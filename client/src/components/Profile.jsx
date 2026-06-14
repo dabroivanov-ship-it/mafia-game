@@ -59,7 +59,7 @@ export default function Profile({ user, onUpdate, onBack }) {
               <div className="profile-avatar placeholder">👤</div>
             )}
           </div>
-          <div>
+          <div className="profile-avatar-info">
             <input
               ref={fileRef}
               type="file"
@@ -68,8 +68,8 @@ export default function Profile({ user, onUpdate, onBack }) {
               hidden
               id="avatar-upload"
             />
-            <label htmlFor="avatar-upload" className="btn btn-ghost">
-              {avatarLoading ? 'Загрузка...' : 'Загрузить аватар'}
+            <label htmlFor="avatar-upload" className="btn btn-ghost btn-sm">
+              {avatarLoading ? 'Загрузка...' : 'Сменить аватар'}
             </label>
             <p className="muted small">JPG, PNG, WebP до 2 МБ</p>
           </div>

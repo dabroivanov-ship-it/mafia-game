@@ -105,7 +105,7 @@ export default function UserProfileModal({ userId, viewerIsAdmin, onClose, onAdm
               ) : (
                 <div className="profile-avatar placeholder">👤</div>
               )}
-              <div>
+              <div className="profile-avatar-info">
                 <strong>{user.displayName}</strong>
                 <p className="muted">@{user.username}</p>
                 {user.isAdmin && <span className="admin-badge">admin</span>}
