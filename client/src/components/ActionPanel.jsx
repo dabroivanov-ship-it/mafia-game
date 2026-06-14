@@ -5,7 +5,8 @@ export default function ActionPanel({ state, emit }) {
   const [clownFirst, setClownFirst] = useState(null);
   const [commissarMode, setCommissarMode] = useState(null); // 'check' | 'kill'
 
-  const me = state.players.find((p) => p.id === state.myId);
+  const me =
+    state.myPlayer || state.players.find((p) => p.id === state.myId);
   if (!state.canPlay || !me?.alive) return null;
 
   const aliveOthers = state.players.filter((p) => p.alive && p.id !== state.myId);

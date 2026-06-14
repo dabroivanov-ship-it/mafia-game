@@ -122,6 +122,9 @@ export function addPlayerToRoom(room, { name, username, socketId, userId }) {
     existingUser.name = name;
     if (username) existingUser.username = username;
     existingUser.connected = true;
+    if ([PHASE.WAITING, PHASE.ENDED].includes(room.phase)) {
+      existingUser.inGame = true;
+    }
     return existingUser;
   }
 
@@ -201,12 +204,12 @@ export function startRegistration(room, starterPlayerId = null) {
   if (room.phase === PHASE.ENDED) {
     resetRoom(room);
   }
-  room.players.forEach((p) => {
+  for (const p of room.players) {
     p.inGame = false;
     p.role = null;
-  });
+  }
   if (starterPlayerId) {
-    const starter = room.players.find((p) => p.id === starterPlayerId && p.connected);
+    const starter = room.players.find((p) => p.id === starterPlayerId);
     if (starter) starter.inGame = true;
   }
   room.phase = PHASE.REGISTRATION;
@@ -876,6 +879,7 @@ export function serializeRoomForPlayer(room, playerId, options = {}) {
   const gameRunning = ![PHASE.WAITING, PHASE.ENDED].includes(room.phase);
   const isSpectator = !!(me && !me.inGame && gameRunning);
   const registeredCount = room.players.filter((p) => p.connected && p.inGame).length;
+  const slotsAvailable = registeredCount < room.maxPlayers;
 
   const visiblePlayers = room.players.filter(
     (p) => p.inGame && (p.connected || room.phase !== PHASE.WAITING)
@@ -897,7 +901,18 @@ export function serializeRoomForPlayer(room, playerId, options = {}) {
     myId: playerId,
     isSpectator,
     isInGame: !!me?.inGame,
-    canJoinGame: room.phase === PHASE.REGISTRATION && !!me && !me.inGame && me.connected,
+    canJoinGame:
+      room.phase === PHASE.REGISTRATION && !!me?.connected && !me.inGame && slotsAvailable,
+    myPlayer: me
+      ? {
+          id: me.id,
+          userId: me.userId || null,
+          name: me.name,
+          username: me.username || me.name,
+          inGame: !!me.inGame,
+          connected: me.connected,
+        }
+      : null,
     myRole: me?.inGame ? me.role || null : null,
     myRoleLabel: me?.inGame && me.role ? getRoleLabel(me.role) : null,
     isDon: me?.isDon || false,

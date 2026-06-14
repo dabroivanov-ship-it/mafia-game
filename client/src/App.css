@@ -408,6 +408,37 @@ body {
   overflow: hidden;
 }
 
+.room-layout-chat {
+  flex-direction: column;
+}
+
+.main-area-full {
+  width: 100%;
+}
+
+.join-game-banner {
+  margin: 0 16px 12px;
+  padding: 14px 16px;
+  background: rgba(108, 92, 231, 0.15);
+  border: 1px solid rgba(108, 92, 231, 0.4);
+  border-radius: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.join-game-banner p {
+  margin: 0;
+  flex: 1;
+  min-width: 200px;
+}
+
+.registration-count {
+  margin-left: 8px;
+  font-size: 0.85rem;
+}
+
 .sidebar {
   width: 200px;
   flex-shrink: 0;
@@ -615,6 +646,21 @@ body {
 .chat-author {
   font-weight: 600;
   margin-right: 4px;
+}
+
+.chat-author-btn {
+  font-weight: 600;
+  margin-right: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+}
+
+.chat-author-btn:hover {
+  text-decoration: underline;
 }
 
 .chat-input {
