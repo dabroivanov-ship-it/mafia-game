@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Chat from './Chat.jsx';
 import PlayersList from './PlayersList.jsx';
 import ActionPanel from './ActionPanel.jsx';
+import UserProfileModal from './UserProfileModal.jsx';
 
 const PHASE_LABELS = {
   waiting: 'Ожидание',
@@ -34,6 +35,7 @@ function useTimer(timerEnd) {
 
 export default function Room({ socket, state, user, onLeave }) {
   const [mafiaTab, setMafiaTab] = useState(false);
+  const [profileUserId, setProfileUserId] = useState(null);
 
   if (!state) {
     return (
@@ -77,7 +79,11 @@ export default function Room({ socket, state, user, onLeave }) {
 
       <div className="room-layout">
         <aside className="sidebar">
-          <PlayersList players={state.players} myId={state.myId} />
+          <PlayersList
+            players={state.players}
+            myId={state.myId}
+            onViewProfile={setProfileUserId}
+          />
         </aside>
 
         <main className="main-area">
@@ -162,6 +168,14 @@ export default function Room({ socket, state, user, onLeave }) {
           </button>
         )}
       </footer>
+
+      {profileUserId && (
+        <UserProfileModal
+          userId={profileUserId}
+          viewerIsAdmin={state.isAdmin}
+          onClose={() => setProfileUserId(null)}
+        />
+      )}
     </div>
   );
 }

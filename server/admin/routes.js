@@ -27,6 +27,15 @@ export function createAdminRouter(handlers) {
     res.json({
       ...handlers.getModerationData(),
       users: listAllUsers(),
+      gameEvents: handlers.getGameEvents?.() || [],
+    });
+  });
+
+  router.get('/rooms/:roomId/history', (req, res) => {
+    const roomId = Number(req.params.roomId);
+    res.json({
+      chat: handlers.getChatHistory?.(roomId) || [],
+      gameEvents: handlers.getRoomGameEvents?.(roomId) || [],
     });
   });
 

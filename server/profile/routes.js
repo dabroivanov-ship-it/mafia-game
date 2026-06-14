@@ -3,6 +3,8 @@ import path from 'path';
 import { authMiddleware } from '../auth/jwt.js';
 import {
   findUserPublic,
+  findUserById,
+  isAdmin,
   updateUserProfile,
   updateUserAvatar,
   deleteAvatarFile,
@@ -38,9 +40,25 @@ router.post('/avatar', authMiddleware, (req, res) => {
 });
 
 router.get('/:userId', authMiddleware, (req, res) => {
-  const user = findUserPublic(Number(req.params.userId));
-  if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
-  res.json({ user });
+  const targetId = Number(req.params.userId);
+  const target = findUserPublic(targetId);
+  if (!target) return res.status(404).json({ error: 'Пользователь не найден' });
+
+  const viewer = findUserById(req.userId);
+  const viewerIsAdmin = isAdmin(viewer);
+  const isSelf = req.userId === targetId;
+
+  const user = { ...target };
+  if (!viewerIsAdmin && !isSelf) {
+    delete user.email;
+    delete user.banReason;
+  }
+
+  res.json({
+    user,
+    isSelf,
+    canAdmin: viewerIsAdmin && !target.isAdmin && !isSelf,
+  });
 });
 
 export default router;

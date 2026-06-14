@@ -17,6 +17,7 @@ import {
 export default function AdminPanel({ onBack }) {
   const [users, setUsers] = useState([]);
   const [messages, setMessages] = useState([]);
+  const [gameEvents, setGameEvents] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -27,31 +28,37 @@ export default function AdminPanel({ onBack }) {
   const [editForm, setEditForm] = useState({ displayName: '', city: '', bio: '' });
   const [newRoomName, setNewRoomName] = useState('');
   const [roomEdits, setRoomEdits] = useState({});
+  const dirtyRoomsRef = useRef(new Set());
   const avatarInputRef = useRef(null);
 
-  const load = async () => {
-    setLoading(true);
+  const load = async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     setError('');
     try {
       const data = await fetchAdminOverview();
       setUsers(data.users || []);
       setMessages(data.messages || []);
+      setGameEvents(data.gameEvents || []);
       setRooms(data.rooms || []);
-      const edits = {};
-      (data.rooms || []).forEach((r) => {
-        edits[r.id] = r.name;
+      setRoomEdits((prev) => {
+        const edits = { ...prev };
+        (data.rooms || []).forEach((r) => {
+          if (!dirtyRoomsRef.current.has(r.id)) {
+            edits[r.id] = r.name;
+          }
+        });
+        return edits;
       });
-      setRoomEdits(edits);
     } catch (err) {
       setError(err.message);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     load();
-    const id = setInterval(load, 10000);
+    const id = setInterval(() => load({ silent: true }), 10000);
     return () => clearInterval(id);
   }, []);
 
@@ -103,12 +110,23 @@ export default function AdminPanel({ onBack }) {
   };
 
   const handleRenameRoom = async (roomId) => {
+    const name = roomEdits[roomId]?.trim();
+    if (!name) {
+      setError('Название не может быть пустым');
+      return;
+    }
     try {
-      await adminRenameRoom(roomId, roomEdits[roomId]);
-      load();
+      await adminRenameRoom(roomId, name);
+      dirtyRoomsRef.current.delete(roomId);
+      await load({ silent: true });
     } catch (err) {
       setError(err.message);
     }
+  };
+
+  const handleRoomNameChange = (roomId, value) => {
+    setRoomEdits((prev) => ({ ...prev, [roomId]: value }));
+    dirtyRoomsRef.current.add(roomId);
   };
 
   const handleCreateRoom = async (e) => {
@@ -172,6 +190,15 @@ export default function AdminPanel({ onBack }) {
     }
   };
 
+  const eventLabel = (type) => {
+    if (type === 'registration_start') return '📝 Регистрация';
+    if (type === 'game_start') return '🎮 Старт игры';
+    if (type === 'game_end') return '🏁 Конец игры';
+    return type;
+  };
+
+  const roomNameById = (id) => rooms.find((r) => r.id === id)?.name || `Комната ${id}`;
+
   if (loading && users.length === 0) {
     return <div className="admin-page"><p className="muted">Загрузка...</p></div>;
   }
@@ -196,7 +223,7 @@ export default function AdminPanel({ onBack }) {
               <input
                 type="text"
                 value={roomEdits[r.id] ?? r.name}
-                onChange={(e) => setRoomEdits({ ...roomEdits, [r.id]: e.target.value })}
+                onChange={(e) => handleRoomNameChange(r.id, e.target.value)}
                 maxLength={50}
               />
               <span className="muted room-meta">
@@ -291,6 +318,26 @@ export default function AdminPanel({ onBack }) {
               ))}
             </tbody>
           </table>
+        </div>
+      </section>
+
+      <section className="admin-section">
+        <h3>История игр ({gameEvents.length})</h3>
+        <div className="admin-game-events">
+          {gameEvents.length === 0 && <p className="muted">Запусков игр пока нет</p>}
+          {gameEvents.map((ev) => (
+            <div key={ev.id} className="admin-game-event">
+              <span className="admin-game-event-type">{eventLabel(ev.eventType)}</span>
+              <span>{roomNameById(ev.roomId)}</span>
+              {ev.payload?.playerCount != null && (
+                <span className="muted">{ev.payload.playerCount} игроков</span>
+              )}
+              {ev.payload?.winnerTeam && (
+                <span className="muted">победа: {ev.payload.winnerTeam}</span>
+              )}
+              <span className="muted">{new Date(ev.time).toLocaleString('ru-RU')}</span>
+            </div>
+          ))}
         </div>
       </section>
 

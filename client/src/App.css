@@ -488,6 +488,29 @@ body {
   white-space: nowrap;
 }
 
+.player-name-btn {
+  flex: 1;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--text);
+  font: inherit;
+  padding: 0;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-name-btn:hover:not(:disabled) {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.player-name-btn:disabled {
+  cursor: default;
+}
+
 .player-score {
   font-size: 0.75rem;
   color: var(--success);
@@ -971,6 +994,29 @@ body {
   margin-bottom: 4px;
 }
 
+.admin-game-events {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.admin-game-event {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--bg-hover);
+  border-radius: 8px;
+  font-size: 0.875rem;
+}
+
+.admin-game-event-type {
+  font-weight: 600;
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -993,6 +1039,49 @@ body {
 
 .modal.modal-wide {
   max-width: 480px;
+}
+
+.modal-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.modal-header-row h3 {
+  margin: 0;
+}
+
+.profile-bio {
+  margin: 12px 0;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.admin-profile-actions {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.admin-profile-actions h4 {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.admin-profile-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ban-form {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .admin-room-list {

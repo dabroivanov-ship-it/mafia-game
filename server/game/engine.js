@@ -1,5 +1,11 @@
 import { CONFIG, PHASE } from './config.js';
 import { distributeRoles, isMafia, isTown, isEvil, isMafiaImmune, isSeductionImmune, getRoleLabel } from './roles.js';
+import {
+  saveChatMessage,
+  saveGameEvent,
+  markChatDeleted,
+  hydrateRoomHistory,
+} from '../history/store.js';
 
 let nextPlayerId = 1;
 
@@ -37,6 +43,8 @@ function createRoom(id) {
     winnerTeam: null,
     systemMessages: [],
     scoresSynced: false,
+    sessionId: null,
+    historyLoaded: false,
   };
 }
 
@@ -79,10 +87,11 @@ export function removeRoom(rooms, roomId) {
   return room;
 }
 
-export function addPlayerToRoom(room, { name, socketId, userId }) {
+export function addPlayerToRoom(room, { name, username, socketId, userId }) {
   const existingSocket = room.players.find((p) => p.socketId === socketId);
   if (existingSocket) {
     existingSocket.name = name;
+    if (username) existingSocket.username = username;
     existingSocket.connected = true;
     return existingSocket;
   }
@@ -95,6 +104,7 @@ export function addPlayerToRoom(room, { name, socketId, userId }) {
     }
     existingUser.socketId = socketId;
     existingUser.name = name;
+    if (username) existingUser.username = username;
     existingUser.connected = true;
     return existingUser;
   }
@@ -109,6 +119,7 @@ export function addPlayerToRoom(room, { name, socketId, userId }) {
     id: nextPlayerId++,
     userId,
     name,
+    username: username || name,
     socketId,
     role: null,
     alive: true,
@@ -121,6 +132,8 @@ export function addPlayerToRoom(room, { name, socketId, userId }) {
   };
 
   room.players.push(player);
+
+  hydrateRoomHistory(room);
 
   if (room.phase === PHASE.REGISTRATION && connectedCount + 1 >= room.maxPlayers) {
     tryStartGameAfterRegistration(room);
@@ -151,12 +164,13 @@ export function removePlayer(room, socketId, applyPenalty = true) {
   return player;
 }
 
-export function reconnectPlayer(room, playerId, socketId, name) {
+export function reconnectPlayer(room, playerId, socketId, name, username) {
   const player = room.players.find((p) => p.id === playerId);
   if (!player) return null;
   player.socketId = socketId;
   player.connected = true;
   if (name) player.name = name;
+  if (username) player.username = username;
   return player;
 }
 
@@ -168,11 +182,12 @@ export function startRegistration(room) {
     resetRoom(room);
   }
   room.phase = PHASE.REGISTRATION;
-  room.chat = [];
-  room.mafiaChat = [];
-  room.deadChat = [];
-  room.systemMessages = [];
-  addSystemMessage(room, 'Регистрация открыта! Ожидайте других игроков.');
+  room.sessionId = Date.now();
+  hydrateRoomHistory(room);
+  saveGameEvent(room.id, room.sessionId, 'registration_start', {
+    roomName: room.name,
+  });
+  addSystemMessage(room, '——— Регистрация открыта! Ожидайте других игроков. ———');
   setTimer(room, CONFIG.REGISTRATION_SEC * 1000, 'registration');
 }
 
@@ -237,7 +252,11 @@ function beginGame(room) {
   room.clownUsed = false;
   room.doctorLastSelfHealNight = -999;
 
-  addSystemMessage(room, `Игра началась! Игроков: ${room.players.length}. Роли разданы.`);
+  saveGameEvent(room.id, room.sessionId, 'game_start', {
+    playerCount: room.players.length,
+    players: room.players.map((p) => ({ name: p.name, userId: p.userId })),
+  });
+  addSystemMessage(room, `🎮 Игра началась! Игроков: ${room.players.length}. Роли разданы.`);
   startDayPhase(room);
 }
 
@@ -586,6 +605,16 @@ function endGame(room, team, message) {
   room.phase = PHASE.ENDED;
   clearTimer(room);
   addSystemMessage(room, `🏁 ${message}`);
+  saveGameEvent(room.id, room.sessionId, 'game_end', {
+    winnerTeam: team,
+    message,
+    players: room.players.map((p) => ({
+      name: p.name,
+      role: p.role,
+      alive: p.alive,
+      score: p.score,
+    })),
+  });
 
   room.players.forEach((p) => {
     if (team === 'town' && isTown(p.role)) {
@@ -599,8 +628,17 @@ function endGame(room, team, message) {
 export function resetRoom(room) {
   const id = room.id;
   const name = room.name;
+  const chat = room.chat;
+  const mafiaChat = room.mafiaChat;
+  const deadChat = room.deadChat;
+  const historyLoaded = room.historyLoaded;
   Object.assign(room, createRoom(id));
   room.name = name;
+  room.chat = chat;
+  room.mafiaChat = mafiaChat;
+  room.deadChat = deadChat;
+  room.historyLoaded = historyLoaded;
+  addSystemMessage(room, '——— Новая игра ———');
 }
 
 export function addChatMessage(room, playerId, text, channel = 'public') {
@@ -611,7 +649,7 @@ export function addChatMessage(room, playerId, text, channel = 'public') {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
     playerId,
     userId: player.userId || null,
-    playerName: player.name,
+    playerName: player.username || player.name,
     text,
     time: new Date().toISOString(),
     deleted: false,
@@ -620,6 +658,8 @@ export function addChatMessage(room, playerId, text, channel = 'public') {
   if (channel === 'mafia') room.mafiaChat.push(msg);
   else if (channel === 'dead') room.deadChat.push(msg);
   else room.chat.push(msg);
+
+  saveChatMessage(room.id, room.sessionId, msg, channel);
   return msg;
 }
 
@@ -630,6 +670,7 @@ export function deleteChatMessage(room, messageId, channel = 'public') {
   if (!msg || msg.system) return false;
   msg.deleted = true;
   msg.text = '[сообщение удалено модератором]';
+  markChatDeleted(messageId);
   return true;
 }
 
@@ -672,15 +713,19 @@ export function getModerationSnapshot(rooms) {
 }
 
 function addSystemMessage(room, text) {
-  room.systemMessages.push({ text, time: new Date().toISOString() });
-  room.chat.push({
-    id: Date.now() + Math.random(),
+  const time = new Date().toISOString();
+  room.systemMessages.push({ text, time });
+  const msg = {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
     playerId: null,
     playerName: '🤖 Ведущий',
     text,
-    time: new Date().toISOString(),
+    time,
     system: true,
-  });
+    deleted: false,
+  };
+  room.chat.push(msg);
+  saveChatMessage(room.id, room.sessionId, msg, 'public');
 }
 
 /** Чат для конкретного игрока: живые не видят сообщения выбывших */
@@ -689,14 +734,14 @@ function buildChatView(room, me) {
 
   if (!me || me.alive) {
     return {
-      messages: room.chat.slice(-100),
+      messages: room.chat.slice(-200),
       mode: 'alive',
     };
   }
 
   const combined = [...systemMsgs, ...room.deadChat]
     .sort((a, b) => new Date(a.time) - new Date(b.time))
-    .slice(-100);
+    .slice(-200);
 
   return {
     messages: combined,
@@ -726,6 +771,7 @@ export function serializeRoomForPlayer(room, playerId, options = {}) {
       .filter((p) => p.connected || room.phase !== PHASE.WAITING)
       .map((p) => ({
         id: p.id,
+        userId: p.userId || null,
         name: p.name,
         alive: p.alive,
         score: p.score,

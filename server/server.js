@@ -10,6 +10,7 @@ import profileRoutes from './profile/routes.js';
 import { createAdminRouter } from './admin/routes.js';
 import { socketAuthMiddleware } from './auth/jwt.js';
 import { findUserById, updateUserScore, isAdmin, uploadsDir } from './auth/db.js';
+import { hydrateRoomHistory, loadGameEvents, getRecentGameEvents, getAdminChatHistory, getRecentChatForAdmin } from './history/store.js';
 import {
   createInitialRooms,
   getLobbySnapshot,
@@ -44,6 +45,9 @@ const io = new Server(httpServer, {
 });
 
 const rooms = createInitialRooms();
+for (const room of rooms.values()) {
+  hydrateRoomHistory(room);
+}
 // socketId -> { roomId, playerId }
 const sessions = new Map();
 
@@ -105,13 +109,26 @@ function syncUserInRooms(userId, displayName) {
 app.use(
   '/api/admin',
   createAdminRouter({
-    getModerationData: () => getModerationSnapshot(rooms),
+    getModerationData: () => {
+      const snap = getModerationSnapshot(rooms);
+      const roomNames = Object.fromEntries(
+        [...rooms.values()].map((r) => [r.id, r.name])
+      );
+      const messages = getRecentChatForAdmin(100).map((m) => ({
+        ...m,
+        roomName: roomNames[m.roomId] || `Комната ${m.roomId}`,
+      }));
+      return { rooms: snap.rooms, messages };
+    },
     deleteMessage: adminDeleteMessage,
     renameRoom: (id, name) => renameRoom(rooms, id, name),
     addRoom: (name) => addRoom(rooms, name),
     deleteRoom: (id) => adminDeleteRoom(id),
     onRoomsChanged,
     syncUserInRooms,
+    getGameEvents: () => getRecentGameEvents(40),
+    getChatHistory: (roomId) => getAdminChatHistory(roomId, 300),
+    getRoomGameEvents: (roomId) => loadGameEvents(roomId, 50),
   })
 );
 
@@ -196,6 +213,7 @@ io.on('connection', (socket) => {
     return;
   }
   socket.displayName = user.display_name;
+  socket.username = user.username;
   socket.isAdmin = isAdmin(user);
 
   socket.emit('lobby:update', getLobbySnapshot(rooms));
@@ -210,14 +228,16 @@ io.on('connection', (socket) => {
       if (!room) return cb?.({ error: 'Комната не найдена' });
 
       const playerName = socket.displayName;
+      const playerUsername = socket.username;
       let player;
 
       if (reconnectId) {
-        player = reconnectPlayer(room, reconnectId, socket.id, playerName);
+        player = reconnectPlayer(room, reconnectId, socket.id, playerName, playerUsername);
       }
       if (!player) {
         player = addPlayerToRoom(room, {
           name: playerName,
+          username: playerUsername,
           socketId: socket.id,
           userId: socket.userId,
         });

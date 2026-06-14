@@ -75,6 +75,10 @@ export async function uploadAvatar(file) {
   return data;
 }
 
+export async function fetchUserProfile(userId) {
+  return apiRequest(`/api/profile/${userId}`);
+}
+
 export async function fetchAdminOverview() {
   return apiRequest('/api/admin/overview');
 }

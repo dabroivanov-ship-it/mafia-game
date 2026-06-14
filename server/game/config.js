@@ -1,8 +1,8 @@
 // Настройки игры (можно менять)
 export const CONFIG = {
-  MIN_PLAYERS: 4,
+  MIN_PLAYERS: 3,
   MAX_PLAYERS: 10,
-  DEFAULT_MAX_PLAYERS: 6, // для теста; в UI показываем до MAX_PLAYERS
+  DEFAULT_MAX_PLAYERS: 6,
   REGISTRATION_SEC: 30,
   DAY_DISCUSSION_SEC: 60,
   NIGHT_ACTIONS_SEC: 60,
@@ -20,7 +20,7 @@ export const PHASE = {
 
 export const ROLE_LABELS = {
   mafia: 'Мафия',
-  commissar: 'Инспектор Катани',
+  commissar: 'Катани',
   doctor: 'Доктор',
   homeless: 'Бомж',
   prostitute: 'Путана',

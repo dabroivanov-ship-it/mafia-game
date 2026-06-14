@@ -1,10 +1,14 @@
 import { ROLE_LABELS } from './config.js';
 
 /**
- * Распределение ролей по количеству игроков (4–10).
+ * Распределение ролей по количеству игроков (3–10).
  * Первый мафия в списке становится главным (don).
  */
 export function distributeRoles(playerCount) {
+  if (playerCount === 3) {
+    return shuffle(['mafia', 'commissar', 'civilian']);
+  }
+
   const pool = [];
 
   if (playerCount >= 4) {
