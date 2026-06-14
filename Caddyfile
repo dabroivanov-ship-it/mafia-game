@@ -1,43 +1,9 @@
-# Замените домен и путь к проекту на свои
-# Caddy сам получит HTTPS-сертификат (Let's Encrypt)
+# Весь трафик → Node.js (API + WebSocket + React из client/dist)
 
-mafia.example.com {
-	# Путь к собранному React-клиенту
-	root * /home/user/mafia-game/client/dist
-	encode gzip
-
-	# WebSocket + Socket.IO
-	handle /socket.io/* {
-		reverse_proxy 127.0.0.1:3001
-	}
-
-	# REST API бэкенда
-	handle /api/* {
-		reverse_proxy 127.0.0.1:3001
-	}
-
-	# SPA: все маршруты → index.html
-	handle {
-		try_files {path} /index.html
-		file_server
-	}
+24vpsbro.ru {
+	reverse_proxy 127.0.0.1:3001
 }
 
-# Локальный тест без домена (http://localhost)
-:8080 {
-	root * ./client/dist
-	encode gzip
-
-	handle /socket.io/* {
-		reverse_proxy 127.0.0.1:3001
-	}
-
-	handle /api/* {
-		reverse_proxy 127.0.0.1:3001
-	}
-
-	handle {
-		try_files {path} /index.html
-		file_server
-	}
+www.24vpsbro.ru {
+	redir https://24vpsbro.ru{uri} permanent
 }

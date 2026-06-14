@@ -2,6 +2,8 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { CONFIG } from './game/config.js';
 import {
   createInitialRooms,
@@ -218,8 +220,23 @@ io.on('connection', (socket) => {
   });
 });
 
+// Отдаём собранный React-клиент (client/dist)
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const clientDist = path.join(__dirname, '..', 'client', 'dist');
+
+app.use(express.static(clientDist));
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api') || req.path.startsWith('/socket.io')) {
+    return next();
+  }
+  res.sendFile(path.join(clientDist, 'index.html'), (err) => {
+    if (err) res.status(404).send('Клиент не собран. Выполните: cd client && npm install && npm run build');
+  });
+});
+
 const PORT = process.env.PORT || 3001;
 httpServer.listen(PORT, () => {
   console.log(`🎭 Mafia server: http://localhost:${PORT}`);
   console.log(`   Комнат: ${CONFIG.ROOM_COUNT}, игроков: ${CONFIG.MIN_PLAYERS}–${CONFIG.MAX_PLAYERS}`);
+  console.log(`   Static: ${clientDist}`);
 });
