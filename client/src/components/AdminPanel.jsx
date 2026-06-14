@@ -350,7 +350,7 @@ export default function AdminPanel({ onBack }) {
               <div className="admin-msg-meta">
                 <span>{msg.roomName}</span>
                 <span>
-                  {msg.channel === 'mafia' ? '🔫 мафия' : msg.channel === 'dead' ? '💀 выбывшие' : '💬 общий'}
+                  {msg.channel === 'mafia' ? '🔫 мафия' : msg.channel === 'dead' ? '💀 выбывшие' : msg.channel === 'spectator' ? '👁 наблюдатели' : '💬 общий'}
                 </span>
                 <span>{new Date(msg.time).toLocaleString('ru-RU')}</span>
               </div>

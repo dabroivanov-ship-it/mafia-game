@@ -27,6 +27,7 @@ function createRoom(id) {
     chat: [],
     mafiaChat: [],
     deadChat: [],
+    spectatorChat: [],
     nightNumber: 0,
     timerEnd: null,
     timerReason: null,
@@ -49,13 +50,19 @@ function createRoom(id) {
 }
 
 export function getLobbySnapshot(rooms) {
-  return Array.from(rooms.values()).map((room) => ({
-    id: room.id,
-    name: room.name,
-    playerCount: room.players.filter((p) => p.connected).length,
-    maxPlayers: room.maxPlayers,
-    phase: room.phase,
-  }));
+  return Array.from(rooms.values()).map((room) => {
+    const inGame = room.players.filter((p) => p.connected && p.inGame).length;
+    const connected = room.players.filter((p) => p.connected).length;
+    const gameRunning = ![PHASE.WAITING, PHASE.ENDED].includes(room.phase);
+    return {
+      id: room.id,
+      name: room.name,
+      playerCount: gameRunning ? inGame : connected,
+      spectatorCount: gameRunning ? room.players.filter((p) => p.connected && !p.inGame).length : 0,
+      maxPlayers: room.maxPlayers,
+      phase: room.phase,
+    };
+  });
 }
 
 export function renameRoom(rooms, roomId, name) {
@@ -110,9 +117,12 @@ export function addPlayerToRoom(room, { name, username, socketId, userId }) {
   }
 
   const connectedCount = room.players.filter((p) => p.connected).length;
-  const canJoin = [PHASE.WAITING, PHASE.REGISTRATION].includes(room.phase);
-  if (canJoin && connectedCount >= room.maxPlayers) {
-    throw new Error('Комната заполнена');
+  const inGameCount = room.players.filter((p) => p.connected && p.inGame).length;
+  const isGamePhase = ![PHASE.WAITING, PHASE.ENDED].includes(room.phase);
+  const defaultInGame = !isGamePhase;
+
+  if ([PHASE.WAITING, PHASE.ENDED].includes(room.phase) && connectedCount >= room.maxPlayers + 20) {
+    throw new Error('Комната переполнена');
   }
 
   const player = {
@@ -121,6 +131,7 @@ export function addPlayerToRoom(room, { name, username, socketId, userId }) {
     name,
     username: username || name,
     socketId,
+    inGame: defaultInGame,
     role: null,
     alive: true,
     score: 0,
@@ -135,7 +146,7 @@ export function addPlayerToRoom(room, { name, username, socketId, userId }) {
 
   hydrateRoomHistory(room);
 
-  if (room.phase === PHASE.REGISTRATION && connectedCount + 1 >= room.maxPlayers) {
+  if (room.phase === PHASE.REGISTRATION && player.inGame && inGameCount + 1 >= room.maxPlayers) {
     tryStartGameAfterRegistration(room);
   }
 
@@ -148,7 +159,7 @@ export function removePlayer(room, socketId, applyPenalty = true) {
 
   const gameActive = ![PHASE.WAITING, PHASE.ENDED].includes(room.phase);
 
-  if (gameActive && applyPenalty && player.alive && player.connected) {
+  if (gameActive && applyPenalty && player.inGame && player.alive && player.connected) {
     player.score -= 100;
     player.leftEarly = true;
     addSystemMessage(room, `${player.name} покинул игру (−100 очков).`);
@@ -174,12 +185,20 @@ export function reconnectPlayer(room, playerId, socketId, name, username) {
   return player;
 }
 
-export function startRegistration(room) {
+export function startRegistration(room, starterPlayerId = null) {
   if (room.phase !== PHASE.WAITING && room.phase !== PHASE.ENDED) {
     throw new Error('Игра уже идёт');
   }
   if (room.phase === PHASE.ENDED) {
     resetRoom(room);
+  }
+  room.players.forEach((p) => {
+    p.inGame = false;
+    p.role = null;
+  });
+  if (starterPlayerId) {
+    const starter = room.players.find((p) => p.id === starterPlayerId && p.connected);
+    if (starter) starter.inGame = true;
   }
   room.phase = PHASE.REGISTRATION;
   room.sessionId = Date.now();
@@ -187,8 +206,30 @@ export function startRegistration(room) {
   saveGameEvent(room.id, room.sessionId, 'registration_start', {
     roomName: room.name,
   });
-  addSystemMessage(room, '——— Регистрация открыта! Ожидайте других игроков. ———');
+  addSystemMessage(
+    room,
+    '——— Регистрация открыта! Нажмите «Присоединиться к игре», чтобы участвовать. ———'
+  );
   setTimer(room, CONFIG.REGISTRATION_SEC * 1000, 'registration');
+}
+
+export function joinGame(room, playerId) {
+  if (room.phase !== PHASE.REGISTRATION) {
+    throw new Error('Присоединиться можно только во время регистрации');
+  }
+  const player = room.players.find((p) => p.id === playerId);
+  if (!player?.connected) throw new Error('Игрок не найден');
+  if (player.inGame) throw new Error('Вы уже в игре');
+
+  const inGameCount = room.players.filter((p) => p.connected && p.inGame).length;
+  if (inGameCount >= room.maxPlayers) {
+    throw new Error('Все места в игре заняты');
+  }
+
+  player.inGame = true;
+  addSystemMessage(room, `${player.username || player.name} присоединился к игре.`);
+  tryStartGameAfterRegistration(room);
+  return player;
 }
 
 export function setTimer(room, ms, reason) {
@@ -203,8 +244,8 @@ export function clearTimer(room) {
 
 export function tryStartGameAfterRegistration(room) {
   if (room.phase !== PHASE.REGISTRATION) return false;
-  const connected = room.players.filter((p) => p.connected);
-  if (connected.length >= room.maxPlayers) {
+  const registered = room.players.filter((p) => p.connected && p.inGame);
+  if (registered.length >= room.maxPlayers) {
     beginGame(room);
     return true;
   }
@@ -213,10 +254,13 @@ export function tryStartGameAfterRegistration(room) {
 
 export function onRegistrationTimerEnd(room) {
   if (room.phase !== PHASE.REGISTRATION) return;
-  const connected = room.players.filter((p) => p.connected);
-  if (connected.length < CONFIG.MIN_PLAYERS) {
+  const registered = room.players.filter((p) => p.connected && p.inGame);
+  if (registered.length < CONFIG.MIN_PLAYERS) {
     room.phase = PHASE.WAITING;
     clearTimer(room);
+    room.players.forEach((p) => {
+      p.inGame = true;
+    });
     addSystemMessage(room, `Недостаточно игроков (минимум ${CONFIG.MIN_PLAYERS}). Игра отменена.`);
     return;
   }
@@ -225,10 +269,10 @@ export function onRegistrationTimerEnd(room) {
 
 function beginGame(room) {
   clearTimer(room);
-  room.players = room.players.filter((p) => p.connected);
+  const participants = room.players.filter((p) => p.connected && p.inGame);
 
-  const roles = distributeRoles(room.players.length);
-  room.players.forEach((p, i) => {
+  const roles = distributeRoles(participants.length);
+  participants.forEach((p, i) => {
     p.role = roles[i];
     p.alive = true;
     p.score = 0;
@@ -236,6 +280,15 @@ function beginGame(room) {
     p.hasVoted = false;
     p.nightActionDone = false;
     p.leftEarly = false;
+  });
+
+  room.players.forEach((p) => {
+    if (!p.inGame) {
+      p.role = null;
+      p.alive = true;
+      p.hasVoted = false;
+      p.nightActionDone = false;
+    }
   });
 
   const firstMafia = room.players.find((p) => isMafia(p.role));
@@ -253,10 +306,10 @@ function beginGame(room) {
   room.doctorLastSelfHealNight = -999;
 
   saveGameEvent(room.id, room.sessionId, 'game_start', {
-    playerCount: room.players.length,
-    players: room.players.map((p) => ({ name: p.name, userId: p.userId })),
+    playerCount: participants.length,
+    players: participants.map((p) => ({ name: p.name, userId: p.userId })),
   });
-  addSystemMessage(room, `🎮 Игра началась! Игроков: ${room.players.length}. Роли разданы.`);
+  addSystemMessage(room, `🎮 Игра началась! Игроков: ${participants.length}. Роли разданы.`);
   startDayPhase(room);
 }
 
@@ -292,13 +345,14 @@ export function castDayVote(room, voterId, targetId) {
 
   const voter = room.players.find((p) => p.id === voterId);
   const target = room.players.find((p) => p.id === targetId);
+  if (!voter?.inGame || !voter.role) throw new Error('Вы не участвуете в игре');
   if (!voter?.alive || !target?.alive) throw new Error('Недопустимый голос');
   if (voterId === targetId) throw new Error('Нельзя голосовать за себя');
 
   room.votes[voterId] = targetId;
   voter.hasVoted = true;
 
-  const alive = room.players.filter((p) => p.alive);
+  const alive = room.players.filter((p) => p.alive && p.inGame && p.role);
   if (alive.every((p) => p.hasVoted)) resolveDayVote(room);
 }
 
@@ -381,7 +435,7 @@ export function submitNightAction(room, playerId, action) {
   if (room.phase !== PHASE.NIGHT) throw new Error('Сейчас не ночь');
 
   const player = room.players.find((p) => p.id === playerId);
-  if (!player?.alive) throw new Error('Вы не можете действовать');
+  if (!player?.alive || !player.inGame || !player.role) throw new Error('Вы не можете действовать');
 
   room.nightActions[playerId] = action;
   player.nightActionDone = true;
@@ -585,7 +639,7 @@ export function resolveNight(room) {
 }
 
 export function checkWin(room) {
-  const alive = room.players.filter((p) => p.alive);
+  const alive = room.players.filter((p) => p.alive && p.inGame && p.role);
   const mafiaAlive = alive.filter((p) => p.role === 'mafia').length;
   const maniacAlive = alive.filter((p) => p.role === 'maniac').length;
   const townAlive = alive.filter((p) => isTown(p.role)).length;
@@ -631,13 +685,27 @@ export function resetRoom(room) {
   const chat = room.chat;
   const mafiaChat = room.mafiaChat;
   const deadChat = room.deadChat;
+  const spectatorChat = room.spectatorChat;
   const historyLoaded = room.historyLoaded;
+  const connectedPlayers = room.players.filter((p) => p.connected);
   Object.assign(room, createRoom(id));
   room.name = name;
   room.chat = chat;
   room.mafiaChat = mafiaChat;
   room.deadChat = deadChat;
+  room.spectatorChat = spectatorChat;
   room.historyLoaded = historyLoaded;
+  room.players = connectedPlayers.map((p) => ({
+    ...p,
+    inGame: true,
+    role: null,
+    alive: true,
+    score: 0,
+    isDon: false,
+    hasVoted: false,
+    nightActionDone: false,
+    leftEarly: false,
+  }));
   addSystemMessage(room, '——— Новая игра ———');
 }
 
@@ -657,6 +725,7 @@ export function addChatMessage(room, playerId, text, channel = 'public') {
 
   if (channel === 'mafia') room.mafiaChat.push(msg);
   else if (channel === 'dead') room.deadChat.push(msg);
+  else if (channel === 'spectator') room.spectatorChat.push(msg);
   else room.chat.push(msg);
 
   saveChatMessage(room.id, room.sessionId, msg, channel);
@@ -665,7 +734,13 @@ export function addChatMessage(room, playerId, text, channel = 'public') {
 
 export function deleteChatMessage(room, messageId, channel = 'public') {
   const list =
-    channel === 'mafia' ? room.mafiaChat : channel === 'dead' ? room.deadChat : room.chat;
+    channel === 'mafia'
+      ? room.mafiaChat
+      : channel === 'dead'
+        ? room.deadChat
+        : channel === 'spectator'
+          ? room.spectatorChat
+          : room.chat;
   const msg = list.find((m) => m.id === messageId);
   if (!msg || msg.system) return false;
   msg.deleted = true;
@@ -703,6 +778,14 @@ export function getModerationSnapshot(rooms) {
         channel: 'dead',
       });
     }
+    for (const msg of room.spectatorChat) {
+      messages.push({
+        ...msg,
+        roomId: room.id,
+        roomName: room.name,
+        channel: 'spectator',
+      });
+    }
   }
   messages.sort((a, b) => new Date(b.time) - new Date(a.time));
 
@@ -728,14 +811,25 @@ function addSystemMessage(room, text) {
   saveChatMessage(room.id, room.sessionId, msg, 'public');
 }
 
-/** Чат для конкретного игрока: живые не видят сообщения выбывших */
+/** Чат для конкретного игрока */
 function buildChatView(room, me) {
+  const gameRunning = ![PHASE.WAITING, PHASE.ENDED].includes(room.phase);
+  const isSpectator = me && !me.inGame && gameRunning;
+
+  if (isSpectator) {
+    const systemMsgs = room.chat.filter((m) => m.system);
+    const combined = [...systemMsgs, ...room.spectatorChat]
+      .sort((a, b) => new Date(a.time) - new Date(b.time))
+      .slice(-200);
+    return { messages: combined, mode: 'spectator' };
+  }
+
   const systemMsgs = room.chat.filter((m) => m.system);
 
-  if (!me || me.alive) {
+  if (!me || !me.inGame || !me.role || me.alive) {
     return {
       messages: room.chat.slice(-200),
-      mode: 'alive',
+      mode: me?.inGame && me?.role && !me.alive ? 'dead' : 'alive',
     };
   }
 
@@ -749,44 +843,70 @@ function buildChatView(room, me) {
   };
 }
 
+function mapPlayerPublic(p, room, playerId) {
+  return {
+    id: p.id,
+    userId: p.userId || null,
+    name: p.name,
+    inGame: !!p.inGame,
+    alive: p.alive,
+    score: p.score,
+    connected: p.connected,
+    hasVoted: p.hasVoted,
+    role: !p.alive || p.id === playerId ? p.role : null,
+    roleLabel: !p.alive || p.id === playerId ? getRoleLabel(p.role) : null,
+    isDon: p.isDon && p.id === playerId,
+  };
+}
+
 export function serializeRoomForPlayer(room, playerId, options = {}) {
   const me = room.players.find((p) => p.id === playerId);
   const { isAdmin = false } = options;
   const chatView = buildChatView(room, me);
+  const gameRunning = ![PHASE.WAITING, PHASE.ENDED].includes(room.phase);
+  const isSpectator = !!(me && !me.inGame && gameRunning);
+  const registeredCount = room.players.filter((p) => p.connected && p.inGame).length;
+
+  const visiblePlayers = room.players.filter(
+    (p) => p.inGame && (p.connected || room.phase !== PHASE.WAITING)
+  );
+  const visibleSpectators = gameRunning
+    ? room.players.filter((p) => p.connected && !p.inGame)
+    : [];
 
   return {
     id: room.id,
     name: room.name,
     phase: room.phase,
     maxPlayers: room.maxPlayers,
+    registeredCount,
     nightNumber: room.nightNumber,
     timerEnd: room.timerEnd,
     timerReason: room.timerReason,
     winnerTeam: room.winnerTeam,
     myId: playerId,
-    myRole: me?.role || null,
-    myRoleLabel: me ? getRoleLabel(me.role) : null,
+    isSpectator,
+    isInGame: !!me?.inGame,
+    canJoinGame: room.phase === PHASE.REGISTRATION && !!me && !me.inGame && me.connected,
+    myRole: me?.inGame ? me.role || null : null,
+    myRoleLabel: me?.inGame && me.role ? getRoleLabel(me.role) : null,
     isDon: me?.isDon || false,
-    players: room.players
-      .filter((p) => p.connected || room.phase !== PHASE.WAITING)
-      .map((p) => ({
-        id: p.id,
-        userId: p.userId || null,
-        name: p.name,
-        alive: p.alive,
-        score: p.score,
-        connected: p.connected,
-        hasVoted: p.hasVoted,
-        role: !p.alive || p.id === playerId ? p.role : null,
-        roleLabel: !p.alive || p.id === playerId ? getRoleLabel(p.role) : null,
-        isDon: p.isDon && p.id === playerId,
-      })),
+    players: visiblePlayers.map((p) => mapPlayerPublic(p, room, playerId)),
+    spectators: visibleSpectators.map((p) => ({
+      id: p.id,
+      userId: p.userId || null,
+      name: p.name,
+      connected: p.connected,
+    })),
     chat: chatView.messages,
     chatMode: chatView.mode,
-    mafiaChat: me?.role === 'mafia' && me.alive ? room.mafiaChat.slice(-50) : [],
-    canStartGame: room.phase === PHASE.WAITING || room.phase === PHASE.REGISTRATION || room.phase === PHASE.ENDED,
-    canChat: !!me,
-    wifeRevengeAvailable: me?.role === 'commissar_wife' && room.wifeRevengeAvailable && !room.wifeRevengeUsed,
+    mafiaChat: me?.role === 'mafia' && me.alive && me.inGame ? room.mafiaChat.slice(-50) : [],
+    canStartGame:
+      room.phase === PHASE.WAITING || room.phase === PHASE.REGISTRATION || room.phase === PHASE.ENDED,
+    canChat: !!me?.connected,
+    canPlay: !!me?.inGame && !!me?.role && gameRunning,
+    wifeRevengeAvailable:
+      me?.role === 'commissar_wife' && room.wifeRevengeAvailable && !room.wifeRevengeUsed,
     clownAvailable: me?.role === 'clown' && !room.clownUsed,
     votingStarted: room.votingStarted,
     myVote: room.votes[playerId] || null,

@@ -18,6 +18,7 @@ import {
   removePlayer,
   reconnectPlayer,
   startRegistration,
+  joinGame,
   tryStartGameAfterRegistration,
   onRegistrationTimerEnd,
   onDayTimerEnd,
@@ -257,7 +258,21 @@ io.on('connection', (socket) => {
 
     const room = rooms.get(session.roomId);
     try {
-      startRegistration(room);
+      startRegistration(room, session.playerId);
+      broadcastRoom(room.id);
+      cb?.({ ok: true });
+    } catch (e) {
+      cb?.({ error: e.message });
+    }
+  });
+
+  socket.on('room:joinGame', (_data, cb) => {
+    const session = sessions.get(socket.id);
+    if (!session) return cb?.({ error: 'Вы не в комнате' });
+
+    const room = rooms.get(session.roomId);
+    try {
+      joinGame(room, session.playerId);
       broadcastRoom(room.id);
       cb?.({ ok: true });
     } catch (e) {
@@ -283,7 +298,16 @@ io.on('connection', (socket) => {
     const me = room.players.find((p) => p.id === session.playerId);
     if (!me) return cb?.({ error: 'Игрок не найден' });
 
-    const channel = me.alive ? 'public' : 'dead';
+    const gameRunning = !['waiting', 'ended'].includes(room.phase);
+    const isSpectator = !me.inGame && gameRunning;
+
+    let channel = 'public';
+    if (isSpectator) {
+      channel = 'spectator';
+    } else if (gameRunning && me.inGame && me.role) {
+      channel = me.alive ? 'public' : 'dead';
+    }
+
     const msg = addChatMessage(room, session.playerId, text, channel);
     if (!msg) return cb?.({ error: 'Не удалось отправить' });
 

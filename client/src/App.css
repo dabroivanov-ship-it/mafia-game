@@ -481,6 +481,23 @@ body {
   background: rgba(108, 92, 231, 0.2);
 }
 
+.spectator-badge {
+  font-size: 0.75rem;
+}
+
+.spectator-banner {
+  margin: 0 16px 12px;
+  padding: 10px 14px;
+  background: rgba(241, 196, 15, 0.12);
+  border: 1px solid rgba(241, 196, 15, 0.35);
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.players-spectators li {
+  opacity: 0.85;
+}
+
 .player-name {
   flex: 1;
   overflow: hidden;

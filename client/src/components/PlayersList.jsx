@@ -1,8 +1,8 @@
-export default function PlayersList({ players, myId, onViewProfile }) {
+export default function PlayersList({ players, spectators = [], myId, onViewProfile }) {
   const alive = players.filter((p) => p.alive);
   const dead = players.filter((p) => !p.alive);
 
-  const renderPlayer = (p, showRole = false) => (
+  const renderPerson = (p, showRole = false, isSpectator = false) => (
     <li key={p.id} className={p.id === myId ? 'me' : ''}>
       <button
         type="button"
@@ -13,8 +13,9 @@ export default function PlayersList({ players, myId, onViewProfile }) {
       >
         {p.name}
       </button>
+      {isSpectator && <span className="spectator-badge">👁</span>}
       {showRole && p.roleLabel && <span className="player-role">{p.roleLabel}</span>}
-      <span className="player-score">{p.score} pts</span>
+      {!isSpectator && <span className="player-score">{p.score} pts</span>}
       {!p.connected && <span className="offline">offline</span>}
       {p.hasVoted && <span className="voted">✓</span>}
     </li>
@@ -25,14 +26,23 @@ export default function PlayersList({ players, myId, onViewProfile }) {
       <h3>Игроки ({alive.length} живых)</h3>
 
       <ul className="players-alive">
-        {alive.map((p) => renderPlayer(p))}
+        {alive.map((p) => renderPerson(p))}
       </ul>
 
       {dead.length > 0 && (
         <>
           <h4>Выбыли</h4>
           <ul className="players-dead">
-            {dead.map((p) => renderPlayer(p, true))}
+            {dead.map((p) => renderPerson(p, true))}
+          </ul>
+        </>
+      )}
+
+      {spectators.length > 0 && (
+        <>
+          <h4>Наблюдатели ({spectators.length})</h4>
+          <ul className="players-spectators">
+            {spectators.map((p) => renderPerson(p, false, true))}
           </ul>
         </>
       )}

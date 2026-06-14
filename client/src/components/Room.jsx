@@ -69,7 +69,16 @@ export default function Room({ socket, state, user, onLeave }) {
         </button>
       </header>
 
-      {state.myRole && (
+      {state.isSpectator && (
+        <div className="spectator-banner">
+          👁 Вы наблюдаете.
+          {state.canJoinGame
+            ? ' Нажмите «Присоединиться к игре», чтобы участвовать.'
+            : ' Ваш чат видят только другие наблюдатели.'}
+        </div>
+      )}
+
+      {state.myRole && !state.isSpectator && (
         <div className="my-role-card">
           <strong>Ваша роль:</strong> {state.myRoleLabel}
           {state.isDon && ' (главный маф)'}
@@ -81,6 +90,7 @@ export default function Room({ socket, state, user, onLeave }) {
         <aside className="sidebar">
           <PlayersList
             players={state.players}
+            spectators={state.spectators || []}
             myId={state.myId}
             onViewProfile={setProfileUserId}
           />
@@ -108,8 +118,15 @@ export default function Room({ socket, state, user, onLeave }) {
             <>
               <div className="chat-header-bar">
                 <span className="chat-header-title">
-                  {state.chatMode === 'dead' ? '💀 Чат выбывших' : '💬 Чат'}
+                  {state.chatMode === 'spectator'
+                    ? '👁 Чат наблюдателей'
+                    : state.chatMode === 'dead'
+                      ? '💀 Чат выбывших'
+                      : '💬 Чат'}
                 </span>
+                {state.chatMode === 'spectator' && (
+                  <span className="chat-header-hint muted">Игроки вас не видят</span>
+                )}
                 {state.chatMode === 'dead' && (
                   <span className="chat-header-hint muted">Живые игроки вас не видят</span>
                 )}
@@ -124,17 +141,24 @@ export default function Room({ socket, state, user, onLeave }) {
                     ? (messageId) =>
                         emit('admin:deleteMessage', {
                           messageId,
-                          channel: state.chatMode === 'dead' ? 'dead' : 'public',
+                          channel:
+                            state.chatMode === 'spectator'
+                              ? 'spectator'
+                              : state.chatMode === 'dead'
+                                ? 'dead'
+                                : 'public',
                         })
                     : null
                 }
                 placeholder={
-                  state.chatMode === 'dead'
-                    ? 'Сообщение для выбывших...'
-                    : 'Сообщение...'
+                  state.chatMode === 'spectator'
+                    ? 'Сообщение для наблюдателей...'
+                    : state.chatMode === 'dead'
+                      ? 'Сообщение для выбывших...'
+                      : 'Сообщение...'
                 }
               />
-              <ActionPanel state={state} emit={emit} />
+              {!state.isSpectator && <ActionPanel state={state} emit={emit} />}
             </>
           ) : (
             <Chat
@@ -159,8 +183,18 @@ export default function Room({ socket, state, user, onLeave }) {
             Запустить игру
           </button>
         )}
-        {state.phase === 'registration' && (
-          <p className="muted">Регистрация... Дождитесь других игроков или таймера.</p>
+        {state.canJoinGame && (
+          <button className="btn btn-primary btn-lg" onClick={() => emit('room:joinGame')}>
+            Присоединиться к игре ({state.registeredCount}/{state.maxPlayers})
+          </button>
+        )}
+        {state.phase === 'registration' && state.isInGame && !state.isSpectator && (
+          <p className="muted">
+            Вы в игре ({state.registeredCount}/{state.maxPlayers}). Ожидайте других или таймера.
+          </p>
+        )}
+        {state.phase === 'registration' && state.isSpectator && !state.canJoinGame && (
+          <p className="muted">Регистрация идёт. Все места заняты — вы наблюдаете.</p>
         )}
         {state.phase === 'ended' && (
           <button className="btn btn-primary btn-lg" onClick={() => emit('room:newGame')}>

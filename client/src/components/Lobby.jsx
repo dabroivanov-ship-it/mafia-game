@@ -41,6 +41,7 @@ export default function Lobby({ rooms, user, onJoin }) {
               <span className="room-status">{PHASE_LABELS[room.phase] || room.phase}</span>
               <span className="room-count">
                 {room.playerCount} / {room.maxPlayers}
+                {room.spectatorCount > 0 && ` · 👁 ${room.spectatorCount}`}
               </span>
             </div>
             <button className="btn btn-primary" onClick={() => onJoin(room.id)}>

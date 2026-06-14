@@ -82,15 +82,17 @@ export function loadRoomChatHistory(roomId, limit = 300) {
   const chat = [];
   const mafiaChat = [];
   const deadChat = [];
+  const spectatorChat = [];
 
   for (const row of rows) {
     const msg = rowToMsg(row);
     if (row.channel === 'mafia') mafiaChat.push(msg);
     else if (row.channel === 'dead') deadChat.push(msg);
+    else if (row.channel === 'spectator') spectatorChat.push(msg);
     else chat.push(msg);
   }
 
-  return { chat, mafiaChat, deadChat };
+  return { chat, mafiaChat, deadChat, spectatorChat };
 }
 
 export function loadGameEvents(roomId, limit = 50) {
@@ -125,10 +127,11 @@ export function getRecentGameEvents(limit = 30) {
 
 export function hydrateRoomHistory(room) {
   if (room.historyLoaded) return;
-  const { chat, mafiaChat, deadChat } = loadRoomChatHistory(room.id);
+  const { chat, mafiaChat, deadChat, spectatorChat } = loadRoomChatHistory(room.id);
   room.chat = chat;
   room.mafiaChat = mafiaChat;
   room.deadChat = deadChat;
+  room.spectatorChat = spectatorChat;
   room.historyLoaded = true;
 }
 
