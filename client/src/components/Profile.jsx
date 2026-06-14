@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
-import { avatarUrl, updateProfile, uploadAvatar, fetchMyMessages } from '../api.js';
+import { avatarUrl, updateProfile, uploadAvatar, fetchChatFeed } from '../api.js';
 
 const MESSAGE_LIMITS = [15, 30, 50, 100];
 
-export default function Profile({ user, onUpdate, onBack }) {  const [form, setForm] = useState({
+export default function Profile({ user, onUpdate, onBack }) {
+  const [form, setForm] = useState({
     displayName: user.displayName || '',
     city: user.city || '',
     bio: user.bio || '',
@@ -14,18 +15,25 @@ export default function Profile({ user, onUpdate, onBack }) {  const [form, setF
   const [avatarLoading, setAvatarLoading] = useState(false);
   const [messageLimit, setMessageLimit] = useState(15);
   const [messages, setMessages] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [messagesLoading, setMessagesLoading] = useState(true);
   const fileRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
     setMessagesLoading(true);
-    fetchMyMessages(messageLimit)
-      .then(({ messages: list }) => {
-        if (!cancelled) setMessages(list || []);
+    fetchChatFeed(messageLimit)
+      .then(({ messages: list, totalCount: total }) => {
+        if (!cancelled) {
+          setMessages(list || []);
+          setTotalCount(total ?? 0);
+        }
       })
       .catch(() => {
-        if (!cancelled) setMessages([]);
+        if (!cancelled) {
+          setMessages([]);
+          setTotalCount(0);
+        }
       })
       .finally(() => {
         if (!cancelled) setMessagesLoading(false);
@@ -34,6 +42,7 @@ export default function Profile({ user, onUpdate, onBack }) {  const [form, setF
       cancelled = true;
     };
   }, [messageLimit]);
+
   const handleSave = async (e) => {
     e.preventDefault();
     setError('');
@@ -146,7 +155,13 @@ export default function Profile({ user, onUpdate, onBack }) {  const [form, setF
 
         <section className="profile-messages">
           <div className="profile-messages-header">
-            <h3>Мои сообщения в чате</h3>
+            <div>
+              <h3>Чат игры</h3>
+              <p className="muted small profile-messages-summary">
+                Всего сообщений: {totalCount}
+                {!messagesLoading && messages.length > 0 && ` · на странице: ${messages.length}`}
+              </p>
+            </div>
             <label className="profile-messages-limit">
               Показать
               <select
@@ -177,6 +192,7 @@ export default function Profile({ user, onUpdate, onBack }) {  const [form, setF
                       minute: '2-digit',
                     })}
                     {msg.roomId != null && ` · комн. ${msg.roomId}`}
+                    {msg.playerName && ` · ${msg.playerName}`}
                   </span>
                   <span className="profile-message-text">{msg.text}</span>
                 </li>

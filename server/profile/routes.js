@@ -10,7 +10,7 @@ import {
   deleteAvatarFile,
 } from '../auth/db.js';
 import { createAvatarUpload } from '../upload/avatar.js';
-import { getUserChatMessages } from '../history/store.js';
+import { getPublicChatFeed, getUserMessageCount } from '../history/store.js';
 
 const router = Router();
 const upload = createAvatarUpload((req) => req.userId);
@@ -40,20 +40,13 @@ router.post('/avatar', authMiddleware, (req, res) => {
   });
 });
 
-router.get('/messages', authMiddleware, (req, res) => {
+router.get('/chat-feed', authMiddleware, (req, res) => {
   const limit = Number(req.query.limit) || 15;
-  const messages = getUserChatMessages(req.userId, limit);
-  res.json({ messages, limit: Math.min(100, Math.max(5, limit)) });
-});
-
-router.get('/:userId/messages', authMiddleware, (req, res) => {
-  const targetId = Number(req.params.userId);
-  const target = findUserPublic(targetId);
-  if (!target) return res.status(404).json({ error: 'Пользователь не найден' });
-
-  const limit = Number(req.query.limit) || 15;
-  const messages = getUserChatMessages(targetId, limit);
-  res.json({ messages, limit: Math.min(100, Math.max(5, limit)) });
+  const feed = getPublicChatFeed(limit);
+  res.json({
+    ...feed,
+    shownCount: feed.messages.length,
+  });
 });
 
 router.get('/:userId', authMiddleware, (req, res) => {
@@ -72,7 +65,7 @@ router.get('/:userId', authMiddleware, (req, res) => {
   }
 
   res.json({
-    user,
+    user: { ...user, messageCount: getUserMessageCount(targetId) },
     isSelf,
     canAdmin: viewerIsAdmin && !target.isAdmin && !isSelf,
   });

@@ -1101,6 +1101,10 @@ body {
   font-size: 1rem;
 }
 
+.profile-messages-summary {
+  margin: 4px 0 0;
+}
+
 .profile-messages-limit {
   display: flex;
   align-items: center;

@@ -2,16 +2,14 @@ import { useEffect, useState } from 'react';
 import {
   avatarUrl,
   fetchUserProfile,
-  fetchUserMessages,
   adminBan,
   adminUnban,
   adminDeleteUser,
   adminUpdateUser,
 } from '../api.js';
 
-const MESSAGE_LIMITS = [15, 30, 50, 100];
-
-export default function UserProfileModal({ userId, viewerIsAdmin, onClose, onAdminAction }) {  const [data, setData] = useState(null);
+export default function UserProfileModal({ userId, viewerIsAdmin, onClose, onAdminAction }) {
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [editMode, setEditMode] = useState(false);
@@ -19,9 +17,7 @@ export default function UserProfileModal({ userId, viewerIsAdmin, onClose, onAdm
   const [banReason, setBanReason] = useState('Нарушение правил');
   const [banHours, setBanHours] = useState('');
   const [showBanForm, setShowBanForm] = useState(false);
-  const [messageLimit, setMessageLimit] = useState(15);
-  const [messages, setMessages] = useState([]);
-  const [messagesLoading, setMessagesLoading] = useState(false);
+
   const load = async () => {
     setLoading(true);
     setError('');
@@ -44,24 +40,6 @@ export default function UserProfileModal({ userId, viewerIsAdmin, onClose, onAdm
     if (userId) load();
   }, [userId]);
 
-  useEffect(() => {
-    if (!userId) return;
-    let cancelled = false;
-    setMessagesLoading(true);
-    fetchUserMessages(userId, messageLimit)
-      .then(({ messages: list }) => {
-        if (!cancelled) setMessages(list || []);
-      })
-      .catch(() => {
-        if (!cancelled) setMessages([]);
-      })
-      .finally(() => {
-        if (!cancelled) setMessagesLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [userId, messageLimit]);
   const handleSave = async () => {
     try {
       await adminUpdateUser(userId, editForm);
@@ -140,6 +118,7 @@ export default function UserProfileModal({ userId, viewerIsAdmin, onClose, onAdm
                   <span>🏆 {user.totalScore} очков</span>
                   {user.city && <span>📍 {user.city}</span>}
                   <span>📅 с {new Date(user.createdAt).toLocaleDateString('ru-RU')}</span>
+                  <span>💬 {user.messageCount ?? 0} сообщ.</span>
                 </div>
                 {user.bio && <p className="profile-bio">{user.bio}</p>}
                 {user.isBanned && (
@@ -147,47 +126,8 @@ export default function UserProfileModal({ userId, viewerIsAdmin, onClose, onAdm
                     Заблокирован{user.banReason ? `: ${user.banReason}` : ''}
                   </div>
                 )}
-
-                <section className="profile-messages profile-messages-compact">
-                  <div className="profile-messages-header">
-                    <h4>Сообщения в чате</h4>
-                    <label className="profile-messages-limit">
-                      Показать
-                      <select
-                        value={messageLimit}
-                        onChange={(e) => setMessageLimit(Number(e.target.value))}
-                      >
-                        {MESSAGE_LIMITS.map((n) => (
-                          <option key={n} value={n}>
-                            {n}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
-                  {messagesLoading && <p className="muted small">Загрузка...</p>}
-                  {!messagesLoading && messages.length === 0 && (
-                    <p className="muted small">Сообщений нет.</p>
-                  )}
-                  {!messagesLoading && messages.length > 0 && (
-                    <ul className="profile-messages-list">
-                      {messages.map((msg) => (
-                        <li key={msg.id} className="profile-message-item">
-                          <span className="profile-message-meta">
-                            {new Date(msg.time).toLocaleString('ru-RU', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </span>
-                          <span className="profile-message-text">{msg.text}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </section>
-              </>            ) : (
+              </>
+            ) : (
               <div className="auth-form">
                 <label>
                   Имя
