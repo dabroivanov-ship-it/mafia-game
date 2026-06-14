@@ -22,23 +22,24 @@ if [[ ! -f dist/server.js ]]; then
   exit 1
 fi
 
-echo "==> smoke test (5s)"
-timeout 5 node dist/server.js &
-PID=$!
-sleep 2
-if ! curl -sf http://127.0.0.1:3001/api/health >/dev/null; then
-  kill "$PID" 2>/dev/null || true
-  echo "ERROR: server did not respond on /api/health"
-  exit 1
-fi
-kill "$PID" 2>/dev/null || true
-wait "$PID" 2>/dev/null || true
-
 echo "==> pm2 restart"
 cd "$ROOT"
-pm2 start ecosystem.config.cjs --update-env
+if pm2 describe mafia-server >/dev/null 2>&1; then
+  pm2 restart ecosystem.config.cjs --update-env
+else
+  pm2 start ecosystem.config.cjs --update-env
+fi
 pm2 save
 
+sleep 1
+echo "==> health check"
+HEALTH="$(curl -sf http://127.0.0.1:3001/api/health || true)"
+if [[ -z "$HEALTH" ]]; then
+  echo "ERROR: /api/health did not respond"
+  pm2 logs mafia-server --lines 30 --nostream
+  exit 1
+fi
+
 echo "==> done"
-curl -s http://127.0.0.1:3001/api/health | head -c 200
+echo "$HEALTH" | head -c 300
 echo
