@@ -511,6 +511,25 @@ body {
   opacity: 0.6;
 }
 
+.chat-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.chat-header-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.chat-header-hint {
+  font-size: 0.8rem;
+}
+
 /* Chat */
 .chat {
   flex: 1;

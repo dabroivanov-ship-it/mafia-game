@@ -20,6 +20,7 @@ function createRoom(id) {
     players: [],
     chat: [],
     mafiaChat: [],
+    deadChat: [],
     nightNumber: 0,
     timerEnd: null,
     timerReason: null,
@@ -140,6 +141,7 @@ export function startRegistration(room) {
   room.phase = PHASE.REGISTRATION;
   room.chat = [];
   room.mafiaChat = [];
+  room.deadChat = [];
   room.systemMessages = [];
   addSystemMessage(room, 'Регистрация открыта! Ожидайте других игроков.');
   setTimer(room, CONFIG.REGISTRATION_SEC * 1000, 'registration');
@@ -587,12 +589,14 @@ export function addChatMessage(room, playerId, text, channel = 'public') {
   };
 
   if (channel === 'mafia') room.mafiaChat.push(msg);
+  else if (channel === 'dead') room.deadChat.push(msg);
   else room.chat.push(msg);
   return msg;
 }
 
 export function deleteChatMessage(room, messageId, channel = 'public') {
-  const list = channel === 'mafia' ? room.mafiaChat : room.chat;
+  const list =
+    channel === 'mafia' ? room.mafiaChat : channel === 'dead' ? room.deadChat : room.chat;
   const msg = list.find((m) => m.id === messageId);
   if (!msg || msg.system) return false;
   msg.deleted = true;
@@ -621,6 +625,14 @@ export function getModerationSnapshot(rooms) {
         channel: 'mafia',
       });
     }
+    for (const msg of room.deadChat) {
+      messages.push({
+        ...msg,
+        roomId: room.id,
+        roomName: room.name,
+        channel: 'dead',
+      });
+    }
   }
   messages.sort((a, b) => new Date(b.time) - new Date(a.time));
 
@@ -642,9 +654,31 @@ function addSystemMessage(room, text) {
   });
 }
 
+/** Чат для конкретного игрока: живые не видят сообщения выбывших */
+function buildChatView(room, me) {
+  const systemMsgs = room.chat.filter((m) => m.system);
+
+  if (!me || me.alive) {
+    return {
+      messages: room.chat.slice(-100),
+      mode: 'alive',
+    };
+  }
+
+  const combined = [...systemMsgs, ...room.deadChat]
+    .sort((a, b) => new Date(a.time) - new Date(b.time))
+    .slice(-100);
+
+  return {
+    messages: combined,
+    mode: 'dead',
+  };
+}
+
 export function serializeRoomForPlayer(room, playerId, options = {}) {
   const me = room.players.find((p) => p.id === playerId);
   const { isAdmin = false } = options;
+  const chatView = buildChatView(room, me);
 
   return {
     id: room.id,
@@ -672,10 +706,11 @@ export function serializeRoomForPlayer(room, playerId, options = {}) {
         roleLabel: !p.alive || p.id === playerId ? getRoleLabel(p.role) : null,
         isDon: p.isDon && p.id === playerId,
       })),
-    chat: room.chat.slice(-100),
+    chat: chatView.messages,
+    chatMode: chatView.mode,
     mafiaChat: me?.role === 'mafia' && me.alive ? room.mafiaChat.slice(-50) : [],
     canStartGame: room.phase === PHASE.WAITING || room.phase === PHASE.REGISTRATION || room.phase === PHASE.ENDED,
-    canChat: room.phase === PHASE.DAY,
+    canChat: !!me,
     wifeRevengeAvailable: me?.role === 'commissar_wife' && room.wifeRevengeAvailable && !room.wifeRevengeUsed,
     clownAvailable: me?.role === 'clown' && !room.clownUsed,
     votingStarted: room.votingStarted,

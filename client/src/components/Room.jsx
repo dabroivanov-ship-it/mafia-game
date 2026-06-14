@@ -100,15 +100,32 @@ export default function Room({ socket, state, user, onLeave }) {
 
           {!mafiaTab ? (
             <>
+              <div className="chat-header-bar">
+                <span className="chat-header-title">
+                  {state.chatMode === 'dead' ? '💀 Чат выбывших' : '💬 Чат'}
+                </span>
+                {state.chatMode === 'dead' && (
+                  <span className="chat-header-hint muted">Живые игроки вас не видят</span>
+                )}
+              </div>
               <Chat
                 messages={state.chat}
-                canSend={state.canChat && me?.alive}
+                canSend={state.canChat}
                 onSend={(text) => emit('chat:send', { text })}
                 isAdmin={state.isAdmin}
                 onDeleteMessage={
                   state.isAdmin
-                    ? (messageId) => emit('admin:deleteMessage', { messageId, channel: 'public' })
+                    ? (messageId) =>
+                        emit('admin:deleteMessage', {
+                          messageId,
+                          channel: state.chatMode === 'dead' ? 'dead' : 'public',
+                        })
                     : null
+                }
+                placeholder={
+                  state.chatMode === 'dead'
+                    ? 'Сообщение для выбывших...'
+                    : 'Сообщение...'
                 }
               />
               <ActionPanel state={state} emit={emit} />

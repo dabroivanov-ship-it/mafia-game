@@ -213,7 +213,11 @@ io.on('connection', (socket) => {
     if (!session) return cb?.({ error: 'Вы не в комнате' });
 
     const room = rooms.get(session.roomId);
-    const msg = addChatMessage(room, session.playerId, text, 'public');
+    const me = room.players.find((p) => p.id === session.playerId);
+    if (!me) return cb?.({ error: 'Игрок не найден' });
+
+    const channel = me.alive ? 'public' : 'dead';
+    const msg = addChatMessage(room, session.playerId, text, channel);
     if (!msg) return cb?.({ error: 'Не удалось отправить' });
 
     broadcastRoom(room.id);

@@ -176,7 +176,7 @@ export default function AdminPanel({ onBack }) {
             <div key={`${msg.roomId}-${msg.id}`} className={`admin-msg ${msg.deleted ? 'deleted' : ''}`}>
               <div className="admin-msg-meta">
                 <span>{msg.roomName}</span>
-                <span>{msg.channel === 'mafia' ? '🔫 мафия' : '💬 общий'}</span>
+                <span>{msg.channel === 'mafia' ? '🔫 мафия' : msg.channel === 'dead' ? '💀 выбывшие' : '💬 общий'}</span>
                 <span>{new Date(msg.time).toLocaleString('ru-RU')}</span>
               </div>
               <div className="admin-msg-body">
