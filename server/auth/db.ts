@@ -14,7 +14,7 @@ export const uploadsDir = process.env.UPLOADS_DIR || path.join(__dirname, '..', 
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
 const dbPath = process.env.DB_PATH || path.join(dataDir, 'mafia.db');
-const db = new Database(dbPath);
+const db: Database.Database = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 
 db.exec(`
@@ -201,13 +201,13 @@ export function updateUserScore(userId: number, delta: number): void {
 }
 
 export function listAllUsers(): PublicUser[] {
-  return db
+  const rows = db
     .prepare(
       `SELECT id, username, email, display_name, city, bio, avatar, role, is_banned, ban_reason, banned_until, total_score, created_at
        FROM users ORDER BY created_at DESC`
     )
-    .all() as User[]
-    .map((row) => publicUser(row)!);
+    .all() as User[];
+  return rows.map((row) => publicUser(row)!);
 }
 
 export function banUser(userId: number, reason: string | undefined, until: string | null = null): PublicUser | null {
