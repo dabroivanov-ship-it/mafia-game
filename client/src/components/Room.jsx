@@ -32,6 +32,22 @@ function useTimer(timerEnd) {
   return left;
 }
 
+function useCountdown(seconds) {
+  const [left, setLeft] = useState(seconds);
+
+  useEffect(() => {
+    setLeft(seconds);
+  }, [seconds]);
+
+  useEffect(() => {
+    if (seconds <= 0) return;
+    const id = setInterval(() => setLeft((v) => Math.max(0, v - 1)), 1000);
+    return () => clearInterval(id);
+  }, [seconds]);
+
+  return left;
+}
+
 export default function Room({ socket, state, onLeave }) {
   const [mafiaTab, setMafiaTab] = useState(false);
   const [profileUserId, setProfileUserId] = useState(null);
@@ -46,6 +62,7 @@ export default function Room({ socket, state, onLeave }) {
   }
 
   const timerLeft = useTimer(state.timerEnd);
+  const joinCooldown = useCountdown(state.joinGameCooldownSec || 0);
   const me = state.myPlayer;
   const isMafia = state.myRole === 'mafia' && me?.alive;
   const showJoin =
@@ -92,8 +109,18 @@ export default function Room({ socket, state, onLeave }) {
       {showJoin && (
         <div className="join-game-banner">
           <p>Идёт регистрация — нажмите, чтобы участвовать в партии.</p>
-          <button type="button" className="btn btn-primary btn-lg btn-block" onClick={() => emit('room:joinGame')}>
-            Присоединиться ({state.registeredCount}/{state.maxPlayers})
+          <button
+            type="button"
+            className="btn btn-primary btn-lg btn-block"
+            disabled={joinCooldown > 0}
+            onClick={async () => {
+              const res = await emit('room:joinGame');
+              if (res?.error) alert(res.error);
+            }}
+          >
+            {joinCooldown > 0
+              ? `Подождите ${joinCooldown} сек.`
+              : `Присоединиться (${state.registeredCount}/${state.maxPlayers})`}
           </button>
         </div>
       )}

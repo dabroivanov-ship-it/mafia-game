@@ -207,6 +207,7 @@ export function startRegistration(room, starterPlayerId = null) {
   for (const p of room.players) {
     p.inGame = false;
     p.role = null;
+    p.joinGameAvailableAt = 0;
   }
   if (starterPlayerId) {
     const starter = room.players.find((p) => p.id === starterPlayerId);
@@ -238,6 +239,12 @@ export function joinGame(room, playerId) {
     throw new Error('Все места в игре заняты');
   }
 
+  const now = Date.now();
+  if (player.joinGameAvailableAt && now < player.joinGameAvailableAt) {
+    const sec = Math.ceil((player.joinGameAvailableAt - now) / 1000);
+    throw new Error(`Подождите ${sec} сек. перед повторным присоединением`);
+  }
+
   player.inGame = true;
   addSystemMessage(room, `${player.username || player.name} присоединился к игре.`);
   tryStartGameAfterRegistration(room);
@@ -253,6 +260,7 @@ export function leaveGame(room, playerId) {
   if (!player.inGame) throw new Error('Вы не в игре');
 
   player.inGame = false;
+  player.joinGameAvailableAt = Date.now() + CONFIG.JOIN_GAME_COOLDOWN_SEC * 1000;
   addSystemMessage(room, `${player.username || player.name} вышел из регистрации.`);
   return player;
 }
@@ -902,6 +910,11 @@ function mapPlayerPublic(p, room, playerId) {
   };
 }
 
+function getJoinCooldownSec(player) {
+  if (!player?.joinGameAvailableAt) return 0;
+  return Math.max(0, Math.ceil((player.joinGameAvailableAt - Date.now()) / 1000));
+}
+
 export function serializeRoomForPlayer(room, playerId, options = {}) {
   const me = room.players.find((p) => p.id === playerId);
   const { isAdmin = false, chatLimit = DEFAULT_CHAT_LIMIT } = options;
@@ -910,6 +923,7 @@ export function serializeRoomForPlayer(room, playerId, options = {}) {
   const isSpectator = !!(me && !me.inGame && gameRunning);
   const registeredCount = room.players.filter((p) => p.connected && p.inGame).length;
   const slotsAvailable = registeredCount < room.maxPlayers;
+  const joinGameCooldownSec = getJoinCooldownSec(me);
 
   const visiblePlayers = room.players.filter(
     (p) => p.inGame && (p.connected || room.phase !== PHASE.WAITING)
@@ -932,7 +946,12 @@ export function serializeRoomForPlayer(room, playerId, options = {}) {
     isSpectator,
     isInGame: !!me?.inGame,
     canJoinGame:
-      room.phase === PHASE.REGISTRATION && !!me?.connected && !me.inGame && slotsAvailable,
+      room.phase === PHASE.REGISTRATION &&
+      !!me?.connected &&
+      !me.inGame &&
+      slotsAvailable &&
+      joinGameCooldownSec === 0,
+    joinGameCooldownSec,
     canLeaveGame:
       room.phase === PHASE.REGISTRATION && !!me?.connected && !!me.inGame,
     myPlayer: me
