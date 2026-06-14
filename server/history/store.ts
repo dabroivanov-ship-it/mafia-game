@@ -106,6 +106,14 @@ export function markChatDeleted(msgKey: string): void {
   ).run('[сообщение удалено модератором]', String(msgKey));
 }
 
+export function markRoomChatDeleted(roomId: number): number {
+  const result = db.prepare(
+    `UPDATE room_chat_log SET deleted = 1, text = ?
+     WHERE room_id = ? AND is_system = 0 AND deleted = 0`
+  ).run('[сообщение удалено модератором]', roomId);
+  return Number(result.changes || 0);
+}
+
 export function loadRoomChatHistory(
   roomId: number,
   limit = 300

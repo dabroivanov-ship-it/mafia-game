@@ -3,6 +3,8 @@ declare module 'socket.io' {
     userId?: number;
     userRole?: string;
     isAdmin?: boolean;
+    isModerator?: boolean;
+    isStaff?: boolean;
     displayName?: string;
     username?: string;
   }

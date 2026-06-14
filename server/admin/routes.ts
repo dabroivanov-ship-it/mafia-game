@@ -6,10 +6,14 @@ import {
   clearBan,
   deleteUser,
   findUserPublic,
+  findUserById,
   updateUserProfile,
   updateUserAvatar,
   removeUserAvatar,
   deleteAvatarFile,
+  updateUserRole,
+  canBanTarget,
+  type AssignableRole,
 } from '../auth/db.js';
 import { createAvatarUpload } from '../upload/avatar.js';
 import type { GameEvent } from '../history/store.js';
@@ -21,6 +25,7 @@ export interface AdminRouterHandlers {
     messages: (ChatMessage & { roomId: number; roomName?: string; channel?: string })[];
   };
   deleteMessage: (roomId: number, messageId: string, channel: string) => boolean;
+  clearRoomMessages: (roomId: number) => number;
   renameRoom: (id: number, name: string) => GameRoom;
   addRoom: (name: string) => GameRoom;
   deleteRoom: (id: number) => void;
@@ -136,15 +141,18 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
 
   router.post('/ban', (req, res) => {
     const { userId, reason, hours } = req.body;
-    const target = findUserPublic(Number(userId));
+    const targetId = Number(userId);
+    const target = findUserById(targetId);
     if (!target) return res.status(404).json({ error: 'Пользователь не найден' });
-    if (target.isAdmin) return res.status(403).json({ error: 'Нельзя забанить администратора' });
+    if (!canBanTarget(req.user, target)) {
+      return res.status(403).json({ error: 'Нельзя забанить этого пользователя' });
+    }
 
     let until: string | null = null;
     if (hours && Number(hours) > 0) {
       until = new Date(Date.now() + Number(hours) * 3600000).toISOString();
     }
-    const user = banUser(Number(userId), reason, until);
+    const user = banUser(targetId, reason, until);
     res.json({ user });
   });
 
@@ -152,6 +160,17 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     const { userId } = req.body;
     const user = clearBan(Number(userId));
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
+    res.json({ user });
+  });
+
+  router.post('/users/:userId/role', (req, res) => {
+    const id = Number(req.params.userId);
+    const role = req.body.role as AssignableRole;
+    if (role !== 'user' && role !== 'moderator') {
+      return res.status(400).json({ error: 'Недопустимая роль' });
+    }
+    const user = updateUserRole(id, role);
+    if (!user) return res.status(404).json({ error: 'Пользователь не найден или это администратор' });
     res.json({ user });
   });
 
@@ -169,6 +188,11 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     const ok = handlers.deleteMessage(Number(roomId), messageId, channel || 'public');
     if (!ok) return res.status(404).json({ error: 'Сообщение не найдено' });
     res.json({ ok: true });
+  });
+
+  router.delete('/rooms/:roomId/messages', (req, res) => {
+    const cleared = handlers.clearRoomMessages(Number(req.params.roomId));
+    res.json({ ok: true, cleared });
   });
 
   return router;

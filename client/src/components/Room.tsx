@@ -192,12 +192,12 @@ export default function Room({ socket, state, onLeave }: RoomProps) {
                   void emit('chat:send', { text });
                 }}
                 onViewProfile={setProfileUserId}
-                isAdmin={state.isAdmin}
+                canModerate={state.canModerate}
                 hasMoreChat={state.hasMoreChat}
                 onLoadMore={loadMoreChat}
                 loadingMore={loadingMoreChat}
                 onDeleteMessage={
-                  state.isAdmin
+                  state.canModerate
                     ? (messageId, sourceChannel) =>
                         emit('admin:deleteMessage', {
                           messageId,
@@ -228,10 +228,10 @@ export default function Room({ socket, state, onLeave }: RoomProps) {
                 void emit('chat:mafia', { text });
               }}
               onViewProfile={setProfileUserId}
-              isAdmin={state.isAdmin}
+              canModerate={state.canModerate}
               hasMoreChat={false}
               onDeleteMessage={
-                state.isAdmin
+                state.canModerate
                   ? (messageId) => emit('admin:deleteMessage', { messageId, channel: 'mafia' })
                   : null
               }
@@ -268,6 +268,7 @@ export default function Room({ socket, state, onLeave }: RoomProps) {
         <UserProfileModal
           userId={profileUserId}
           viewerIsAdmin={state.isAdmin}
+          viewerCanModerate={state.canModerate}
           onClose={() => setProfileUserId(null)}
         />
       )}

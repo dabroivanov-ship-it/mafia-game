@@ -8,8 +8,9 @@ import { CONFIG, isActiveGamePhase } from './game/config.js';
 import authRoutes from './auth/routes.js';
 import { createProfileRouter } from './profile/routes.js';
 import { createAdminRouter } from './admin/routes.js';
+import { createModerationRouter } from './moderation/routes.js';
 import { socketAuthMiddleware } from './auth/jwt.js';
-import { findUserById, updateUserScore, isAdmin, uploadsDir, normalizeChatLimit } from './auth/db.js';
+import { findUserById, updateUserScore, isAdmin, isStaff, uploadsDir, normalizeChatLimit } from './auth/db.js';
 import { hydrateRoomHistory, loadGameEvents, getRecentGameEvents, getAdminChatHistory, getRecentChatForAdmin } from './history/store.js';
 import {
   createInitialRooms,
@@ -29,6 +30,7 @@ import {
   submitNightAction,
   addChatMessage,
   deleteChatMessage,
+  clearRoomChat,
   getModerationSnapshot,
   resetRoom,
   serializeRoomForPlayer,
@@ -103,6 +105,14 @@ function adminDeleteMessage(roomId: number, messageId: string, channel: string):
   return ok;
 }
 
+function adminClearRoomMessages(roomId: number): number {
+  const room = rooms.get(roomId);
+  if (!room) return 0;
+  const cleared = clearRoomChat(room);
+  broadcastRoom(roomId);
+  return cleared;
+}
+
 function kickPlayersFromRoom(room: GameRoom): void {
   for (const player of room.players) {
     if (player.socketId) {
@@ -161,6 +171,7 @@ app.use(
       return { rooms: snap.rooms, messages };
     },
     deleteMessage: adminDeleteMessage,
+    clearRoomMessages: adminClearRoomMessages,
     renameRoom: (id, name) => renameRoom(rooms, id, name),
     addRoom: (name) => addRoom(rooms, name),
     deleteRoom: (id) => adminDeleteRoom(id),
@@ -171,6 +182,7 @@ app.use(
     getRoomGameEvents: (roomId) => loadGameEvents(roomId, 50),
   })
 );
+app.use('/api/moderation', createModerationRouter());
 
 function serializeForSocketUser(
   room: GameRoom,
@@ -181,7 +193,11 @@ function serializeForSocketUser(
   const session = socketId ? sessions.get(socketId) : undefined;
   const chatLimit = resolveSessionChatLimit(session, userId);
   const acc = userId ? findUserById(userId) : undefined;
-  return serializeRoomForPlayer(room, gamePlayerId, { isAdmin: isAdmin(acc), chatLimit });
+  return serializeRoomForPlayer(room, gamePlayerId, {
+    isAdmin: isAdmin(acc),
+    canModerate: isStaff(acc),
+    chatLimit,
+  });
 }
 
 function syncRoomScores(room: GameRoom): void {
@@ -276,6 +292,8 @@ io.on('connection', (socket) => {
   socket.displayName = user.display_name;
   socket.username = user.username;
   socket.isAdmin = isAdmin(user);
+  socket.isModerator = user.role === 'moderator';
+  socket.isStaff = isStaff(user);
 
   socket.emit('lobby:update', getLobbySnapshot(rooms));
 
@@ -479,7 +497,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('admin:deleteMessage', ({ messageId, channel }, cb) => {
-    if (!socket.isAdmin) return cb?.({ error: 'Нет доступа' });
+    if (!socket.isStaff) return cb?.({ error: 'Нет доступа' });
     const session = sessions.get(socket.id);
     if (!session) return cb?.({ error: 'Вы не в комнате' });
     const room = rooms.get(session.roomId);

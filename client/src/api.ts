@@ -98,6 +98,7 @@ export async function uploadAvatar(file: File): Promise<{ user: User }> {
 export async function fetchUserProfile(userId: number): Promise<{
   user: User & { messageCount?: number };
   canAdmin: boolean;
+  canModerate: boolean;
 }> {
   return apiRequest(`/api/profile/${userId}`);
 }
@@ -145,6 +146,34 @@ export async function fetchAdminUsers(): Promise<{ users: User[] }> {
   return apiRequest('/api/admin/users');
 }
 
+export async function modBan(
+  userId: number,
+  reason: string,
+  hours: number | null
+): Promise<void> {
+  return apiRequest('/api/moderation/ban', {
+    method: 'POST',
+    body: JSON.stringify({ userId, reason, hours }),
+  });
+}
+
+export async function modUnban(userId: number): Promise<void> {
+  return apiRequest('/api/moderation/unban', {
+    method: 'POST',
+    body: JSON.stringify({ userId }),
+  });
+}
+
+export async function adminSetUserRole(
+  userId: number,
+  role: 'user' | 'moderator'
+): Promise<{ user: User }> {
+  return apiRequest(`/api/admin/users/${userId}/role`, {
+    method: 'POST',
+    body: JSON.stringify({ role }),
+  });
+}
+
 export async function adminBan(
   userId: number,
   reason: string,
@@ -176,6 +205,10 @@ export async function adminDeleteMessage(
     method: 'DELETE',
     body: JSON.stringify({ roomId, messageId, channel }),
   });
+}
+
+export async function adminClearRoomMessages(roomId: number): Promise<{ cleared: number }> {
+  return apiRequest(`/api/admin/rooms/${roomId}/messages`, { method: 'DELETE' });
 }
 
 export async function adminRenameRoom(

@@ -26,6 +26,10 @@ interface MenuProps {
 export default function Menu({ user, view, onNavigate, onLogout }: MenuProps) {
   return (
     <nav className="main-menu" aria-label="Главное меню">
+      <div className="menu-logo" aria-hidden="true">
+        <span className="menu-logo-mark">♠</span>
+        <span className="menu-logo-text">Mafia</span>
+      </div>
       <div className="menu-items">
         {ITEMS.map((item) => (
           <button

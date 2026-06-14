@@ -4,6 +4,8 @@ import {
   fetchUserProfile,
   adminBan,
   adminUnban,
+  modBan,
+  modUnban,
   adminDeleteUser,
   adminUpdateUser,
 } from '../api';
@@ -12,6 +14,7 @@ import type { User } from '../types';
 interface UserProfileModalProps {
   userId: number;
   viewerIsAdmin: boolean;
+  viewerCanModerate?: boolean;
   onClose: () => void;
   onAdminAction?: () => void;
 }
@@ -19,11 +22,13 @@ interface UserProfileModalProps {
 interface ProfileData {
   user: User & { messageCount?: number };
   canAdmin: boolean;
+  canModerate: boolean;
 }
 
 export default function UserProfileModal({
   userId,
   viewerIsAdmin,
+  viewerCanModerate = false,
   onClose,
   onAdminAction,
 }: UserProfileModalProps) {
@@ -71,7 +76,8 @@ export default function UserProfileModal({
 
   const handleBan = async () => {
     try {
-      await adminBan(userId, banReason, banHours ? Number(banHours) : null);
+      const ban = viewerIsAdmin ? adminBan : modBan;
+      await ban(userId, banReason, banHours ? Number(banHours) : null);
       setShowBanForm(false);
       await load();
       onAdminAction?.();
@@ -82,7 +88,8 @@ export default function UserProfileModal({
 
   const handleUnban = async () => {
     try {
-      await adminUnban(userId);
+      const unban = viewerIsAdmin ? adminUnban : modUnban;
+      await unban(userId);
       await load();
       onAdminAction?.();
     } catch (err) {
@@ -103,6 +110,7 @@ export default function UserProfileModal({
 
   const user = data?.user;
   const canAdmin = data?.canAdmin && viewerIsAdmin;
+  const canModerate = (data?.canModerate && viewerCanModerate) || canAdmin;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -127,6 +135,7 @@ export default function UserProfileModal({
                 <strong>{user.displayName}</strong>
                 <p className="muted">@{user.username}</p>
                 {user.isAdmin && <span className="admin-badge">admin</span>}
+                {user.isModerator && <span className="mod-badge">mod</span>}
               </div>
             </div>
 
@@ -180,6 +189,50 @@ export default function UserProfileModal({
                     Сохранить
                   </button>
                 </div>
+              </div>
+            )}
+
+            {canModerate && !editMode && !canAdmin && (
+              <div className="admin-profile-actions">
+                <h4>Модерация</h4>
+                <div className="admin-profile-buttons">
+                  {!user.isBanned ? (
+                    <button type="button" className="btn btn-sm danger" onClick={() => setShowBanForm(true)}>
+                      Забанить
+                    </button>
+                  ) : (
+                    <button type="button" className="btn btn-sm" onClick={handleUnban}>
+                      Разбанить
+                    </button>
+                  )}
+                </div>
+
+                {showBanForm && (
+                  <div className="ban-form">
+                    <label>
+                      Причина
+                      <input value={banReason} onChange={(e) => setBanReason(e.target.value)} />
+                    </label>
+                    <label>
+                      Часов (пусто = навсегда)
+                      <input
+                        type="number"
+                        min="1"
+                        value={banHours}
+                        onChange={(e) => setBanHours(e.target.value)}
+                        placeholder="24"
+                      />
+                    </label>
+                    <div className="profile-actions">
+                      <button type="button" className="btn btn-ghost" onClick={() => setShowBanForm(false)}>
+                        Отмена
+                      </button>
+                      <button type="button" className="btn btn-primary danger" onClick={handleBan}>
+                        Забанить
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

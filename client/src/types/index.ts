@@ -6,7 +6,7 @@ export type GamePhase =
   | 'night'
   | 'ended';
 
-export type UserRole = 'user' | 'admin';
+export type UserRole = 'user' | 'moderator' | 'admin';
 
 export interface User {
   id: number;
@@ -18,6 +18,8 @@ export interface User {
   avatar: string | null;
   role: UserRole;
   isAdmin: boolean;
+  isModerator: boolean;
+  isStaff: boolean;
   totalScore: number;
   createdAt: string;
   isBanned: boolean;
@@ -131,6 +133,7 @@ export interface RoomState {
   myVote: number | null;
   nightActionDone: boolean;
   isAdmin: boolean;
+  canModerate: boolean;
 }
 
 export interface ApiError {

@@ -52,6 +52,8 @@ export interface PublicUser {
   avatar: string | null;
   role: string;
   isAdmin: boolean;
+  isModerator: boolean;
+  isStaff: boolean;
   totalScore: number;
   createdAt: string;
   isBanned: boolean;
@@ -176,6 +178,7 @@ export interface RoomState {
   myVote: number | null;
   nightActionDone: boolean;
   isAdmin: boolean;
+  canModerate: boolean;
 }
 
 export interface Session {

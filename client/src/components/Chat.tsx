@@ -7,7 +7,7 @@ interface ChatProps {
   onSend: (text: string) => void;
   onDeleteMessage?: ((messageId: string | number, sourceChannel?: ChatChannel) => void) | null;
   onViewProfile?: (userId: number) => void;
-  isAdmin?: boolean;
+  canModerate?: boolean;
   placeholder?: string;
   hasMoreChat?: boolean;
   onLoadMore?: () => void;
@@ -20,7 +20,7 @@ export default function Chat({
   onSend,
   onDeleteMessage,
   onViewProfile,
-  isAdmin,
+  canModerate,
   placeholder = 'Сообщение...',
   hasMoreChat = false,
   onLoadMore,
@@ -124,7 +124,7 @@ export default function Chat({
               </button>
             )}
             <span className="chat-text">{msg.text}</span>
-            {isAdmin && !msg.system && !msg.deleted && onDeleteMessage && (
+            {canModerate && !msg.system && !msg.deleted && onDeleteMessage && (
               <button
                 type="button"
                 className="chat-delete-btn"

@@ -63,8 +63,28 @@ function syncAdminRoles(): void {
 }
 syncAdminRoles();
 
+export type AssignableRole = 'user' | 'moderator';
+
 export function isAdmin(user: User | null | undefined): boolean {
   return user?.role === 'admin';
+}
+
+export function isModerator(user: User | null | undefined): boolean {
+  return user?.role === 'moderator';
+}
+
+export function isStaff(user: User | null | undefined): boolean {
+  return isAdmin(user) || isModerator(user);
+}
+
+export function canBanTarget(
+  actor: User | null | undefined,
+  target: User | null | undefined
+): boolean {
+  if (!isStaff(actor) || !target) return false;
+  if (isAdmin(target)) return false;
+  if (isModerator(target)) return isAdmin(actor);
+  return true;
 }
 
 export function isUserBanned(user: User | null | undefined): boolean {
@@ -99,6 +119,8 @@ export function publicUser(user: User | null | undefined): PublicUser | null {
     avatar: user.avatar || null,
     role: user.role || 'user',
     isAdmin: user.role === 'admin',
+    isModerator: user.role === 'moderator',
+    isStaff: isStaff(user),
     totalScore: user.total_score,
     createdAt: user.created_at,
     isBanned: isUserBanned(user),
@@ -219,6 +241,13 @@ export function clearBan(userId: number): PublicUser | null {
   db.prepare(
     'UPDATE users SET is_banned = 0, ban_reason = NULL, banned_until = NULL WHERE id = ?'
   ).run(userId);
+  return findUserPublic(userId);
+}
+
+export function updateUserRole(userId: number, role: AssignableRole): PublicUser | null {
+  const target = findUserById(userId);
+  if (!target || target.role === 'admin') return null;
+  db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, userId);
   return findUserPublic(userId);
 }
 

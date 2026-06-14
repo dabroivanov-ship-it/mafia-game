@@ -4,6 +4,7 @@ import {
   findUserPublic,
   findUserById,
   isAdmin,
+  canBanTarget,
   updateUserProfile,
   updateUserAvatar,
   deleteAvatarFile,
@@ -59,6 +60,7 @@ export function createProfileRouter({ onProfileUpdated }: ProfileRouterOptions =
     const viewer = findUserById(req.userId!);
     const viewerIsAdmin = isAdmin(viewer);
     const isSelf = req.userId === targetId;
+    const targetUser = findUserById(targetId);
 
     const user: PublicUser & { messageCount?: number } = { ...target };
     if (!viewerIsAdmin && !isSelf) {
@@ -70,6 +72,7 @@ export function createProfileRouter({ onProfileUpdated }: ProfileRouterOptions =
       user: { ...user, messageCount: getUserMessageCount(targetId) },
       isSelf,
       canAdmin: viewerIsAdmin && !target.isAdmin && !isSelf,
+      canModerate: canBanTarget(viewer, targetUser) && !isSelf,
     });
   });
 

@@ -1,7 +1,7 @@
 import jwt, { type SignOptions } from 'jsonwebtoken';
 import type { NextFunction, Request, Response } from 'express';
 import type { Socket } from 'socket.io';
-import { findUserById, isUserBanned, isAdmin } from './db.js';
+import { findUserById, isUserBanned, isAdmin, isModerator, isStaff } from './db.js';
 import type { User } from '../types/index.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'mafia-dev-secret-change-in-production';
@@ -66,6 +66,14 @@ export function adminMiddleware(req: Request, res: Response, next: NextFunction)
   next();
 }
 
+export function staffMiddleware(req: Request, res: Response, next: NextFunction): void {
+  if (!isStaff(req.user)) {
+    res.status(403).json({ error: 'Нет прав модератора' });
+    return;
+  }
+  next();
+}
+
 export function socketAuthMiddleware(socket: Socket, next: (err?: Error) => void): void {
   const token = socket.handshake.auth?.token as string | undefined;
   if (!token) {
@@ -86,6 +94,8 @@ export function socketAuthMiddleware(socket: Socket, next: (err?: Error) => void
     socket.userId = user.id;
     socket.userRole = user.role;
     socket.isAdmin = isAdmin(user);
+    socket.isModerator = isModerator(user);
+    socket.isStaff = isStaff(user);
     next();
   } catch {
     next(new Error('Недействительный токен'));

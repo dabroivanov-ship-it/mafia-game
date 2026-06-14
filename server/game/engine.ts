@@ -4,6 +4,7 @@ import {
   saveChatMessage,
   saveGameEvent,
   markChatDeleted,
+  markRoomChatDeleted,
   hydrateRoomHistory,
 } from '../history/store.js';
 import { loadRoomNames, saveRoomName, deleteRoomName } from '../rooms/store.js';
@@ -828,6 +829,25 @@ export function deleteChatMessage(
   return true;
 }
 
+export function clearRoomChat(room: GameRoom): number {
+  let changed = 0;
+  const clearList = (messages: ChatMessage[]) => {
+    for (const msg of messages) {
+      if (msg.system || msg.deleted) continue;
+      msg.deleted = true;
+      msg.text = '[сообщение удалено модератором]';
+      changed += 1;
+    }
+  };
+
+  clearList(room.chat);
+  clearList(room.mafiaChat);
+  clearList(room.deadChat);
+  clearList(room.spectatorChat);
+  markRoomChatDeleted(room.id);
+  return changed;
+}
+
 export interface ModerationSnapshot {
   rooms: LobbyRoom[];
   messages: (ChatMessage & { roomId: number; roomName: string; channel: ChatChannel })[];
@@ -977,10 +997,10 @@ function getJoinCooldownSec(player: GamePlayer | undefined): number {
 export function serializeRoomForPlayer(
   room: GameRoom,
   playerId: number,
-  options: { isAdmin?: boolean; chatLimit?: number } = {}
+  options: { isAdmin?: boolean; canModerate?: boolean; chatLimit?: number } = {}
 ): RoomState {
   const me = room.players.find((p) => p.id === playerId);
-  const { isAdmin = false, chatLimit = DEFAULT_CHAT_LIMIT } = options;
+  const { isAdmin = false, canModerate = false, chatLimit = DEFAULT_CHAT_LIMIT } = options;
   const chatView = buildChatView(room, me, chatLimit);
   const gameRunning = isActiveGamePhase(room.phase);
   const isSpectator = !!(me && !me.inGame && gameRunning);
@@ -1052,5 +1072,6 @@ export function serializeRoomForPlayer(
     myVote: room.votes[playerId] || null,
     nightActionDone: me?.nightActionDone || false,
     isAdmin,
+    canModerate,
   };
 }
