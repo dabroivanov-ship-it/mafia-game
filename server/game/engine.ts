@@ -1,4 +1,4 @@
-import { CONFIG, PHASE } from './config.js';
+import { CONFIG, PHASE, isLobbyPhase, isActiveGamePhase } from './config.js';
 import { distributeRoles, isMafia, isTown, isEvil, isMafiaImmune, isSeductionImmune, getRoleLabel } from './roles.js';
 import {
   saveChatMessage,
@@ -72,7 +72,7 @@ export function getLobbySnapshot(rooms: Map<number, GameRoom>): LobbyRoom[] {
   return Array.from(rooms.values()).map((room) => {
     const inGame = room.players.filter((p) => p.connected && p.inGame).length;
     const connected = room.players.filter((p) => p.connected).length;
-    const gameRunning = ![PHASE.WAITING, PHASE.ENDED].includes(room.phase);
+    const gameRunning = !isLobbyPhase(room.phase);
     return {
       id: room.id,
       name: room.name,
@@ -148,7 +148,7 @@ export function addPlayerToRoom(
     existingUser.name = name;
     if (username) existingUser.username = username;
     existingUser.connected = true;
-    if ([PHASE.WAITING, PHASE.ENDED].includes(room.phase)) {
+    if (isLobbyPhase(room.phase)) {
       existingUser.inGame = true;
     }
     return existingUser;
@@ -156,10 +156,10 @@ export function addPlayerToRoom(
 
   const connectedCount = room.players.filter((p) => p.connected).length;
   const inGameCount = room.players.filter((p) => p.connected && p.inGame).length;
-  const isGamePhase = ![PHASE.WAITING, PHASE.ENDED].includes(room.phase);
+  const isGamePhase = !isLobbyPhase(room.phase);
   const defaultInGame = !isGamePhase;
 
-  if ([PHASE.WAITING, PHASE.ENDED].includes(room.phase) && connectedCount >= room.maxPlayers + 20) {
+  if (isLobbyPhase(room.phase) && connectedCount >= room.maxPlayers + 20) {
     throw new Error('Комната переполнена');
   }
 
@@ -195,7 +195,7 @@ export function removePlayer(room: GameRoom, socketId: string, applyPenalty = tr
   const player = room.players.find((p) => p.socketId === socketId);
   if (!player) return null;
 
-  const gameActive = ![PHASE.WAITING, PHASE.ENDED].includes(room.phase);
+  const gameActive = !isLobbyPhase(room.phase);
 
   if (gameActive && applyPenalty && player.inGame && player.alive && player.connected) {
     player.score -= 100;
@@ -917,7 +917,7 @@ function buildChatView(
   me: GamePlayer | undefined,
   chatLimit = DEFAULT_CHAT_LIMIT
 ): { messages: ChatMessage[]; mode: 'spectator' | 'dead' | 'alive'; hasMoreChat: boolean } {
-  const gameRunning = ![PHASE.WAITING, PHASE.REGISTRATION, PHASE.ENDED].includes(room.phase);
+  const gameRunning = isActiveGamePhase(room.phase);
   const isSpectator = me && !me.inGame && gameRunning;
 
   if (isSpectator) {
@@ -982,7 +982,7 @@ export function serializeRoomForPlayer(
   const me = room.players.find((p) => p.id === playerId);
   const { isAdmin = false, chatLimit = DEFAULT_CHAT_LIMIT } = options;
   const chatView = buildChatView(room, me, chatLimit);
-  const gameRunning = ![PHASE.WAITING, PHASE.REGISTRATION, PHASE.ENDED].includes(room.phase);
+  const gameRunning = isActiveGamePhase(room.phase);
   const isSpectator = !!(me && !me.inGame && gameRunning);
   const registeredCount = room.players.filter((p) => p.connected && p.inGame).length;
   const slotsAvailable = registeredCount < room.maxPlayers;

@@ -4,7 +4,7 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { CONFIG } from './game/config.js';
+import { CONFIG, isActiveGamePhase } from './game/config.js';
 import authRoutes from './auth/routes.js';
 import { createProfileRouter } from './profile/routes.js';
 import { createAdminRouter } from './admin/routes.js';
@@ -403,7 +403,7 @@ io.on('connection', (socket) => {
     const me = room.players.find((p) => p.id === session.playerId);
     if (!me) return cb?.({ error: 'Игрок не найден' });
 
-    const gameRunning = !['waiting', 'registration', 'ended'].includes(room.phase);
+    const gameRunning = isActiveGamePhase(room.phase);
     const isSpectator = !me.inGame && gameRunning;
 
     let channel: ChatChannel = 'public';

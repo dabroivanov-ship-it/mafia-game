@@ -7,7 +7,7 @@ import type { User } from '../types/index.js';
 const JWT_SECRET = process.env.JWT_SECRET || 'mafia-dev-secret-change-in-production';
 const JWT_EXPIRES: SignOptions['expiresIn'] = (process.env.JWT_EXPIRES || '7d') as SignOptions['expiresIn'];
 
-interface JwtPayload {
+interface AppJwtPayload {
   sub: number;
   username: string;
   role: string;
@@ -21,8 +21,16 @@ export function signToken(user: User): string {
   );
 }
 
-export function verifyToken(token: string): JwtPayload {
-  return jwt.verify(token, JWT_SECRET) as JwtPayload;
+export function verifyToken(token: string): AppJwtPayload {
+  const payload = jwt.verify(token, JWT_SECRET);
+  if (typeof payload === 'string' || payload.sub == null) {
+    throw new Error('Invalid token');
+  }
+  return {
+    sub: Number(payload.sub),
+    username: String(payload.username ?? ''),
+    role: String(payload.role ?? 'user'),
+  };
 }
 
 export function authMiddleware(req: Request, res: Response, next: NextFunction): void {

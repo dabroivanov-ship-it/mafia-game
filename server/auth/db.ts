@@ -206,8 +206,8 @@ export function listAllUsers(): PublicUser[] {
       `SELECT id, username, email, display_name, city, bio, avatar, role, is_banned, ban_reason, banned_until, total_score, created_at
        FROM users ORDER BY created_at DESC`
     )
-    .all()
-    .map((row) => publicUser(row as User)!);
+    .all() as User[]
+    .map((row) => publicUser(row)!);
 }
 
 export function banUser(userId: number, reason: string | undefined, until: string | null = null): PublicUser | null {

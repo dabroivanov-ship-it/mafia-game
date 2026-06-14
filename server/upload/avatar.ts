@@ -18,7 +18,11 @@ export function createAvatarUpload(getUserId: (req: Request) => string | number)
     limits: { fileSize: 2 * 1024 * 1024 },
     fileFilter: (_req, file, cb) => {
       const ok = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.mimetype);
-      cb(ok ? null : new Error('Только JPG, PNG, WebP, GIF'), ok);
+      if (ok) {
+        cb(null, true);
+      } else {
+        cb(new Error('Только JPG, PNG, WebP, GIF'));
+      }
     },
   });
 }

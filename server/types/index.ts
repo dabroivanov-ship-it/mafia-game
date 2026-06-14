@@ -55,7 +55,7 @@ export interface PublicUser {
   totalScore: number;
   createdAt: string;
   isBanned: boolean;
-  banReason: string | null;
+  banReason?: string | null;
   chatLimit: number;
 }
 

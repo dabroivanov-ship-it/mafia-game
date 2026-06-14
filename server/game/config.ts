@@ -47,3 +47,11 @@ export const TOWN_ROLES: RoleId[] = [
   'highlander',
   'civilian',
 ];
+
+export function isLobbyPhase(phase: GamePhase): phase is 'waiting' | 'ended' {
+  return phase === PHASE.WAITING || phase === PHASE.ENDED;
+}
+
+export function isActiveGamePhase(phase: GamePhase): boolean {
+  return phase === PHASE.DAY || phase === PHASE.VOTING || phase === PHASE.NIGHT;
+}
