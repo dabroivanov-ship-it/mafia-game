@@ -1,47 +1,20 @@
-import { useState, useRef, useEffect } from 'react';
-import { avatarUrl, updateProfile, uploadAvatar, fetchChatFeed } from '../api.js';
+import { useState, useRef } from 'react';
+import { avatarUrl, updateProfile, uploadAvatar } from '../api.js';
 
-const MESSAGE_LIMITS = [15, 30, 50, 100];
+const CHAT_LIMIT_OPTIONS = [15, 30, 50, 100];
 
 export default function Profile({ user, onUpdate, onBack }) {
   const [form, setForm] = useState({
     displayName: user.displayName || '',
     city: user.city || '',
     bio: user.bio || '',
+    chatLimit: user.chatLimit ?? 15,
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [avatarLoading, setAvatarLoading] = useState(false);
-  const [messageLimit, setMessageLimit] = useState(15);
-  const [messages, setMessages] = useState([]);
-  const [totalCount, setTotalCount] = useState(0);
-  const [messagesLoading, setMessagesLoading] = useState(true);
   const fileRef = useRef(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    setMessagesLoading(true);
-    fetchChatFeed(messageLimit)
-      .then(({ messages: list, totalCount: total }) => {
-        if (!cancelled) {
-          setMessages(list || []);
-          setTotalCount(total ?? 0);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setMessages([]);
-          setTotalCount(0);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setMessagesLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [messageLimit]);
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -143,6 +116,22 @@ export default function Profile({ user, onUpdate, onBack }) {
               rows={4}
             />
           </label>
+          <label>
+            Сообщений в чате комнаты
+            <select
+              value={form.chatLimit}
+              onChange={(e) => setForm({ ...form, chatLimit: Number(e.target.value) })}
+            >
+              {CHAT_LIMIT_OPTIONS.map((n) => (
+                <option key={n} value={n}>
+                  {n} последних
+                </option>
+              ))}
+            </select>
+            <span className="muted small profile-field-hint">
+              Сколько сообщений загружать в комнате. Старые — кнопкой «Загрузить ранее».
+            </span>
+          </label>
           <div className="profile-actions">
             <button type="button" className="btn btn-ghost" onClick={onBack}>
               Назад
@@ -152,54 +141,6 @@ export default function Profile({ user, onUpdate, onBack }) {
             </button>
           </div>
         </form>
-
-        <section className="profile-messages">
-          <div className="profile-messages-header">
-            <div>
-              <h3>Чат игры</h3>
-              <p className="muted small profile-messages-summary">
-                Всего сообщений: {totalCount}
-                {!messagesLoading && messages.length > 0 && ` · на странице: ${messages.length}`}
-              </p>
-            </div>
-            <label className="profile-messages-limit">
-              Показать
-              <select
-                value={messageLimit}
-                onChange={(e) => setMessageLimit(Number(e.target.value))}
-              >
-                {MESSAGE_LIMITS.map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          {messagesLoading && <p className="muted small">Загрузка...</p>}
-          {!messagesLoading && messages.length === 0 && (
-            <p className="muted small">Сообщений пока нет.</p>
-          )}
-          {!messagesLoading && messages.length > 0 && (
-            <ul className="profile-messages-list">
-              {messages.map((msg) => (
-                <li key={msg.id} className="profile-message-item">
-                  <span className="profile-message-meta">
-                    {new Date(msg.time).toLocaleString('ru-RU', {
-                      day: '2-digit',
-                      month: '2-digit',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                    {msg.roomId != null && ` · комн. ${msg.roomId}`}
-                    {msg.playerName && ` · ${msg.playerName}`}
-                  </span>
-                  <span className="profile-message-text">{msg.text}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
       </div>
     </div>
   );

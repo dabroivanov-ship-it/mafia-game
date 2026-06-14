@@ -147,29 +147,6 @@ export function getRecentChatForAdmin(limit = 100) {
   }));
 }
 
-export function getPublicChatFeed(limit = 15) {
-  const lim = Math.min(100, Math.max(5, Number(limit) || 15));
-  const rows = db
-    .prepare(
-      `SELECT * FROM room_chat_log
-       WHERE is_system = 0 AND deleted = 0 AND channel = 'public'
-       ORDER BY created_at DESC LIMIT ?`
-    )
-    .all(lim);
-  const messages = rows.reverse().map((row) => ({
-    ...rowToMsg(row),
-    roomId: row.room_id,
-    channel: row.channel,
-  }));
-  const totalCount = db
-    .prepare(
-      `SELECT COUNT(*) AS c FROM room_chat_log
-       WHERE is_system = 0 AND deleted = 0 AND channel = 'public'`
-    )
-    .get().c;
-  return { messages, totalCount, limit: lim };
-}
-
 export function getUserMessageCount(userId) {
   const row = db
     .prepare(
@@ -187,20 +164,4 @@ export function getAdminChatHistory(roomId, limit = 200) {
     )
     .all(roomId, limit);
   return rows.map(rowToMsg).reverse();
-}
-
-export function getUserChatMessages(userId, limit = 15) {
-  const lim = Math.min(100, Math.max(5, Number(limit) || 15));
-  const rows = db
-    .prepare(
-      `SELECT * FROM room_chat_log
-       WHERE user_id = ? AND is_system = 0 AND deleted = 0
-       ORDER BY created_at DESC LIMIT ?`
-    )
-    .all(userId, lim);
-  return rows.reverse().map((row) => ({
-    ...rowToMsg(row),
-    roomId: row.room_id,
-    channel: row.channel,
-  }));
 }

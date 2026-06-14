@@ -844,7 +844,7 @@ function addSystemMessage(room, text) {
   saveChatMessage(room.id, room.sessionId, msg, 'public');
 }
 
-const DEFAULT_CHAT_LIMIT = 50;
+const DEFAULT_CHAT_LIMIT = 15;
 const MAX_CHAT_LIMIT = 300;
 
 function sliceChatMessages(messages, chatLimit) {

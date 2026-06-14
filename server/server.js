@@ -6,10 +6,10 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { CONFIG } from './game/config.js';
 import authRoutes from './auth/routes.js';
-import profileRoutes from './profile/routes.js';
+import { createProfileRouter } from './profile/routes.js';
 import { createAdminRouter } from './admin/routes.js';
 import { socketAuthMiddleware } from './auth/jwt.js';
-import { findUserById, updateUserScore, isAdmin, uploadsDir } from './auth/db.js';
+import { findUserById, updateUserScore, isAdmin, uploadsDir, normalizeChatLimit } from './auth/db.js';
 import { hydrateRoomHistory, loadGameEvents, getRecentGameEvents, getAdminChatHistory, getRecentChatForAdmin } from './history/store.js';
 import {
   createInitialRooms,
@@ -52,16 +52,47 @@ for (const room of rooms.values()) {
 }
 // socketId -> { roomId, playerId }
 const sessions = new Map();
-const DEFAULT_CHAT_LIMIT = 50;
+const DEFAULT_CHAT_LIMIT = 15;
 const CHAT_LOAD_STEP = 30;
 const MAX_CHAT_LIMIT = 300;
+
+function getUserChatLimit(userId) {
+  if (!userId) return DEFAULT_CHAT_LIMIT;
+  const user = findUserById(userId);
+  return normalizeChatLimit(user?.chat_limit);
+}
+
+function resolveSessionChatLimit(session, userId) {
+  const base = getUserChatLimit(userId);
+  if (!session) return base;
+  return Math.max(base, session.chatLimit ?? base);
+}
+
+function syncUserProfileInRooms(userId, user) {
+  for (const room of rooms.values()) {
+    const player = room.players.find((p) => p.userId === userId);
+    if (!player?.socketId) continue;
+    const session = sessions.get(player.socketId);
+    if (session && user?.chatLimit) {
+      session.chatLimit = normalizeChatLimit(user.chatLimit);
+    }
+    if (user?.displayName) player.name = user.displayName;
+    io.to(player.socketId).emit(
+      'room:state',
+      serializeForSocketUser(room, player.id, userId, player.socketId)
+    );
+  }
+}
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, rooms: getLobbySnapshot(rooms) });
 });
 
 app.use('/api/auth', authRoutes);
-app.use('/api/profile', profileRoutes);
+app.use(
+  '/api/profile',
+  createProfileRouter({ onProfileUpdated: syncUserProfileInRooms })
+);
 app.use('/uploads/avatars', express.static(uploadsDir));
 
 function adminDeleteMessage(roomId, messageId, channel) {
@@ -143,7 +174,7 @@ app.use(
 
 function serializeForSocketUser(room, gamePlayerId, userId, socketId = null) {
   const session = socketId ? sessions.get(socketId) : null;
-  const chatLimit = session?.chatLimit ?? DEFAULT_CHAT_LIMIT;
+  const chatLimit = resolveSessionChatLimit(session, userId);
   const acc = userId ? findUserById(userId) : null;
   return serializeRoomForPlayer(room, gamePlayerId, { isAdmin: isAdmin(acc), chatLimit });
 }
@@ -203,7 +234,7 @@ function attachSession(socket, roomId, playerId) {
     roomId,
     playerId,
     userId: socket.userId,
-    chatLimit: DEFAULT_CHAT_LIMIT,
+    chatLimit: getUserChatLimit(socket.userId),
   });
   socket.join(`room:${roomId}`);
 }
@@ -331,7 +362,7 @@ io.on('connection', (socket) => {
 
     session.chatLimit = Math.min(
       MAX_CHAT_LIMIT,
-      (session.chatLimit || DEFAULT_CHAT_LIMIT) + CHAT_LOAD_STEP
+      resolveSessionChatLimit(session, socket.userId) + CHAT_LOAD_STEP
     );
     socket.emit(
       'room:state',

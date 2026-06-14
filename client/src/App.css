@@ -151,6 +151,22 @@ body {
   min-height: 48px;
 }
 
+.auth-form select {
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 16px;
+  min-height: 48px;
+}
+
+.profile-field-hint {
+  display: block;
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
 .auth-error {
   background: rgba(231, 76, 60, 0.15);
   border: 1px solid var(--danger);

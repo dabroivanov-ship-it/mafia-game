@@ -51,6 +51,7 @@ function migrateColumns() {
   if (!cols.includes('is_banned')) add('ALTER TABLE users ADD COLUMN is_banned INTEGER NOT NULL DEFAULT 0');
   if (!cols.includes('ban_reason')) add('ALTER TABLE users ADD COLUMN ban_reason TEXT DEFAULT NULL');
   if (!cols.includes('banned_until')) add('ALTER TABLE users ADD COLUMN banned_until TEXT DEFAULT NULL');
+  if (!cols.includes('chat_limit')) add('ALTER TABLE users ADD COLUMN chat_limit INTEGER NOT NULL DEFAULT 15');
 }
 
 migrateColumns();
@@ -79,6 +80,14 @@ export function isUserBanned(user) {
   return true;
 }
 
+export const CHAT_LIMIT_OPTIONS = [15, 30, 50, 100];
+
+export function normalizeChatLimit(value) {
+  const n = Number(value) || 15;
+  if (!CHAT_LIMIT_OPTIONS.includes(n)) return 15;
+  return n;
+}
+
 export function publicUser(user) {
   if (!user) return null;
   return {
@@ -95,6 +104,7 @@ export function publicUser(user) {
     createdAt: user.created_at,
     isBanned: isUserBanned(user),
     banReason: user.ban_reason || null,
+    chatLimit: normalizeChatLimit(user.chat_limit),
   };
 }
 
@@ -127,10 +137,15 @@ export function createUser({ username, email, passwordHash, displayName }) {
   return findUserById(result.lastInsertRowid);
 }
 
-export function updateUserProfile(userId, { displayName, city, bio }) {
-  db.prepare(
-    'UPDATE users SET display_name = ?, city = ?, bio = ? WHERE id = ?'
-  ).run(displayName, city || '', bio || '', userId);
+export function updateUserProfile(userId, { displayName, city, bio, chatLimit }) {
+  const fields = ['display_name = ?', 'city = ?', 'bio = ?'];
+  const values = [displayName, city || '', bio || ''];
+  if (chatLimit != null) {
+    fields.push('chat_limit = ?');
+    values.push(normalizeChatLimit(chatLimit));
+  }
+  values.push(userId);
+  db.prepare(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`).run(...values);
   return findUserPublic(userId);
 }
 

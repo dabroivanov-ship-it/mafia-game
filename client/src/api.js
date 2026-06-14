@@ -79,10 +79,6 @@ export async function fetchUserProfile(userId) {
   return apiRequest(`/api/profile/${userId}`);
 }
 
-export async function fetchChatFeed(limit = 15) {
-  return apiRequest(`/api/profile/chat-feed?limit=${limit}`);
-}
-
 export async function fetchAdminOverview() {
   return apiRequest('/api/admin/overview');
 }
