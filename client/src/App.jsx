@@ -170,13 +170,13 @@ export default function App() {
             {error}
           </div>
         )}
-        <Room socket={socket} state={roomState} user={user} onLeave={leaveRoom} />
+        <Room socket={socket} state={roomState} onLeave={leaveRoom} />
       </div>
     );
   }
 
   return (
-    <div className="app">
+    <div className="app app-shell">
       {notification && (
         <div className="toast" onClick={() => setNotification(null)}>
           🔒 {notification}
@@ -188,23 +188,25 @@ export default function App() {
         </div>
       )}
 
+      <div className="app-body">
+        {view === 'lobby' && (
+          <Lobby rooms={rooms} onJoin={joinRoom} />
+        )}
+        {view === 'rules' && <Rules />}
+        {view === 'profile' && (
+          <Profile user={user} onUpdate={handleUserUpdate} onBack={() => setView('lobby')} />
+        )}
+        {view === 'admin' && user.isAdmin && (
+          <AdminPanel onBack={() => setView('lobby')} />
+        )}
+      </div>
+
       <Menu
         user={user}
         view={view}
         onNavigate={setView}
         onLogout={handleLogout}
       />
-
-      {view === 'lobby' && (
-        <Lobby rooms={rooms} onJoin={joinRoom} />
-      )}
-      {view === 'rules' && <Rules />}
-      {view === 'profile' && (
-        <Profile user={user} onUpdate={handleUserUpdate} onBack={() => setView('lobby')} />
-      )}
-      {view === 'admin' && user.isAdmin && (
-        <AdminPanel onBack={() => setView('lobby')} />
-      )}
     </div>
   );
 }
