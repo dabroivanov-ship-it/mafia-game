@@ -35,6 +35,7 @@ function createRoom(id) {
     votingStarted: false,
     winnerTeam: null,
     systemMessages: [],
+    scoresSynced: false,
   };
 }
 
@@ -48,12 +49,24 @@ export function getLobbySnapshot(rooms) {
   }));
 }
 
-export function addPlayerToRoom(room, { name, socketId }) {
-  const existing = room.players.find((p) => p.socketId === socketId);
-  if (existing) {
-    existing.name = name;
-    existing.connected = true;
-    return existing;
+export function addPlayerToRoom(room, { name, socketId, userId }) {
+  const existingSocket = room.players.find((p) => p.socketId === socketId);
+  if (existingSocket) {
+    existingSocket.name = name;
+    existingSocket.connected = true;
+    return existingSocket;
+  }
+
+  // Переподключение того же аккаунта
+  const existingUser = room.players.find((p) => p.userId === userId);
+  if (existingUser) {
+    if (existingUser.connected && existingUser.socketId) {
+      throw new Error('Вы уже в этой комнате');
+    }
+    existingUser.socketId = socketId;
+    existingUser.name = name;
+    existingUser.connected = true;
+    return existingUser;
   }
 
   const connectedCount = room.players.filter((p) => p.connected).length;
@@ -64,6 +77,7 @@ export function addPlayerToRoom(room, { name, socketId }) {
 
   const player = {
     id: nextPlayerId++,
+    userId,
     name,
     socketId,
     role: null,

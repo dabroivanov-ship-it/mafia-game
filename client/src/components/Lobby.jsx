@@ -9,15 +9,12 @@ const PHASE_LABELS = {
   ended: 'Игра окончена',
 };
 
-export default function Lobby({ rooms, onJoin, defaultName }) {
-  const [name, setName] = useState(defaultName);
+export default function Lobby({ rooms, user, onJoin, onLogout }) {
   const [joining, setJoining] = useState(null);
 
   const handleJoin = (roomId) => {
-    const trimmed = name.trim();
-    if (!trimmed) return;
     setJoining(roomId);
-    onJoin(roomId, trimmed);
+    onJoin(roomId);
     setJoining(null);
   };
 
@@ -28,16 +25,15 @@ export default function Lobby({ rooms, onJoin, defaultName }) {
         <p>Многопользовательская игра с автоматическим ведущим</p>
       </header>
 
-      <div className="name-input-block">
-        <label htmlFor="player-name">Ваше имя</label>
-        <input
-          id="player-name"
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Введите имя..."
-          maxLength={20}
-        />
+      <div className="user-bar">
+        <div className="user-info">
+          <span className="user-name">{user.displayName}</span>
+          <span className="user-login">@{user.username}</span>
+          <span className="user-score">🏆 {user.totalScore} очков</span>
+        </div>
+        <button type="button" className="btn btn-ghost" onClick={onLogout}>
+          Выйти
+        </button>
       </div>
 
       <div className="rooms-list">
@@ -54,7 +50,7 @@ export default function Lobby({ rooms, onJoin, defaultName }) {
             <button
               className="btn btn-primary"
               onClick={() => handleJoin(room.id)}
-              disabled={!name.trim() || joining === room.id}
+              disabled={joining === room.id}
             >
               Войти
             </button>

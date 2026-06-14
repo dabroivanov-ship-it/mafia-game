@@ -5,6 +5,9 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { CONFIG } from './game/config.js';
+import authRoutes from './auth/routes.js';
+import { socketAuthMiddleware } from './auth/jwt.js';
+import { findUserById, updateUserScore } from './auth/db.js';
 import {
   createInitialRooms,
   getLobbySnapshot,
@@ -41,6 +44,18 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true, rooms: getLobbySnapshot(rooms) });
 });
 
+app.use('/api/auth', authRoutes);
+
+function syncRoomScores(room) {
+  if (room.phase !== 'ended' || room.scoresSynced) return;
+  for (const p of room.players) {
+    if (p.userId && p.score !== 0) {
+      updateUserScore(p.userId, p.score);
+    }
+  }
+  room.scoresSynced = true;
+}
+
 function broadcastLobby() {
   io.emit('lobby:update', getLobbySnapshot(rooms));
 }
@@ -48,6 +63,8 @@ function broadcastLobby() {
 function broadcastRoom(roomId) {
   const room = rooms.get(roomId);
   if (!room) return;
+
+  syncRoomScores(room);
 
   for (const player of room.players) {
     if (player.socketId) {
@@ -93,24 +110,39 @@ setInterval(() => {
   }
 }, 1000);
 
+io.use(socketAuthMiddleware);
+
 io.on('connection', (socket) => {
+  const user = findUserById(socket.userId);
+  if (!user) {
+    socket.disconnect(true);
+    return;
+  }
+  socket.displayName = user.display_name;
+
   socket.emit('lobby:update', getLobbySnapshot(rooms));
 
   socket.on('lobby:get', () => {
     socket.emit('lobby:update', getLobbySnapshot(rooms));
   });
 
-  socket.on('room:join', ({ roomId, playerName, playerId: reconnectId }, cb) => {
+  socket.on('room:join', ({ roomId, playerId: reconnectId }, cb) => {
     try {
       const room = rooms.get(Number(roomId));
       if (!room) return cb?.({ error: 'Комната не найдена' });
 
+      const playerName = socket.displayName;
       let player;
+
       if (reconnectId) {
         player = reconnectPlayer(room, reconnectId, socket.id, playerName);
       }
       if (!player) {
-        player = addPlayerToRoom(room, { name: playerName, socketId: socket.id });
+        player = addPlayerToRoom(room, {
+          name: playerName,
+          socketId: socket.id,
+          userId: socket.userId,
+        });
       }
 
       attachSession(socket, room.id, player.id);
