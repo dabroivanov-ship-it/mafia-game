@@ -244,6 +244,19 @@ export function joinGame(room, playerId) {
   return player;
 }
 
+export function leaveGame(room, playerId) {
+  if (room.phase !== PHASE.REGISTRATION) {
+    throw new Error('Выйти из игры можно только во время регистрации');
+  }
+  const player = room.players.find((p) => p.id === playerId);
+  if (!player?.connected) throw new Error('Игрок не найден');
+  if (!player.inGame) throw new Error('Вы не в игре');
+
+  player.inGame = false;
+  addSystemMessage(room, `${player.username || player.name} вышел из регистрации.`);
+  return player;
+}
+
 export function setTimer(room, ms, reason) {
   room.timerEnd = Date.now() + ms;
   room.timerReason = reason;
@@ -823,36 +836,53 @@ function addSystemMessage(room, text) {
   saveChatMessage(room.id, room.sessionId, msg, 'public');
 }
 
+const DEFAULT_CHAT_LIMIT = 50;
+const MAX_CHAT_LIMIT = 300;
+
+function sliceChatMessages(messages, chatLimit) {
+  const limit = Math.min(MAX_CHAT_LIMIT, Math.max(15, chatLimit || DEFAULT_CHAT_LIMIT));
+  const total = messages.length;
+  return {
+    messages: messages.slice(-limit),
+    hasMoreChat: total > limit,
+  };
+}
+
 /** Чат для конкретного игрока */
-function buildChatView(room, me) {
+function buildChatView(room, me, chatLimit = DEFAULT_CHAT_LIMIT) {
   const gameRunning = ![PHASE.WAITING, PHASE.ENDED].includes(room.phase);
   const isSpectator = me && !me.inGame && gameRunning;
 
   if (isSpectator) {
     const gameMsgs = room.chat.map((m) => ({ ...m, sourceChannel: 'public' }));
     const specMsgs = room.spectatorChat.map((m) => ({ ...m, sourceChannel: 'spectator' }));
-    const combined = [...gameMsgs, ...specMsgs]
-      .sort((a, b) => new Date(a.time) - new Date(b.time))
-      .slice(-200);
-    return { messages: combined, mode: 'spectator' };
+    const combined = [...gameMsgs, ...specMsgs].sort(
+      (a, b) => new Date(a.time) - new Date(b.time)
+    );
+    const sliced = sliceChatMessages(combined, chatLimit);
+    return { messages: sliced.messages, mode: 'spectator', hasMoreChat: sliced.hasMoreChat };
   }
 
   const systemMsgs = room.chat.filter((m) => m.system);
 
   if (!me || !me.inGame || !me.role || me.alive) {
+    const sliced = sliceChatMessages(room.chat, chatLimit);
     return {
-      messages: room.chat.slice(-200),
+      messages: sliced.messages,
       mode: me?.inGame && me?.role && !me.alive ? 'dead' : 'alive',
+      hasMoreChat: sliced.hasMoreChat,
     };
   }
 
-  const combined = [...systemMsgs, ...room.deadChat]
-    .sort((a, b) => new Date(a.time) - new Date(b.time))
-    .slice(-200);
+  const combined = [...systemMsgs, ...room.deadChat].sort(
+    (a, b) => new Date(a.time) - new Date(b.time)
+  );
+  const sliced = sliceChatMessages(combined, chatLimit);
 
   return {
-    messages: combined,
+    messages: sliced.messages,
     mode: 'dead',
+    hasMoreChat: sliced.hasMoreChat,
   };
 }
 
@@ -874,8 +904,8 @@ function mapPlayerPublic(p, room, playerId) {
 
 export function serializeRoomForPlayer(room, playerId, options = {}) {
   const me = room.players.find((p) => p.id === playerId);
-  const { isAdmin = false } = options;
-  const chatView = buildChatView(room, me);
+  const { isAdmin = false, chatLimit = DEFAULT_CHAT_LIMIT } = options;
+  const chatView = buildChatView(room, me, chatLimit);
   const gameRunning = ![PHASE.WAITING, PHASE.ENDED].includes(room.phase);
   const isSpectator = !!(me && !me.inGame && gameRunning);
   const registeredCount = room.players.filter((p) => p.connected && p.inGame).length;
@@ -903,6 +933,8 @@ export function serializeRoomForPlayer(room, playerId, options = {}) {
     isInGame: !!me?.inGame,
     canJoinGame:
       room.phase === PHASE.REGISTRATION && !!me?.connected && !me.inGame && slotsAvailable,
+    canLeaveGame:
+      room.phase === PHASE.REGISTRATION && !!me?.connected && !!me.inGame,
     myPlayer: me
       ? {
           id: me.id,
@@ -925,6 +957,7 @@ export function serializeRoomForPlayer(room, playerId, options = {}) {
     })),
     chat: chatView.messages,
     chatMode: chatView.mode,
+    hasMoreChat: chatView.hasMoreChat,
     mafiaChat: me?.role === 'mafia' && me.alive && me.inGame ? room.mafiaChat.slice(-50) : [],
     canStartGame:
       room.phase === PHASE.WAITING || room.phase === PHASE.REGISTRATION || room.phase === PHASE.ENDED,

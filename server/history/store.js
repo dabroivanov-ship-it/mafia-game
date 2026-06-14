@@ -15,6 +15,7 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
   CREATE INDEX IF NOT EXISTS idx_room_chat_room ON room_chat_log(room_id, created_at);
+  CREATE INDEX IF NOT EXISTS idx_room_chat_user ON room_chat_log(user_id, created_at);
 
   CREATE TABLE IF NOT EXISTS room_game_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -153,4 +154,20 @@ export function getAdminChatHistory(roomId, limit = 200) {
     )
     .all(roomId, limit);
   return rows.map(rowToMsg).reverse();
+}
+
+export function getUserChatMessages(userId, limit = 15) {
+  const lim = Math.min(100, Math.max(5, Number(limit) || 15));
+  const rows = db
+    .prepare(
+      `SELECT * FROM room_chat_log
+       WHERE user_id = ? AND is_system = 0 AND deleted = 0
+       ORDER BY created_at DESC LIMIT ?`
+    )
+    .all(userId, lim);
+  return rows.reverse().map((row) => ({
+    ...rowToMsg(row),
+    roomId: row.room_id,
+    channel: row.channel,
+  }));
 }

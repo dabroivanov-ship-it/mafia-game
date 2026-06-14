@@ -10,6 +10,7 @@ import {
   deleteAvatarFile,
 } from '../auth/db.js';
 import { createAvatarUpload } from '../upload/avatar.js';
+import { getUserChatMessages } from '../history/store.js';
 
 const router = Router();
 const upload = createAvatarUpload((req) => req.userId);
@@ -37,6 +38,22 @@ router.post('/avatar', authMiddleware, (req, res) => {
     if (oldAvatar) deleteAvatarFile(oldAvatar);
     res.json({ user, avatar: avatarUrl });
   });
+});
+
+router.get('/messages', authMiddleware, (req, res) => {
+  const limit = Number(req.query.limit) || 15;
+  const messages = getUserChatMessages(req.userId, limit);
+  res.json({ messages, limit: Math.min(100, Math.max(5, limit)) });
+});
+
+router.get('/:userId/messages', authMiddleware, (req, res) => {
+  const targetId = Number(req.params.userId);
+  const target = findUserPublic(targetId);
+  if (!target) return res.status(404).json({ error: 'Пользователь не найден' });
+
+  const limit = Number(req.query.limit) || 15;
+  const messages = getUserChatMessages(targetId, limit);
+  res.json({ messages, limit: Math.min(100, Math.max(5, limit)) });
 });
 
 router.get('/:userId', authMiddleware, (req, res) => {

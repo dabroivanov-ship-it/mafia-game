@@ -35,6 +35,7 @@ function useTimer(timerEnd) {
 export default function Room({ socket, state, onLeave }) {
   const [mafiaTab, setMafiaTab] = useState(false);
   const [profileUserId, setProfileUserId] = useState(null);
+  const [loadingMoreChat, setLoadingMoreChat] = useState(false);
 
   if (!state) {
     return (
@@ -58,6 +59,15 @@ export default function Room({ socket, state, onLeave }) {
     new Promise((resolve) => {
       socket.emit(event, data, resolve);
     });
+
+  const loadMoreChat = async () => {
+    setLoadingMoreChat(true);
+    try {
+      await emit('room:loadMoreChat');
+    } finally {
+      setLoadingMoreChat(false);
+    }
+  };
 
   return (
     <div className="room">
@@ -84,6 +94,15 @@ export default function Room({ socket, state, onLeave }) {
           <p>Идёт регистрация — нажмите, чтобы участвовать в партии.</p>
           <button type="button" className="btn btn-primary btn-lg btn-block" onClick={() => emit('room:joinGame')}>
             Присоединиться ({state.registeredCount}/{state.maxPlayers})
+          </button>
+        </div>
+      )}
+
+      {state.canLeaveGame && (
+        <div className="join-game-banner leave-game-banner">
+          <p>Вы зарегистрированы ({state.registeredCount}/{state.maxPlayers}). Ожидайте других или таймера.</p>
+          <button type="button" className="btn btn-ghost btn-block" onClick={() => emit('room:leaveGame')}>
+            Выйти из игры
           </button>
         </div>
       )}
@@ -137,6 +156,9 @@ export default function Room({ socket, state, onLeave }) {
                 onSend={(text) => emit('chat:send', { text })}
                 onViewProfile={setProfileUserId}
                 isAdmin={state.isAdmin}
+                hasMoreChat={state.hasMoreChat}
+                onLoadMore={loadMoreChat}
+                loadingMore={loadingMoreChat}
                 onDeleteMessage={
                   state.isAdmin
                     ? (messageId, sourceChannel) =>
@@ -168,6 +190,7 @@ export default function Room({ socket, state, onLeave }) {
               onSend={(text) => emit('chat:mafia', { text })}
               onViewProfile={setProfileUserId}
               isAdmin={state.isAdmin}
+              hasMoreChat={false}
               onDeleteMessage={
                 state.isAdmin
                   ? (messageId) => emit('admin:deleteMessage', { messageId, channel: 'mafia' })
@@ -184,11 +207,6 @@ export default function Room({ socket, state, onLeave }) {
           <button type="button" className="btn btn-primary btn-lg btn-block" onClick={() => emit('room:start')}>
             Запустить игру
           </button>
-        )}
-        {state.phase === 'registration' && state.isInGame && !state.isSpectator && (
-          <p className="muted">
-            Вы в игре ({state.registeredCount}/{state.maxPlayers}). Ожидайте других или таймера.
-          </p>
         )}
         {state.phase === 'registration' && state.isSpectator && !showJoin && (
           <p className="muted">Все места заняты — вы наблюдаете.</p>

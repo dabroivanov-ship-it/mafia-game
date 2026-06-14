@@ -19,6 +19,7 @@ import {
   reconnectPlayer,
   startRegistration,
   joinGame,
+  leaveGame,
   tryStartGameAfterRegistration,
   onRegistrationTimerEnd,
   onDayTimerEnd,
@@ -51,6 +52,9 @@ for (const room of rooms.values()) {
 }
 // socketId -> { roomId, playerId }
 const sessions = new Map();
+const DEFAULT_CHAT_LIMIT = 50;
+const CHAT_LOAD_STEP = 30;
+const MAX_CHAT_LIMIT = 300;
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, rooms: getLobbySnapshot(rooms) });
@@ -103,7 +107,7 @@ function syncUserInRooms(userId, displayName) {
       if (player.socketId) {
         io.to(player.socketId).emit(
           'room:state',
-          serializeForSocketUser(room, player.id, userId)
+          serializeForSocketUser(room, player.id, userId, player.socketId)
         );
       }
     }
@@ -137,9 +141,11 @@ app.use(
   })
 );
 
-function serializeForSocketUser(room, gamePlayerId, userId) {
+function serializeForSocketUser(room, gamePlayerId, userId, socketId = null) {
+  const session = socketId ? sessions.get(socketId) : null;
+  const chatLimit = session?.chatLimit ?? DEFAULT_CHAT_LIMIT;
   const acc = userId ? findUserById(userId) : null;
-  return serializeRoomForPlayer(room, gamePlayerId, { isAdmin: isAdmin(acc) });
+  return serializeRoomForPlayer(room, gamePlayerId, { isAdmin: isAdmin(acc), chatLimit });
 }
 
 function syncRoomScores(room) {
@@ -166,7 +172,7 @@ function broadcastRoom(roomId) {
     if (player.socketId) {
       io.to(player.socketId).emit(
         'room:state',
-        serializeForSocketUser(room, player.id, player.userId)
+        serializeForSocketUser(room, player.id, player.userId, player.socketId)
       );
     }
   }
@@ -183,7 +189,7 @@ function sendPrivateNotes(room, privateNotes = []) {
 }
 
 function attachSession(socket, roomId, playerId) {
-  sessions.set(socket.id, { roomId, playerId });
+  sessions.set(socket.id, { roomId, playerId, chatLimit: DEFAULT_CHAT_LIMIT });
   socket.join(`room:${roomId}`);
 }
 
@@ -250,7 +256,7 @@ io.on('connection', (socket) => {
 
       attachSession(socket, room.id, player.id);
       broadcastRoom(room.id);
-      cb?.({ ok: true, playerId: player.id, state: serializeForSocketUser(room, player.id, socket.userId) });
+      cb?.({ ok: true, playerId: player.id, state: serializeForSocketUser(room, player.id, socket.userId, socket.id) });
     } catch (e) {
       cb?.({ error: e.message });
     }
@@ -282,6 +288,38 @@ io.on('connection', (socket) => {
     } catch (e) {
       cb?.({ error: e.message });
     }
+  });
+
+  socket.on('room:leaveGame', (_data, cb) => {
+    const session = sessions.get(socket.id);
+    if (!session) return cb?.({ error: 'Вы не в комнате' });
+
+    const room = rooms.get(session.roomId);
+    try {
+      leaveGame(room, session.playerId);
+      broadcastRoom(room.id);
+      cb?.({ ok: true });
+    } catch (e) {
+      cb?.({ error: e.message });
+    }
+  });
+
+  socket.on('room:loadMoreChat', (_data, cb) => {
+    const session = sessions.get(socket.id);
+    if (!session) return cb?.({ error: 'Вы не в комнате' });
+
+    const room = rooms.get(session.roomId);
+    if (!room) return cb?.({ error: 'Комната не найдена' });
+
+    session.chatLimit = Math.min(
+      MAX_CHAT_LIMIT,
+      (session.chatLimit || DEFAULT_CHAT_LIMIT) + CHAT_LOAD_STEP
+    );
+    socket.emit(
+      'room:state',
+      serializeForSocketUser(room, session.playerId, socket.userId, socket.id)
+    );
+    cb?.({ ok: true });
   });
 
   socket.on('room:newGame', (_data, cb) => {

@@ -1,8 +1,9 @@
-import { useState, useRef } from 'react';
-import { avatarUrl, updateProfile, uploadAvatar } from '../api.js';
+import { useState, useRef, useEffect } from 'react';
+import { avatarUrl, updateProfile, uploadAvatar, fetchMyMessages } from '../api.js';
 
-export default function Profile({ user, onUpdate, onBack }) {
-  const [form, setForm] = useState({
+const MESSAGE_LIMITS = [15, 30, 50, 100];
+
+export default function Profile({ user, onUpdate, onBack }) {  const [form, setForm] = useState({
     displayName: user.displayName || '',
     city: user.city || '',
     bio: user.bio || '',
@@ -11,8 +12,28 @@ export default function Profile({ user, onUpdate, onBack }) {
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [avatarLoading, setAvatarLoading] = useState(false);
+  const [messageLimit, setMessageLimit] = useState(15);
+  const [messages, setMessages] = useState([]);
+  const [messagesLoading, setMessagesLoading] = useState(true);
   const fileRef = useRef(null);
 
+  useEffect(() => {
+    let cancelled = false;
+    setMessagesLoading(true);
+    fetchMyMessages(messageLimit)
+      .then(({ messages: list }) => {
+        if (!cancelled) setMessages(list || []);
+      })
+      .catch(() => {
+        if (!cancelled) setMessages([]);
+      })
+      .finally(() => {
+        if (!cancelled) setMessagesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [messageLimit]);
   const handleSave = async (e) => {
     e.preventDefault();
     setError('');
@@ -122,6 +143,47 @@ export default function Profile({ user, onUpdate, onBack }) {
             </button>
           </div>
         </form>
+
+        <section className="profile-messages">
+          <div className="profile-messages-header">
+            <h3>Мои сообщения в чате</h3>
+            <label className="profile-messages-limit">
+              Показать
+              <select
+                value={messageLimit}
+                onChange={(e) => setMessageLimit(Number(e.target.value))}
+              >
+                {MESSAGE_LIMITS.map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          {messagesLoading && <p className="muted small">Загрузка...</p>}
+          {!messagesLoading && messages.length === 0 && (
+            <p className="muted small">Сообщений пока нет.</p>
+          )}
+          {!messagesLoading && messages.length > 0 && (
+            <ul className="profile-messages-list">
+              {messages.map((msg) => (
+                <li key={msg.id} className="profile-message-item">
+                  <span className="profile-message-meta">
+                    {new Date(msg.time).toLocaleString('ru-RU', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                    {msg.roomId != null && ` · комн. ${msg.roomId}`}
+                  </span>
+                  <span className="profile-message-text">{msg.text}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       </div>
     </div>
   );
