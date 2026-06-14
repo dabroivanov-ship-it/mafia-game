@@ -10,6 +10,8 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 3001,
+        JWT_SECRET: 'change-me-in-production',
+        ADMIN_USERNAMES: 'admin',
       },
     },
   ],

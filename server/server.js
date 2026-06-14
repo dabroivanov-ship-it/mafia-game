@@ -6,8 +6,10 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { CONFIG } from './game/config.js';
 import authRoutes from './auth/routes.js';
+import profileRoutes from './profile/routes.js';
+import { createAdminRouter } from './admin/routes.js';
 import { socketAuthMiddleware } from './auth/jwt.js';
-import { findUserById, updateUserScore } from './auth/db.js';
+import { findUserById, updateUserScore, isAdmin, uploadsDir } from './auth/db.js';
 import {
   createInitialRooms,
   getLobbySnapshot,
@@ -23,6 +25,8 @@ import {
   castDayVote,
   submitNightAction,
   addChatMessage,
+  deleteChatMessage,
+  getModerationSnapshot,
   resetRoom,
   serializeRoomForPlayer,
 } from './game/engine.js';
@@ -45,6 +49,29 @@ app.get('/api/health', (_req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/profile', profileRoutes);
+app.use('/uploads/avatars', express.static(uploadsDir));
+
+function adminDeleteMessage(roomId, messageId, channel) {
+  const room = rooms.get(roomId);
+  if (!room) return false;
+  const ok = deleteChatMessage(room, messageId, channel);
+  if (ok) broadcastRoom(roomId);
+  return ok;
+}
+
+app.use(
+  '/api/admin',
+  createAdminRouter(
+    () => getModerationSnapshot(rooms),
+    adminDeleteMessage
+  )
+);
+
+function serializeForSocketUser(room, gamePlayerId, userId) {
+  const acc = userId ? findUserById(userId) : null;
+  return serializeRoomForPlayer(room, gamePlayerId, { isAdmin: isAdmin(acc) });
+}
 
 function syncRoomScores(room) {
   if (room.phase !== 'ended' || room.scoresSynced) return;
@@ -68,7 +95,10 @@ function broadcastRoom(roomId) {
 
   for (const player of room.players) {
     if (player.socketId) {
-      io.to(player.socketId).emit('room:state', serializeRoomForPlayer(room, player.id));
+      io.to(player.socketId).emit(
+        'room:state',
+        serializeForSocketUser(room, player.id, player.userId)
+      );
     }
   }
   broadcastLobby();
@@ -119,6 +149,7 @@ io.on('connection', (socket) => {
     return;
   }
   socket.displayName = user.display_name;
+  socket.isAdmin = isAdmin(user);
 
   socket.emit('lobby:update', getLobbySnapshot(rooms));
 
@@ -147,7 +178,7 @@ io.on('connection', (socket) => {
 
       attachSession(socket, room.id, player.id);
       broadcastRoom(room.id);
-      cb?.({ ok: true, playerId: player.id, state: serializeRoomForPlayer(room, player.id) });
+      cb?.({ ok: true, playerId: player.id, state: serializeForSocketUser(room, player.id, socket.userId) });
     } catch (e) {
       cb?.({ error: e.message });
     }
@@ -241,6 +272,17 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('admin:deleteMessage', ({ messageId, channel }, cb) => {
+    if (!socket.isAdmin) return cb?.({ error: 'Нет доступа' });
+    const session = sessions.get(socket.id);
+    if (!session) return cb?.({ error: 'Вы не в комнате' });
+    const room = rooms.get(session.roomId);
+    const ok = deleteChatMessage(room, messageId, channel || 'public');
+    if (!ok) return cb?.({ error: 'Сообщение не найдено' });
+    broadcastRoom(room.id);
+    cb?.({ ok: true });
+  });
+
   socket.on('disconnect', () => {
     const session = sessions.get(socket.id);
     if (!session) return;
@@ -258,7 +300,7 @@ const clientDist = path.join(__dirname, '..', 'client', 'dist');
 
 app.use(express.static(clientDist));
 app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api') || req.path.startsWith('/socket.io')) {
+  if (req.path.startsWith('/api') || req.path.startsWith('/socket.io') || req.path.startsWith('/uploads')) {
     return next();
   }
   res.sendFile(path.join(clientDist, 'index.html'), (err) => {

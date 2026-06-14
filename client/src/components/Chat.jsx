@@ -1,6 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 
-export default function Chat({ messages, canSend, onSend, placeholder = 'Сообщение...' }) {
+export default function Chat({
+  messages,
+  canSend,
+  onSend,
+  onDeleteMessage,
+  isAdmin,
+  placeholder = 'Сообщение...',
+}) {
   const [text, setText] = useState('');
   const bottomRef = useRef(null);
 
@@ -30,11 +37,21 @@ export default function Chat({ messages, canSend, onSend, placeholder = 'Соо�
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`chat-msg ${msg.system ? 'system' : ''}`}
+            className={`chat-msg ${msg.system ? 'system' : ''} ${msg.deleted ? 'deleted' : ''}`}
           >
             <span className="chat-time">{formatTime(msg.time)}</span>
             <span className="chat-author">{msg.playerName}:</span>
             <span className="chat-text">{msg.text}</span>
+            {isAdmin && !msg.system && !msg.deleted && onDeleteMessage && (
+              <button
+                type="button"
+                className="chat-delete-btn"
+                title="Удалить сообщение"
+                onClick={() => onDeleteMessage(msg.id)}
+              >
+                ✕
+              </button>
+            )}
           </div>
         ))}
         <div ref={bottomRef} />

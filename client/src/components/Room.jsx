@@ -32,7 +32,7 @@ function useTimer(timerEnd) {
   return left;
 }
 
-export default function Room({ socket, state, onLeave }) {
+export default function Room({ socket, state, user, onLeave }) {
   const [mafiaTab, setMafiaTab] = useState(false);
 
   if (!state) {
@@ -104,6 +104,12 @@ export default function Room({ socket, state, onLeave }) {
                 messages={state.chat}
                 canSend={state.canChat && me?.alive}
                 onSend={(text) => emit('chat:send', { text })}
+                isAdmin={state.isAdmin}
+                onDeleteMessage={
+                  state.isAdmin
+                    ? (messageId) => emit('admin:deleteMessage', { messageId, channel: 'public' })
+                    : null
+                }
               />
               <ActionPanel state={state} emit={emit} />
             </>
@@ -112,6 +118,12 @@ export default function Room({ socket, state, onLeave }) {
               messages={state.mafiaChat}
               canSend={state.phase === 'night'}
               onSend={(text) => emit('chat:mafia', { text })}
+              isAdmin={state.isAdmin}
+              onDeleteMessage={
+                state.isAdmin
+                  ? (messageId) => emit('admin:deleteMessage', { messageId, channel: 'mafia' })
+                  : null
+              }
               placeholder="Сообщение для мафии..."
             />
           )}

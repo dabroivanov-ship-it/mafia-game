@@ -577,16 +577,57 @@ export function addChatMessage(room, playerId, text, channel = 'public') {
   if (!player) return null;
 
   const msg = {
-    id: Date.now() + Math.random(),
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
     playerId,
+    userId: player.userId || null,
     playerName: player.name,
     text,
     time: new Date().toISOString(),
+    deleted: false,
   };
 
   if (channel === 'mafia') room.mafiaChat.push(msg);
   else room.chat.push(msg);
   return msg;
+}
+
+export function deleteChatMessage(room, messageId, channel = 'public') {
+  const list = channel === 'mafia' ? room.mafiaChat : room.chat;
+  const msg = list.find((m) => m.id === messageId);
+  if (!msg || msg.system) return false;
+  msg.deleted = true;
+  msg.text = '[сообщение удалено модератором]';
+  return true;
+}
+
+export function getModerationSnapshot(rooms) {
+  const messages = [];
+  for (const room of rooms.values()) {
+    for (const msg of room.chat) {
+      if (!msg.system) {
+        messages.push({
+          ...msg,
+          roomId: room.id,
+          roomName: room.name,
+          channel: 'public',
+        });
+      }
+    }
+    for (const msg of room.mafiaChat) {
+      messages.push({
+        ...msg,
+        roomId: room.id,
+        roomName: room.name,
+        channel: 'mafia',
+      });
+    }
+  }
+  messages.sort((a, b) => new Date(b.time) - new Date(a.time));
+
+  return {
+    rooms: getLobbySnapshot(rooms),
+    messages: messages.slice(0, 80),
+  };
 }
 
 function addSystemMessage(room, text) {
@@ -601,8 +642,9 @@ function addSystemMessage(room, text) {
   });
 }
 
-export function serializeRoomForPlayer(room, playerId) {
+export function serializeRoomForPlayer(room, playerId, options = {}) {
   const me = room.players.find((p) => p.id === playerId);
+  const { isAdmin = false } = options;
 
   return {
     id: room.id,
@@ -639,5 +681,6 @@ export function serializeRoomForPlayer(room, playerId) {
     votingStarted: room.votingStarted,
     myVote: room.votes[playerId] || null,
     nightActionDone: me?.nightActionDone || false,
+    isAdmin,
   };
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { avatarUrl } from '../api.js';
 
 const PHASE_LABELS = {
   waiting: 'Ожидание',
@@ -9,31 +9,27 @@ const PHASE_LABELS = {
   ended: 'Игра окончена',
 };
 
-export default function Lobby({ rooms, user, onJoin, onLogout }) {
-  const [joining, setJoining] = useState(null);
-
-  const handleJoin = (roomId) => {
-    setJoining(roomId);
-    onJoin(roomId);
-    setJoining(null);
-  };
-
+export default function Lobby({ rooms, user, onJoin }) {
   return (
     <div className="lobby">
       <header className="lobby-header">
         <h1>🎭 Мафия</h1>
-        <p>Многопользовательская игра с автоматическим ведущим</p>
+        <p>Выберите комнату для игры</p>
       </header>
 
       <div className="user-bar">
         <div className="user-info">
-          <span className="user-name">{user.displayName}</span>
-          <span className="user-login">@{user.username}</span>
-          <span className="user-score">🏆 {user.totalScore} очков</span>
+          {user.avatar ? (
+            <img src={avatarUrl(user.avatar)} alt="" className="user-avatar-sm" />
+          ) : (
+            <span className="user-avatar-sm placeholder">👤</span>
+          )}
+          <div>
+            <span className="user-name">{user.displayName}</span>
+            {user.city && <span className="user-city">📍 {user.city}</span>}
+            <span className="user-score">🏆 {user.totalScore} очков</span>
+          </div>
         </div>
-        <button type="button" className="btn btn-ghost" onClick={onLogout}>
-          Выйти
-        </button>
       </div>
 
       <div className="rooms-list">
@@ -47,11 +43,7 @@ export default function Lobby({ rooms, user, onJoin, onLogout }) {
                 {room.playerCount} / {room.maxPlayers}
               </span>
             </div>
-            <button
-              className="btn btn-primary"
-              onClick={() => handleJoin(room.id)}
-              disabled={joining === room.id}
-            >
+            <button className="btn btn-primary" onClick={() => onJoin(room.id)}>
               Войти
             </button>
           </div>

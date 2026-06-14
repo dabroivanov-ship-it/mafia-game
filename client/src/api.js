@@ -2,8 +2,17 @@ const API_BASE =
   import.meta.env.VITE_API_URL ??
   (import.meta.env.DEV ? 'http://localhost:3001' : '');
 
+export function avatarUrl(path) {
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  return `${API_BASE}${path}`;
+}
+
 export async function apiRequest(path, options = {}) {
-  const headers = { 'Content-Type': 'application/json', ...options.headers };
+  const headers = { ...options.headers };
+  if (!(options.body instanceof FormData)) {
+    headers['Content-Type'] = headers['Content-Type'] || 'application/json';
+  }
   const token = localStorage.getItem('mafia_token');
   if (token) headers.Authorization = `Bearer ${token}`;
 
@@ -27,15 +36,6 @@ export function clearSession() {
   localStorage.removeItem('mafia_player_id');
 }
 
-export function loadStoredUser() {
-  try {
-    const raw = localStorage.getItem('mafia_user');
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-
 export async function register(payload) {
   return apiRequest('/api/auth/register', {
     method: 'POST',
@@ -52,4 +52,58 @@ export async function login(payload) {
 
 export async function fetchMe() {
   return apiRequest('/api/auth/me');
+}
+
+export async function updateProfile(payload) {
+  return apiRequest('/api/profile', {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function uploadAvatar(file) {
+  const form = new FormData();
+  form.append('avatar', file);
+  const token = localStorage.getItem('mafia_token');
+  const res = await fetch(`${API_BASE}/api/profile/avatar`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Ошибка загрузки');
+  return data;
+}
+
+export async function fetchAdminOverview() {
+  return apiRequest('/api/admin/overview');
+}
+
+export async function fetchAdminUsers() {
+  return apiRequest('/api/admin/users');
+}
+
+export async function adminBan(userId, reason, hours) {
+  return apiRequest('/api/admin/ban', {
+    method: 'POST',
+    body: JSON.stringify({ userId, reason, hours }),
+  });
+}
+
+export async function adminUnban(userId) {
+  return apiRequest('/api/admin/unban', {
+    method: 'POST',
+    body: JSON.stringify({ userId }),
+  });
+}
+
+export async function adminDeleteUser(userId) {
+  return apiRequest(`/api/admin/users/${userId}`, { method: 'DELETE' });
+}
+
+export async function adminDeleteMessage(roomId, messageId, channel) {
+  return apiRequest('/api/admin/messages', {
+    method: 'DELETE',
+    body: JSON.stringify({ roomId, messageId, channel }),
+  });
 }
