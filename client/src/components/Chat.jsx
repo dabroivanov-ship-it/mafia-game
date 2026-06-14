@@ -37,9 +37,12 @@ export default function Chat({
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`chat-msg ${msg.system ? 'system' : ''} ${msg.deleted ? 'deleted' : ''}`}
+            className={`chat-msg ${msg.system ? 'system' : ''} ${msg.deleted ? 'deleted' : ''} ${msg.sourceChannel === 'spectator' ? 'spectator-only' : ''}`}
           >
             <span className="chat-time">{formatTime(msg.time)}</span>
+            {msg.sourceChannel === 'spectator' && (
+              <span className="chat-spectator-tag" title="Только для наблюдателей">👁</span>
+            )}
             <span className="chat-author">{msg.playerName}:</span>
             <span className="chat-text">{msg.text}</span>
             {isAdmin && !msg.system && !msg.deleted && onDeleteMessage && (
@@ -47,7 +50,7 @@ export default function Chat({
                 type="button"
                 className="chat-delete-btn"
                 title="Удалить сообщение"
-                onClick={() => onDeleteMessage(msg.id)}
+                onClick={() => onDeleteMessage(msg.id, msg.sourceChannel)}
               >
                 ✕
               </button>

@@ -74,7 +74,7 @@ export default function Room({ socket, state, user, onLeave }) {
           👁 Вы наблюдаете.
           {state.canJoinGame
             ? ' Нажмите «Присоединиться к игре», чтобы участвовать.'
-            : ' Ваш чат видят только другие наблюдатели.'}
+            : ' Вы видите чат игры; ваши сообщения видят только наблюдатели.'}
         </div>
       )}
 
@@ -119,13 +119,15 @@ export default function Room({ socket, state, user, onLeave }) {
               <div className="chat-header-bar">
                 <span className="chat-header-title">
                   {state.chatMode === 'spectator'
-                    ? '👁 Чат наблюдателей'
+                    ? '👁 Игра + чат наблюдателей'
                     : state.chatMode === 'dead'
                       ? '💀 Чат выбывших'
                       : '💬 Чат'}
                 </span>
                 {state.chatMode === 'spectator' && (
-                  <span className="chat-header-hint muted">Игроки вас не видят</span>
+                  <span className="chat-header-hint muted">
+                    Сообщения с 👁 видят только наблюдатели
+                  </span>
                 )}
                 {state.chatMode === 'dead' && (
                   <span className="chat-header-hint muted">Живые игроки вас не видят</span>
@@ -138,11 +140,11 @@ export default function Room({ socket, state, user, onLeave }) {
                 isAdmin={state.isAdmin}
                 onDeleteMessage={
                   state.isAdmin
-                    ? (messageId) =>
+                    ? (messageId, sourceChannel) =>
                         emit('admin:deleteMessage', {
                           messageId,
                           channel:
-                            state.chatMode === 'spectator'
+                            sourceChannel === 'spectator'
                               ? 'spectator'
                               : state.chatMode === 'dead'
                                 ? 'dead'

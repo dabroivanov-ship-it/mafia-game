@@ -817,8 +817,9 @@ function buildChatView(room, me) {
   const isSpectator = me && !me.inGame && gameRunning;
 
   if (isSpectator) {
-    const systemMsgs = room.chat.filter((m) => m.system);
-    const combined = [...systemMsgs, ...room.spectatorChat]
+    const gameMsgs = room.chat.map((m) => ({ ...m, sourceChannel: 'public' }));
+    const specMsgs = room.spectatorChat.map((m) => ({ ...m, sourceChannel: 'spectator' }));
+    const combined = [...gameMsgs, ...specMsgs]
       .sort((a, b) => new Date(a.time) - new Date(b.time))
       .slice(-200);
     return { messages: combined, mode: 'spectator' };
