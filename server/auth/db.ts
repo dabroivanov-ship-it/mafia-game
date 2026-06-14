@@ -1,20 +1,18 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
-import { fileURLToPath } from 'url';
 import type { PublicUser, User } from '../types/index.js';
+import { getDataDir, getDbPath, getUploadsDir } from '../paths.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dataDir = process.env.DB_PATH
-  ? path.dirname(process.env.DB_PATH)
-  : path.join(__dirname, '..', 'data');
+const dataDir = getDataDir();
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
-export const uploadsDir = process.env.UPLOADS_DIR || path.join(__dirname, '..', 'uploads', 'avatars');
+export const uploadsDir = getUploadsDir();
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
-const dbPath = process.env.DB_PATH || path.join(dataDir, 'mafia.db');
+const dbPath = getDbPath();
 const db: Database.Database = new Database(dbPath);
+console.log(`📦 SQLite: ${dbPath}`);
 db.pragma('journal_mode = WAL');
 
 db.exec(`
