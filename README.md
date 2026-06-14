@@ -336,6 +336,7 @@ curl -s http://127.0.0.1:3001/api/health
 
 | Проблема | Решение |
 |----------|---------|
+| Сайт **502 Bad Gateway** | Caddy работает, Node — нет: `pm2 logs mafia-server --lines 50`, затем `bash scripts/deploy.sh` или ручная пересборка (см. ниже) |
 | Сайт 404 / «Клиент не собран» | `cd client && npm run build`, затем `pm2 restart mafia-server` |
 | Сервер не стартует после pull | `cd server && npm install && npm run build` |
 | «Загрузка комнат...» | `pm2 status` — процесс `mafia-server` должен быть online |
