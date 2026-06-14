@@ -12,6 +12,13 @@ export default function Menu({ user, view, onNavigate, onLogout }) {
       </button>
       <button
         type="button"
+        className={`menu-item ${view === 'rules' ? 'active' : ''}`}
+        onClick={() => onNavigate('rules')}
+      >
+        📖 Правила
+      </button>
+      <button
+        type="button"
         className={`menu-item ${view === 'profile' ? 'active' : ''}`}
         onClick={() => onNavigate('profile')}
       >

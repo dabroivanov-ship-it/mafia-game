@@ -1,5 +1,3 @@
-import { avatarUrl } from '../api.js';
-
 const PHASE_LABELS = {
   waiting: 'Ожидание',
   registration: 'Регистрация',
@@ -9,28 +7,13 @@ const PHASE_LABELS = {
   ended: 'Игра окончена',
 };
 
-export default function Lobby({ rooms, user, onJoin }) {
+export default function Lobby({ rooms, onJoin }) {
   return (
     <div className="lobby">
       <header className="lobby-header">
         <h1>🎭 Мафия</h1>
         <p>Выберите комнату для игры</p>
       </header>
-
-      <div className="user-bar">
-        <div className="user-info">
-          {user.avatar ? (
-            <img src={avatarUrl(user.avatar)} alt="" className="user-avatar-sm" />
-          ) : (
-            <span className="user-avatar-sm placeholder">👤</span>
-          )}
-          <div>
-            <span className="user-name">{user.displayName}</span>
-            {user.city && <span className="user-city">📍 {user.city}</span>}
-            <span className="user-score">🏆 {user.totalScore} очков</span>
-          </div>
-        </div>
-      </div>
 
       <div className="rooms-list">
         {rooms.length === 0 && <p className="muted">Загрузка комнат...</p>}

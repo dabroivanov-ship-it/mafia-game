@@ -3,6 +3,7 @@ import { io } from 'socket.io-client';
 import Auth from './components/Auth.jsx';
 import Menu from './components/Menu.jsx';
 import Lobby from './components/Lobby.jsx';
+import Rules from './components/Rules.jsx';
 import Profile from './components/Profile.jsx';
 import AdminPanel from './components/AdminPanel.jsx';
 import Room from './components/Room.jsx';
@@ -195,8 +196,9 @@ export default function App() {
       />
 
       {view === 'lobby' && (
-        <Lobby rooms={rooms} user={user} onJoin={joinRoom} />
+        <Lobby rooms={rooms} onJoin={joinRoom} />
       )}
+      {view === 'rules' && <Rules />}
       {view === 'profile' && (
         <Profile user={user} onUpdate={handleUserUpdate} onBack={() => setView('lobby')} />
       )}
