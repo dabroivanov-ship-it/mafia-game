@@ -1,4 +1,6 @@
 // Настройки игры (можно менять)
+import type { GamePhase, RoleId } from '../types/index.js';
+
 export const CONFIG = {
   MIN_PLAYERS: 3,
   MAX_PLAYERS: 10,
@@ -8,7 +10,7 @@ export const CONFIG = {
   DAY_DISCUSSION_SEC: 60,
   NIGHT_ACTIONS_SEC: 60,
   ROOM_COUNT: 3,
-};
+} as const;
 
 export const PHASE = {
   WAITING: 'waiting',
@@ -17,9 +19,9 @@ export const PHASE = {
   VOTING: 'voting',
   NIGHT: 'night',
   ENDED: 'ended',
-};
+} as const satisfies Record<string, GamePhase>;
 
-export const ROLE_LABELS = {
+export const ROLE_LABELS: Record<RoleId, string> = {
   mafia: 'Мафия',
   commissar: 'Катани',
   doctor: 'Доктор',
@@ -33,9 +35,9 @@ export const ROLE_LABELS = {
 };
 
 // Категории для проверок победы и очков
-export const MAFIA_ROLES = ['mafia'];
-export const EVIL_ROLES = ['mafia', 'maniac'];
-export const TOWN_ROLES = [
+export const MAFIA_ROLES: RoleId[] = ['mafia'];
+export const EVIL_ROLES: RoleId[] = ['mafia', 'maniac'];
+export const TOWN_ROLES: RoleId[] = [
   'commissar',
   'doctor',
   'homeless',

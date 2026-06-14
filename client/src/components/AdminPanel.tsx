@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, FormEvent, ChangeEvent, KeyboardEvent } from 'react';
 import {
   avatarUrl,
   fetchAdminOverview,
@@ -12,25 +12,33 @@ import {
   adminUpdateUser,
   adminUploadUserAvatar,
   adminRemoveUserAvatar,
-} from '../api.js';
+  type AdminGameEvent,
+  type AdminMessage,
+  type AdminRoom,
+} from '../api';
+import type { User } from '../types';
 
-export default function AdminPanel({ onBack }) {
-  const [users, setUsers] = useState([]);
-  const [messages, setMessages] = useState([]);
-  const [gameEvents, setGameEvents] = useState([]);
-  const [rooms, setRooms] = useState([]);
+interface AdminPanelProps {
+  onBack: () => void;
+}
+
+export default function AdminPanel({ onBack }: AdminPanelProps) {
+  const [users, setUsers] = useState<User[]>([]);
+  const [messages, setMessages] = useState<AdminMessage[]>([]);
+  const [gameEvents, setGameEvents] = useState<AdminGameEvent[]>([]);
+  const [rooms, setRooms] = useState<AdminRoom[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [banTarget, setBanTarget] = useState(null);
+  const [banTarget, setBanTarget] = useState<User | null>(null);
   const [banReason, setBanReason] = useState('Нарушение правил');
   const [banHours, setBanHours] = useState('');
-  const [editUser, setEditUser] = useState(null);
+  const [editUser, setEditUser] = useState<User | null>(null);
   const [editForm, setEditForm] = useState({ displayName: '', city: '', bio: '' });
   const [newRoomName, setNewRoomName] = useState('');
-  const [roomEdits, setRoomEdits] = useState({});
-  const dirtyRoomsRef = useRef(new Set());
+  const [roomEdits, setRoomEdits] = useState<Record<number, string>>({});
+  const dirtyRoomsRef = useRef(new Set<number>());
   const roomEditsInitializedRef = useRef(false);
-  const avatarInputRef = useRef(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const load = async ({ silent = false, syncRoomNames = false } = {}) => {
     if (!silent) setLoading(true);
@@ -43,7 +51,7 @@ export default function AdminPanel({ onBack }) {
       setRooms(data.rooms || []);
 
       if (!roomEditsInitializedRef.current || syncRoomNames) {
-        const edits = {};
+        const edits: Record<number, string> = {};
         (data.rooms || []).forEach((r) => {
           edits[r.id] = r.name;
         });
@@ -52,19 +60,19 @@ export default function AdminPanel({ onBack }) {
         roomEditsInitializedRef.current = true;
       }
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : 'Ошибка загрузки');
     } finally {
       if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
-    load();
-    const id = setInterval(() => load({ silent: true }), 10000);
+    void load();
+    const id = setInterval(() => void load({ silent: true }), 10000);
     return () => clearInterval(id);
   }, []);
 
-  const openEditUser = (u) => {
+  const openEditUser = (u: User) => {
     setEditUser(u);
     setEditForm({
       displayName: u.displayName || '',
@@ -78,23 +86,23 @@ export default function AdminPanel({ onBack }) {
     try {
       await adminUpdateUser(editUser.id, editForm);
       setEditUser(null);
-      load();
+      await load();
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : 'Ошибка сохранения');
     }
   };
 
-  const handleUserAvatar = async (e) => {
+  const handleUserAvatar = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !editUser) return;
     try {
       await adminUploadUserAvatar(editUser.id, file);
-      load();
+      await load();
       const data = await fetchAdminOverview();
       const updated = data.users.find((u) => u.id === editUser.id);
       if (updated) setEditUser(updated);
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : 'Ошибка загрузки');
     } finally {
       if (avatarInputRef.current) avatarInputRef.current.value = '';
     }
@@ -104,14 +112,14 @@ export default function AdminPanel({ onBack }) {
     if (!editUser) return;
     try {
       await adminRemoveUserAvatar(editUser.id);
-      load();
+      await load();
       setEditUser({ ...editUser, avatar: null });
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : 'Ошибка удаления');
     }
   };
 
-  const handleRenameRoom = async (roomId) => {
+  const handleRenameRoom = async (roomId: number) => {
     const name = roomEdits[roomId]?.trim();
     if (!name) {
       setError('Название не может быть пустым');
@@ -125,41 +133,41 @@ export default function AdminPanel({ onBack }) {
         prev.map((r) => (r.id === roomId ? { ...r, name: room.name } : r))
       );
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : 'Ошибка переименования');
     }
   };
 
-  const handleRoomNameChange = (roomId, value) => {
+  const handleRoomNameChange = (roomId: number, value: string) => {
     setRoomEdits((prev) => ({ ...prev, [roomId]: value }));
     dirtyRoomsRef.current.add(roomId);
   };
 
-  const handleRoomNameKeyDown = (e, roomId) => {
+  const handleRoomNameKeyDown = (e: KeyboardEvent<HTMLInputElement>, roomId: number) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      handleRenameRoom(roomId);
+      void handleRenameRoom(roomId);
     }
   };
 
-  const handleCreateRoom = async (e) => {
+  const handleCreateRoom = async (e: FormEvent) => {
     e.preventDefault();
     if (!newRoomName.trim()) return;
     try {
       await adminCreateRoom(newRoomName.trim());
       setNewRoomName('');
-      load();
+      await load();
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : 'Ошибка создания');
     }
   };
 
-  const handleDeleteRoom = async (roomId, name) => {
+  const handleDeleteRoom = async (roomId: number, name: string) => {
     if (!confirm(`Удалить комнату «${name}»? Игроки будут выгнаны.`)) return;
     try {
       await adminDeleteRoom(roomId);
-      load();
+      await load();
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : 'Ошибка удаления');
     }
   };
 
@@ -168,48 +176,48 @@ export default function AdminPanel({ onBack }) {
     try {
       await adminBan(banTarget.id, banReason, banHours ? Number(banHours) : null);
       setBanTarget(null);
-      load();
+      await load();
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : 'Ошибка бана');
     }
   };
 
-  const handleUnban = async (userId) => {
+  const handleUnban = async (userId: number) => {
     try {
       await adminUnban(userId);
-      load();
+      await load();
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : 'Ошибка разбана');
     }
   };
 
-  const handleDeleteUser = async (userId) => {
+  const handleDeleteUser = async (userId: number) => {
     if (!confirm('Удалить пользователя и его профиль?')) return;
     try {
       await adminDeleteUser(userId);
-      load();
+      await load();
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : 'Ошибка удаления');
     }
   };
 
-  const handleDeleteMsg = async (msg) => {
+  const handleDeleteMsg = async (msg: AdminMessage) => {
     try {
       await adminDeleteMessage(msg.roomId, msg.id, msg.channel);
-      load();
+      await load();
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : 'Ошибка удаления');
     }
   };
 
-  const eventLabel = (type) => {
+  const eventLabel = (type: string) => {
     if (type === 'registration_start') return '📝 Регистрация';
     if (type === 'game_start') return '🎮 Старт игры';
     if (type === 'game_end') return '🏁 Конец игры';
     return type;
   };
 
-  const roomNameById = (id) => rooms.find((r) => r.id === id)?.name || `Комната ${id}`;
+  const roomNameById = (id: number) => rooms.find((r) => r.id === id)?.name || `Комната ${id}`;
 
   if (loading && users.length === 0) {
     return <div className="admin-page"><p className="muted">Загрузка...</p></div>;
@@ -220,7 +228,7 @@ export default function AdminPanel({ onBack }) {
       <div className="admin-header">
         <h2>🛡️ Панель администратора</h2>
         <div className="admin-header-actions">
-          <button type="button" className="btn btn-ghost" onClick={load}>Обновить</button>
+          <button type="button" className="btn btn-ghost" onClick={() => void load()}>Обновить</button>
           <button type="button" className="btn btn-ghost" onClick={onBack}>Назад</button>
         </div>
       </div>
@@ -242,13 +250,13 @@ export default function AdminPanel({ onBack }) {
               <span className="muted room-meta">
                 {r.playerCount}/{r.maxPlayers} · {r.phase}
               </span>
-              <button type="button" className="btn btn-sm btn-primary" onClick={() => handleRenameRoom(r.id)}>
+              <button type="button" className="btn btn-sm btn-primary" onClick={() => void handleRenameRoom(r.id)}>
                 Сохранить
               </button>
               <button
                 type="button"
                 className="btn btn-sm danger"
-                onClick={() => handleDeleteRoom(r.id, r.name)}
+                onClick={() => void handleDeleteRoom(r.id, r.name)}
                 disabled={rooms.length <= 1}
               >
                 Удалить
@@ -256,13 +264,7 @@ export default function AdminPanel({ onBack }) {
             </div>
           ))}
         </div>
-        <form
-          className="admin-add-room"
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleCreateRoom(e);
-          }}
-        >
+        <form className="admin-add-room" onSubmit={handleCreateRoom}>
           <input
             type="text"
             placeholder="Название новой комнаты"
@@ -293,7 +295,7 @@ export default function AdminPanel({ onBack }) {
                   <td>
                     <div className="admin-user-cell">
                       {u.avatar ? (
-                        <img src={avatarUrl(u.avatar)} alt="" className="admin-avatar" />
+                        <img src={avatarUrl(u.avatar) ?? undefined} alt="" className="admin-avatar" />
                       ) : (
                         <span className="admin-avatar placeholder">👤</span>
                       )}
@@ -323,12 +325,12 @@ export default function AdminPanel({ onBack }) {
                       </button>
                     )}
                     {u.isBanned && (
-                      <button type="button" className="btn btn-sm" onClick={() => handleUnban(u.id)}>
+                      <button type="button" className="btn btn-sm" onClick={() => void handleUnban(u.id)}>
                         Разбан
                       </button>
                     )}
                     {!u.isAdmin && (
-                      <button type="button" className="btn btn-sm btn-ghost" onClick={() => handleDeleteUser(u.id)}>
+                      <button type="button" className="btn btn-sm btn-ghost" onClick={() => void handleDeleteUser(u.id)}>
                         Удалить
                       </button>
                     )}
@@ -377,7 +379,7 @@ export default function AdminPanel({ onBack }) {
                 <strong>{msg.playerName}:</strong> {msg.text}
               </div>
               {!msg.deleted && (
-                <button type="button" className="btn btn-sm danger" onClick={() => handleDeleteMsg(msg)}>
+                <button type="button" className="btn btn-sm danger" onClick={() => void handleDeleteMsg(msg)}>
                   Удалить
                 </button>
               )}
@@ -393,7 +395,7 @@ export default function AdminPanel({ onBack }) {
 
             <div className="profile-avatar-block">
               {editUser.avatar ? (
-                <img src={avatarUrl(editUser.avatar)} alt="" className="profile-avatar" />
+                <img src={avatarUrl(editUser.avatar) ?? undefined} alt="" className="profile-avatar" />
               ) : (
                 <div className="profile-avatar placeholder">👤</div>
               )}
@@ -401,7 +403,7 @@ export default function AdminPanel({ onBack }) {
                 <input ref={avatarInputRef} type="file" accept="image/*" onChange={handleUserAvatar} hidden id="admin-avatar" />
                 <label htmlFor="admin-avatar" className="btn btn-ghost">Заменить аватар</label>
                 {editUser.avatar && (
-                  <button type="button" className="btn btn-sm danger" onClick={handleRemoveAvatar}>
+                  <button type="button" className="btn btn-sm danger" onClick={() => void handleRemoveAvatar()}>
                     Удалить аватар
                   </button>
                 )}
@@ -435,7 +437,7 @@ export default function AdminPanel({ onBack }) {
             </label>
             <div className="profile-actions">
               <button type="button" className="btn btn-ghost" onClick={() => setEditUser(null)}>Отмена</button>
-              <button type="button" className="btn btn-primary" onClick={handleSaveUser}>Сохранить</button>
+              <button type="button" className="btn btn-primary" onClick={() => void handleSaveUser()}>Сохранить</button>
             </div>
           </div>
         </div>
@@ -461,7 +463,7 @@ export default function AdminPanel({ onBack }) {
             </label>
             <div className="profile-actions">
               <button type="button" className="btn btn-ghost" onClick={() => setBanTarget(null)}>Отмена</button>
-              <button type="button" className="btn btn-primary danger" onClick={handleBan}>Забанить</button>
+              <button type="button" className="btn btn-primary danger" onClick={() => void handleBan()}>Забанить</button>
             </div>
           </div>
         </div>

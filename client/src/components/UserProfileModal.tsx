@@ -6,10 +6,28 @@ import {
   adminUnban,
   adminDeleteUser,
   adminUpdateUser,
-} from '../api.js';
+} from '../api';
+import type { User } from '../types';
 
-export default function UserProfileModal({ userId, viewerIsAdmin, onClose, onAdminAction }) {
-  const [data, setData] = useState(null);
+interface UserProfileModalProps {
+  userId: number;
+  viewerIsAdmin: boolean;
+  onClose: () => void;
+  onAdminAction?: () => void;
+}
+
+interface ProfileData {
+  user: User & { messageCount?: number };
+  canAdmin: boolean;
+}
+
+export default function UserProfileModal({
+  userId,
+  viewerIsAdmin,
+  onClose,
+  onAdminAction,
+}: UserProfileModalProps) {
+  const [data, setData] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [editMode, setEditMode] = useState(false);
@@ -30,14 +48,14 @@ export default function UserProfileModal({ userId, viewerIsAdmin, onClose, onAdm
         bio: res.user.bio || '',
       });
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : 'Ошибка загрузки');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (userId) load();
+    if (userId) void load();
   }, [userId]);
 
   const handleSave = async () => {
@@ -47,7 +65,7 @@ export default function UserProfileModal({ userId, viewerIsAdmin, onClose, onAdm
       await load();
       onAdminAction?.();
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : 'Ошибка сохранения');
     }
   };
 
@@ -58,7 +76,7 @@ export default function UserProfileModal({ userId, viewerIsAdmin, onClose, onAdm
       await load();
       onAdminAction?.();
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : 'Ошибка бана');
     }
   };
 
@@ -68,7 +86,7 @@ export default function UserProfileModal({ userId, viewerIsAdmin, onClose, onAdm
       await load();
       onAdminAction?.();
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : 'Ошибка разбана');
     }
   };
 
@@ -79,7 +97,7 @@ export default function UserProfileModal({ userId, viewerIsAdmin, onClose, onAdm
       onAdminAction?.();
       onClose();
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : 'Ошибка удаления');
     }
   };
 
@@ -101,7 +119,7 @@ export default function UserProfileModal({ userId, viewerIsAdmin, onClose, onAdm
           <>
             <div className="profile-avatar-block">
               {user.avatar ? (
-                <img src={avatarUrl(user.avatar)} alt="" className="profile-avatar" />
+                <img src={avatarUrl(user.avatar) ?? undefined} alt="" className="profile-avatar" />
               ) : (
                 <div className="profile-avatar placeholder">👤</div>
               )}

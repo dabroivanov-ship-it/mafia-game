@@ -1,4 +1,5 @@
 import db from '../auth/db.js';
+import type { ChatChannel, ChatMessage, GameRoom } from '../types/index.js';
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS room_chat_log (
@@ -28,7 +29,30 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_room_game_room ON room_game_log(room_id, created_at);
 `);
 
-function rowToMsg(row) {
+interface ChatRow {
+  id: number;
+  room_id: number;
+  session_id: number | null;
+  msg_key: string;
+  channel: string;
+  user_id: number | null;
+  player_name: string | null;
+  text: string;
+  is_system: number;
+  deleted: number;
+  created_at: string;
+}
+
+interface GameEventRow {
+  id: number;
+  room_id: number;
+  session_id: number | null;
+  event_type: string;
+  payload: string | null;
+  created_at: string;
+}
+
+function rowToMsg(row: ChatRow): ChatMessage {
   return {
     id: row.msg_key,
     dbId: row.id,
@@ -42,7 +66,12 @@ function rowToMsg(row) {
   };
 }
 
-export function saveChatMessage(roomId, sessionId, msg, channel = 'public') {
+export function saveChatMessage(
+  roomId: number,
+  sessionId: number | null,
+  msg: ChatMessage,
+  channel: ChatChannel = 'public'
+): void {
   db.prepare(
     `INSERT INTO room_chat_log (room_id, session_id, msg_key, channel, user_id, player_name, text, is_system, deleted, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
@@ -60,30 +89,43 @@ export function saveChatMessage(roomId, sessionId, msg, channel = 'public') {
   );
 }
 
-export function saveGameEvent(roomId, sessionId, eventType, payload = {}) {
+export function saveGameEvent(
+  roomId: number,
+  sessionId: number | null,
+  eventType: string,
+  payload: Record<string, unknown> = {}
+): void {
   db.prepare(
     `INSERT INTO room_game_log (room_id, session_id, event_type, payload) VALUES (?, ?, ?, ?)`
   ).run(roomId, sessionId || null, eventType, JSON.stringify(payload));
 }
 
-export function markChatDeleted(msgKey) {
+export function markChatDeleted(msgKey: string): void {
   db.prepare(
     `UPDATE room_chat_log SET deleted = 1, text = ? WHERE msg_key = ?`
   ).run('[сообщение удалено модератором]', String(msgKey));
 }
 
-export function loadRoomChatHistory(roomId, limit = 300) {
+export function loadRoomChatHistory(
+  roomId: number,
+  limit = 300
+): {
+  chat: ChatMessage[];
+  mafiaChat: ChatMessage[];
+  deadChat: ChatMessage[];
+  spectatorChat: ChatMessage[];
+} {
   const rows = db
     .prepare(
       `SELECT * FROM room_chat_log WHERE room_id = ? ORDER BY created_at DESC LIMIT ?`
     )
-    .all(roomId, limit)
-    .reverse();
+    .all(roomId, limit) as ChatRow[];
+  rows.reverse();
 
-  const chat = [];
-  const mafiaChat = [];
-  const deadChat = [];
-  const spectatorChat = [];
+  const chat: ChatMessage[] = [];
+  const mafiaChat: ChatMessage[] = [];
+  const deadChat: ChatMessage[] = [];
+  const spectatorChat: ChatMessage[] = [];
 
   for (const row of rows) {
     const msg = rowToMsg(row);
@@ -96,37 +138,44 @@ export function loadRoomChatHistory(roomId, limit = 300) {
   return { chat, mafiaChat, deadChat, spectatorChat };
 }
 
-export function loadGameEvents(roomId, limit = 50) {
-  return db
+export interface GameEvent {
+  id: number;
+  roomId: number;
+  sessionId: number | null;
+  eventType: string;
+  payload: Record<string, unknown>;
+  time: string;
+}
+
+export function loadGameEvents(roomId: number, limit = 50): GameEvent[] {
+  return (db
     .prepare(
       `SELECT * FROM room_game_log WHERE room_id = ? ORDER BY created_at DESC LIMIT ?`
     )
-    .all(roomId, limit)
-    .map((row) => ({
-      id: row.id,
-      roomId: row.room_id,
-      sessionId: row.session_id,
-      eventType: row.event_type,
-      payload: row.payload ? JSON.parse(row.payload) : {},
-      time: row.created_at,
-    }));
+    .all(roomId, limit) as GameEventRow[]).map((row) => ({
+    id: row.id,
+    roomId: row.room_id,
+    sessionId: row.session_id,
+    eventType: row.event_type,
+    payload: row.payload ? JSON.parse(row.payload) : {},
+    time: row.created_at,
+  }));
 }
 
-export function getRecentGameEvents(limit = 30) {
-  return db
+export function getRecentGameEvents(limit = 30): GameEvent[] {
+  return (db
     .prepare(`SELECT * FROM room_game_log ORDER BY created_at DESC LIMIT ?`)
-    .all(limit)
-    .map((row) => ({
-      id: row.id,
-      roomId: row.room_id,
-      sessionId: row.session_id,
-      eventType: row.event_type,
-      payload: row.payload ? JSON.parse(row.payload) : {},
-      time: row.created_at,
-    }));
+    .all(limit) as GameEventRow[]).map((row) => ({
+    id: row.id,
+    roomId: row.room_id,
+    sessionId: row.session_id,
+    eventType: row.event_type,
+    payload: row.payload ? JSON.parse(row.payload) : {},
+    time: row.created_at,
+  }));
 }
 
-export function hydrateRoomHistory(room) {
+export function hydrateRoomHistory(room: GameRoom): void {
   if (room.historyLoaded) return;
   const { chat, mafiaChat, deadChat, spectatorChat } = loadRoomChatHistory(room.id);
   room.chat = chat;
@@ -136,10 +185,10 @@ export function hydrateRoomHistory(room) {
   room.historyLoaded = true;
 }
 
-export function getRecentChatForAdmin(limit = 100) {
+export function getRecentChatForAdmin(limit = 100): (ChatMessage & { roomId: number; channel: string })[] {
   const rows = db
     .prepare(`SELECT * FROM room_chat_log ORDER BY created_at DESC LIMIT ?`)
-    .all(limit);
+    .all(limit) as ChatRow[];
   return rows.map((row) => ({
     ...rowToMsg(row),
     roomId: row.room_id,
@@ -147,21 +196,21 @@ export function getRecentChatForAdmin(limit = 100) {
   }));
 }
 
-export function getUserMessageCount(userId) {
+export function getUserMessageCount(userId: number): number {
   const row = db
     .prepare(
       `SELECT COUNT(*) AS c FROM room_chat_log
        WHERE user_id = ? AND is_system = 0 AND deleted = 0`
     )
-    .get(userId);
+    .get(userId) as { c: number } | undefined;
   return row?.c ?? 0;
 }
 
-export function getAdminChatHistory(roomId, limit = 200) {
+export function getAdminChatHistory(roomId: number, limit = 200): ChatMessage[] {
   const rows = db
     .prepare(
       `SELECT * FROM room_chat_log WHERE room_id = ? ORDER BY created_at DESC LIMIT ?`
     )
-    .all(roomId, limit);
+    .all(roomId, limit) as ChatRow[];
   return rows.map(rowToMsg).reverse();
 }

@@ -1,12 +1,29 @@
-import { avatarUrl } from '../api.js';
+import { avatarUrl } from '../api';
+import type { User } from '../types';
 
-const ITEMS = [
+type MenuView = 'lobby' | 'rules' | 'profile' | 'admin' | 'room';
+
+interface MenuItem {
+  id: MenuView;
+  icon: string | null;
+  label: string;
+  avatar?: boolean;
+}
+
+const ITEMS: MenuItem[] = [
   { id: 'lobby', icon: '🏠', label: 'Комнаты' },
   { id: 'rules', icon: '📖', label: 'Правила' },
   { id: 'profile', icon: null, label: 'Профиль', avatar: true },
 ];
 
-export default function Menu({ user, view, onNavigate, onLogout }) {
+interface MenuProps {
+  user: User;
+  view: MenuView;
+  onNavigate: (view: MenuView) => void;
+  onLogout: () => void;
+}
+
+export default function Menu({ user, view, onNavigate, onLogout }: MenuProps) {
   return (
     <nav className="main-menu" aria-label="Главное меню">
       <div className="menu-items">
@@ -19,7 +36,7 @@ export default function Menu({ user, view, onNavigate, onLogout }) {
           >
             {item.avatar ? (
               user.avatar ? (
-                <img src={avatarUrl(user.avatar)} alt="" className="menu-avatar" />
+                <img src={avatarUrl(user.avatar) ?? undefined} alt="" className="menu-avatar" />
               ) : (
                 <span className="menu-icon menu-avatar placeholder">👤</span>
               )

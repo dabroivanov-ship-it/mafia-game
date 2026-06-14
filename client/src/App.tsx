@@ -1,34 +1,43 @@
 import { useEffect, useState, useCallback } from 'react';
-import { io } from 'socket.io-client';
-import Auth from './components/Auth.jsx';
-import Menu from './components/Menu.jsx';
-import Lobby from './components/Lobby.jsx';
-import Rules from './components/Rules.jsx';
-import Profile from './components/Profile.jsx';
-import AdminPanel from './components/AdminPanel.jsx';
-import Room from './components/Room.jsx';
-import { clearSession, fetchMe, saveSession } from './api.js';
+import { io, Socket } from 'socket.io-client';
+import Auth from './components/Auth';
+import Menu from './components/Menu';
+import Lobby from './components/Lobby';
+import Rules from './components/Rules';
+import Profile from './components/Profile';
+import AdminPanel from './components/AdminPanel';
+import Room from './components/Room';
+import { clearSession, fetchMe, saveSession } from './api';
+import type { LobbyRoom, RoomState, User } from './types';
 
 const SOCKET_URL =
   import.meta.env.VITE_SOCKET_URL ??
   (import.meta.env.DEV ? 'http://localhost:3001' : undefined);
 
-export default function App() {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(() => localStorage.getItem('mafia_token'));
-  const [authLoading, setAuthLoading] = useState(true);
-  const [view, setView] = useState('lobby');
+type AppView = 'lobby' | 'rules' | 'profile' | 'admin' | 'room';
 
-  const [socket, setSocket] = useState(null);
-  const [rooms, setRooms] = useState([]);
-  const [roomState, setRoomState] = useState(null);
-  const [playerId, setPlayerId] = useState(() => {
+interface RoomJoinResponse {
+  error?: string;
+  playerId?: number;
+  state?: RoomState;
+}
+
+export default function App() {
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem('mafia_token'));
+  const [authLoading, setAuthLoading] = useState(true);
+  const [view, setView] = useState<AppView>('lobby');
+
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [rooms, setRooms] = useState<LobbyRoom[]>([]);
+  const [roomState, setRoomState] = useState<RoomState | null>(null);
+  const [playerId, setPlayerId] = useState<number | null>(() => {
     const v = localStorage.getItem('mafia_player_id');
     return v ? Number(v) : null;
   });
-  const [currentRoomId, setCurrentRoomId] = useState(null);
-  const [notification, setNotification] = useState(null);
-  const [error, setError] = useState(null);
+  const [currentRoomId, setCurrentRoomId] = useState<number | null>(null);
+  const [notification, setNotification] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function checkAuth() {
@@ -62,7 +71,7 @@ export default function App() {
       auth: { token },
     });
 
-    s.on('connect_error', (err) => {
+    s.on('connect_error', (err: Error) => {
       const msg = err.message || '';
       if (msg.includes('авториза') || msg.includes('токен') || msg.includes('заблокирован')) {
         clearSession();
@@ -74,12 +83,12 @@ export default function App() {
 
     s.on('lobby:update', setRooms);
     s.on('room:state', setRoomState);
-    s.on('notification:private', ({ message }) => {
+    s.on('notification:private', ({ message }: { message: string }) => {
       setNotification(message);
       setTimeout(() => setNotification(null), 8000);
     });
 
-    s.on('room:kicked', ({ reason }) => {
+    s.on('room:kicked', ({ reason }: { reason?: string }) => {
       setCurrentRoomId(null);
       setRoomState(null);
       setPlayerId(null);
@@ -89,10 +98,12 @@ export default function App() {
     });
 
     setSocket(s);
-    return () => s.disconnect();
+    return () => {
+      s.disconnect();
+    };
   }, [token, user]);
 
-  const handleAuthSuccess = useCallback((authUser, authToken) => {
+  const handleAuthSuccess = useCallback((authUser: User, authToken: string) => {
     setUser(authUser);
     setToken(authToken);
     setView('lobby');
@@ -111,27 +122,32 @@ export default function App() {
     setView('lobby');
   }, [socket]);
 
-  const handleUserUpdate = useCallback((updated) => {
-    setUser(updated);
-    saveSession(token, updated);
-  }, [token]);
+  const handleUserUpdate = useCallback(
+    (updated: User) => {
+      setUser(updated);
+      if (token) saveSession(token, updated);
+    },
+    [token]
+  );
 
   const joinRoom = useCallback(
-    (roomId) => {
+    (roomId: number) => {
       if (!socket) return;
       setError(null);
       setView('room');
 
-      socket.emit('room:join', { roomId, playerId }, (res) => {
+      socket.emit('room:join', { roomId, playerId }, (res: RoomJoinResponse) => {
         if (res?.error) {
           setError(res.error);
           setView('lobby');
           return;
         }
-        setPlayerId(res.playerId);
-        localStorage.setItem('mafia_player_id', String(res.playerId));
+        if (res.playerId != null) {
+          setPlayerId(res.playerId);
+          localStorage.setItem('mafia_player_id', String(res.playerId));
+        }
         setCurrentRoomId(roomId);
-        setRoomState(res.state);
+        if (res.state) setRoomState(res.state);
       });
     },
     [socket, playerId]
@@ -149,7 +165,7 @@ export default function App() {
     if (!socket || !currentRoomId) return;
 
     const resyncRoom = () => {
-      socket.emit('room:join', { roomId: currentRoomId, playerId }, (res) => {
+      socket.emit('room:join', { roomId: currentRoomId, playerId }, (res: RoomJoinResponse) => {
         if (res?.error) {
           setError(res.error);
           setCurrentRoomId(null);
@@ -168,7 +184,9 @@ export default function App() {
     };
 
     socket.on('connect', resyncRoom);
-    return () => socket.off('connect', resyncRoom);
+    return () => {
+      socket.off('connect', resyncRoom);
+    };
   }, [socket, currentRoomId, playerId]);
 
   if (authLoading) {
@@ -215,9 +233,7 @@ export default function App() {
       )}
 
       <div className="app-body">
-        {view === 'lobby' && (
-          <Lobby rooms={rooms} onJoin={joinRoom} />
-        )}
+        {view === 'lobby' && <Lobby rooms={rooms} onJoin={joinRoom} />}
         {view === 'rules' && <Rules />}
         {view === 'profile' && (
           <Profile user={user} onUpdate={handleUserUpdate} onBack={() => setView('lobby')} />
@@ -227,12 +243,7 @@ export default function App() {
         )}
       </div>
 
-      <Menu
-        user={user}
-        view={view}
-        onNavigate={setView}
-        onLogout={handleLogout}
-      />
+      <Menu user={user} view={view} onNavigate={(v) => setView(v)} onLogout={handleLogout} />
     </div>
   );
 }

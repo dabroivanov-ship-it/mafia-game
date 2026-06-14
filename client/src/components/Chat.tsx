@@ -1,4 +1,18 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, FormEvent } from 'react';
+import type { ChatChannel, ChatMessage } from '../types';
+
+interface ChatProps {
+  messages: ChatMessage[];
+  canSend: boolean;
+  onSend: (text: string) => void;
+  onDeleteMessage?: ((messageId: string | number, sourceChannel?: ChatChannel) => void) | null;
+  onViewProfile?: (userId: number) => void;
+  isAdmin?: boolean;
+  placeholder?: string;
+  hasMoreChat?: boolean;
+  onLoadMore?: () => void;
+  loadingMore?: boolean;
+}
 
 export default function Chat({
   messages,
@@ -11,10 +25,10 @@ export default function Chat({
   hasMoreChat = false,
   onLoadMore,
   loadingMore = false,
-}) {
+}: ChatProps) {
   const [text, setText] = useState('');
-  const listRef = useRef(null);
-  const bottomRef = useRef(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
   const atBottomRef = useRef(true);
   const prevLenRef = useRef(0);
   const loadingMoreRef = useRef(false);
@@ -49,7 +63,7 @@ export default function Chat({
     prevLenRef.current = messages.length;
   }, [messages]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     const trimmed = text.trim();
     if (!trimmed || !canSend) return;
@@ -64,7 +78,7 @@ export default function Chat({
     onLoadMore();
   };
 
-  const formatTime = (iso) => {
+  const formatTime = (iso: string) => {
     try {
       return new Date(iso).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
     } catch {
@@ -103,7 +117,7 @@ export default function Chat({
               <button
                 type="button"
                 className="chat-author-btn"
-                onClick={() => onViewProfile?.(msg.userId)}
+                onClick={() => onViewProfile?.(msg.userId!)}
                 title="Открыть профиль"
               >
                 {msg.playerName}:

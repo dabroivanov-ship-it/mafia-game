@@ -7,23 +7,36 @@ import {
   hydrateRoomHistory,
 } from '../history/store.js';
 import { loadRoomNames, saveRoomName, deleteRoomName } from '../rooms/store.js';
+import type {
+  ChatChannel,
+  ChatMessage,
+  GamePlayer,
+  GameRoom,
+  LobbyRoom,
+  NightAction,
+  NightResolveResult,
+  PrivateNote,
+  RoomState,
+  RoomStatePlayer,
+  TimerReason,
+} from '../types/index.js';
 
 let nextPlayerId = 1;
 
-export function createInitialRooms() {
-  const rooms = new Map();
+export function createInitialRooms(): Map<number, GameRoom> {
+  const rooms = new Map<number, GameRoom>();
   const savedNames = loadRoomNames();
   for (let i = 1; i <= CONFIG.ROOM_COUNT; i++) {
     const room = createRoom(i);
     if (savedNames.has(i)) {
-      room.name = savedNames.get(i);
+      room.name = savedNames.get(i)!;
     }
     rooms.set(i, room);
   }
   return rooms;
 }
 
-function createRoom(id) {
+function createRoom(id: number): GameRoom {
   return {
     id,
     name: `Комната ${id}`,
@@ -55,7 +68,7 @@ function createRoom(id) {
   };
 }
 
-export function getLobbySnapshot(rooms) {
+export function getLobbySnapshot(rooms: Map<number, GameRoom>): LobbyRoom[] {
   return Array.from(rooms.values()).map((room) => {
     const inGame = room.players.filter((p) => p.connected && p.inGame).length;
     const connected = room.players.filter((p) => p.connected).length;
@@ -71,7 +84,7 @@ export function getLobbySnapshot(rooms) {
   });
 }
 
-export function renameRoom(rooms, roomId, name) {
+export function renameRoom(rooms: Map<number, GameRoom>, roomId: number, name: string): GameRoom {
   const room = rooms.get(Number(roomId));
   if (!room) throw new Error('Комната не найдена');
   const trimmed = String(name || '').trim().slice(0, 50);
@@ -81,7 +94,7 @@ export function renameRoom(rooms, roomId, name) {
   return room;
 }
 
-export function addRoom(rooms, name) {
+export function addRoom(rooms: Map<number, GameRoom>, name: string): GameRoom {
   let maxId = 0;
   for (const id of rooms.keys()) maxId = Math.max(maxId, id);
   const id = maxId + 1;
@@ -93,17 +106,30 @@ export function addRoom(rooms, name) {
   return room;
 }
 
-export function removeRoom(rooms, roomId) {
+export function removeRoom(rooms: Map<number, GameRoom>, roomId: number): GameRoom {
   if (rooms.size <= 1) throw new Error('Нельзя удалить последнюю комнату');
   const id = Number(roomId);
   if (!rooms.has(id)) throw new Error('Комната не найдена');
-  const room = rooms.get(id);
+  const room = rooms.get(id)!;
   rooms.delete(id);
   deleteRoomName(id);
   return room;
 }
 
-export function addPlayerToRoom(room, { name, username, socketId, userId }) {
+export function addPlayerToRoom(
+  room: GameRoom,
+  {
+    name,
+    username,
+    socketId,
+    userId,
+  }: {
+    name: string;
+    username: string;
+    socketId: string;
+    userId: number;
+  }
+): GamePlayer {
   const existingSocket = room.players.find((p) => p.socketId === socketId);
   if (existingSocket) {
     existingSocket.name = name;
@@ -137,7 +163,7 @@ export function addPlayerToRoom(room, { name, username, socketId, userId }) {
     throw new Error('Комната переполнена');
   }
 
-  const player = {
+  const player: GamePlayer = {
     id: nextPlayerId++,
     userId,
     name,
@@ -165,7 +191,7 @@ export function addPlayerToRoom(room, { name, username, socketId, userId }) {
   return player;
 }
 
-export function removePlayer(room, socketId, applyPenalty = true) {
+export function removePlayer(room: GameRoom, socketId: string, applyPenalty = true): GamePlayer | null {
   const player = room.players.find((p) => p.socketId === socketId);
   if (!player) return null;
 
@@ -187,7 +213,13 @@ export function removePlayer(room, socketId, applyPenalty = true) {
   return player;
 }
 
-export function reconnectPlayer(room, playerId, socketId, name, username) {
+export function reconnectPlayer(
+  room: GameRoom,
+  playerId: number,
+  socketId: string,
+  name: string,
+  username: string
+): GamePlayer | null {
   const player = room.players.find((p) => p.id === playerId);
   if (!player) return null;
   player.socketId = socketId;
@@ -197,7 +229,7 @@ export function reconnectPlayer(room, playerId, socketId, name, username) {
   return player;
 }
 
-export function startRegistration(room, starterPlayerId = null) {
+export function startRegistration(room: GameRoom, starterPlayerId: number | null = null): void {
   if (room.phase !== PHASE.WAITING && room.phase !== PHASE.ENDED) {
     throw new Error('Игра уже идёт');
   }
@@ -226,7 +258,7 @@ export function startRegistration(room, starterPlayerId = null) {
   setTimer(room, CONFIG.REGISTRATION_SEC * 1000, 'registration');
 }
 
-export function joinGame(room, playerId) {
+export function joinGame(room: GameRoom, playerId: number): GamePlayer {
   if (room.phase !== PHASE.REGISTRATION) {
     throw new Error('Присоединиться можно только во время регистрации');
   }
@@ -251,7 +283,7 @@ export function joinGame(room, playerId) {
   return player;
 }
 
-export function leaveGame(room, playerId) {
+export function leaveGame(room: GameRoom, playerId: number): GamePlayer {
   if (room.phase !== PHASE.REGISTRATION) {
     throw new Error('Выйти из игры можно только во время регистрации');
   }
@@ -265,17 +297,17 @@ export function leaveGame(room, playerId) {
   return player;
 }
 
-export function setTimer(room, ms, reason) {
+export function setTimer(room: GameRoom, ms: number, reason: TimerReason): void {
   room.timerEnd = Date.now() + ms;
   room.timerReason = reason;
 }
 
-export function clearTimer(room) {
+export function clearTimer(room: GameRoom): void {
   room.timerEnd = null;
   room.timerReason = null;
 }
 
-export function tryStartGameAfterRegistration(room) {
+export function tryStartGameAfterRegistration(room: GameRoom): boolean {
   if (room.phase !== PHASE.REGISTRATION) return false;
   const registered = room.players.filter((p) => p.connected && p.inGame);
   if (registered.length >= room.maxPlayers) {
@@ -285,7 +317,7 @@ export function tryStartGameAfterRegistration(room) {
   return false;
 }
 
-export function onRegistrationTimerEnd(room) {
+export function onRegistrationTimerEnd(room: GameRoom): void {
   if (room.phase !== PHASE.REGISTRATION) return;
   const registered = room.players.filter((p) => p.connected && p.inGame);
   if (registered.length < CONFIG.MIN_PLAYERS) {
@@ -300,7 +332,7 @@ export function onRegistrationTimerEnd(room) {
   beginGame(room);
 }
 
-function beginGame(room) {
+function beginGame(room: GameRoom): void {
   clearTimer(room);
   const participants = room.players.filter((p) => p.connected && p.inGame);
 
@@ -346,7 +378,7 @@ function beginGame(room) {
   startDayPhase(room);
 }
 
-export function startDayPhase(room) {
+export function startDayPhase(room: GameRoom): void {
   room.phase = PHASE.DAY;
   room.votes = {};
   room.votingStarted = false;
@@ -357,7 +389,7 @@ export function startDayPhase(room) {
   setTimer(room, CONFIG.DAY_DISCUSSION_SEC * 1000, 'day');
 }
 
-export function startVoting(room) {
+export function startVoting(room: GameRoom): void {
   if (room.phase !== PHASE.DAY) return;
   room.phase = PHASE.VOTING;
   room.votingStarted = true;
@@ -369,11 +401,11 @@ export function startVoting(room) {
   addSystemMessage(room, '🗳️ Голосование началось! Выберите игрока.');
 }
 
-export function onDayTimerEnd(room) {
+export function onDayTimerEnd(room: GameRoom): void {
   if (room.phase === PHASE.DAY) startVoting(room);
 }
 
-export function castDayVote(room, voterId, targetId) {
+export function castDayVote(room: GameRoom, voterId: number, targetId: number): void {
   if (room.phase !== PHASE.VOTING) throw new Error('Сейчас не время голосования');
 
   const voter = room.players.find((p) => p.id === voterId);
@@ -389,14 +421,14 @@ export function castDayVote(room, voterId, targetId) {
   if (alive.every((p) => p.hasVoted)) resolveDayVote(room);
 }
 
-function resolveDayVote(room) {
-  const tally = {};
+function resolveDayVote(room: GameRoom): void {
+  const tally: Record<number, number> = {};
   for (const targetId of Object.values(room.votes)) {
     tally[targetId] = (tally[targetId] || 0) + 1;
   }
 
   let maxVotes = 0;
-  let candidates = [];
+  let candidates: number[] = [];
   for (const [id, count] of Object.entries(tally)) {
     if (count > maxVotes) {
       maxVotes = count;
@@ -416,7 +448,7 @@ function resolveDayVote(room) {
   startNightPhase(room);
 }
 
-function eliminatePlayer(room, playerId) {
+function eliminatePlayer(room: GameRoom, playerId: number): void {
   const player = room.players.find((p) => p.id === playerId);
   if (!player?.alive) return;
 
@@ -447,7 +479,7 @@ function eliminatePlayer(room, playerId) {
   }
 }
 
-export function startNightPhase(room) {
+export function startNightPhase(room: GameRoom): void {
   room.phase = PHASE.NIGHT;
   room.nightNumber += 1;
   room.nightActions = {};
@@ -459,12 +491,16 @@ export function startNightPhase(room) {
   setTimer(room, CONFIG.NIGHT_ACTIONS_SEC * 1000, 'night');
 }
 
-export function onNightTimerEnd(room) {
+export function onNightTimerEnd(room: GameRoom): NightResolveResult | null {
   if (room.phase === PHASE.NIGHT) return resolveNight(room);
   return null;
 }
 
-export function submitNightAction(room, playerId, action) {
+export function submitNightAction(
+  room: GameRoom,
+  playerId: number,
+  action: NightAction
+): NightResolveResult | null {
   if (room.phase !== PHASE.NIGHT) throw new Error('Сейчас не ночь');
 
   const player = room.players.find((p) => p.id === playerId);
@@ -481,7 +517,7 @@ export function submitNightAction(room, playerId, action) {
   return null;
 }
 
-function getPlayersNeedingNightAction(room) {
+function getPlayersNeedingNightAction(room: GameRoom): GamePlayer[] {
   return room.players.filter((p) => {
     if (!p.alive) return false;
     if (p.role === 'prostitute') return true;
@@ -496,30 +532,31 @@ function getPlayersNeedingNightAction(room) {
   });
 }
 
-export function resolveNight(room) {
+export function resolveNight(room: GameRoom): NightResolveResult {
   clearTimer(room);
 
   const actions = room.nightActions;
-  const deaths = new Set();
-  const heals = new Set();
-  const privateNotes = [];
+  const deaths = new Set<number>();
+  const heals = new Set<number>();
+  const privateNotes: PrivateNote[] = [];
 
   const prostitute = room.players.find((p) => p.alive && p.role === 'prostitute');
   if (prostitute && actions[prostitute.id]?.type === 'seduce') {
-    const target = room.players.find((p) => p.id === actions[prostitute.id].targetId);
+    const act = actions[prostitute.id] as Extract<NightAction, { type: 'seduce' }>;
+    const target = room.players.find((p) => p.id === act.targetId);
     if (target && !isSeductionImmune(target.role)) {
       room.seducedPlayerId = target.id;
       prostitute.score += 5;
     }
   }
 
-  const isSeduced = (playerId) => {
+  const isSeduced = (playerId: number): boolean => {
     const p = room.players.find((pl) => pl.id === playerId);
     if (!p || isSeductionImmune(p.role)) return false;
     return room.seducedPlayerId === playerId;
   };
 
-  const mafiaVotes = {};
+  const mafiaVotes: Record<number, number> = {};
   room.players
     .filter((p) => p.alive && p.role === 'mafia')
     .forEach((m) => {
@@ -529,7 +566,7 @@ export function resolveNight(room) {
       }
     });
 
-  let mafiaTarget = null;
+  let mafiaTarget: number | null = null;
   const entries = Object.entries(mafiaVotes);
   if (entries.length > 0) {
     entries.sort((a, b) => b[1] - a[1]);
@@ -652,7 +689,7 @@ export function resolveNight(room) {
     }
   }
 
-  const killedTonight = [];
+  const killedTonight: GamePlayer[] = [];
   for (const id of deaths) {
     const p = room.players.find((pl) => pl.id === id);
     if (p?.alive) killedTonight.push(p);
@@ -671,7 +708,7 @@ export function resolveNight(room) {
   return { privateNotes };
 }
 
-export function checkWin(room) {
+export function checkWin(room: GameRoom): boolean {
   const alive = room.players.filter((p) => p.alive && p.inGame && p.role);
   const mafiaAlive = alive.filter((p) => p.role === 'mafia').length;
   const maniacAlive = alive.filter((p) => p.role === 'maniac').length;
@@ -688,7 +725,7 @@ export function checkWin(room) {
   return false;
 }
 
-function endGame(room, team, message) {
+function endGame(room: GameRoom, team: 'town' | 'mafia', message: string): void {
   room.phase = PHASE.ENDED;
   clearTimer(room);
   addSystemMessage(room, `🏁 ${message}`);
@@ -712,7 +749,7 @@ function endGame(room, team, message) {
   });
 }
 
-export function resetRoom(room) {
+export function resetRoom(room: GameRoom): void {
   const id = room.id;
   const name = room.name;
   const chat = room.chat;
@@ -742,11 +779,16 @@ export function resetRoom(room) {
   addSystemMessage(room, '——— Новая игра ———');
 }
 
-export function addChatMessage(room, playerId, text, channel = 'public') {
+export function addChatMessage(
+  room: GameRoom,
+  playerId: number,
+  text: string,
+  channel: ChatChannel = 'public'
+): ChatMessage | null {
   const player = room.players.find((p) => p.id === playerId);
   if (!player) return null;
 
-  const msg = {
+  const msg: ChatMessage = {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
     playerId,
     userId: player.userId || null,
@@ -765,7 +807,11 @@ export function addChatMessage(room, playerId, text, channel = 'public') {
   return msg;
 }
 
-export function deleteChatMessage(room, messageId, channel = 'public') {
+export function deleteChatMessage(
+  room: GameRoom,
+  messageId: string,
+  channel: ChatChannel = 'public'
+): boolean {
   const list =
     channel === 'mafia'
       ? room.mafiaChat
@@ -782,8 +828,13 @@ export function deleteChatMessage(room, messageId, channel = 'public') {
   return true;
 }
 
-export function getModerationSnapshot(rooms) {
-  const messages = [];
+export interface ModerationSnapshot {
+  rooms: LobbyRoom[];
+  messages: (ChatMessage & { roomId: number; roomName: string; channel: ChatChannel })[];
+}
+
+export function getModerationSnapshot(rooms: Map<number, GameRoom>): ModerationSnapshot {
+  const messages: ModerationSnapshot['messages'] = [];
   for (const room of rooms.values()) {
     for (const msg of room.chat) {
       if (!msg.system) {
@@ -820,7 +871,7 @@ export function getModerationSnapshot(rooms) {
       });
     }
   }
-  messages.sort((a, b) => new Date(b.time) - new Date(a.time));
+  messages.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
 
   return {
     rooms: getLobbySnapshot(rooms),
@@ -828,10 +879,10 @@ export function getModerationSnapshot(rooms) {
   };
 }
 
-function addSystemMessage(room, text) {
+function addSystemMessage(room: GameRoom, text: string): void {
   const time = new Date().toISOString();
   room.systemMessages.push({ text, time });
-  const msg = {
+  const msg: ChatMessage = {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
     playerId: null,
     playerName: '🤖 Ведущий',
@@ -839,6 +890,7 @@ function addSystemMessage(room, text) {
     time,
     system: true,
     deleted: false,
+    userId: null,
   };
   room.chat.push(msg);
   saveChatMessage(room.id, room.sessionId, msg, 'public');
@@ -847,7 +899,10 @@ function addSystemMessage(room, text) {
 const DEFAULT_CHAT_LIMIT = 15;
 const MAX_CHAT_LIMIT = 300;
 
-function sliceChatMessages(messages, chatLimit) {
+function sliceChatMessages(
+  messages: ChatMessage[],
+  chatLimit: number
+): { messages: ChatMessage[]; hasMoreChat: boolean } {
   const limit = Math.min(MAX_CHAT_LIMIT, Math.max(15, chatLimit || DEFAULT_CHAT_LIMIT));
   const total = messages.length;
   return {
@@ -857,15 +912,19 @@ function sliceChatMessages(messages, chatLimit) {
 }
 
 /** Чат для конкретного игрока */
-function buildChatView(room, me, chatLimit = DEFAULT_CHAT_LIMIT) {
+function buildChatView(
+  room: GameRoom,
+  me: GamePlayer | undefined,
+  chatLimit = DEFAULT_CHAT_LIMIT
+): { messages: ChatMessage[]; mode: 'spectator' | 'dead' | 'alive'; hasMoreChat: boolean } {
   const gameRunning = ![PHASE.WAITING, PHASE.REGISTRATION, PHASE.ENDED].includes(room.phase);
   const isSpectator = me && !me.inGame && gameRunning;
 
   if (isSpectator) {
-    const gameMsgs = room.chat.map((m) => ({ ...m, sourceChannel: 'public' }));
-    const specMsgs = room.spectatorChat.map((m) => ({ ...m, sourceChannel: 'spectator' }));
+    const gameMsgs = room.chat.map((m) => ({ ...m, sourceChannel: 'public' as ChatChannel }));
+    const specMsgs = room.spectatorChat.map((m) => ({ ...m, sourceChannel: 'spectator' as ChatChannel }));
     const combined = [...gameMsgs, ...specMsgs].sort(
-      (a, b) => new Date(a.time) - new Date(b.time)
+      (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
     );
     const sliced = sliceChatMessages(combined, chatLimit);
     return { messages: sliced.messages, mode: 'spectator', hasMoreChat: sliced.hasMoreChat };
@@ -883,7 +942,7 @@ function buildChatView(room, me, chatLimit = DEFAULT_CHAT_LIMIT) {
   }
 
   const combined = [...systemMsgs, ...room.deadChat].sort(
-    (a, b) => new Date(a.time) - new Date(b.time)
+    (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
   );
   const sliced = sliceChatMessages(combined, chatLimit);
 
@@ -894,7 +953,7 @@ function buildChatView(room, me, chatLimit = DEFAULT_CHAT_LIMIT) {
   };
 }
 
-function mapPlayerPublic(p, room, playerId) {
+function mapPlayerPublic(p: GamePlayer, _room: GameRoom, playerId: number): RoomStatePlayer {
   return {
     id: p.id,
     userId: p.userId || null,
@@ -910,12 +969,16 @@ function mapPlayerPublic(p, room, playerId) {
   };
 }
 
-function getJoinCooldownSec(player) {
+function getJoinCooldownSec(player: GamePlayer | undefined): number {
   if (!player?.joinGameAvailableAt) return 0;
   return Math.max(0, Math.ceil((player.joinGameAvailableAt - Date.now()) / 1000));
 }
 
-export function serializeRoomForPlayer(room, playerId, options = {}) {
+export function serializeRoomForPlayer(
+  room: GameRoom,
+  playerId: number,
+  options: { isAdmin?: boolean; chatLimit?: number } = {}
+): RoomState {
   const me = room.players.find((p) => p.id === playerId);
   const { isAdmin = false, chatLimit = DEFAULT_CHAT_LIMIT } = options;
   const chatView = buildChatView(room, me, chatLimit);

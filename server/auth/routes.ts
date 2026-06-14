@@ -3,7 +3,6 @@ import bcrypt from 'bcryptjs';
 import {
   findUserByUsername,
   findUserByEmail,
-  findUserById,
   createUser,
   publicUser,
   isUserBanned,
@@ -43,6 +42,7 @@ router.post('/register', async (req, res) => {
     const name = (displayName?.trim() || u).slice(0, 20);
 
     const user = createUser({ username: u, email: e, passwordHash, displayName: name });
+    if (!user) return res.status(500).json({ error: 'Ошибка регистрации' });
     const token = signToken(user);
     res.status(201).json({ token, user: publicUser(user) });
   } catch (err) {

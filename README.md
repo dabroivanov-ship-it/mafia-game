@@ -6,8 +6,8 @@
 
 | Часть | Технологии |
 |-------|------------|
-| Сервер | Node.js, Express, Socket.IO, SQLite |
-| Клиент | React, Vite |
+| Сервер | Node.js, Express, Socket.IO, SQLite, **TypeScript** |
+| Клиент | React, Vite, **TypeScript** |
 | Продакшен | PM2 + Caddy (HTTPS) |
 
 ---
@@ -44,7 +44,8 @@ npm install
 **Терминал 1 — сервер:**
 ```bash
 cd server
-npm run server
+npm run build   # компиляция TypeScript → dist/
+npm run dev     # или npm start для production-сборки
 ```
 → http://localhost:3001
 
@@ -117,6 +118,7 @@ npm run build
 # Сервер
 cd ../server
 npm install
+npm run build
 ```
 
 Проверка сборки:
@@ -210,7 +212,7 @@ cd /home/mafia-game
 git pull
 
 cd client && npm install && npm run build
-cd ../server && npm install
+cd ../server && npm install && npm run build
 
 cd /home/mafia-game
 pm2 restart mafia-server
@@ -220,7 +222,7 @@ pm2 restart mafia-server
 
 ## 5. Настройки игры
 
-Файл `server/game/config.js`:
+Файл `server/game/config.ts`:
 
 | Параметр | По умолчанию | Описание |
 |----------|--------------|----------|
@@ -271,17 +273,17 @@ pm2 restart mafia-server
 ```
 mafia-game/
 ├── server/
-│   ├── server.js          # Express + Socket.IO
+│   ├── server.ts          # Express + Socket.IO (исходник)
+│   ├── dist/              # Скомпилированный JS (npm run build)
+│   ├── types/             # Общие типы TypeScript
 │   ├── auth/              # Регистрация, JWT, SQLite
 │   ├── game/              # Логика мафии
 │   └── data/mafia.db      # База (создаётся автоматически)
 ├── client/
 │   └── src/
-│       ├── components/
-│       │   ├── Auth.jsx   # Вход / регистрация
-│       │   ├── Lobby.jsx
-│       │   └── Room.jsx
-│       └── App.jsx
+│       ├── types/         # Типы API и состояния игры
+│       ├── components/    # React-компоненты (.tsx)
+│       └── App.tsx
 ├── Caddyfile              # Конфиг веб-сервера
 ├── ecosystem.config.cjs   # Конфиг PM2
 └── README.md

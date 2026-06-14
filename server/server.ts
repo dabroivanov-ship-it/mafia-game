@@ -36,6 +36,7 @@ import {
   addRoom,
   removeRoom,
 } from './game/engine.js';
+import type { ChatChannel, GameRoom, PrivateNote, PublicUser, RoomState, Session } from './types/index.js';
 
 const app = express();
 app.use(cors());
@@ -50,25 +51,24 @@ const rooms = createInitialRooms();
 for (const room of rooms.values()) {
   hydrateRoomHistory(room);
 }
-// socketId -> { roomId, playerId }
-const sessions = new Map();
+const sessions = new Map<string, Session>();
 const DEFAULT_CHAT_LIMIT = 15;
 const CHAT_LOAD_STEP = 30;
 const MAX_CHAT_LIMIT = 300;
 
-function getUserChatLimit(userId) {
+function getUserChatLimit(userId: number | undefined): number {
   if (!userId) return DEFAULT_CHAT_LIMIT;
   const user = findUserById(userId);
   return normalizeChatLimit(user?.chat_limit);
 }
 
-function resolveSessionChatLimit(session, userId) {
+function resolveSessionChatLimit(session: Session | undefined, userId: number | undefined): number {
   const base = getUserChatLimit(userId);
   if (!session) return base;
   return Math.max(base, session.chatLimit ?? base);
 }
 
-function syncUserProfileInRooms(userId, user) {
+function syncUserProfileInRooms(userId: number, user: PublicUser | null): void {
   for (const room of rooms.values()) {
     const player = room.players.find((p) => p.userId === userId);
     if (!player?.socketId) continue;
@@ -95,15 +95,15 @@ app.use(
 );
 app.use('/uploads/avatars', express.static(uploadsDir));
 
-function adminDeleteMessage(roomId, messageId, channel) {
+function adminDeleteMessage(roomId: number, messageId: string, channel: string): boolean {
   const room = rooms.get(roomId);
   if (!room) return false;
-  const ok = deleteChatMessage(room, messageId, channel);
+  const ok = deleteChatMessage(room, messageId, channel as ChatChannel);
   if (ok) broadcastRoom(roomId);
   return ok;
 }
 
-function kickPlayersFromRoom(room) {
+function kickPlayersFromRoom(room: GameRoom): void {
   for (const player of room.players) {
     if (player.socketId) {
       io.to(player.socketId).emit('room:kicked', { reason: 'Комната удалена администратором' });
@@ -112,7 +112,7 @@ function kickPlayersFromRoom(room) {
   }
 }
 
-function onRoomsChanged(changedRoomId = null) {
+function onRoomsChanged(changedRoomId: number | null = null): void {
   broadcastLobby();
   if (changedRoomId != null) {
     broadcastRoom(changedRoomId);
@@ -123,14 +123,14 @@ function onRoomsChanged(changedRoomId = null) {
   }
 }
 
-function adminDeleteRoom(roomId) {
+function adminDeleteRoom(roomId: number): void {
   const room = rooms.get(roomId);
   if (!room) throw new Error('Комната не найдена');
   kickPlayersFromRoom(room);
   removeRoom(rooms, roomId);
 }
 
-function syncUserInRooms(userId, displayName) {
+function syncUserInRooms(userId: number, displayName: string): void {
   for (const room of rooms.values()) {
     const player = room.players.find((p) => p.userId === userId);
     if (player) {
@@ -172,14 +172,19 @@ app.use(
   })
 );
 
-function serializeForSocketUser(room, gamePlayerId, userId, socketId = null) {
-  const session = socketId ? sessions.get(socketId) : null;
+function serializeForSocketUser(
+  room: GameRoom,
+  gamePlayerId: number,
+  userId: number | undefined,
+  socketId: string | null = null
+): RoomState {
+  const session = socketId ? sessions.get(socketId) : undefined;
   const chatLimit = resolveSessionChatLimit(session, userId);
-  const acc = userId ? findUserById(userId) : null;
+  const acc = userId ? findUserById(userId) : undefined;
   return serializeRoomForPlayer(room, gamePlayerId, { isAdmin: isAdmin(acc), chatLimit });
 }
 
-function syncRoomScores(room) {
+function syncRoomScores(room: GameRoom): void {
   if (room.phase !== 'ended' || room.scoresSynced) return;
   for (const p of room.players) {
     if (p.userId && p.score !== 0) {
@@ -189,17 +194,17 @@ function syncRoomScores(room) {
   room.scoresSynced = true;
 }
 
-function broadcastLobby() {
+function broadcastLobby(): void {
   io.emit('lobby:update', getLobbySnapshot(rooms));
 }
 
-function broadcastRoom(roomId) {
+function broadcastRoom(roomId: number): void {
   const room = rooms.get(roomId);
   if (!room) return;
 
   syncRoomScores(room);
 
-  const notified = new Set();
+  const notified = new Set<number>();
   for (const [socketId, session] of sessions.entries()) {
     if (session.roomId !== roomId) continue;
     io.to(socketId).emit(
@@ -213,14 +218,14 @@ function broadcastRoom(roomId) {
     if (!player.connected || !player.socketId || notified.has(player.id)) continue;
     io.to(player.socketId).emit(
       'room:state',
-      serializeForSocketUser(room, player.id, player.userId, player.socketId)
+      serializeForSocketUser(room, player.id, player.userId ?? undefined, player.socketId)
     );
   }
 
   broadcastLobby();
 }
 
-function sendPrivateNotes(room, privateNotes = []) {
+function sendPrivateNotes(room: GameRoom, privateNotes: PrivateNote[] = []): void {
   for (const note of privateNotes) {
     const p = room.players.find((pl) => pl.id === note.playerId);
     if (p?.socketId) {
@@ -229,14 +234,13 @@ function sendPrivateNotes(room, privateNotes = []) {
   }
 }
 
-function attachSession(socket, roomId, playerId) {
-  sessions.set(socket.id, {
+function attachSession(socketId: string, roomId: number, playerId: number, userId?: number): void {
+  sessions.set(socketId, {
     roomId,
     playerId,
-    userId: socket.userId,
-    chatLimit: getUserChatLimit(socket.userId),
+    userId,
+    chatLimit: getUserChatLimit(userId),
   });
-  socket.join(`room:${roomId}`);
 }
 
 // Таймеры комнат — проверка каждую секунду
@@ -245,7 +249,7 @@ setInterval(() => {
     if (!room.timerEnd || Date.now() < room.timerEnd) continue;
 
     const reason = room.timerReason;
-    let privateNotes = [];
+    let privateNotes: PrivateNote[] = [];
     if (reason === 'registration') {
       onRegistrationTimerEnd(room);
       tryStartGameAfterRegistration(room);
@@ -264,7 +268,7 @@ setInterval(() => {
 io.use(socketAuthMiddleware);
 
 io.on('connection', (socket) => {
-  const user = findUserById(socket.userId);
+  const user = findUserById(socket.userId!);
   if (!user) {
     socket.disconnect(true);
     return;
@@ -284,8 +288,8 @@ io.on('connection', (socket) => {
       const room = rooms.get(Number(roomId));
       if (!room) return cb?.({ error: 'Комната не найдена' });
 
-      const playerName = socket.displayName;
-      const playerUsername = socket.username;
+      const playerName = socket.displayName!;
+      const playerUsername = socket.username!;
       let player;
 
       if (reconnectId) {
@@ -296,15 +300,17 @@ io.on('connection', (socket) => {
           name: playerName,
           username: playerUsername,
           socketId: socket.id,
-          userId: socket.userId,
+          userId: socket.userId!,
         });
       }
 
-      attachSession(socket, room.id, player.id);
+      attachSession(socket.id, room.id, player.id, socket.userId);
+      socket.join(`room:${room.id}`);
       broadcastRoom(room.id);
       cb?.({ ok: true, playerId: player.id, state: serializeForSocketUser(room, player.id, socket.userId, socket.id) });
     } catch (e) {
-      cb?.({ error: e.message });
+      const err = e as Error;
+      cb?.({ error: err.message });
     }
   });
 
@@ -313,6 +319,7 @@ io.on('connection', (socket) => {
     if (!session) return cb?.({ error: 'Вы не в комнате' });
 
     const room = rooms.get(session.roomId);
+    if (!room) return cb?.({ error: 'Комната не найдена' });
     try {
       startRegistration(room, session.playerId);
       broadcastRoom(room.id);
@@ -321,7 +328,8 @@ io.on('connection', (socket) => {
         state: serializeForSocketUser(room, session.playerId, socket.userId, socket.id),
       });
     } catch (e) {
-      cb?.({ error: e.message });
+      const err = e as Error;
+      cb?.({ error: err.message });
     }
   });
 
@@ -330,12 +338,14 @@ io.on('connection', (socket) => {
     if (!session) return cb?.({ error: 'Вы не в комнате' });
 
     const room = rooms.get(session.roomId);
+    if (!room) return cb?.({ error: 'Комната не найдена' });
     try {
       joinGame(room, session.playerId);
       broadcastRoom(room.id);
       cb?.({ ok: true });
     } catch (e) {
-      cb?.({ error: e.message });
+      const err = e as Error;
+      cb?.({ error: err.message });
     }
   });
 
@@ -344,12 +354,14 @@ io.on('connection', (socket) => {
     if (!session) return cb?.({ error: 'Вы не в комнате' });
 
     const room = rooms.get(session.roomId);
+    if (!room) return cb?.({ error: 'Комната не найдена' });
     try {
       leaveGame(room, session.playerId);
       broadcastRoom(room.id);
       cb?.({ ok: true });
     } catch (e) {
-      cb?.({ error: e.message });
+      const err = e as Error;
+      cb?.({ error: err.message });
     }
   });
 
@@ -376,6 +388,7 @@ io.on('connection', (socket) => {
     if (!session) return cb?.({ error: 'Вы не в комнате' });
 
     const room = rooms.get(session.roomId);
+    if (!room) return cb?.({ error: 'Комната не найдена' });
     resetRoom(room);
     broadcastRoom(room.id);
     cb?.({ ok: true });
@@ -386,13 +399,14 @@ io.on('connection', (socket) => {
     if (!session) return cb?.({ error: 'Вы не в комнате' });
 
     const room = rooms.get(session.roomId);
+    if (!room) return cb?.({ error: 'Комната не найдена' });
     const me = room.players.find((p) => p.id === session.playerId);
     if (!me) return cb?.({ error: 'Игрок не найден' });
 
     const gameRunning = !['waiting', 'registration', 'ended'].includes(room.phase);
     const isSpectator = !me.inGame && gameRunning;
 
-    let channel = 'public';
+    let channel: ChatChannel = 'public';
     if (isSpectator) {
       channel = 'spectator';
     } else if (gameRunning && me.inGame && me.role) {
@@ -411,6 +425,7 @@ io.on('connection', (socket) => {
     if (!session) return cb?.({ error: 'Вы не в комнате' });
 
     const room = rooms.get(session.roomId);
+    if (!room) return cb?.({ error: 'Комната не найдена' });
     const me = room.players.find((p) => p.id === session.playerId);
     if (me?.role !== 'mafia' || !me.alive) return cb?.({ error: 'Нет доступа' });
 
@@ -424,6 +439,7 @@ io.on('connection', (socket) => {
     if (!session) return cb?.({ error: 'Вы не в комнате' });
 
     const room = rooms.get(session.roomId);
+    if (!room) return cb?.({ error: 'Комната не найдена' });
     startVoting(room);
     broadcastRoom(room.id);
     cb?.({ ok: true });
@@ -434,12 +450,14 @@ io.on('connection', (socket) => {
     if (!session) return cb?.({ error: 'Вы не в комнате' });
 
     const room = rooms.get(session.roomId);
+    if (!room) return cb?.({ error: 'Комната не найдена' });
     try {
       castDayVote(room, session.playerId, targetId);
       broadcastRoom(room.id);
       cb?.({ ok: true });
     } catch (e) {
-      cb?.({ error: e.message });
+      const err = e as Error;
+      cb?.({ error: err.message });
     }
   });
 
@@ -448,13 +466,15 @@ io.on('connection', (socket) => {
     if (!session) return cb?.({ error: 'Вы не в комнате' });
 
     const room = rooms.get(session.roomId);
+    if (!room) return cb?.({ error: 'Комната не найдена' });
     try {
       const result = submitNightAction(room, session.playerId, action);
       broadcastRoom(room.id);
       sendPrivateNotes(room, result?.privateNotes || []);
       cb?.({ ok: true });
     } catch (e) {
-      cb?.({ error: e.message });
+      const err = e as Error;
+      cb?.({ error: err.message });
     }
   });
 
@@ -463,7 +483,8 @@ io.on('connection', (socket) => {
     const session = sessions.get(socket.id);
     if (!session) return cb?.({ error: 'Вы не в комнате' });
     const room = rooms.get(session.roomId);
-    const ok = deleteChatMessage(room, messageId, channel || 'public');
+    if (!room) return cb?.({ error: 'Комната не найдена' });
+    const ok = deleteChatMessage(room, messageId, (channel || 'public') as ChatChannel);
     if (!ok) return cb?.({ error: 'Сообщение не найдено' });
     broadcastRoom(room.id);
     cb?.({ ok: true });
@@ -474,6 +495,7 @@ io.on('connection', (socket) => {
     if (!session) return;
 
     const room = rooms.get(session.roomId);
+    if (!room) return;
     removePlayer(room, socket.id, true);
     sessions.delete(socket.id);
     broadcastRoom(room.id);
@@ -482,7 +504,8 @@ io.on('connection', (socket) => {
 
 // Отдаём собранный React-клиент (client/dist)
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const clientDist = path.join(__dirname, '..', 'client', 'dist');
+const serverRoot = __dirname.endsWith(`${path.sep}dist`) ? path.join(__dirname, '..') : __dirname;
+const clientDist = path.join(serverRoot, '..', 'client', 'dist');
 
 app.use(express.static(clientDist));
 app.get('*', (req, res, next) => {

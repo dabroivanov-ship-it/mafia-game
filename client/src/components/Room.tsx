@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import Chat from './Chat.jsx';
-import ActionPanel from './ActionPanel.jsx';
-import UserProfileModal from './UserProfileModal.jsx';
+import { Socket } from 'socket.io-client';
+import Chat from './Chat';
+import ActionPanel from './ActionPanel';
+import UserProfileModal from './UserProfileModal';
+import type { GamePhase, RoomState } from '../types';
 
-const PHASE_LABELS = {
+const PHASE_LABELS: Record<GamePhase, string> = {
   waiting: 'Ожидание',
   registration: 'Регистрация',
   day: 'День',
@@ -12,7 +14,7 @@ const PHASE_LABELS = {
   ended: 'Игра окончена',
 };
 
-function useTimer(timerEnd) {
+function useTimer(timerEnd: number | null) {
   const [left, setLeft] = useState(0);
 
   useEffect(() => {
@@ -32,7 +34,7 @@ function useTimer(timerEnd) {
   return left;
 }
 
-function useCountdown(seconds) {
+function useCountdown(seconds: number) {
   const [left, setLeft] = useState(seconds);
 
   useEffect(() => {
@@ -48,10 +50,19 @@ function useCountdown(seconds) {
   return left;
 }
 
-export default function Room({ socket, state, onLeave }) {
+interface RoomProps {
+  socket: Socket | null;
+  state: RoomState | null;
+  onLeave: () => void;
+}
+
+export default function Room({ socket, state, onLeave }: RoomProps) {
   const [mafiaTab, setMafiaTab] = useState(false);
-  const [profileUserId, setProfileUserId] = useState(null);
+  const [profileUserId, setProfileUserId] = useState<number | null>(null);
   const [loadingMoreChat, setLoadingMoreChat] = useState(false);
+
+  const timerLeft = useTimer(state?.timerEnd ?? null);
+  const joinCooldown = useCountdown(state?.joinGameCooldownSec || 0);
 
   if (!state) {
     return (
@@ -61,8 +72,6 @@ export default function Room({ socket, state, onLeave }) {
     );
   }
 
-  const timerLeft = useTimer(state.timerEnd);
-  const joinCooldown = useCountdown(state.joinGameCooldownSec || 0);
   const me = state.myPlayer;
   const isMafia = state.myRole === 'mafia' && me?.alive;
   const showJoin =
@@ -71,9 +80,9 @@ export default function Room({ socket, state, onLeave }) {
     !state.isInGame &&
     state.registeredCount < state.maxPlayers;
 
-  const emit = (event, data) =>
-    new Promise((resolve) => {
-      socket.emit(event, data, resolve);
+  const emit = (event: string, data?: unknown) =>
+    new Promise<{ error?: string } | undefined>((resolve) => {
+      socket?.emit(event, data, resolve);
     });
 
   const loadMoreChat = async () => {
@@ -179,7 +188,9 @@ export default function Room({ socket, state, onLeave }) {
               <Chat
                 messages={state.chat}
                 canSend={state.canChat}
-                onSend={(text) => emit('chat:send', { text })}
+                onSend={(text) => {
+                  void emit('chat:send', { text });
+                }}
                 onViewProfile={setProfileUserId}
                 isAdmin={state.isAdmin}
                 hasMoreChat={state.hasMoreChat}
@@ -213,7 +224,9 @@ export default function Room({ socket, state, onLeave }) {
             <Chat
               messages={state.mafiaChat}
               canSend={state.phase === 'night'}
-              onSend={(text) => emit('chat:mafia', { text })}
+              onSend={(text) => {
+                void emit('chat:mafia', { text });
+              }}
               onViewProfile={setProfileUserId}
               isAdmin={state.isAdmin}
               hasMoreChat={false}

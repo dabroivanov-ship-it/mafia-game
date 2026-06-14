@@ -1,8 +1,13 @@
-import { useState } from 'react';
-import { login, register, saveSession } from '../api.js';
+import { useState, FormEvent } from 'react';
+import { login, register, saveSession } from '../api';
+import type { User } from '../types';
 
-export default function Auth({ onSuccess }) {
-  const [mode, setMode] = useState('login');
+interface AuthProps {
+  onSuccess: (user: User, token: string) => void;
+}
+
+export default function Auth({ onSuccess }: AuthProps) {
+  const [mode, setMode] = useState<'login' | 'register'>('login');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -15,7 +20,7 @@ export default function Auth({ onSuccess }) {
     displayName: '',
   });
 
-  const handleLogin = async (e) => {
+  const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
@@ -24,13 +29,13 @@ export default function Auth({ onSuccess }) {
       saveSession(token, user);
       onSuccess(user, token);
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : 'Ошибка входа');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRegister = async (e) => {
+  const handleRegister = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -50,7 +55,7 @@ export default function Auth({ onSuccess }) {
       saveSession(token, user);
       onSuccess(user, token);
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : 'Ошибка регистрации');
     } finally {
       setLoading(false);
     }
@@ -68,14 +73,20 @@ export default function Auth({ onSuccess }) {
           <button
             type="button"
             className={mode === 'login' ? 'active' : ''}
-            onClick={() => { setMode('login'); setError(''); }}
+            onClick={() => {
+              setMode('login');
+              setError('');
+            }}
           >
             Вход
           </button>
           <button
             type="button"
             className={mode === 'register' ? 'active' : ''}
-            onClick={() => { setMode('register'); setError(''); }}
+            onClick={() => {
+              setMode('register');
+              setError('');
+            }}
           >
             Регистрация
           </button>

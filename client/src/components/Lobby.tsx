@@ -1,4 +1,6 @@
-const PHASE_LABELS = {
+import type { GamePhase, LobbyRoom } from '../types';
+
+const PHASE_LABELS: Record<GamePhase, string> = {
   waiting: 'Ожидание',
   registration: 'Регистрация',
   day: 'День',
@@ -7,7 +9,12 @@ const PHASE_LABELS = {
   ended: 'Игра окончена',
 };
 
-export default function Lobby({ rooms, onJoin }) {
+interface LobbyProps {
+  rooms: LobbyRoom[];
+  onJoin: (roomId: number) => void;
+}
+
+export default function Lobby({ rooms, onJoin }: LobbyProps) {
   return (
     <div className="lobby">
       <header className="lobby-header">

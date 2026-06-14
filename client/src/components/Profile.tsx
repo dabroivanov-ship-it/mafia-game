@@ -1,9 +1,16 @@
-import { useState, useRef } from 'react';
-import { avatarUrl, updateProfile, uploadAvatar } from '../api.js';
+import { useState, useRef, FormEvent, ChangeEvent } from 'react';
+import { avatarUrl, updateProfile, uploadAvatar } from '../api';
+import type { User } from '../types';
 
 const CHAT_LIMIT_OPTIONS = [15, 30, 50, 100];
 
-export default function Profile({ user, onUpdate, onBack }) {
+interface ProfileProps {
+  user: User;
+  onUpdate: (user: User) => void;
+  onBack: () => void;
+}
+
+export default function Profile({ user, onUpdate, onBack }: ProfileProps) {
   const [form, setForm] = useState({
     displayName: user.displayName || '',
     city: user.city || '',
@@ -14,9 +21,9 @@ export default function Profile({ user, onUpdate, onBack }) {
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [avatarLoading, setAvatarLoading] = useState(false);
-  const fileRef = useRef(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  const handleSave = async (e) => {
+  const handleSave = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
@@ -26,13 +33,13 @@ export default function Profile({ user, onUpdate, onBack }) {
       onUpdate(updated);
       setSuccess('Профиль сохранён');
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : 'Ошибка сохранения');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAvatar = async (e) => {
+  const handleAvatar = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setAvatarLoading(true);
@@ -42,7 +49,7 @@ export default function Profile({ user, onUpdate, onBack }) {
       onUpdate(updated);
       setSuccess('Аватар обновлён');
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : 'Ошибка загрузки');
     } finally {
       setAvatarLoading(false);
       if (fileRef.current) fileRef.current.value = '';
@@ -57,7 +64,7 @@ export default function Profile({ user, onUpdate, onBack }) {
         <div className="profile-avatar-block">
           <div className="profile-avatar-wrap">
             {user.avatar ? (
-              <img src={avatarUrl(user.avatar)} alt="Аватар" className="profile-avatar" />
+              <img src={avatarUrl(user.avatar) ?? undefined} alt="Аватар" className="profile-avatar" />
             ) : (
               <div className="profile-avatar placeholder">👤</div>
             )}

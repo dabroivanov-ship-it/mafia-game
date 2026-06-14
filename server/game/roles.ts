@@ -1,15 +1,16 @@
 import { ROLE_LABELS } from './config.js';
+import type { RoleId } from '../types/index.js';
 
 /**
  * Распределение ролей по количеству игроков (3–10).
  * Первый мафия в списке становится главным (don).
  */
-export function distributeRoles(playerCount) {
+export function distributeRoles(playerCount: number): RoleId[] {
   if (playerCount === 3) {
     return shuffle(['mafia', 'commissar', 'civilian']);
   }
 
-  const pool = [];
+  const pool: RoleId[] = [];
 
   if (playerCount >= 4) {
     pool.push('mafia', 'commissar', 'doctor', 'civilian');
@@ -45,7 +46,7 @@ export function distributeRoles(playerCount) {
   return shuffle(pool);
 }
 
-function shuffle(arr) {
+function shuffle(arr: RoleId[]): RoleId[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -54,28 +55,29 @@ function shuffle(arr) {
   return a;
 }
 
-export function getRoleLabel(role) {
+export function getRoleLabel(role: RoleId | null | undefined): string {
+  if (!role) return '';
   return ROLE_LABELS[role] || role;
 }
 
-export function isMafia(role) {
+export function isMafia(role: RoleId | null | undefined): boolean {
   return role === 'mafia';
 }
 
-export function isTown(role) {
+export function isTown(role: RoleId | null | undefined): boolean {
   return role !== 'mafia' && role !== 'maniac';
 }
 
-export function isEvil(role) {
+export function isEvil(role: RoleId | null | undefined): boolean {
   return role === 'mafia' || role === 'maniac';
 }
 
 /** Горец не убивается мафией */
-export function isMafiaImmune(role) {
+export function isMafiaImmune(role: RoleId | null | undefined): boolean {
   return role === 'highlander';
 }
 
 /** Клоун не подвержен соблазнению путаны */
-export function isSeductionImmune(role) {
+export function isSeductionImmune(role: RoleId | null | undefined): boolean {
   return role === 'clown';
 }

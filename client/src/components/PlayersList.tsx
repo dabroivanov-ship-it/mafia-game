@@ -1,8 +1,22 @@
-export default function PlayersList({ players, spectators = [], myId, onViewProfile }) {
+import type { RoomPlayer, RoomSpectator } from '../types';
+
+interface PlayersListProps {
+  players: RoomPlayer[];
+  spectators?: RoomSpectator[];
+  myId: number;
+  onViewProfile?: (userId: number) => void;
+}
+
+export default function PlayersList({
+  players,
+  spectators = [],
+  myId,
+  onViewProfile,
+}: PlayersListProps) {
   const alive = players.filter((p) => p.alive);
   const dead = players.filter((p) => !p.alive);
 
-  const renderPerson = (p, showRole = false, isSpectator = false) => (
+  const renderPerson = (p: RoomPlayer | RoomSpectator, showRole = false, isSpectator = false) => (
     <li key={p.id} className={p.id === myId ? 'me' : ''}>
       <button
         type="button"
@@ -14,10 +28,12 @@ export default function PlayersList({ players, spectators = [], myId, onViewProf
         {p.name}
       </button>
       {isSpectator && <span className="spectator-badge">👁</span>}
-      {showRole && p.roleLabel && <span className="player-role">{p.roleLabel}</span>}
-      {!isSpectator && <span className="player-score">{p.score} pts</span>}
+      {showRole && 'roleLabel' in p && p.roleLabel && (
+        <span className="player-role">{p.roleLabel}</span>
+      )}
+      {!isSpectator && 'score' in p && <span className="player-score">{p.score} pts</span>}
       {!p.connected && <span className="offline">offline</span>}
-      {p.hasVoted && <span className="voted">✓</span>}
+      {'hasVoted' in p && p.hasVoted && <span className="voted">✓</span>}
     </li>
   );
 

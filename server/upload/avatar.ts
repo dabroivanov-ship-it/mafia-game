@@ -1,8 +1,9 @@
 import multer from 'multer';
 import path from 'path';
+import type { Request } from 'express';
 import { uploadsDir } from '../auth/db.js';
 
-export function createAvatarUpload(getUserId) {
+export function createAvatarUpload(getUserId: (req: Request) => string | number) {
   const storage = multer.diskStorage({
     destination: (_req, _file, cb) => cb(null, uploadsDir),
     filename: (req, file, cb) => {

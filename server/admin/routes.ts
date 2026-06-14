@@ -12,8 +12,26 @@ import {
   deleteAvatarFile,
 } from '../auth/db.js';
 import { createAvatarUpload } from '../upload/avatar.js';
+import type { GameEvent } from '../history/store.js';
+import type { ChatMessage, GameRoom, LobbyRoom } from '../types/index.js';
 
-export function createAdminRouter(handlers) {
+export interface AdminRouterHandlers {
+  getModerationData: () => {
+    rooms: LobbyRoom[];
+    messages: (ChatMessage & { roomId: number; roomName?: string; channel?: string })[];
+  };
+  deleteMessage: (roomId: number, messageId: string, channel: string) => boolean;
+  renameRoom: (id: number, name: string) => GameRoom;
+  addRoom: (name: string) => GameRoom;
+  deleteRoom: (id: number) => void;
+  onRoomsChanged: (changedRoomId?: number | null) => void;
+  syncUserInRooms?: (userId: number, displayName: string) => void;
+  getGameEvents?: () => GameEvent[];
+  getChatHistory?: (roomId: number) => ChatMessage[];
+  getRoomGameEvents?: (roomId: number) => GameEvent[];
+}
+
+export function createAdminRouter(handlers: AdminRouterHandlers) {
   const router = Router();
   const avatarUpload = createAvatarUpload((req) => req.params.userId || 'admin');
 
@@ -47,7 +65,8 @@ export function createAdminRouter(handlers) {
       handlers.onRoomsChanged(roomId);
       res.json({ room: { id: room.id, name: room.name } });
     } catch (e) {
-      res.status(400).json({ error: e.message });
+      const err = e as Error;
+      res.status(400).json({ error: err.message });
     }
   });
 
@@ -57,7 +76,8 @@ export function createAdminRouter(handlers) {
       handlers.onRoomsChanged(room.id);
       res.status(201).json({ room: { id: room.id, name: room.name } });
     } catch (e) {
-      res.status(400).json({ error: e.message });
+      const err = e as Error;
+      res.status(400).json({ error: err.message });
     }
   });
 
@@ -67,7 +87,8 @@ export function createAdminRouter(handlers) {
       handlers.onRoomsChanged();
       res.json({ ok: true });
     } catch (e) {
-      res.status(400).json({ error: e.message });
+      const err = e as Error;
+      res.status(400).json({ error: err.message });
     }
   });
 
@@ -87,7 +108,7 @@ export function createAdminRouter(handlers) {
       city: (city || '').trim().slice(0, 50),
       bio: (bio || '').trim().slice(0, 500),
     });
-    handlers.syncUserInRooms?.(id, user.displayName);
+    handlers.syncUserInRooms?.(id, user!.displayName);
     res.json({ user });
   });
 
@@ -119,7 +140,7 @@ export function createAdminRouter(handlers) {
     if (!target) return res.status(404).json({ error: 'Пользователь не найден' });
     if (target.isAdmin) return res.status(403).json({ error: 'Нельзя забанить администратора' });
 
-    let until = null;
+    let until: string | null = null;
     if (hours && Number(hours) > 0) {
       until = new Date(Date.now() + Number(hours) * 3600000).toISOString();
     }
