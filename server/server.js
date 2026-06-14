@@ -29,6 +29,9 @@ import {
   getModerationSnapshot,
   resetRoom,
   serializeRoomForPlayer,
+  renameRoom,
+  addRoom,
+  removeRoom,
 } from './game/engine.js';
 
 const app = express();
@@ -60,12 +63,56 @@ function adminDeleteMessage(roomId, messageId, channel) {
   return ok;
 }
 
+function kickPlayersFromRoom(room) {
+  for (const player of room.players) {
+    if (player.socketId) {
+      io.to(player.socketId).emit('room:kicked', { reason: 'Комната удалена администратором' });
+      sessions.delete(player.socketId);
+    }
+  }
+}
+
+function onRoomsChanged() {
+  broadcastLobby();
+  for (const room of rooms.values()) {
+    broadcastRoom(room.id);
+  }
+}
+
+function adminDeleteRoom(roomId) {
+  const room = rooms.get(roomId);
+  if (!room) throw new Error('Комната не найдена');
+  kickPlayersFromRoom(room);
+  removeRoom(rooms, roomId);
+}
+
+function syncUserInRooms(userId, displayName) {
+  for (const room of rooms.values()) {
+    const player = room.players.find((p) => p.userId === userId);
+    if (player) {
+      player.name = displayName;
+      if (player.socketId) {
+        io.to(player.socketId).emit(
+          'room:state',
+          serializeForSocketUser(room, player.id, userId)
+        );
+      }
+    }
+  }
+  onRoomsChanged();
+}
+
 app.use(
   '/api/admin',
-  createAdminRouter(
-    () => getModerationSnapshot(rooms),
-    adminDeleteMessage
-  )
+  createAdminRouter({
+    getModerationData: () => getModerationSnapshot(rooms),
+    deleteMessage: adminDeleteMessage,
+    renameRoom: (id, name) => renameRoom(rooms, id, name),
+    addRoom: (name) => addRoom(rooms, name),
+    deleteRoom: (id) => adminDeleteRoom(id),
+    onRoomsChanged,
+    syncUserInRooms,
+  })
 );
 
 function serializeForSocketUser(room, gamePlayerId, userId) {

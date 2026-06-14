@@ -50,6 +50,35 @@ export function getLobbySnapshot(rooms) {
   }));
 }
 
+export function renameRoom(rooms, roomId, name) {
+  const room = rooms.get(Number(roomId));
+  if (!room) throw new Error('Комната не найдена');
+  const trimmed = String(name || '').trim().slice(0, 50);
+  if (!trimmed) throw new Error('Название не может быть пустым');
+  room.name = trimmed;
+  return room;
+}
+
+export function addRoom(rooms, name) {
+  let maxId = 0;
+  for (const id of rooms.keys()) maxId = Math.max(maxId, id);
+  const id = maxId + 1;
+  const room = createRoom(id);
+  const trimmed = String(name || '').trim().slice(0, 50);
+  room.name = trimmed || `Комната ${id}`;
+  rooms.set(id, room);
+  return room;
+}
+
+export function removeRoom(rooms, roomId) {
+  if (rooms.size <= 1) throw new Error('Нельзя удалить последнюю комнату');
+  const id = Number(roomId);
+  if (!rooms.has(id)) throw new Error('Комната не найдена');
+  const room = rooms.get(id);
+  rooms.delete(id);
+  return room;
+}
+
 export function addPlayerToRoom(room, { name, socketId, userId }) {
   const existingSocket = room.players.find((p) => p.socketId === socketId);
   if (existingSocket) {

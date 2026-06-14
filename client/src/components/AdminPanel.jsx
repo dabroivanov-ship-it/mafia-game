@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
   avatarUrl,
   fetchAdminOverview,
@@ -6,6 +6,12 @@ import {
   adminUnban,
   adminDeleteUser,
   adminDeleteMessage,
+  adminRenameRoom,
+  adminCreateRoom,
+  adminDeleteRoom,
+  adminUpdateUser,
+  adminUploadUserAvatar,
+  adminRemoveUserAvatar,
 } from '../api.js';
 
 export default function AdminPanel({ onBack }) {
@@ -17,6 +23,11 @@ export default function AdminPanel({ onBack }) {
   const [banTarget, setBanTarget] = useState(null);
   const [banReason, setBanReason] = useState('Нарушение правил');
   const [banHours, setBanHours] = useState('');
+  const [editUser, setEditUser] = useState(null);
+  const [editForm, setEditForm] = useState({ displayName: '', city: '', bio: '' });
+  const [newRoomName, setNewRoomName] = useState('');
+  const [roomEdits, setRoomEdits] = useState({});
+  const avatarInputRef = useRef(null);
 
   const load = async () => {
     setLoading(true);
@@ -26,6 +37,11 @@ export default function AdminPanel({ onBack }) {
       setUsers(data.users || []);
       setMessages(data.messages || []);
       setRooms(data.rooms || []);
+      const edits = {};
+      (data.rooms || []).forEach((r) => {
+        edits[r.id] = r.name;
+      });
+      setRoomEdits(edits);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -38,6 +54,84 @@ export default function AdminPanel({ onBack }) {
     const id = setInterval(load, 10000);
     return () => clearInterval(id);
   }, []);
+
+  const openEditUser = (u) => {
+    setEditUser(u);
+    setEditForm({
+      displayName: u.displayName || '',
+      city: u.city || '',
+      bio: u.bio || '',
+    });
+  };
+
+  const handleSaveUser = async () => {
+    if (!editUser) return;
+    try {
+      await adminUpdateUser(editUser.id, editForm);
+      setEditUser(null);
+      load();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleUserAvatar = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !editUser) return;
+    try {
+      await adminUploadUserAvatar(editUser.id, file);
+      load();
+      const data = await fetchAdminOverview();
+      const updated = data.users.find((u) => u.id === editUser.id);
+      if (updated) setEditUser(updated);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    if (!editUser) return;
+    try {
+      await adminRemoveUserAvatar(editUser.id);
+      load();
+      setEditUser({ ...editUser, avatar: null });
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleRenameRoom = async (roomId) => {
+    try {
+      await adminRenameRoom(roomId, roomEdits[roomId]);
+      load();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleCreateRoom = async (e) => {
+    e.preventDefault();
+    if (!newRoomName.trim()) return;
+    try {
+      await adminCreateRoom(newRoomName.trim());
+      setNewRoomName('');
+      load();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleDeleteRoom = async (roomId, name) => {
+    if (!confirm(`Удалить комнату «${name}»? Игроки будут выгнаны.`)) return;
+    try {
+      await adminDeleteRoom(roomId);
+      load();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
 
   const handleBan = async () => {
     if (!banTarget) return;
@@ -60,7 +154,7 @@ export default function AdminPanel({ onBack }) {
   };
 
   const handleDeleteUser = async (userId) => {
-    if (!confirm('Удалить пользователя?')) return;
+    if (!confirm('Удалить пользователя и его профиль?')) return;
     try {
       await adminDeleteUser(userId);
       load();
@@ -95,14 +189,43 @@ export default function AdminPanel({ onBack }) {
       {error && <div className="auth-error">{error}</div>}
 
       <section className="admin-section">
-        <h3>Комнаты ({rooms.length})</h3>
-        <div className="admin-rooms">
+        <h3>Управление комнатами</h3>
+        <div className="admin-room-list">
           {rooms.map((r) => (
-            <span key={r.id} className="admin-tag">
-              {r.name}: {r.playerCount}/{r.maxPlayers} — {r.phase}
-            </span>
+            <div key={r.id} className="admin-room-row">
+              <input
+                type="text"
+                value={roomEdits[r.id] ?? r.name}
+                onChange={(e) => setRoomEdits({ ...roomEdits, [r.id]: e.target.value })}
+                maxLength={50}
+              />
+              <span className="muted room-meta">
+                {r.playerCount}/{r.maxPlayers} · {r.phase}
+              </span>
+              <button type="button" className="btn btn-sm btn-primary" onClick={() => handleRenameRoom(r.id)}>
+                Сохранить
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm danger"
+                onClick={() => handleDeleteRoom(r.id, r.name)}
+                disabled={rooms.length <= 1}
+              >
+                Удалить
+              </button>
+            </div>
           ))}
         </div>
+        <form className="admin-add-room" onSubmit={handleCreateRoom}>
+          <input
+            type="text"
+            placeholder="Название новой комнаты"
+            value={newRoomName}
+            onChange={(e) => setNewRoomName(e.target.value)}
+            maxLength={50}
+          />
+          <button type="submit" className="btn btn-primary">+ Создать комнату</button>
+        </form>
       </section>
 
       <section className="admin-section">
@@ -145,6 +268,9 @@ export default function AdminPanel({ onBack }) {
                     )}
                   </td>
                   <td className="admin-actions">
+                    <button type="button" className="btn btn-sm" onClick={() => openEditUser(u)}>
+                      Профиль
+                    </button>
                     {!u.isAdmin && !u.isBanned && (
                       <button type="button" className="btn btn-sm danger" onClick={() => setBanTarget(u)}>
                         Бан
@@ -176,7 +302,9 @@ export default function AdminPanel({ onBack }) {
             <div key={`${msg.roomId}-${msg.id}`} className={`admin-msg ${msg.deleted ? 'deleted' : ''}`}>
               <div className="admin-msg-meta">
                 <span>{msg.roomName}</span>
-                <span>{msg.channel === 'mafia' ? '🔫 мафия' : msg.channel === 'dead' ? '💀 выбывшие' : '💬 общий'}</span>
+                <span>
+                  {msg.channel === 'mafia' ? '🔫 мафия' : msg.channel === 'dead' ? '💀 выбывшие' : '💬 общий'}
+                </span>
                 <span>{new Date(msg.time).toLocaleString('ru-RU')}</span>
               </div>
               <div className="admin-msg-body">
@@ -191,6 +319,61 @@ export default function AdminPanel({ onBack }) {
           ))}
         </div>
       </section>
+
+      {editUser && (
+        <div className="modal-overlay" onClick={() => setEditUser(null)}>
+          <div className="modal modal-wide" onClick={(e) => e.stopPropagation()}>
+            <h3>Редактировать: {editUser.username}</h3>
+
+            <div className="profile-avatar-block">
+              {editUser.avatar ? (
+                <img src={avatarUrl(editUser.avatar)} alt="" className="profile-avatar" />
+              ) : (
+                <div className="profile-avatar placeholder">👤</div>
+              )}
+              <div>
+                <input ref={avatarInputRef} type="file" accept="image/*" onChange={handleUserAvatar} hidden id="admin-avatar" />
+                <label htmlFor="admin-avatar" className="btn btn-ghost">Заменить аватар</label>
+                {editUser.avatar && (
+                  <button type="button" className="btn btn-sm danger" onClick={handleRemoveAvatar}>
+                    Удалить аватар
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <label>
+              Имя
+              <input
+                value={editForm.displayName}
+                onChange={(e) => setEditForm({ ...editForm, displayName: e.target.value })}
+                maxLength={30}
+              />
+            </label>
+            <label>
+              Город
+              <input
+                value={editForm.city}
+                onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
+                maxLength={50}
+              />
+            </label>
+            <label>
+              О себе
+              <textarea
+                value={editForm.bio}
+                onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
+                maxLength={500}
+                rows={3}
+              />
+            </label>
+            <div className="profile-actions">
+              <button type="button" className="btn btn-ghost" onClick={() => setEditUser(null)}>Отмена</button>
+              <button type="button" className="btn btn-primary" onClick={handleSaveUser}>Сохранить</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {banTarget && (
         <div className="modal-overlay" onClick={() => setBanTarget(null)}>
@@ -211,12 +394,8 @@ export default function AdminPanel({ onBack }) {
               />
             </label>
             <div className="profile-actions">
-              <button type="button" className="btn btn-ghost" onClick={() => setBanTarget(null)}>
-                Отмена
-              </button>
-              <button type="button" className="btn btn-primary danger" onClick={handleBan}>
-                Забанить
-              </button>
+              <button type="button" className="btn btn-ghost" onClick={() => setBanTarget(null)}>Отмена</button>
+              <button type="button" className="btn btn-primary danger" onClick={handleBan}>Забанить</button>
             </div>
           </div>
         </div>

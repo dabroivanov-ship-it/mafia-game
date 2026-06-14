@@ -134,6 +134,20 @@ export function updateUserProfile(userId, { displayName, city, bio }) {
   return findUserPublic(userId);
 }
 
+export function deleteAvatarFile(avatarPath) {
+  if (avatarPath?.startsWith('/uploads/')) {
+    const filePath = path.join(uploadsDir, path.basename(avatarPath));
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  }
+}
+
+export function removeUserAvatar(userId) {
+  const user = findUserById(userId);
+  if (user?.avatar) deleteAvatarFile(user.avatar);
+  db.prepare('UPDATE users SET avatar = NULL WHERE id = ?').run(userId);
+  return findUserPublic(userId);
+}
+
 export function updateUserAvatar(userId, avatarPath) {
   const old = findUserById(userId);
   db.prepare('UPDATE users SET avatar = ? WHERE id = ?').run(avatarPath, userId);
@@ -147,7 +161,7 @@ export function updateUserScore(userId, delta) {
 export function listAllUsers() {
   return db
     .prepare(
-      `SELECT id, username, email, display_name, city, avatar, role, is_banned, ban_reason, banned_until, total_score, created_at
+      `SELECT id, username, email, display_name, city, bio, avatar, role, is_banned, ban_reason, banned_until, total_score, created_at
        FROM users ORDER BY created_at DESC`
     )
     .all()
@@ -169,6 +183,8 @@ export function clearBan(userId) {
 }
 
 export function deleteUser(userId) {
+  const user = findUserById(userId);
+  if (user?.avatar) deleteAvatarFile(user.avatar);
   db.prepare('DELETE FROM users WHERE id = ? AND role != ?').run(userId, 'admin');
 }
 

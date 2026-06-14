@@ -107,3 +107,46 @@ export async function adminDeleteMessage(roomId, messageId, channel) {
     body: JSON.stringify({ roomId, messageId, channel }),
   });
 }
+
+export async function adminRenameRoom(roomId, name) {
+  return apiRequest(`/api/admin/rooms/${roomId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ name }),
+  });
+}
+
+export async function adminCreateRoom(name) {
+  return apiRequest('/api/admin/rooms', {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  });
+}
+
+export async function adminDeleteRoom(roomId) {
+  return apiRequest(`/api/admin/rooms/${roomId}`, { method: 'DELETE' });
+}
+
+export async function adminUpdateUser(userId, payload) {
+  return apiRequest(`/api/admin/users/${userId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function adminUploadUserAvatar(userId, file) {
+  const form = new FormData();
+  form.append('avatar', file);
+  const token = localStorage.getItem('mafia_token');
+  const res = await fetch(`${API_BASE}/api/admin/users/${userId}/avatar`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Ошибка загрузки');
+  return data;
+}
+
+export async function adminRemoveUserAvatar(userId) {
+  return apiRequest(`/api/admin/users/${userId}/avatar`, { method: 'DELETE' });
+}

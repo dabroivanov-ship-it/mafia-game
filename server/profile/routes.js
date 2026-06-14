@@ -1,33 +1,16 @@
 import { Router } from 'express';
-import multer from 'multer';
 import path from 'path';
-import fs from 'fs';
 import { authMiddleware } from '../auth/jwt.js';
 import {
   findUserPublic,
   updateUserProfile,
   updateUserAvatar,
-  uploadsDir,
+  deleteAvatarFile,
 } from '../auth/db.js';
+import { createAvatarUpload } from '../upload/avatar.js';
 
 const router = Router();
-
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadsDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
-    cb(null, `${req.userId}_${Date.now()}${ext}`);
-  },
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 2 * 1024 * 1024 },
-  fileFilter: (_req, file, cb) => {
-    const ok = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.mimetype);
-    cb(ok ? null : new Error('Только JPG, PNG, WebP, GIF'), ok);
-  },
-});
+const upload = createAvatarUpload((req) => req.userId);
 
 router.put('/', authMiddleware, (req, res) => {
   const { displayName, city, bio } = req.body;
@@ -44,21 +27,12 @@ router.put('/', authMiddleware, (req, res) => {
 
 router.post('/avatar', authMiddleware, (req, res) => {
   upload.single('avatar')(req, res, (err) => {
-    if (err) {
-      return res.status(400).json({ error: err.message || 'Ошибка загрузки' });
-    }
-    if (!req.file) {
-      return res.status(400).json({ error: 'Файл не выбран' });
-    }
+    if (err) return res.status(400).json({ error: err.message || 'Ошибка загрузки' });
+    if (!req.file) return res.status(400).json({ error: 'Файл не выбран' });
 
     const avatarUrl = `/uploads/avatars/${req.file.filename}`;
     const { oldAvatar, user } = updateUserAvatar(req.userId, avatarUrl);
-
-    if (oldAvatar?.startsWith('/uploads/')) {
-      const oldPath = path.join(uploadsDir, path.basename(oldAvatar));
-      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-    }
-
+    if (oldAvatar) deleteAvatarFile(oldAvatar);
     res.json({ user, avatar: avatarUrl });
   });
 });

@@ -78,6 +78,15 @@ export default function App() {
       setTimeout(() => setNotification(null), 8000);
     });
 
+    s.on('room:kicked', ({ reason }) => {
+      setCurrentRoomId(null);
+      setRoomState(null);
+      setPlayerId(null);
+      setView('lobby');
+      localStorage.removeItem('mafia_player_id');
+      setError(reason || 'Вы вышли из комнаты');
+    });
+
     setSocket(s);
     return () => s.disconnect();
   }, [token, user]);

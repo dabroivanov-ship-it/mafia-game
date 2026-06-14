@@ -991,6 +991,67 @@ body {
   max-width: 400px;
 }
 
+.modal.modal-wide {
+  max-width: 480px;
+}
+
+.admin-room-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.admin-room-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-room-row input {
+  flex: 1;
+  min-width: 160px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.room-meta {
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.admin-add-room {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-add-room input {
+  flex: 1;
+  min-width: 180px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.modal label textarea {
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  resize: vertical;
+}
+
 .modal label {
   display: block;
   margin: 12px 0;
