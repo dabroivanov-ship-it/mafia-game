@@ -42,8 +42,9 @@ export function createAdminRouter(handlers) {
   /* --- Комнаты --- */
   router.put('/rooms/:roomId', (req, res) => {
     try {
-      const room = handlers.renameRoom(Number(req.params.roomId), req.body.name);
-      handlers.onRoomsChanged();
+      const roomId = Number(req.params.roomId);
+      const room = handlers.renameRoom(roomId, req.body.name);
+      handlers.onRoomsChanged(roomId);
       res.json({ room: { id: room.id, name: room.name } });
     } catch (e) {
       res.status(400).json({ error: e.message });
@@ -53,7 +54,7 @@ export function createAdminRouter(handlers) {
   router.post('/rooms', (req, res) => {
     try {
       const room = handlers.addRoom(req.body.name);
-      handlers.onRoomsChanged();
+      handlers.onRoomsChanged(room.id);
       res.status(201).json({ room: { id: room.id, name: room.name } });
     } catch (e) {
       res.status(400).json({ error: e.message });

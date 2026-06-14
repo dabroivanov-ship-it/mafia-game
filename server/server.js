@@ -77,8 +77,12 @@ function kickPlayersFromRoom(room) {
   }
 }
 
-function onRoomsChanged() {
+function onRoomsChanged(changedRoomId = null) {
   broadcastLobby();
+  if (changedRoomId != null) {
+    broadcastRoom(changedRoomId);
+    return;
+  }
   for (const room of rooms.values()) {
     broadcastRoom(room.id);
   }

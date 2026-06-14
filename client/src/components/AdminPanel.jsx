@@ -29,9 +29,10 @@ export default function AdminPanel({ onBack }) {
   const [newRoomName, setNewRoomName] = useState('');
   const [roomEdits, setRoomEdits] = useState({});
   const dirtyRoomsRef = useRef(new Set());
+  const roomEditsInitializedRef = useRef(false);
   const avatarInputRef = useRef(null);
 
-  const load = async ({ silent = false } = {}) => {
+  const load = async ({ silent = false, syncRoomNames = false } = {}) => {
     if (!silent) setLoading(true);
     setError('');
     try {
@@ -40,15 +41,16 @@ export default function AdminPanel({ onBack }) {
       setMessages(data.messages || []);
       setGameEvents(data.gameEvents || []);
       setRooms(data.rooms || []);
-      setRoomEdits((prev) => {
-        const edits = { ...prev };
+
+      if (!roomEditsInitializedRef.current || syncRoomNames) {
+        const edits = {};
         (data.rooms || []).forEach((r) => {
-          if (!dirtyRoomsRef.current.has(r.id)) {
-            edits[r.id] = r.name;
-          }
+          edits[r.id] = r.name;
         });
-        return edits;
-      });
+        setRoomEdits(edits);
+        dirtyRoomsRef.current.clear();
+        roomEditsInitializedRef.current = true;
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -116,9 +118,12 @@ export default function AdminPanel({ onBack }) {
       return;
     }
     try {
-      await adminRenameRoom(roomId, name);
+      const { room } = await adminRenameRoom(roomId, name);
       dirtyRoomsRef.current.delete(roomId);
-      await load({ silent: true });
+      setRoomEdits((prev) => ({ ...prev, [roomId]: room.name }));
+      setRooms((prev) =>
+        prev.map((r) => (r.id === roomId ? { ...r, name: room.name } : r))
+      );
     } catch (err) {
       setError(err.message);
     }
@@ -127,6 +132,13 @@ export default function AdminPanel({ onBack }) {
   const handleRoomNameChange = (roomId, value) => {
     setRoomEdits((prev) => ({ ...prev, [roomId]: value }));
     dirtyRoomsRef.current.add(roomId);
+  };
+
+  const handleRoomNameKeyDown = (e, roomId) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleRenameRoom(roomId);
+    }
   };
 
   const handleCreateRoom = async (e) => {
@@ -224,6 +236,7 @@ export default function AdminPanel({ onBack }) {
                 type="text"
                 value={roomEdits[r.id] ?? r.name}
                 onChange={(e) => handleRoomNameChange(r.id, e.target.value)}
+                onKeyDown={(e) => handleRoomNameKeyDown(e, r.id)}
                 maxLength={50}
               />
               <span className="muted room-meta">
@@ -243,7 +256,13 @@ export default function AdminPanel({ onBack }) {
             </div>
           ))}
         </div>
-        <form className="admin-add-room" onSubmit={handleCreateRoom}>
+        <form
+          className="admin-add-room"
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleCreateRoom(e);
+          }}
+        >
           <input
             type="text"
             placeholder="Название новой комнаты"

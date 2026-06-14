@@ -6,13 +6,19 @@ import {
   markChatDeleted,
   hydrateRoomHistory,
 } from '../history/store.js';
+import { loadRoomNames, saveRoomName, deleteRoomName } from '../rooms/store.js';
 
 let nextPlayerId = 1;
 
 export function createInitialRooms() {
   const rooms = new Map();
+  const savedNames = loadRoomNames();
   for (let i = 1; i <= CONFIG.ROOM_COUNT; i++) {
-    rooms.set(i, createRoom(i));
+    const room = createRoom(i);
+    if (savedNames.has(i)) {
+      room.name = savedNames.get(i);
+    }
+    rooms.set(i, room);
   }
   return rooms;
 }
@@ -71,6 +77,7 @@ export function renameRoom(rooms, roomId, name) {
   const trimmed = String(name || '').trim().slice(0, 50);
   if (!trimmed) throw new Error('Название не может быть пустым');
   room.name = trimmed;
+  saveRoomName(room.id, trimmed);
   return room;
 }
 
@@ -82,6 +89,7 @@ export function addRoom(rooms, name) {
   const trimmed = String(name || '').trim().slice(0, 50);
   room.name = trimmed || `Комната ${id}`;
   rooms.set(id, room);
+  saveRoomName(id, room.name);
   return room;
 }
 
@@ -91,6 +99,7 @@ export function removeRoom(rooms, roomId) {
   if (!rooms.has(id)) throw new Error('Комната не найдена');
   const room = rooms.get(id);
   rooms.delete(id);
+  deleteRoomName(id);
   return room;
 }
 
