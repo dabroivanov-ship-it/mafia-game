@@ -858,7 +858,7 @@ function sliceChatMessages(messages, chatLimit) {
 
 /** Чат для конкретного игрока */
 function buildChatView(room, me, chatLimit = DEFAULT_CHAT_LIMIT) {
-  const gameRunning = ![PHASE.WAITING, PHASE.ENDED].includes(room.phase);
+  const gameRunning = ![PHASE.WAITING, PHASE.REGISTRATION, PHASE.ENDED].includes(room.phase);
   const isSpectator = me && !me.inGame && gameRunning;
 
   if (isSpectator) {
@@ -919,7 +919,7 @@ export function serializeRoomForPlayer(room, playerId, options = {}) {
   const me = room.players.find((p) => p.id === playerId);
   const { isAdmin = false, chatLimit = DEFAULT_CHAT_LIMIT } = options;
   const chatView = buildChatView(room, me, chatLimit);
-  const gameRunning = ![PHASE.WAITING, PHASE.ENDED].includes(room.phase);
+  const gameRunning = ![PHASE.WAITING, PHASE.REGISTRATION, PHASE.ENDED].includes(room.phase);
   const isSpectator = !!(me && !me.inGame && gameRunning);
   const registeredCount = room.players.filter((p) => p.connected && p.inGame).length;
   const slotsAvailable = registeredCount < room.maxPlayers;

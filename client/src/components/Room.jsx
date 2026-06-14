@@ -66,11 +66,10 @@ export default function Room({ socket, state, onLeave }) {
   const me = state.myPlayer;
   const isMafia = state.myRole === 'mafia' && me?.alive;
   const showJoin =
-    state.canJoinGame ||
-    (state.phase === 'registration' &&
-      me &&
-      !state.isInGame &&
-      state.registeredCount < state.maxPlayers);
+    state.phase === 'registration' &&
+    me &&
+    !state.isInGame &&
+    state.registeredCount < state.maxPlayers;
 
   const emit = (event, data) =>
     new Promise((resolve) => {
@@ -112,7 +111,7 @@ export default function Room({ socket, state, onLeave }) {
           <button
             type="button"
             className="btn btn-primary btn-lg btn-block"
-            disabled={joinCooldown > 0}
+            disabled={joinCooldown > 0 || !state.canJoinGame}
             onClick={async () => {
               const res = await emit('room:joinGame');
               if (res?.error) alert(res.error);
@@ -230,13 +229,20 @@ export default function Room({ socket, state, onLeave }) {
       </div>
 
       <footer className="room-footer">
-        {state.canStartGame && state.phase !== 'registration' && (
-          <button type="button" className="btn btn-primary btn-lg btn-block" onClick={() => emit('room:start')}>
+        {state.canStartGame && state.phase === 'waiting' && (
+          <button
+            type="button"
+            className="btn btn-primary btn-lg btn-block"
+            onClick={async () => {
+              const res = await emit('room:start');
+              if (res?.error) alert(res.error);
+            }}
+          >
             Запустить игру
           </button>
         )}
-        {state.phase === 'registration' && state.isSpectator && !showJoin && (
-          <p className="muted">Все места заняты — вы наблюдаете.</p>
+        {state.phase === 'registration' && me && !state.isInGame && !showJoin && (
+          <p className="muted">Все места заняты — дождитесь начала или наблюдайте в чате.</p>
         )}
         {state.phase === 'ended' && (
           <button type="button" className="btn btn-primary btn-lg btn-block" onClick={() => emit('room:newGame')}>

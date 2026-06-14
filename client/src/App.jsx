@@ -145,6 +145,32 @@ export default function App() {
     setView('lobby');
   }, []);
 
+  useEffect(() => {
+    if (!socket || !currentRoomId) return;
+
+    const resyncRoom = () => {
+      socket.emit('room:join', { roomId: currentRoomId, playerId }, (res) => {
+        if (res?.error) {
+          setError(res.error);
+          setCurrentRoomId(null);
+          setRoomState(null);
+          setPlayerId(null);
+          localStorage.removeItem('mafia_player_id');
+          setView('lobby');
+          return;
+        }
+        if (res?.playerId != null) {
+          setPlayerId(res.playerId);
+          localStorage.setItem('mafia_player_id', String(res.playerId));
+        }
+        if (res?.state) setRoomState(res.state);
+      });
+    };
+
+    socket.on('connect', resyncRoom);
+    return () => socket.off('connect', resyncRoom);
+  }, [socket, currentRoomId, playerId]);
+
   if (authLoading) {
     return (
       <div className="app loading-screen">

@@ -168,14 +168,24 @@ function broadcastRoom(roomId) {
 
   syncRoomScores(room);
 
-  for (const player of room.players) {
-    if (player.socketId) {
-      io.to(player.socketId).emit(
-        'room:state',
-        serializeForSocketUser(room, player.id, player.userId, player.socketId)
-      );
-    }
+  const notified = new Set();
+  for (const [socketId, session] of sessions.entries()) {
+    if (session.roomId !== roomId) continue;
+    io.to(socketId).emit(
+      'room:state',
+      serializeForSocketUser(room, session.playerId, session.userId, socketId)
+    );
+    notified.add(session.playerId);
   }
+
+  for (const player of room.players) {
+    if (!player.connected || !player.socketId || notified.has(player.id)) continue;
+    io.to(player.socketId).emit(
+      'room:state',
+      serializeForSocketUser(room, player.id, player.userId, player.socketId)
+    );
+  }
+
   broadcastLobby();
 }
 
@@ -189,7 +199,12 @@ function sendPrivateNotes(room, privateNotes = []) {
 }
 
 function attachSession(socket, roomId, playerId) {
-  sessions.set(socket.id, { roomId, playerId, chatLimit: DEFAULT_CHAT_LIMIT });
+  sessions.set(socket.id, {
+    roomId,
+    playerId,
+    userId: socket.userId,
+    chatLimit: DEFAULT_CHAT_LIMIT,
+  });
   socket.join(`room:${roomId}`);
 }
 
@@ -270,7 +285,10 @@ io.on('connection', (socket) => {
     try {
       startRegistration(room, session.playerId);
       broadcastRoom(room.id);
-      cb?.({ ok: true });
+      cb?.({
+        ok: true,
+        state: serializeForSocketUser(room, session.playerId, socket.userId, socket.id),
+      });
     } catch (e) {
       cb?.({ error: e.message });
     }
@@ -340,7 +358,7 @@ io.on('connection', (socket) => {
     const me = room.players.find((p) => p.id === session.playerId);
     if (!me) return cb?.({ error: 'Игрок не найден' });
 
-    const gameRunning = !['waiting', 'ended'].includes(room.phase);
+    const gameRunning = !['waiting', 'registration', 'ended'].includes(room.phase);
     const isSpectator = !me.inGame && gameRunning;
 
     let channel = 'public';
