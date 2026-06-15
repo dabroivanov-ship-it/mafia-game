@@ -156,8 +156,7 @@ export function addPlayerToRoom(
     existingSocket.name = name;
     if (username) existingSocket.username = username;
     existingSocket.connected = true;
-    const privateNotes = autoJoinRegistrationIfPossible(room, existingSocket);
-    return { player: existingSocket, privateNotes };
+    return { player: existingSocket, privateNotes: [] };
   }
 
   // Переподключение того же аккаунта
@@ -174,11 +173,11 @@ export function addPlayerToRoom(
     if (isLobbyPhase(room.phase)) {
       existingUser.inGame = true;
     }
-    let privateNotes = autoJoinRegistrationIfPossible(room, existingUser);
-    return { player: existingUser, privateNotes };
+    return { player: existingUser, privateNotes: [] };
   }
 
   const connectedCount = room.players.filter((p) => p.connected).length;
+  const inGameCount = room.players.filter((p) => p.connected && p.inGame).length;
   const isGamePhase = !isLobbyPhase(room.phase);
   const defaultInGame = !isGamePhase;
 
@@ -207,12 +206,9 @@ export function addPlayerToRoom(
 
   hydrateRoomHistory(room);
 
-  let privateNotes = autoJoinRegistrationIfPossible(room, player);
-  if (privateNotes.length === 0 && room.phase === PHASE.REGISTRATION && player.inGame) {
-    const inGameCount = room.players.filter((p) => p.connected && p.inGame).length;
-    if (inGameCount >= room.maxPlayers) {
-      privateNotes = tryStartGameAfterRegistration(room);
-    }
+  let privateNotes: PrivateNote[] = [];
+  if (room.phase === PHASE.REGISTRATION && player.inGame && inGameCount + 1 >= room.maxPlayers) {
+    privateNotes = tryStartGameAfterRegistration(room);
   }
 
   return { player, privateNotes };
@@ -318,29 +314,10 @@ export function reconnectPlayer(
   player.disconnectedAt = null;
   if (name) player.name = name;
   if (username) player.username = username;
-  const privateNotes = autoJoinRegistrationIfPossible(room, player);
-  return { player, privateNotes };
+  return { player, privateNotes: [] };
 }
 
-function registrationSlotsLeft(room: GameRoom): number {
-  const inGameCount = room.players.filter((p) => p.connected && p.inGame).length;
-  return Math.max(0, room.maxPlayers - inGameCount);
-}
-
-function autoJoinRegistrationIfPossible(room: GameRoom, player: GamePlayer): PrivateNote[] {
-  if (room.phase !== PHASE.REGISTRATION) return [];
-  if (player.inGame || !player.connected) return [];
-  if (registrationSlotsLeft(room) <= 0) return [];
-
-  const now = Date.now();
-  if (player.joinGameAvailableAt && now < player.joinGameAvailableAt) return [];
-
-  player.inGame = true;
-  addSystemMessage(room, `${player.username || player.name} присоединяется к игре!`);
-  return tryStartGameAfterRegistration(room);
-}
-
-export function startRegistration(room: GameRoom, starterPlayerId: number | null = null): void {
+export function startRegistration(room: GameRoom, _starterPlayerId: number | null = null): void {
   if (room.phase !== PHASE.WAITING && room.phase !== PHASE.ENDED) {
     throw new Error('Игра уже идёт');
   }
@@ -353,17 +330,6 @@ export function startRegistration(room: GameRoom, starterPlayerId: number | null
     p.joinGameAvailableAt = 0;
   }
 
-  const connected = room.players.filter((p) => p.connected);
-  const starter = starterPlayerId ? connected.find((p) => p.id === starterPlayerId) : undefined;
-  const ordered = starter
-    ? [starter, ...connected.filter((p) => p.id !== starterPlayerId)]
-    : connected;
-
-  for (const p of ordered) {
-    if (registrationSlotsLeft(room) <= 0) break;
-    p.inGame = true;
-  }
-
   room.phase = PHASE.REGISTRATION;
   room.sessionId = Date.now();
   hydrateRoomHistory(room);
@@ -372,7 +338,7 @@ export function startRegistration(room: GameRoom, starterPlayerId: number | null
   });
   addSystemMessage(
     room,
-    '——— Регистрация открыта! Игроки в комнате записаны автоматически. Новым — кнопка «Присоединиться». ———'
+    '——— Регистрация открыта! Нажмите «Присоединиться к игре», чтобы участвовать. ———'
   );
   setTimer(room, CONFIG.REGISTRATION_SEC * 1000, 'registration');
 }
