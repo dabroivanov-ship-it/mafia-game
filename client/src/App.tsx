@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import Auth from './components/Auth';
 import Menu from './components/Menu';
-import Lobby, { type CabinetTab, type LobbyTab } from './components/Lobby';
+import Lobby, { type LobbyScreen } from './components/Lobby';
 import Info from './components/Info';
 import AdminPanel from './components/AdminPanel';
 import Room from './components/Room';
@@ -39,8 +39,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [unreadMailCount, setUnreadMailCount] = useState(0);
   const [pmNotice, setPmNotice] = useState<string | null>(null);
-  const [lobbyTab, setLobbyTab] = useState<LobbyTab>('rooms');
-  const [cabinetTab, setCabinetTab] = useState<CabinetTab>('settings');
+  const [lobbyScreen, setLobbyScreen] = useState<LobbyScreen>('rooms');
   const [composeToUserId, setComposeToUserId] = useState<number | null>(null);
   const [composeToUsername, setComposeToUsername] = useState<string | null>(null);
 
@@ -136,11 +135,10 @@ export default function App() {
   }, [token]);
 
   const openMessages = useCallback((opts?: { userId?: number; username?: string }) => {
-    setCabinetTab('messages');
     setComposeToUserId(opts?.userId ?? null);
     setComposeToUsername(opts?.username ?? null);
     setView('lobby');
-    setLobbyTab('cabinet');
+    setLobbyScreen('cabinet-messages');
     setPmNotice(null);
   }, []);
 
@@ -299,12 +297,10 @@ export default function App() {
           <Lobby
             rooms={rooms}
             user={user}
-            tab={lobbyTab}
-            onTabChange={setLobbyTab}
+            screen={lobbyScreen}
+            onScreenChange={setLobbyScreen}
             onJoin={joinRoom}
             onUserUpdate={handleUserUpdate}
-            cabinetTab={cabinetTab}
-            onCabinetTabChange={setCabinetTab}
             composeToUserId={composeToUserId}
             composeToUsername={composeToUsername}
             onComposeReset={() => {
@@ -327,8 +323,7 @@ export default function App() {
         view={view}
         onNavigate={(v) => {
           if (v === 'lobby') {
-            setLobbyTab('rooms');
-            setCabinetTab('settings');
+            setLobbyScreen('rooms');
             setComposeToUserId(null);
             setComposeToUsername(null);
           }

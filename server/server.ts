@@ -10,6 +10,7 @@ import { createProfileRouter } from './profile/routes.js';
 import { createAdminRouter } from './admin/routes.js';
 import { createModerationRouter } from './moderation/routes.js';
 import { createMessagesRouter } from './messages/routes.js';
+import { createNewsRouter } from './news/routes.js';
 import { getUnreadCount } from './messages/store.js';
 import { socketAuthMiddleware } from './auth/jwt.js';
 import { findUserById, updateUserScore, isAdmin, isStaff, updateUserConnectionInfo, uploadsDir, normalizeChatLimit } from './auth/db.js';
@@ -25,6 +26,7 @@ import {
   leaveGame,
   tryStartGameAfterRegistration,
   onRegistrationTimerEnd,
+  onRolesTimerEnd,
   onDayTimerEnd,
   onNightTimerEnd,
   startVoting,
@@ -99,6 +101,7 @@ app.use(
   '/api/profile',
   createProfileRouter({ onProfileUpdated: syncUserProfileInRooms })
 );
+app.use('/api/news', createNewsRouter());
 app.use('/uploads/avatars', express.static(uploadsDir));
 
 function adminDeleteMessage(roomId: number, messageId: string, channel: string): boolean {
@@ -302,8 +305,10 @@ setInterval(() => {
     const reason = room.timerReason;
     let privateNotes: PrivateNote[] = [];
     if (reason === 'registration') {
-      onRegistrationTimerEnd(room);
-      tryStartGameAfterRegistration(room);
+      privateNotes = onRegistrationTimerEnd(room);
+      privateNotes.push(...tryStartGameAfterRegistration(room));
+    } else if (reason === 'roles') {
+      privateNotes = onRolesTimerEnd(room);
     } else if (reason === 'day') {
       onDayTimerEnd(room);
     } else if (reason === 'night') {
@@ -369,12 +374,16 @@ io.on('connection', (socket) => {
         player = reconnectPlayer(room, reconnectId, socket.id, playerName, playerUsername);
       }
       if (!player) {
-        player = addPlayerToRoom(room, {
+        const joined = addPlayerToRoom(room, {
           name: playerName,
           username: playerUsername,
           socketId: socket.id,
           userId: socket.userId!,
         });
+        player = joined.player;
+        if (joined.privateNotes.length) {
+          sendPrivateNotes(room, joined.privateNotes);
+        }
       }
 
       attachSession(socket.id, room.id, player.id, socket.userId);
@@ -413,8 +422,9 @@ io.on('connection', (socket) => {
     const room = rooms.get(session.roomId);
     if (!room) return cb?.({ error: 'Комната не найдена' });
     try {
-      joinGame(room, session.playerId);
+      const { privateNotes } = joinGame(room, session.playerId);
       broadcastRoom(room.id);
+      sendPrivateNotes(room, privateNotes);
       cb?.({ ok: true });
     } catch (e) {
       const err = e as Error;
@@ -542,8 +552,9 @@ io.on('connection', (socket) => {
     const room = rooms.get(session.roomId);
     if (!room) return cb?.({ error: 'Комната не найдена' });
     try {
-      castDayVote(room, session.playerId, targetId);
+      const notes = castDayVote(room, session.playerId, targetId);
       broadcastRoom(room.id);
+      sendPrivateNotes(room, notes);
       cb?.({ ok: true });
     } catch (e) {
       const err = e as Error;

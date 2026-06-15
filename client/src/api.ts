@@ -1,4 +1,4 @@
-import type { User, StaffMember, ProfileStaffMeta, PrivateMessage } from './types';
+import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost } from './types';
 
 const API_BASE =
   import.meta.env.VITE_API_URL ??
@@ -107,6 +107,16 @@ export async function fetchOutbox(): Promise<{ messages: PrivateMessage[] }> {
   return apiRequest('/api/messages/outbox');
 }
 
+export async function fetchMailHistory(): Promise<{ messages: PrivateMessage[] }> {
+  return apiRequest('/api/messages/history');
+}
+
+export async function fetchMailThread(
+  otherUserId: number
+): Promise<{ messages: PrivateMessage[]; unreadCount: number }> {
+  return apiRequest(`/api/messages/thread/${otherUserId}`);
+}
+
 export async function sendPrivateMessage(
   to: number | string,
   text: string
@@ -127,6 +137,39 @@ export async function markMessageRead(messageId: number): Promise<{ unreadCount:
 
 export async function fetchStaffList(): Promise<{ staff: StaffMember[] }> {
   return apiRequest('/api/profile/staff/list');
+}
+
+export async function fetchNews(): Promise<{ news: NewsPost[] }> {
+  return apiRequest('/api/news');
+}
+
+export async function fetchAdminNews(): Promise<{ news: NewsPost[] }> {
+  return apiRequest('/api/admin/news');
+}
+
+export async function adminCreateNews(payload: {
+  title: string;
+  body: string;
+  isPublished?: boolean;
+}): Promise<{ news: NewsPost }> {
+  return apiRequest('/api/admin/news', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function adminUpdateNews(
+  id: number,
+  payload: { title?: string; body?: string; isPublished?: boolean }
+): Promise<{ news: NewsPost }> {
+  return apiRequest(`/api/admin/news/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function adminDeleteNews(id: number): Promise<void> {
+  await apiRequest(`/api/admin/news/${id}`, { method: 'DELETE' });
 }
 
 export async function fetchUserProfile(userId: number): Promise<{

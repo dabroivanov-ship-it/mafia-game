@@ -14,17 +14,21 @@ import {
   adminSetUserRole,
   adminUploadUserAvatar,
   adminRemoveUserAvatar,
+  fetchAdminNews,
+  adminCreateNews,
+  adminUpdateNews,
+  adminDeleteNews,
   type AdminGameEvent,
   type AdminMessage,
   type AdminRoom,
 } from '../api';
-import type { User } from '../types';
+import type { User, NewsPost } from '../types';
 
 interface AdminPanelProps {
   onBack: () => void;
 }
 
-type AdminSection = 'users' | 'rooms' | 'messages' | 'system';
+type AdminSection = 'users' | 'rooms' | 'messages' | 'news' | 'system';
 
 export default function AdminPanel({ onBack }: AdminPanelProps) {
   const [section, setSection] = useState<AdminSection>('users');
@@ -45,6 +49,10 @@ export default function AdminPanel({ onBack }: AdminPanelProps) {
   const dirtyRoomsRef = useRef(new Set<number>());
   const roomEditsInitializedRef = useRef(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [newsPosts, setNewsPosts] = useState<NewsPost[]>([]);
+  const [newsLoading, setNewsLoading] = useState(false);
+  const [newsForm, setNewsForm] = useState({ title: '', body: '', isPublished: true });
+  const [editNews, setEditNews] = useState<NewsPost | null>(null);
 
   const load = async ({ silent = false, syncRoomNames = false } = {}) => {
     if (!silent) setLoading(true);
@@ -77,6 +85,22 @@ export default function AdminPanel({ onBack }: AdminPanelProps) {
     const id = setInterval(() => void load({ silent: true }), 10000);
     return () => clearInterval(id);
   }, []);
+
+  const loadNews = async () => {
+    setNewsLoading(true);
+    try {
+      const { news } = await fetchAdminNews();
+      setNewsPosts(news);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка загрузки новостей');
+    } finally {
+      setNewsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (section === 'news') void loadNews();
+  }, [section]);
 
   const openEditUser = (u: User) => {
     setEditUser(u);
@@ -235,6 +259,69 @@ export default function AdminPanel({ onBack }: AdminPanelProps) {
     }
   };
 
+  const resetNewsForm = () => {
+    setNewsForm({ title: '', body: '', isPublished: true });
+    setEditNews(null);
+  };
+
+  const handleSaveNews = async (e: FormEvent) => {
+    e.preventDefault();
+    const title = newsForm.title.trim();
+    const body = newsForm.body.trim();
+    if (!title || !body) {
+      setError('Заголовок и текст новости обязательны');
+      return;
+    }
+    try {
+      if (editNews) {
+        await adminUpdateNews(editNews.id, {
+          title,
+          body,
+          isPublished: newsForm.isPublished,
+        });
+      } else {
+        await adminCreateNews({
+          title,
+          body,
+          isPublished: newsForm.isPublished,
+        });
+      }
+      resetNewsForm();
+      await loadNews();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка сохранения новости');
+    }
+  };
+
+  const handleEditNews = (item: NewsPost) => {
+    setEditNews(item);
+    setNewsForm({
+      title: item.title,
+      body: item.body,
+      isPublished: item.isPublished,
+    });
+  };
+
+  const handleDeleteNews = async (id: number) => {
+    if (!confirm('Удалить эту новость?')) return;
+    try {
+      await adminDeleteNews(id);
+      if (editNews?.id === id) resetNewsForm();
+      await loadNews();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка удаления новости');
+    }
+  };
+
+  const handleToggleNewsPublished = async (item: NewsPost) => {
+    try {
+      await adminUpdateNews(item.id, { isPublished: !item.isPublished });
+      await loadNews();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка обновления');
+    }
+  };
+
   const eventLabel = (type: string) => {
     if (type === 'registration_start') return '📝 Регистрация';
     if (type === 'game_start') return '🎮 Старт игры';
@@ -281,6 +368,9 @@ export default function AdminPanel({ onBack }: AdminPanelProps) {
           </button>
           <button type="button" className={section === 'messages' ? 'active' : ''} onClick={() => setSection('messages')}>
             Очистка сообщений
+          </button>
+          <button type="button" className={section === 'news' ? 'active' : ''} onClick={() => setSection('news')}>
+            Новости
           </button>
           <button type="button" className={section === 'system' ? 'active' : ''} onClick={() => setSection('system')}>
             Система и настройки
@@ -476,6 +566,84 @@ export default function AdminPanel({ onBack }: AdminPanelProps) {
                 </div>
               </section>
             </>
+          )}
+
+          {section === 'news' && (
+            <section className="admin-section">
+              <h3>Новости ({newsPosts.length})</h3>
+
+              <form className="admin-news-form" onSubmit={handleSaveNews}>
+                <h4>{editNews ? `Редактирование #${editNews.id}` : 'Новая публикация'}</h4>
+                <label>
+                  Заголовок
+                  <input
+                    value={newsForm.title}
+                    onChange={(e) => setNewsForm({ ...newsForm, title: e.target.value })}
+                    maxLength={200}
+                    required
+                  />
+                </label>
+                <label>
+                  Текст
+                  <textarea
+                    value={newsForm.body}
+                    onChange={(e) => setNewsForm({ ...newsForm, body: e.target.value })}
+                    rows={6}
+                    maxLength={10000}
+                    required
+                  />
+                </label>
+                <label className="admin-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={newsForm.isPublished}
+                    onChange={(e) => setNewsForm({ ...newsForm, isPublished: e.target.checked })}
+                  />
+                  Опубликовать сразу
+                </label>
+                <div className="profile-actions">
+                  {editNews && (
+                    <button type="button" className="btn btn-ghost" onClick={resetNewsForm}>
+                      Отмена
+                    </button>
+                  )}
+                  <button type="submit" className="btn btn-primary">
+                    {editNews ? 'Сохранить' : 'Добавить новость'}
+                  </button>
+                </div>
+              </form>
+
+              {newsLoading && newsPosts.length === 0 && <p className="muted">Загрузка...</p>}
+
+              <div className="news-list admin-news-list">
+                {newsPosts.length === 0 && !newsLoading && <p className="muted">Новостей пока нет</p>}
+                {newsPosts.map((item) => (
+                  <article key={item.id} className="news-card">
+                    <header className="news-card-header">
+                      <h2>{item.title}</h2>
+                      <time className="muted" dateTime={item.createdAt}>
+                        {new Date(item.createdAt).toLocaleString('ru-RU')}
+                      </time>
+                    </header>
+                    <p className="news-author muted">
+                      {item.authorName || '—'} · {item.isPublished ? 'опубликовано' : 'черновик'}
+                    </p>
+                    <div className="news-body">{item.body}</div>
+                    <div className="admin-actions">
+                      <button type="button" className="btn btn-sm" onClick={() => handleEditNews(item)}>
+                        Редактировать
+                      </button>
+                      <button type="button" className="btn btn-sm" onClick={() => void handleToggleNewsPublished(item)}>
+                        {item.isPublished ? 'Снять с публикации' : 'Опубликовать'}
+                      </button>
+                      <button type="button" className="btn btn-sm danger" onClick={() => void handleDeleteNews(item.id)}>
+                        Удалить
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
           )}
 
           {section === 'system' && (

@@ -12,7 +12,7 @@ interface ChatProps {
   myPlayerId?: number;
   onSend: (text: string, opts?: ChatSendOptions) => void;
   onDeleteMessage?: ((messageId: string | number, sourceChannel?: ChatChannel) => void) | null;
-  onViewProfile?: (userId: number) => void;
+  onOpenPlayerPage?: (target: ChatReplyTarget) => void;
   canModerate?: boolean;
   placeholder?: string;
   hasMoreChat?: boolean;
@@ -30,7 +30,7 @@ export default function Chat({
   myPlayerId,
   onSend,
   onDeleteMessage,
-  onViewProfile,
+  onOpenPlayerPage,
   canModerate,
   placeholder = 'Сообщение...',
   hasMoreChat = false,
@@ -102,13 +102,12 @@ export default function Chat({
   };
 
   const handleAuthorClick = (msg: ChatMessage) => {
-    if (!msg.playerId || msg.playerId === myPlayerId) return;
-    onReplyToChange?.({
+    if (!msg.userId || !msg.playerId || msg.playerId === myPlayerId) return;
+    onOpenPlayerPage?.({
       playerId: msg.playerId,
       playerName: msg.playerName,
       userId: msg.userId,
     });
-    onPrivateModeChange?.(false);
   };
 
   const formatTime = (iso: string) => {
@@ -154,27 +153,15 @@ export default function Chat({
             {msg.system || !msg.userId ? (
               <span className="chat-author">{msg.playerName}:</span>
             ) : (
-              <span className="chat-author-row">
-                <button
-                  type="button"
-                  className={`chat-author-btn ${replyTo?.playerId === msg.playerId ? 'selected' : ''}`}
-                  onClick={() => handleAuthorClick(msg)}
-                  title="Написать игроку"
-                  disabled={!msg.playerId || msg.playerId === myPlayerId}
-                >
-                  {msg.playerName}:
-                </button>
-                {onViewProfile && (
-                  <button
-                    type="button"
-                    className="chat-profile-btn"
-                    onClick={() => onViewProfile(msg.userId!)}
-                    title="Профиль"
-                  >
-                    👤
-                  </button>
-                )}
-              </span>
+              <button
+                type="button"
+                className={`chat-author-btn ${replyTo?.playerId === msg.playerId ? 'selected' : ''}`}
+                onClick={() => handleAuthorClick(msg)}
+                title="Открыть профиль и написать"
+                disabled={!msg.playerId || msg.playerId === myPlayerId}
+              >
+                {msg.playerName}:
+              </button>
             )}
             {msg.toPlayerName && (
               <span className="chat-direct-to" title="Адресат">

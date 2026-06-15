@@ -1,30 +1,33 @@
 import { useEffect, useState, FormEvent } from 'react';
 import {
   avatarUrl,
-  fetchInbox,
-  fetchOutbox,
+  fetchMailHistory,
+  fetchMailThread,
   fetchUnreadMailCount,
   sendPrivateMessage,
   markMessageRead,
 } from '../api';
 import type { PrivateMessage } from '../types';
 
-type MailTab = 'inbox' | 'outbox' | 'compose';
+type MailView = 'history' | 'thread' | 'compose';
 
 interface MessagesProps {
   composeToUserId?: number | null;
   composeToUsername?: string | null;
   onUnreadChange?: (count: number) => void;
+  onBack: () => void;
 }
 
 export default function Messages({
   composeToUserId = null,
   composeToUsername = null,
   onUnreadChange,
+  onBack,
 }: MessagesProps) {
-  const [tab, setTab] = useState<MailTab>(composeToUserId ? 'compose' : 'inbox');
-  const [inbox, setInbox] = useState<PrivateMessage[]>([]);
-  const [outbox, setOutbox] = useState<PrivateMessage[]>([]);
+  const [view, setView] = useState<MailView>(composeToUserId || composeToUsername ? 'compose' : 'history');
+  const [history, setHistory] = useState<PrivateMessage[]>([]);
+  const [thread, setThread] = useState<PrivateMessage[]>([]);
+  const [threadUser, setThreadUser] = useState<PrivateMessage['otherUser'] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -34,17 +37,12 @@ export default function Messages({
   const [composeText, setComposeText] = useState('');
   const [sending, setSending] = useState(false);
 
-  const load = async () => {
+  const loadHistory = async () => {
     setLoading(true);
     setError('');
     try {
-      const [inRes, outRes, unreadRes] = await Promise.all([
-        fetchInbox(),
-        fetchOutbox(),
-        fetchUnreadMailCount(),
-      ]);
-      setInbox(inRes.messages);
-      setOutbox(outRes.messages);
+      const [histRes, unreadRes] = await Promise.all([fetchMailHistory(), fetchUnreadMailCount()]);
+      setHistory(histRes.messages);
       onUnreadChange?.(unreadRes.count);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка загрузки');
@@ -53,27 +51,42 @@ export default function Messages({
     }
   };
 
+  const openThread = async (user: PrivateMessage['otherUser']) => {
+    setLoading(true);
+    setError('');
+    setThreadUser(user);
+    setView('thread');
+    try {
+      const { messages, unreadCount } = await fetchMailThread(user.id);
+      setThread(messages);
+      onUnreadChange?.(unreadCount);
+      await loadHistory();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка загрузки');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    void load();
+    void loadHistory();
   }, []);
 
   useEffect(() => {
     if (composeToUserId) {
       setComposeTo(String(composeToUserId));
-      setTab('compose');
+      setView('compose');
     } else if (composeToUsername) {
       setComposeTo(`@${composeToUsername}`);
-      setTab('compose');
+      setView('compose');
     }
   }, [composeToUserId, composeToUsername]);
 
   const handleRead = async (msg: PrivateMessage) => {
-    if (msg.isRead) return;
+    if (msg.direction !== 'in' || msg.isRead) return;
     try {
       const { unreadCount } = await markMessageRead(msg.id);
-      setInbox((prev) =>
-        prev.map((m) => (m.id === msg.id ? { ...m, isRead: true } : m))
-      );
+      setHistory((prev) => prev.map((m) => (m.id === msg.id ? { ...m, isRead: true } : m)));
       onUnreadChange?.(unreadCount);
     } catch {
       /* ignore */
@@ -90,8 +103,8 @@ export default function Messages({
       await sendPrivateMessage(recipient, composeText.trim());
       setComposeText('');
       setSuccess('Сообщение отправлено');
-      setTab('outbox');
-      await load();
+      setView('history');
+      await loadHistory();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка отправки');
     } finally {
@@ -99,59 +112,64 @@ export default function Messages({
     }
   };
 
-  const replyTo = (username: string) => {
+  const replyInThread = (username: string) => {
     setComposeTo(`@${username}`);
-    setTab('compose');
+    setView('compose');
   };
 
   return (
-    <div className="messages-panel">
-      <div className="messages-tabs">
+    <div className="cabinet-page messages-page">
+      <nav className="info-back messages-page-nav">
         <button
           type="button"
-          className={tab === 'inbox' ? 'active' : ''}
-          onClick={() => setTab('inbox')}
+          className="btn btn-ghost btn-sm"
+          onClick={() => {
+            if (view === 'history' || view === 'compose') onBack();
+            else {
+              setView('history');
+              setThreadUser(null);
+            }
+          }}
         >
-          Входящие ({inbox.filter((m) => !m.isRead).length})
+          {view === 'thread' ? '← История' : '← Кабинет'}
         </button>
-        <button type="button" className={tab === 'outbox' ? 'active' : ''} onClick={() => setTab('outbox')}>
-          Исходящие
-        </button>
-        <button type="button" className={tab === 'compose' ? 'active' : ''} onClick={() => setTab('compose')}>
-          Написать
-        </button>
-      </div>
+        {view !== 'compose' && (
+          <button type="button" className="btn btn-primary btn-sm" onClick={() => setView('compose')}>
+            ✏️ Написать
+          </button>
+        )}
+      </nav>
+
+      <header className="page-header">
+        <h1>
+          {view === 'thread' && threadUser
+            ? `💬 ${threadUser.displayName}`
+            : view === 'compose'
+              ? '✏️ Новое письмо'
+              : '✉️ Письма'}
+        </h1>
+        {view === 'thread' && threadUser && (
+          <p className="muted">@{threadUser.username}</p>
+        )}
+        {view === 'history' && (
+          <p className="muted">История всех сообщений</p>
+        )}
+      </header>
 
       {error && <div className="auth-error">{error}</div>}
       {success && <div className="auth-success">{success}</div>}
-      {loading && tab !== 'compose' && <p className="muted">Загрузка...</p>}
 
-      {tab === 'inbox' && !loading && (
-        <div className="mail-list">
-          {inbox.length === 0 && <p className="muted">Входящих писем нет</p>}
-          {inbox.map((msg) => (
-            <MailItem key={msg.id} msg={msg} direction="inbox" onOpen={() => void handleRead(msg)} onReply={() => replyTo(msg.otherUser.username)} />
-          ))}
-        </div>
-      )}
-
-      {tab === 'outbox' && !loading && (
-        <div className="mail-list">
-          {outbox.length === 0 && <p className="muted">Исходящих писем нет</p>}
-          {outbox.map((msg) => (
-            <MailItem key={msg.id} msg={msg} direction="outbox" onReply={() => replyTo(msg.otherUser.username)} />
-          ))}
-        </div>
-      )}
-
-      {tab === 'compose' && (
-        <form className="auth-form mail-compose" onSubmit={handleSend}>
+      {view === 'compose' && (
+        <form className="auth-form mail-compose profile-card" onSubmit={handleSend}>
           <label>
             {composeToUserId ? (
               <>
                 Кому
-                <input type="text" value={`${composeToUsername ? `@${composeToUsername}` : ''} (ID ${composeTo})`} readOnly />
-                <input type="hidden" value={composeTo} readOnly />
+                <input
+                  type="text"
+                  value={`${composeToUsername ? `@${composeToUsername}` : ''} (ID ${composeTo})`}
+                  readOnly
+                />
               </>
             ) : (
               <>
@@ -177,34 +195,67 @@ export default function Messages({
               required
             />
           </label>
-          <button type="submit" className="btn btn-primary" disabled={sending}>
-            {sending ? 'Отправка...' : 'Отправить'}
-          </button>
+          <div className="profile-actions">
+            <button type="button" className="btn btn-ghost" onClick={() => setView('history')}>
+              Отмена
+            </button>
+            <button type="submit" className="btn btn-primary" disabled={sending}>
+              {sending ? 'Отправка...' : 'Отправить'}
+            </button>
+          </div>
         </form>
+      )}
+
+      {view === 'history' && (
+        <>
+          {loading && <p className="muted">Загрузка...</p>}
+          {!loading && (
+            <div className="mail-list">
+              {history.length === 0 && <p className="muted">Сообщений пока нет</p>}
+              {history.map((msg) => (
+                <HistoryItem
+                  key={msg.id}
+                  msg={msg}
+                  onOpen={() => {
+                    void handleRead(msg);
+                    void openThread(msg.otherUser);
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {view === 'thread' && threadUser && (
+        <>
+          {loading && <p className="muted">Загрузка...</p>}
+          {!loading && (
+            <div className="mail-thread">
+              {thread.length === 0 && <p className="muted">Переписки пока нет</p>}
+              {thread.map((msg) => (
+                <ThreadBubble key={msg.id} msg={msg} />
+              ))}
+              <div className="mail-thread-actions">
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={() => replyInThread(threadUser.username)}
+                >
+                  Ответить
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
 }
 
-function MailItem({
-  msg,
-  direction,
-  onOpen,
-  onReply,
-}: {
-  msg: PrivateMessage;
-  direction: 'inbox' | 'outbox';
-  onOpen?: () => void;
-  onReply?: () => void;
-}) {
+function HistoryItem({ msg, onOpen }: { msg: PrivateMessage; onOpen: () => void }) {
   return (
-    <div
-      className={`mail-item ${!msg.isRead && direction === 'inbox' ? 'unread' : ''}`}
-      onClick={onOpen}
-      onKeyDown={(e) => e.key === 'Enter' && onOpen?.()}
-      role={onOpen ? 'button' : undefined}
-      tabIndex={onOpen ? 0 : undefined}
-    >
+    <button type="button" className={`mail-item mail-history-item ${!msg.isRead && msg.direction === 'in' ? 'unread' : ''}`} onClick={onOpen}>
       <div className="mail-item-header">
         {msg.otherUser.avatar ? (
           <img src={avatarUrl(msg.otherUser.avatar) ?? undefined} alt="" className="mail-avatar" />
@@ -215,23 +266,25 @@ function MailItem({
           <strong>{msg.otherUser.displayName}</strong>
           <span className="muted">@{msg.otherUser.username}</span>
         </div>
-        <span className="muted mail-time">
-          {new Date(msg.createdAt).toLocaleString('ru-RU')}
+        <span className={`mail-direction ${msg.direction === 'out' ? 'out' : 'in'}`}>
+          {msg.direction === 'out' ? '↑ исх.' : '↓ вх.'}
         </span>
+        <span className="muted mail-time">{new Date(msg.createdAt).toLocaleString('ru-RU')}</span>
       </div>
       <p className="mail-text">{msg.text}</p>
-      {onReply && (
-        <button
-          type="button"
-          className="btn btn-sm btn-ghost"
-          onClick={(e) => {
-            e.stopPropagation();
-            onReply();
-          }}
-        >
-          Ответить
-        </button>
-      )}
+    </button>
+  );
+}
+
+function ThreadBubble({ msg }: { msg: PrivateMessage }) {
+  const isOut = msg.direction === 'out';
+  return (
+    <div className={`mail-thread-bubble ${isOut ? 'out' : 'in'}`}>
+      <div className="mail-thread-meta">
+        <span>{isOut ? 'Вы' : msg.otherUser.displayName}</span>
+        <span className="muted">{new Date(msg.createdAt).toLocaleString('ru-RU')}</span>
+      </div>
+      <p>{msg.text}</p>
     </div>
   );
 }

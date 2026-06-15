@@ -8,6 +8,7 @@ import type { GamePhase, RoomState, ChatReplyTarget } from '../types';
 const PHASE_LABELS: Record<GamePhase, string> = {
   waiting: 'Ожидание',
   registration: 'Регистрация',
+  roles: 'Раздача ролей',
   day: 'День',
   voting: 'Голосование',
   night: 'Ночь',
@@ -59,7 +60,7 @@ interface RoomProps {
 
 export default function Room({ socket, state, onLeave, currentUserId }: RoomProps) {
   const [mafiaTab, setMafiaTab] = useState(false);
-  const [profileUserId, setProfileUserId] = useState<number | null>(null);
+  const [profileTarget, setProfileTarget] = useState<ChatReplyTarget | null>(null);
   const [loadingMoreChat, setLoadingMoreChat] = useState(false);
   const [chatReplyTo, setChatReplyTo] = useState<ChatReplyTarget | null>(null);
   const [chatPrivateMode, setChatPrivateMode] = useState(false);
@@ -88,21 +89,20 @@ export default function Room({ socket, state, onLeave, currentUserId }: RoomProp
       socket?.emit(event, data, resolve);
     });
 
-  const resolveReplyTarget = (userId: number): ChatReplyTarget | null => {
-    const player = state.players.find((p) => p.userId === userId);
-    if (player) return { playerId: player.id, playerName: player.name, userId };
-    const spectator = state.spectators.find((p) => p.userId === userId);
-    if (spectator) return { playerId: spectator.id, playerName: spectator.name, userId };
-    return null;
+  const openPlayerPage = (target: ChatReplyTarget) => {
+    if (target.playerId === state.myId || !target.userId) return;
+    setProfileTarget(target);
   };
 
-  const openChatWithUser = (userId: number) => {
-    const target = resolveReplyTarget(userId);
-    if (target && target.playerId !== state.myId) {
-      setChatReplyTo(target);
-      setChatPrivateMode(false);
-      setProfileUserId(null);
-    }
+  const sendRoomChat = async (
+    text: string,
+    opts?: { toPlayerId?: number; isPrivate?: boolean }
+  ) => {
+    return emit('chat:send', {
+      text,
+      toPlayerId: opts?.toPlayerId,
+      isPrivate: opts?.isPrivate,
+    });
   };
 
   const loadMoreChat = async () => {
@@ -127,12 +127,21 @@ export default function Room({ socket, state, onLeave, currentUserId }: RoomProp
                 {state.registeredCount}/{state.maxPlayers} в игре
               </span>
             )}
+            {state.phase === 'roles' && (
+              <span className="registration-count">Ночь начнётся после раздачи ролей</span>
+            )}
           </div>
         </div>
         <button type="button" className="btn btn-ghost btn-leave" onClick={onLeave}>
           ← Выйти
         </button>
       </header>
+
+      {state.phase === 'roles' && !state.isSpectator && (
+        <div className="join-game-banner roles-banner">
+          <p>🎭 Раздача ролей. Ведущий сообщит вашу роль в личных сообщениях [P]. Ожидайте ночи…</p>
+        </div>
+      )}
 
       {showJoin && (
         <div className="join-game-banner">
@@ -226,7 +235,7 @@ export default function Room({ socket, state, onLeave, currentUserId }: RoomProp
                     }
                   });
                 }}
-                onViewProfile={setProfileUserId}
+                onOpenPlayerPage={openPlayerPage}
                 canModerate={state.canModerate}
                 hasMoreChat={state.hasMoreChat}
                 onLoadMore={loadMoreChat}
@@ -261,10 +270,12 @@ export default function Room({ socket, state, onLeave, currentUserId }: RoomProp
             <Chat
               messages={state.mafiaChat}
               canSend={state.phase === 'night'}
+              myPlayerId={state.myId}
+              onOpenPlayerPage={openPlayerPage}
               onSend={(text) => {
                 void emit('chat:mafia', { text });
               }}
-              onViewProfile={setProfileUserId}
+              onOpenPlayerPage={openPlayerPage}
               canModerate={state.canModerate}
               hasMoreChat={false}
               onDeleteMessage={
@@ -301,14 +312,16 @@ export default function Room({ socket, state, onLeave, currentUserId }: RoomProp
         )}
       </footer>
 
-      {profileUserId && (
+      {profileTarget?.userId && (
         <UserProfileModal
-          userId={profileUserId}
+          userId={profileTarget.userId}
           currentUserId={currentUserId}
           viewerIsAdmin={state.isAdmin}
           viewerCanModerate={state.canModerate}
-          onClose={() => setProfileUserId(null)}
-          onWriteInChat={openChatWithUser}
+          replyTarget={profileTarget}
+          canSendChat={state.canChat}
+          onSendChat={sendRoomChat}
+          onClose={() => setProfileTarget(null)}
         />
       )}
     </div>

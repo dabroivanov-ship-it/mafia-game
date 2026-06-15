@@ -18,6 +18,12 @@ import {
 import { createAvatarUpload } from '../upload/avatar.js';
 import type { GameEvent } from '../history/store.js';
 import type { ChatMessage, GameRoom, LobbyRoom } from '../types/index.js';
+import {
+  createNews,
+  updateNews,
+  deleteNews,
+  listAllNews,
+} from '../news/store.js';
 
 export interface AdminRouterHandlers {
   getModerationData: () => {
@@ -193,6 +199,39 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
   router.delete('/rooms/:roomId/messages', (req, res) => {
     const cleared = handlers.clearRoomMessages(Number(req.params.roomId));
     res.json({ ok: true, cleared });
+  });
+
+  router.get('/news', (_req, res) => {
+    res.json({ news: listAllNews() });
+  });
+
+  router.post('/news', (req, res) => {
+    try {
+      const news = createNews(req.userId!, {
+        title: req.body.title,
+        body: req.body.body,
+        isPublished: req.body.isPublished !== false,
+      });
+      res.status(201).json({ news });
+    } catch (err) {
+      res.status(400).json({ error: err instanceof Error ? err.message : 'Ошибка' });
+    }
+  });
+
+  router.put('/news/:id', (req, res) => {
+    const news = updateNews(Number(req.params.id), {
+      title: req.body.title,
+      body: req.body.body,
+      isPublished: req.body.isPublished,
+    });
+    if (!news) return res.status(404).json({ error: 'Новость не найдена' });
+    res.json({ news });
+  });
+
+  router.delete('/news/:id', (req, res) => {
+    const ok = deleteNews(Number(req.params.id));
+    if (!ok) return res.status(404).json({ error: 'Новость не найдена' });
+    res.json({ ok: true });
   });
 
   return router;

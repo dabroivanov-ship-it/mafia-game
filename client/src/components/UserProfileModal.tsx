@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, FormEvent } from 'react';
 import {
   avatarUrl,
   fetchUserProfile,
@@ -10,7 +10,9 @@ import {
   adminUpdateUser,
   sendPrivateMessage,
 } from '../api';
-import type { User, ProfileStaffMeta } from '../types';
+import type { User, ProfileStaffMeta, ChatReplyTarget } from '../types';
+
+type ChatVisibility = 'all' | 'direct' | 'private';
 
 interface UserProfileModalProps {
   userId: number;
@@ -19,7 +21,12 @@ interface UserProfileModalProps {
   viewerCanModerate?: boolean;
   onClose: () => void;
   onAdminAction?: () => void;
-  onWriteInChat?: (userId: number) => void;
+  replyTarget?: ChatReplyTarget | null;
+  canSendChat?: boolean;
+  onSendChat?: (
+    text: string,
+    opts: { toPlayerId?: number; isPrivate?: boolean }
+  ) => Promise<{ error?: string } | void>;
 }
 
 interface ProfileData {
@@ -36,7 +43,9 @@ export default function UserProfileModal({
   viewerCanModerate = false,
   onClose,
   onAdminAction,
-  onWriteInChat,
+  replyTarget = null,
+  canSendChat = false,
+  onSendChat,
 }: UserProfileModalProps) {
   const [data, setData] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -46,10 +55,18 @@ export default function UserProfileModal({
   const [banReason, setBanReason] = useState('Нарушение правил');
   const [banHours, setBanHours] = useState('');
   const [showBanForm, setShowBanForm] = useState(false);
-  const [showCompose, setShowCompose] = useState(false);
+  const [showMailCompose, setShowMailCompose] = useState(false);
   const [mailText, setMailText] = useState('');
   const [mailSending, setMailSending] = useState(false);
   const [mailSuccess, setMailSuccess] = useState('');
+  const [chatText, setChatText] = useState('');
+  const [chatVisibility, setChatVisibility] = useState<ChatVisibility>('direct');
+  const [chatSending, setChatSending] = useState(false);
+  const [chatSuccess, setChatSuccess] = useState('');
+  const chatInputRef = useRef<HTMLTextAreaElement>(null);
+
+  const showChatCompose =
+    !!onSendChat && !!replyTarget && canSendChat && userId !== currentUserId;
 
   const load = async () => {
     setLoading(true);
@@ -72,6 +89,20 @@ export default function UserProfileModal({
   useEffect(() => {
     if (userId) void load();
   }, [userId]);
+
+  useEffect(() => {
+    if (replyTarget) {
+      setChatVisibility('direct');
+      setChatText('');
+      setChatSuccess('');
+    }
+  }, [replyTarget?.playerId, userId]);
+
+  useEffect(() => {
+    if (showChatCompose && !loading) {
+      chatInputRef.current?.focus();
+    }
+  }, [showChatCompose, loading]);
 
   const handleSave = async () => {
     try {
@@ -118,11 +149,6 @@ export default function UserProfileModal({
     }
   };
 
-  const user = data?.user;
-  const canAdmin = data?.canAdmin && viewerIsAdmin;
-  const canModerate = (data?.canModerate && viewerCanModerate) || canAdmin;
-  const canWriteMail = userId !== currentUserId;
-
   const handleSendMail = async () => {
     if (!mailText.trim()) return;
     setMailSending(true);
@@ -131,7 +157,7 @@ export default function UserProfileModal({
     try {
       await sendPrivateMessage(userId, mailText.trim());
       setMailText('');
-      setShowCompose(false);
+      setShowMailCompose(false);
       setMailSuccess('Письмо отправлено');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка отправки');
@@ -140,48 +166,147 @@ export default function UserProfileModal({
     }
   };
 
+  const handleSendChat = async (e: FormEvent) => {
+    e.preventDefault();
+    const trimmed = chatText.trim();
+    if (!trimmed || !onSendChat) return;
+
+    setChatSending(true);
+    setError('');
+    setChatSuccess('');
+
+    const opts =
+      chatVisibility === 'all'
+        ? {}
+        : chatVisibility === 'private'
+          ? { toPlayerId: replyTarget!.playerId, isPrivate: true }
+          : { toPlayerId: replyTarget!.playerId, isPrivate: false };
+
+    try {
+      const res = await onSendChat(trimmed, opts);
+      if (res?.error) {
+        setError(res.error);
+      } else {
+        setChatText('');
+        setChatSuccess('Сообщение отправлено в чат');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка отправки');
+    } finally {
+      setChatSending(false);
+    }
+  };
+
+  const user = data?.user;
+  const canAdmin = data?.canAdmin && viewerIsAdmin;
+  const canModerate = (data?.canModerate && viewerCanModerate) || canAdmin;
+  const canWriteMail = userId !== currentUserId;
+  const displayTitle = user?.displayName || replyTarget?.playerName || 'Игрок';
+
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal modal-wide user-profile-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header-row">
-          <h3>Профиль игрока</h3>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
+    <div className="modal-overlay player-page-overlay" onClick={onClose}>
+      <div className="modal player-page-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="player-page-top">
+          <button type="button" className="btn btn-ghost btn-sm player-page-close" onClick={onClose}>
+            ✕ Закрыть
+          </button>
+          <h2 className="player-page-name">{displayTitle}</h2>
+
+          {showChatCompose && (
+            <form className="player-page-compose" onSubmit={handleSendChat}>
+              <textarea
+                ref={chatInputRef}
+                value={chatText}
+                onChange={(e) => setChatText(e.target.value)}
+                rows={4}
+                maxLength={300}
+                placeholder="Напишите сообщение..."
+                disabled={chatSending}
+              />
+              <div className="player-page-compose-controls">
+                <label className="player-page-select-wrap">
+                  <span className="sr-only">Кому</span>
+                  <select
+                    value={chatVisibility}
+                    onChange={(e) => setChatVisibility(e.target.value as ChatVisibility)}
+                    disabled={chatSending}
+                  >
+                    <option value="all">Всем</option>
+                    <option value="direct">{replyTarget!.playerName}</option>
+                    <option value="private">Приватно [P]</option>
+                  </select>
+                </label>
+                <button
+                  type="submit"
+                  className="btn btn-primary player-page-say-btn"
+                  disabled={chatSending || !chatText.trim()}
+                >
+                  {chatSending ? '...' : 'Сказать'}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {chatSuccess && <div className="auth-success player-page-flash">{chatSuccess}</div>}
         </div>
 
-        {loading && <p className="muted">Загрузка...</p>}
-        {error && <div className="auth-error">{error}</div>}
-        {mailSuccess && <div className="auth-success">{mailSuccess}</div>}
+        {loading && <p className="muted player-page-body">Загрузка...</p>}
+        {error && <div className="auth-error player-page-body">{error}</div>}
+        {mailSuccess && <div className="auth-success player-page-body">{mailSuccess}</div>}
 
         {!loading && user && (
-          <>
-            <div className="profile-avatar-block">
-              {user.avatar ? (
-                <img src={avatarUrl(user.avatar) ?? undefined} alt="" className="profile-avatar" />
-              ) : (
-                <div className="profile-avatar placeholder">👤</div>
-              )}
-              <div className="profile-avatar-info">
-                <strong>{user.displayName}</strong>
-                <p className="muted">@{user.username}</p>
-                {user.isAdmin && <span className="admin-badge">admin</span>}
-                {user.isModerator && <span className="mod-badge">mod</span>}
-              </div>
-            </div>
-
+          <div className="player-page-body">
             {!editMode ? (
               <>
-                <div className="profile-stats">
-                  <span>🏆 {user.totalScore} очков</span>
-                  {user.city && <span>📍 {user.city}</span>}
-                  <span>📅 с {new Date(user.createdAt).toLocaleDateString('ru-RU')}</span>
-                  <span>💬 {user.messageCount ?? 0} сообщ.</span>
+                <div className="player-page-avatar-row">
+                  {user.avatar ? (
+                    <img src={avatarUrl(user.avatar) ?? undefined} alt="" className="profile-avatar" />
+                  ) : (
+                    <div className="profile-avatar placeholder">👤</div>
+                  )}
+                  <div>
+                    <strong>@{user.username}</strong>
+                    {user.isAdmin && <span className="admin-badge">admin</span>}
+                    {user.isModerator && <span className="mod-badge">mod</span>}
+                  </div>
                 </div>
-                {user.bio && <p className="profile-bio">{user.bio}</p>}
-                {user.isBanned && (
-                  <div className="auth-error">
-                    Заблокирован{user.banReason ? `: ${user.banReason}` : ''}
+
+                <ul className="player-page-info">
+                  <li>
+                    <span className="player-page-label">Имя</span>
+                    <span>{user.displayName}</span>
+                  </li>
+                  <li>
+                    <span className="player-page-label">Город</span>
+                    <span>{user.city || '—'}</span>
+                  </li>
+                  <li>
+                    <span className="player-page-label">Очки</span>
+                    <span>{user.totalScore}</span>
+                  </li>
+                  <li>
+                    <span className="player-page-label">Сообщений в чате</span>
+                    <span>{user.messageCount ?? 0}</span>
+                  </li>
+                  <li>
+                    <span className="player-page-label">Регистрация</span>
+                    <span>{new Date(user.createdAt).toLocaleDateString('ru-RU')}</span>
+                  </li>
+                  {user.isBanned && (
+                    <li className="player-page-banned">
+                      <span className="player-page-label">Статус</span>
+                      <span>Заблокирован{user.banReason ? `: ${user.banReason}` : ''}</span>
+                    </li>
+                  )}
+                </ul>
+
+                {user.bio && (
+                  <div className="player-page-bio">
+                    <span className="player-page-label">О себе</span>
+                    <p>{user.bio}</p>
                   </div>
                 )}
+
                 {canModerate && data?.staffMeta && (
                   <div className="profile-staff-meta">
                     <h4>Данные подключения</h4>
@@ -197,23 +322,16 @@ export default function UserProfileModal({
                     </div>
                   </div>
                 )}
-                {canWriteMail && !editMode && (
-                  <div className="profile-mail-actions">
-                    {onWriteInChat && (
+
+                {canWriteMail && (
+                  <div className="player-page-actions">
+                    {!showMailCompose ? (
                       <button
                         type="button"
-                        className="btn btn-sm btn-primary"
-                        onClick={() => {
-                          onWriteInChat(userId);
-                          onClose();
-                        }}
+                        className="player-page-link"
+                        onClick={() => setShowMailCompose(true)}
                       >
-                        💬 Написать в чат
-                      </button>
-                    )}
-                    {!showCompose ? (
-                      <button type="button" className="btn btn-sm btn-ghost" onClick={() => setShowCompose(true)}>
-                        ✉️ Письмо
+                        &gt; ✉️ Написать письмо
                       </button>
                     ) : (
                       <div className="mail-compose-inline">
@@ -222,10 +340,14 @@ export default function UserProfileModal({
                           onChange={(e) => setMailText(e.target.value)}
                           rows={4}
                           maxLength={2000}
-                          placeholder="Личное сообщение..."
+                          placeholder="Личное сообщение в кабинет..."
                         />
                         <div className="profile-actions">
-                          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowCompose(false)}>
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => setShowMailCompose(false)}
+                          >
                             Отмена
                           </button>
                           <button
@@ -333,7 +455,7 @@ export default function UserProfileModal({
                 )}
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
     </div>

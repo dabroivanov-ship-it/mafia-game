@@ -5,6 +5,9 @@ import {
   sendPrivateMessage,
   listInbox,
   listOutbox,
+  listHistory,
+  listThread,
+  markThreadRead,
   getUnreadCount,
   markMessageRead,
 } from './store.js';
@@ -34,6 +37,19 @@ export function createMessagesRouter({ onMessageSent, onMessageRead }: MessagesR
 
   router.get('/outbox', (req, res) => {
     res.json({ messages: listOutbox(req.userId!) });
+  });
+
+  router.get('/history', (req, res) => {
+    res.json({ messages: listHistory(req.userId!) });
+  });
+
+  router.get('/thread/:otherUserId', (req, res) => {
+    const otherUserId = Number(req.params.otherUserId);
+    if (!otherUserId) return res.status(400).json({ error: 'Некорректный пользователь' });
+    markThreadRead(req.userId!, otherUserId);
+    const unreadCount = getUnreadCount(req.userId!);
+    onMessageRead?.(req.userId!, unreadCount);
+    res.json({ messages: listThread(req.userId!, otherUserId), unreadCount });
   });
 
   router.post('/', (req, res) => {

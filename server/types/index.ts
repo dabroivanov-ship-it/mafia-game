@@ -1,6 +1,7 @@
 export type GamePhase =
   | 'waiting'
   | 'registration'
+  | 'roles'
   | 'day'
   | 'voting'
   | 'night'
@@ -20,7 +21,7 @@ export type RoleId =
 
 export type ChatChannel = 'public' | 'mafia' | 'dead' | 'spectator' | 'private';
 
-export type TimerReason = 'registration' | 'day' | 'night';
+export type TimerReason = 'registration' | 'roles' | 'day' | 'night';
 
 export type WinnerTeam = 'town' | 'mafia' | null;
 

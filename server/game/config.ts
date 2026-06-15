@@ -6,6 +6,7 @@ export const CONFIG = {
   MAX_PLAYERS: 10,
   DEFAULT_MAX_PLAYERS: 6,
   REGISTRATION_SEC: 60,
+  ROLE_REVEAL_SEC: 20,
   JOIN_GAME_COOLDOWN_SEC: 15,
   DAY_DISCUSSION_SEC: 60,
   NIGHT_ACTIONS_SEC: 60,
@@ -15,6 +16,7 @@ export const CONFIG = {
 export const PHASE = {
   WAITING: 'waiting',
   REGISTRATION: 'registration',
+  ROLES: 'roles',
   DAY: 'day',
   VOTING: 'voting',
   NIGHT: 'night',
@@ -53,5 +55,5 @@ export function isLobbyPhase(phase: GamePhase): phase is 'waiting' | 'ended' {
 }
 
 export function isActiveGamePhase(phase: GamePhase): boolean {
-  return phase === PHASE.DAY || phase === PHASE.VOTING || phase === PHASE.NIGHT;
+  return phase === PHASE.ROLES || phase === PHASE.DAY || phase === PHASE.VOTING || phase === PHASE.NIGHT;
 }

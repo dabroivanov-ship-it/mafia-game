@@ -1,6 +1,17 @@
 import { CONFIG, PHASE, isLobbyPhase, isActiveGamePhase } from './config.js';
 import { distributeRoles, isMafia, isTown, isEvil, isMafiaImmune, isSeductionImmune, getRoleLabel } from './roles.js';
 import {
+  buildRoleRevealNotes,
+  buildNightReminderNotes,
+  getGameStartSystemMessage,
+  getRolesRevealSystemMessage,
+  getNightAtmosphereMessages,
+  getNightCompleteMessage,
+  getMorningIntroMessage,
+  getGameEndRolesMessage,
+  getScoreSummaryMessage,
+} from './host.js';
+import {
   saveChatMessage,
   saveGameEvent,
   markChatDeleted,
@@ -131,13 +142,13 @@ export function addPlayerToRoom(
     socketId: string;
     userId: number;
   }
-): GamePlayer {
+): { player: GamePlayer; privateNotes: PrivateNote[] } {
   const existingSocket = room.players.find((p) => p.socketId === socketId);
   if (existingSocket) {
     existingSocket.name = name;
     if (username) existingSocket.username = username;
     existingSocket.connected = true;
-    return existingSocket;
+    return { player: existingSocket, privateNotes: [] };
   }
 
   // Переподключение того же аккаунта
@@ -153,7 +164,7 @@ export function addPlayerToRoom(
     if (isLobbyPhase(room.phase)) {
       existingUser.inGame = true;
     }
-    return existingUser;
+    return { player: existingUser, privateNotes: [] };
   }
 
   const connectedCount = room.players.filter((p) => p.connected).length;
@@ -186,11 +197,12 @@ export function addPlayerToRoom(
 
   hydrateRoomHistory(room);
 
+  let privateNotes: PrivateNote[] = [];
   if (room.phase === PHASE.REGISTRATION && player.inGame && inGameCount + 1 >= room.maxPlayers) {
-    tryStartGameAfterRegistration(room);
+    privateNotes = tryStartGameAfterRegistration(room);
   }
 
-  return player;
+  return { player, privateNotes };
 }
 
 export function removePlayer(room: GameRoom, socketId: string, applyPenalty = true): GamePlayer | null {
@@ -260,7 +272,7 @@ export function startRegistration(room: GameRoom, starterPlayerId: number | null
   setTimer(room, CONFIG.REGISTRATION_SEC * 1000, 'registration');
 }
 
-export function joinGame(room: GameRoom, playerId: number): GamePlayer {
+export function joinGame(room: GameRoom, playerId: number): { player: GamePlayer; privateNotes: PrivateNote[] } {
   if (room.phase !== PHASE.REGISTRATION) {
     throw new Error('Присоединиться можно только во время регистрации');
   }
@@ -280,9 +292,9 @@ export function joinGame(room: GameRoom, playerId: number): GamePlayer {
   }
 
   player.inGame = true;
-  addSystemMessage(room, `${player.username || player.name} присоединился к игре.`);
-  tryStartGameAfterRegistration(room);
-  return player;
+  addSystemMessage(room, `${player.username || player.name} присоединяется к игре!`);
+  const privateNotes = tryStartGameAfterRegistration(room);
+  return { player, privateNotes };
 }
 
 export function leaveGame(room: GameRoom, playerId: number): GamePlayer {
@@ -309,18 +321,17 @@ export function clearTimer(room: GameRoom): void {
   room.timerReason = null;
 }
 
-export function tryStartGameAfterRegistration(room: GameRoom): boolean {
-  if (room.phase !== PHASE.REGISTRATION) return false;
+export function tryStartGameAfterRegistration(room: GameRoom): PrivateNote[] {
+  if (room.phase !== PHASE.REGISTRATION) return [];
   const registered = room.players.filter((p) => p.connected && p.inGame);
   if (registered.length >= room.maxPlayers) {
-    beginGame(room);
-    return true;
+    return beginGame(room);
   }
-  return false;
+  return [];
 }
 
-export function onRegistrationTimerEnd(room: GameRoom): void {
-  if (room.phase !== PHASE.REGISTRATION) return;
+export function onRegistrationTimerEnd(room: GameRoom): PrivateNote[] {
+  if (room.phase !== PHASE.REGISTRATION) return [];
   const registered = room.players.filter((p) => p.connected && p.inGame);
   if (registered.length < CONFIG.MIN_PLAYERS) {
     room.phase = PHASE.WAITING;
@@ -332,12 +343,20 @@ export function onRegistrationTimerEnd(room: GameRoom): void {
       room,
       `⏱ Регистрация завершена: записалось ${registered.length} из ${CONFIG.MIN_PLAYERS} нужных. Игра не состоялась — можно запустить снова, когда наберётся больше игроков.`
     );
-    return;
+    return [];
   }
-  beginGame(room);
+  return beginGame(room);
 }
 
-function beginGame(room: GameRoom): void {
+export function onRolesTimerEnd(room: GameRoom): PrivateNote[] {
+  if (room.phase !== PHASE.ROLES) return [];
+  for (const msg of getNightAtmosphereMessages(room)) {
+    addSystemMessage(room, msg);
+  }
+  return startNightPhase(room);
+}
+
+function beginGame(room: GameRoom): PrivateNote[] {
   clearTimer(room);
   const participants = room.players.filter((p) => p.connected && p.inGame);
 
@@ -367,7 +386,6 @@ function beginGame(room: GameRoom): void {
     room.mafiaDonId = firstMafia.id;
   }
 
-  room.phase = PHASE.DAY;
   room.nightNumber = 0;
   room.commissarAlive = room.players.some((p) => p.role === 'commissar');
   room.wifeRevengeAvailable = false;
@@ -379,8 +397,11 @@ function beginGame(room: GameRoom): void {
     playerCount: participants.length,
     players: participants.map((p) => ({ name: p.name, userId: p.userId })),
   });
-  addSystemMessage(room, `🎮 Игра началась! Игроков: ${participants.length}. Роли разданы.`);
-  startDayPhase(room);
+  addSystemMessage(room, getGameStartSystemMessage(participants.length));
+  addSystemMessage(room, getRolesRevealSystemMessage(participants.length));
+  room.phase = PHASE.ROLES;
+  setTimer(room, CONFIG.ROLE_REVEAL_SEC * 1000, 'roles');
+  return buildRoleRevealNotes(room);
 }
 
 export function startDayPhase(room: GameRoom): void {
@@ -410,7 +431,7 @@ export function onDayTimerEnd(room: GameRoom): void {
   if (room.phase === PHASE.DAY) startVoting(room);
 }
 
-export function castDayVote(room: GameRoom, voterId: number, targetId: number): void {
+export function castDayVote(room: GameRoom, voterId: number, targetId: number): PrivateNote[] {
   if (room.phase !== PHASE.VOTING) throw new Error('Сейчас не время голосования');
 
   const voter = room.players.find((p) => p.id === voterId);
@@ -423,10 +444,11 @@ export function castDayVote(room: GameRoom, voterId: number, targetId: number): 
   voter.hasVoted = true;
 
   const alive = room.players.filter((p) => p.alive && p.inGame && p.role);
-  if (alive.every((p) => p.hasVoted)) resolveDayVote(room);
+  if (alive.every((p) => p.hasVoted)) return resolveDayVote(room);
+  return [];
 }
 
-function resolveDayVote(room: GameRoom): void {
+function resolveDayVote(room: GameRoom): PrivateNote[] {
   const tally: Record<number, number> = {};
   for (const targetId of Object.values(room.votes)) {
     tally[targetId] = (tally[targetId] || 0) + 1;
@@ -449,16 +471,18 @@ function resolveDayVote(room: GameRoom): void {
     addSystemMessage(room, '🗳️ Ничья — никто не выбывает.');
   }
 
-  if (checkWin(room)) return;
-  startNightPhase(room);
+  if (checkWin(room)) return [];
+  return startNightPhase(room);
 }
 
-function eliminatePlayer(room: GameRoom, playerId: number): void {
+function eliminatePlayer(room: GameRoom, playerId: number, opts: { silent?: boolean } = {}): void {
   const player = room.players.find((p) => p.id === playerId);
   if (!player?.alive) return;
 
   player.alive = false;
-  addSystemMessage(room, `💀 ${player.name} выбыл(а)! Роль: ${getRoleLabel(player.role)}.`);
+  if (!opts.silent) {
+    addSystemMessage(room, `💀 ${player.name} выбыл(а)! Роль: ${getRoleLabel(player.role)}.`);
+  }
 
   if (player.role === 'commissar') {
     room.commissarAlive = false;
@@ -484,7 +508,7 @@ function eliminatePlayer(room: GameRoom, playerId: number): void {
   }
 }
 
-export function startNightPhase(room: GameRoom): void {
+export function startNightPhase(room: GameRoom): PrivateNote[] {
   room.phase = PHASE.NIGHT;
   room.nightNumber += 1;
   room.nightActions = {};
@@ -492,8 +516,15 @@ export function startNightPhase(room: GameRoom): void {
   room.players.forEach((p) => {
     p.nightActionDone = false;
   });
-  addSystemMessage(room, `🌙 Ночь ${room.nightNumber}. Город засыпает...`);
+
+  if (room.nightNumber > 1) {
+    for (const msg of getNightAtmosphereMessages(room)) {
+      addSystemMessage(room, msg);
+    }
+  }
+
   setTimer(room, CONFIG.NIGHT_ACTIONS_SEC * 1000, 'night');
+  return buildNightReminderNotes(room);
 }
 
 export function onNightTimerEnd(room: GameRoom): NightResolveResult | null {
@@ -700,10 +731,13 @@ export function resolveNight(room: GameRoom): NightResolveResult {
     if (p?.alive) killedTonight.push(p);
   }
 
+  addSystemMessage(room, getNightCompleteMessage());
+  addSystemMessage(room, getMorningIntroMessage(killedTonight));
+
   if (killedTonight.length === 0) {
-    addSystemMessage(room, '🌅 Утро. Этой ночью никто не погиб.');
+    /* утро без жертв */
   } else {
-    killedTonight.forEach((p) => eliminatePlayer(room, p.id));
+    killedTonight.forEach((p) => eliminatePlayer(room, p.id, { silent: true }));
   }
 
   room.nightActions = {};
@@ -734,6 +768,9 @@ function endGame(room: GameRoom, team: 'town' | 'mafia', message: string): void 
   room.phase = PHASE.ENDED;
   clearTimer(room);
   addSystemMessage(room, `🏁 ${message}`);
+  addSystemMessage(room, getGameEndRolesMessage(room));
+  const scoreMsg = getScoreSummaryMessage(room);
+  if (scoreMsg) addSystemMessage(room, scoreMsg);
   saveGameEvent(room.id, room.sessionId, 'game_end', {
     winnerTeam: team,
     message,
@@ -1134,8 +1171,8 @@ export function serializeRoomForPlayer(
     mafiaChat: me?.role === 'mafia' && me.alive && me.inGame ? room.mafiaChat.slice(-50) : [],
     canStartGame:
       room.phase === PHASE.WAITING || room.phase === PHASE.REGISTRATION || room.phase === PHASE.ENDED,
-    canChat: !!me?.connected,
-    canPlay: !!me?.inGame && !!me?.role && gameRunning,
+    canChat: !!me?.connected && room.phase !== PHASE.ROLES,
+    canPlay: !!me?.inGame && !!me?.role && room.phase === PHASE.NIGHT,
     wifeRevengeAvailable:
       me?.role === 'commissar_wife' && room.wifeRevengeAvailable && !room.wifeRevengeUsed,
     clownAvailable: me?.role === 'clown' && !room.clownUsed,

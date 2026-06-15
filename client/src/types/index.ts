@@ -1,6 +1,7 @@
 export type GamePhase =
   | 'waiting'
   | 'registration'
+  | 'roles'
   | 'day'
   | 'voting'
   | 'night'
@@ -159,6 +160,17 @@ export interface StaffMember {
   role: 'admin' | 'moderator';
 }
 
+export interface NewsPost {
+  id: number;
+  title: string;
+  body: string;
+  isPublished: boolean;
+  authorId?: number;
+  authorName?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ProfileStaffMeta {
   lastIp: string | null;
   lastUserAgent: string | null;
@@ -169,6 +181,7 @@ export interface PrivateMessage {
   text: string;
   createdAt: string;
   isRead: boolean;
+  direction?: 'in' | 'out';
   otherUser: {
     id: number;
     username: string;
