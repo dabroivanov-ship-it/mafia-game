@@ -25,7 +25,7 @@ export default function PlayersList({
         disabled={!p.userId}
         title={p.userId ? 'Открыть профиль' : undefined}
       >
-        {p.name}
+        {p.username || p.name}
       </button>
       {isSpectator && <span className="spectator-badge">👁</span>}
       {showRole && 'roleLabel' in p && p.roleLabel && (

@@ -2,6 +2,10 @@ import { CONFIG, ROLE_LABELS } from './config.js';
 import { getRoleLabel, isEvil, isMafia } from './roles.js';
 import type { GamePlayer, GameRoom, PrivateNote, RoleId } from '../types/index.js';
 
+export function playerNick(p: Pick<GamePlayer, 'username' | 'name'>): string {
+  return p.username || p.name;
+}
+
 function pick<T>(items: T[]): T {
   return items[Math.floor(Math.random() * items.length)];
 }
@@ -9,7 +13,7 @@ function pick<T>(items: T[]): T {
 function aliveNames(room: GameRoom, excludeId?: number): string[] {
   return room.players
     .filter((p) => p.alive && p.inGame && p.role && p.id !== excludeId)
-    .map((p) => p.name);
+    .map((p) => playerNick(p));
 }
 
 function nightActionPrompt(player: GamePlayer, room: GameRoom): string {
@@ -130,32 +134,32 @@ export function buildMorningReportMessages(_room: GameRoom, report: NightReport)
   const messages: string[] = [getNightCompleteMessage()];
 
   if (report.commissarChecked) {
-    messages.push(`Комиссар Катани провёл проверку игрока ${report.commissarChecked.name}.`);
+    messages.push(`Комиссар Катани провёл проверку игрока ${playerNick(report.commissarChecked)}.`);
   }
   if (report.commissarKilled) {
     messages.push(
-      `Инспектор Катани казнил ${report.commissarKilled.name} (${getRoleLabel(report.commissarKilled.role)})!`
+      `Инспектор Катани казнил ${playerNick(report.commissarKilled)} (${getRoleLabel(report.commissarKilled.role)})!`
     );
   }
   if (report.doctorSaved) {
-    messages.push(`Доктор вылечил ${report.doctorSaved.name} — мафия не смогла его убить!`);
+    messages.push(`Доктор вылечил ${playerNick(report.doctorSaved)} — мафия не смогла его убить!`);
   }
   if (report.highlanderAttacked) {
-    messages.push(`Горец ${report.highlanderAttacked.name} пережил атаку мафии!`);
+    messages.push(`Горец ${playerNick(report.highlanderAttacked)} пережил атаку мафии!`);
   }
   if (report.mafiaKilled) {
     messages.push(
-      `Мафия зверски расправилась с ${report.mafiaKilled.name} (${getRoleLabel(report.mafiaKilled.role)})!`
+      `Мафия зверски расправилась с ${playerNick(report.mafiaKilled)} (${getRoleLabel(report.mafiaKilled.role)})!`
     );
   }
   if (report.maniacKilled) {
     messages.push(
-      `Маньяк убил ${report.maniacKilled.name} (${getRoleLabel(report.maniacKilled.role)})!`
+      `Маньяк убил ${playerNick(report.maniacKilled)} (${getRoleLabel(report.maniacKilled.role)})!`
     );
   }
   if (report.wifeKilled) {
     messages.push(
-      `Жена комиссара отомстила — ${report.wifeKilled.name} (${getRoleLabel(report.wifeKilled.role)}) не дожил(а) до утра!`
+      `Жена комиссара отомстила — ${playerNick(report.wifeKilled)} (${getRoleLabel(report.wifeKilled.role)}) не дожил(а) до утра!`
     );
   }
 
@@ -166,15 +170,15 @@ export function buildMorningReportMessages(_room: GameRoom, report: NightReport)
 export function getCommissarCheckResultMessage(target: GamePlayer): string {
   const role = getRoleLabel(target.role);
   const verdict = isEvil(target.role) ? 'Это мафия (или зло)!' : 'Это не мафия.';
-  return `🔍 Результат проверки: ${target.name} — ${role}. ${verdict}`;
+  return `🔍 Результат проверки: ${playerNick(target)} — ${role}. ${verdict}`;
 }
 
 export function getHomelessCheckResultMessage(target: GamePlayer): string {
-  return `🔍 Результат проверки: ${target.name} — ${getRoleLabel(target.role)}.`;
+  return `🔍 Результат проверки: ${playerNick(target)} — ${getRoleLabel(target.role)}.`;
 }
 
 export function getHangVerdictMessage(player: GamePlayer): string {
-  return `Город решил повесить ${player.name}. Он оказался ${getRoleLabel(player.role)}.`;
+  return `Город решил повесить ${playerNick(player)}. Он оказался ${getRoleLabel(player.role)}.`;
 }
 
 export function getVotingTieMessage(): string {
@@ -251,13 +255,14 @@ export function getMorningIntroMessage(killed: GamePlayer[]): string {
 
   const parts = killed.map((p) => {
     const role = getRoleLabel(p.role);
+    const nick = playerNick(p);
     if (p.role === 'commissar') {
-      return `Не все дожили до рассвета — среди погибших комиссар ${p.name}.`;
+      return `Не все дожили до рассвета — среди погибших комиссар ${nick}.`;
     }
     if (isMafia(p.role)) {
-      return `${p.name} (${role}) не дожил(а) до утра.`;
+      return `${nick} (${role}) не дожил(а) до утра.`;
     }
-    return `${p.name} (${role}) не дожил(а) до рассвета.`;
+    return `${nick} (${role}) не дожил(а) до утра.`;
   });
 
   return `Вот и день наступил. Но все ли дожили до него? ${parts.join(' ')}`;
@@ -266,14 +271,14 @@ export function getMorningIntroMessage(killed: GamePlayer[]): string {
 export function getGameEndRolesMessage(room: GameRoom): string {
   const lines = room.players
     .filter((p) => p.inGame && p.role)
-    .map((p) => `${p.name} — ${getRoleLabel(p.role)}`);
+    .map((p) => `${playerNick(p)} — ${getRoleLabel(p.role)}`);
   return `А роли были такие: ${lines.join(', ')}`;
 }
 
 export function getScoreSummaryMessage(room: GameRoom): string {
   const scorers = room.players
     .filter((p) => p.inGame)
-    .map((p) => `${p.name}: ${p.score}`)
+    .map((p) => `${playerNick(p)}: ${p.score}`)
     .join(', ');
   return scorers ? `За эту игру заработали очков: ${scorers}` : '';
 }

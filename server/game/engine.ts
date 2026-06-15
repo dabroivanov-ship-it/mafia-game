@@ -17,6 +17,7 @@ import {
   getVotingStartMessage,
   getHangVerdictMessage,
   getVotingTieMessage,
+  playerNick,
   type NightReport,
 } from './host.js';
 import {
@@ -226,7 +227,7 @@ export function markPlayerDisconnected(room: GameRoom, socketId: string): GamePl
   if (gameActive && player.inGame && player.alive) {
     addSystemMessage(
       room,
-      `${player.name} отошёл от игры. Есть ${CONFIG.DISCONNECT_GRACE_SEC} сек. на возвращение.`
+      `${playerNick(player)} отошёл от игры. Есть ${CONFIG.DISCONNECT_GRACE_SEC} сек. на возвращение.`
     );
   }
 
@@ -249,7 +250,7 @@ export function finalizePlayerLeave(room: GameRoom, playerId: number): boolean {
   player.alive = false;
   addSystemMessage(
     room,
-    `${player.name} покинул игру из-за неактивности (−100 очков). Роль: ${getRoleLabel(player.role)}.`
+    `${playerNick(player)} покинул игру из-за неактивности (−100 очков). Роль: ${getRoleLabel(player.role)}.`
   );
 
   if (player.role === 'commissar') {
@@ -269,7 +270,7 @@ export function finalizePlayerLeave(room: GameRoom, playerId: number): boolean {
     if (nextMafia) {
       nextMafia.isDon = true;
       room.mafiaDonId = nextMafia.id;
-      addSystemMessage(room, `🎩 ${nextMafia.name} стал(а) главным мафиози.`);
+      addSystemMessage(room, `🎩 ${playerNick(nextMafia)} стал(а) главным мафиози.`);
     } else {
       room.mafiaDonId = null;
     }
@@ -287,7 +288,7 @@ export function removePlayer(room: GameRoom, socketId: string, applyPenalty = tr
   if (gameActive && applyPenalty && player.inGame && player.alive && player.connected) {
     player.score -= 100;
     player.leftEarly = true;
-    addSystemMessage(room, `${player.name} покинул игру (−100 очков).`);
+    addSystemMessage(room, `${playerNick(player)} покинул игру (−100 очков).`);
   }
 
   player.connected = false;
@@ -563,7 +564,7 @@ function eliminatePlayer(room: GameRoom, playerId: number, opts: { silent?: bool
 
   player.alive = false;
   if (!opts.silent) {
-    addSystemMessage(room, `💀 ${player.name} выбыл(а)! Роль: ${getRoleLabel(player.role)}.`);
+    addSystemMessage(room, `💀 ${playerNick(player)} выбыл(а)! Роль: ${getRoleLabel(player.role)}.`);
   }
 
   if (player.role === 'commissar') {
@@ -583,7 +584,7 @@ function eliminatePlayer(room: GameRoom, playerId: number, opts: { silent?: bool
     if (nextMafia) {
       nextMafia.isDon = true;
       room.mafiaDonId = nextMafia.id;
-      addSystemMessage(room, `🎩 ${nextMafia.name} стал(а) главным мафиози.`);
+      addSystemMessage(room, `🎩 ${playerNick(nextMafia)} стал(а) главным мафиози.`);
     } else {
       room.mafiaDonId = null;
     }
@@ -1201,6 +1202,7 @@ function mapPlayerPublic(p: GamePlayer, _room: GameRoom, playerId: number): Room
     id: p.id,
     userId: p.userId || null,
     name: p.name,
+    username: p.username || p.name,
     inGame: !!p.inGame,
     alive: p.alive,
     score: p.score,

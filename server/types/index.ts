@@ -143,6 +143,7 @@ export interface RoomStatePlayer {
   id: number;
   userId: number | null;
   name: string;
+  username: string;
   inGame: boolean;
   alive: boolean;
   score: number;

@@ -30,7 +30,7 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
       className={`btn btn-target ${selected ? 'selected' : ''}`}
       onClick={() => onClick(player.id)}
     >
-      {player.name}
+      {player.username || player.name}
     </button>
   );
 
