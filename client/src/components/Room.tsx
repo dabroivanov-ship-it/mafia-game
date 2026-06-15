@@ -275,7 +275,6 @@ export default function Room({ socket, state, onLeave, currentUserId }: RoomProp
               onSend={(text) => {
                 void emit('chat:mafia', { text });
               }}
-              onOpenPlayerPage={openPlayerPage}
               canModerate={state.canModerate}
               hasMoreChat={false}
               onDeleteMessage={
