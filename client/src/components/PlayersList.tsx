@@ -16,8 +16,7 @@ export default function PlayersList({
   const alive = players.filter((p) => p.alive);
   const dead = players.filter((p) => !p.alive);
 
-  const displayName = (p: RoomPlayer | RoomSpectator) =>
-    'username' in p ? p.username || p.name : p.name;
+  const displayName = (p: RoomPlayer | RoomSpectator) => p.username || p.name;
 
   const renderPerson = (p: RoomPlayer | RoomSpectator, showRole = false, isSpectator = false) => (
     <li key={p.id} className={p.id === myId ? 'me' : ''}>
