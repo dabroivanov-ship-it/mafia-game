@@ -1,4 +1,4 @@
-import { useState, useRef, FormEvent, ChangeEvent } from 'react';
+import { useState, useRef, useEffect, FormEvent, ChangeEvent } from 'react';
 import { avatarUrl, updateProfile, uploadAvatar } from '../api';
 import Messages from './Messages';
 import type { User } from '../types';
@@ -27,6 +27,9 @@ export default function Profile({
   onUnreadChange,
 }: ProfileProps) {
   const [tab, setTab] = useState<ProfileTab>(initialTab);
+  useEffect(() => {
+    setTab(initialTab);
+  }, [initialTab]);
   const [form, setForm] = useState({
     displayName: user.displayName || '',
     city: user.city || '',

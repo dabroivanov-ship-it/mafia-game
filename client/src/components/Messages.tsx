@@ -3,6 +3,7 @@ import {
   avatarUrl,
   fetchInbox,
   fetchOutbox,
+  fetchUnreadMailCount,
   sendPrivateMessage,
   markMessageRead,
 } from '../api';
@@ -37,11 +38,14 @@ export default function Messages({
     setLoading(true);
     setError('');
     try {
-      const [inRes, outRes] = await Promise.all([fetchInbox(), fetchOutbox()]);
+      const [inRes, outRes, unreadRes] = await Promise.all([
+        fetchInbox(),
+        fetchOutbox(),
+        fetchUnreadMailCount(),
+      ]);
       setInbox(inRes.messages);
       setOutbox(outRes.messages);
-      const unread = inRes.messages.filter((m) => !m.isRead).length;
-      onUnreadChange?.(unread);
+      onUnreadChange?.(unreadRes.count);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка загрузки');
     } finally {

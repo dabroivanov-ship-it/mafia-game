@@ -192,6 +192,9 @@ app.use(
     onMessageSent: (recipientId, payload) => {
       notifyUser(recipientId, 'pm:received', payload);
     },
+    onMessageRead: (userId, unreadCount) => {
+      notifyUser(userId, 'pm:unread', { count: unreadCount });
+    },
   })
 );
 

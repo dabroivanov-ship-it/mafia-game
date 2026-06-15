@@ -17,9 +17,10 @@ export interface MessagesRouterOptions {
     preview: string;
     unreadCount: number;
   }) => void;
+  onMessageRead?: (userId: number, unreadCount: number) => void;
 }
 
-export function createMessagesRouter({ onMessageSent }: MessagesRouterOptions = {}) {
+export function createMessagesRouter({ onMessageSent, onMessageRead }: MessagesRouterOptions = {}) {
   const router = Router();
   router.use(authMiddleware);
 
@@ -64,7 +65,9 @@ export function createMessagesRouter({ onMessageSent }: MessagesRouterOptions = 
   router.post('/:messageId/read', (req, res) => {
     const ok = markMessageRead(Number(req.params.messageId), req.userId!);
     if (!ok) return res.status(404).json({ error: 'Сообщение не найдено' });
-    res.json({ ok: true, unreadCount: getUnreadCount(req.userId!) });
+    const unreadCount = getUnreadCount(req.userId!);
+    onMessageRead?.(req.userId!, unreadCount);
+    res.json({ ok: true, unreadCount });
   });
 
   return router;
