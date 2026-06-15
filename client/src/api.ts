@@ -1,4 +1,4 @@
-import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost } from './types';
+import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, MailConversation } from './types';
 
 const API_BASE =
   import.meta.env.VITE_API_URL ??
@@ -107,14 +107,23 @@ export async function fetchOutbox(): Promise<{ messages: PrivateMessage[] }> {
   return apiRequest('/api/messages/outbox');
 }
 
+export async function fetchMailConversations(): Promise<{ conversations: MailConversation[] }> {
+  return apiRequest('/api/messages/conversations');
+}
+
 export async function fetchMailHistory(): Promise<{ messages: PrivateMessage[] }> {
   return apiRequest('/api/messages/history');
 }
 
 export async function fetchMailThread(
-  otherUserId: number
-): Promise<{ messages: PrivateMessage[]; unreadCount: number }> {
-  return apiRequest(`/api/messages/thread/${otherUserId}`);
+  otherUserId: number,
+  options?: { limit?: number; beforeId?: number }
+): Promise<{ messages: PrivateMessage[]; hasMore: boolean; total: number; unreadCount: number }> {
+  const params = new URLSearchParams();
+  if (options?.limit) params.set('limit', String(options.limit));
+  if (options?.beforeId) params.set('beforeId', String(options.beforeId));
+  const qs = params.toString();
+  return apiRequest(`/api/messages/thread/${otherUserId}${qs ? `?${qs}` : ''}`);
 }
 
 export async function sendPrivateMessage(

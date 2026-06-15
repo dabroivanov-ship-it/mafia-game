@@ -688,6 +688,91 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  max-height: min(70vh, 560px);
+  overflow-y: auto;
+  padding: 4px 2px;
+}
+
+.mail-thread-load-more {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0 8px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: linear-gradient(var(--bg) 60%, transparent);
+}
+
+.mail-conversation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mail-conversation-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 12px 14px;
+}
+
+.mail-conversation-item.unread {
+  border-color: rgba(124, 108, 240, 0.45);
+  background: rgba(124, 108, 240, 0.08);
+}
+
+.mail-conversation-item .mail-item-header {
+  align-items: flex-start;
+}
+
+.mail-conversation-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.mail-conversation-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.mail-conversation-top strong {
+  font-size: 1rem;
+}
+
+.mail-conversation-login {
+  display: block;
+  font-size: 0.8rem;
+  margin-bottom: 4px;
+}
+
+.mail-conversation-preview {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9rem;
+  color: var(--text-muted, var(--muted));
+}
+
+.mail-conversation-badge {
+  flex-shrink: 0;
+  min-width: 22px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: center;
+  align-self: center;
 }
 
 .mail-thread-bubble {

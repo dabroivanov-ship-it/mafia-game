@@ -36,6 +36,23 @@ export interface PrivateMessageView {
   };
 }
 
+export interface ConversationPreview {
+  otherUser: PrivateMessageView['otherUser'];
+  lastMessage: {
+    id: number;
+    text: string;
+    createdAt: string;
+    direction: 'in' | 'out';
+  };
+  unreadCount: number;
+}
+
+export interface ThreadPage {
+  messages: PrivateMessageView[];
+  hasMore: boolean;
+  total: number;
+}
+
 function mapOtherUser(userId: number) {
   const user = findUserById(userId);
   return {
@@ -120,15 +137,98 @@ export function listHistory(userId: number, limit = 100): PrivateMessageView[] {
   return rows.map((row) => rowToHistoryView(row, userId));
 }
 
-export function listThread(userId: number, otherUserId: number, limit = 100): PrivateMessageView[] {
+export function listConversations(userId: number, limit = 50): ConversationPreview[] {
   const rows = db
     .prepare(
-      `SELECT * FROM private_messages
-       WHERE (sender_id = ? AND recipient_id = ?) OR (sender_id = ? AND recipient_id = ?)
-       ORDER BY created_at ASC LIMIT ?`
+      `SELECT pm.* FROM private_messages pm
+       INNER JOIN (
+         SELECT
+           CASE WHEN sender_id = ? THEN recipient_id ELSE sender_id END AS other_id,
+           MAX(id) AS max_id
+         FROM private_messages
+         WHERE sender_id = ? OR recipient_id = ?
+         GROUP BY other_id
+       ) latest ON pm.id = latest.max_id
+       ORDER BY pm.created_at DESC
+       LIMIT ?`
     )
-    .all(userId, otherUserId, otherUserId, userId, limit) as MessageRow[];
-  return rows.map((row) => rowToHistoryView(row, userId));
+    .all(userId, userId, userId, limit) as MessageRow[];
+
+  return rows.map((row) => {
+    const view = rowToHistoryView(row, userId);
+    const unreadRow = db
+      .prepare(
+        `SELECT COUNT(*) AS c FROM private_messages
+         WHERE recipient_id = ? AND sender_id = ? AND is_read = 0`
+      )
+      .get(userId, view.otherUser.id) as { c: number };
+    return {
+      otherUser: view.otherUser,
+      lastMessage: {
+        id: view.id,
+        text: view.text,
+        createdAt: view.createdAt,
+        direction: view.direction || 'in',
+      },
+      unreadCount: unreadRow?.c ?? 0,
+    };
+  });
+}
+
+function countThreadMessages(userId: number, otherUserId: number): number {
+  const row = db
+    .prepare(
+      `SELECT COUNT(*) AS c FROM private_messages
+       WHERE (sender_id = ? AND recipient_id = ?) OR (sender_id = ? AND recipient_id = ?)`
+    )
+    .get(userId, otherUserId, otherUserId, userId) as { c: number };
+  return row?.c ?? 0;
+}
+
+export function listThread(
+  userId: number,
+  otherUserId: number,
+  options: { limit?: number; beforeId?: number } = {}
+): ThreadPage {
+  const limit = Math.min(Math.max(options.limit ?? 10, 1), 100);
+  const total = countThreadMessages(userId, otherUserId);
+
+  let rows: MessageRow[];
+  if (options.beforeId) {
+    rows = db
+      .prepare(
+        `SELECT * FROM private_messages
+         WHERE ((sender_id = ? AND recipient_id = ?) OR (sender_id = ? AND recipient_id = ?))
+           AND id < ?
+         ORDER BY id DESC LIMIT ?`
+      )
+      .all(userId, otherUserId, otherUserId, userId, options.beforeId, limit) as MessageRow[];
+  } else {
+    rows = db
+      .prepare(
+        `SELECT * FROM private_messages
+         WHERE (sender_id = ? AND recipient_id = ?) OR (sender_id = ? AND recipient_id = ?)
+         ORDER BY id DESC LIMIT ?`
+      )
+      .all(userId, otherUserId, otherUserId, userId, limit) as MessageRow[];
+  }
+
+  rows.reverse();
+  const messages = rows.map((row) => rowToHistoryView(row, userId));
+  const oldestId = messages[0]?.id;
+  let hasMore = false;
+  if (oldestId) {
+    const older = db
+      .prepare(
+        `SELECT COUNT(*) AS c FROM private_messages
+         WHERE ((sender_id = ? AND recipient_id = ?) OR (sender_id = ? AND recipient_id = ?))
+           AND id < ?`
+      )
+      .get(userId, otherUserId, otherUserId, userId, oldestId) as { c: number };
+    hasMore = (older?.c ?? 0) > 0;
+  }
+
+  return { messages, hasMore, total };
 }
 
 export function markThreadRead(userId: number, otherUserId: number): number {

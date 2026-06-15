@@ -189,3 +189,14 @@ export interface PrivateMessage {
     avatar: string | null;
   };
 }
+
+export interface MailConversation {
+  otherUser: PrivateMessage['otherUser'];
+  lastMessage: {
+    id: number;
+    text: string;
+    createdAt: string;
+    direction: 'in' | 'out';
+  };
+  unreadCount: number;
+}

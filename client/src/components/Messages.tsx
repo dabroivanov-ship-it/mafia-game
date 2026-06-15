@@ -1,15 +1,16 @@
-import { useEffect, useState, FormEvent } from 'react';
+import { useEffect, useRef, useState, FormEvent } from 'react';
 import {
   avatarUrl,
-  fetchMailHistory,
+  fetchMailConversations,
   fetchMailThread,
   fetchUnreadMailCount,
   sendPrivateMessage,
-  markMessageRead,
 } from '../api';
-import type { PrivateMessage } from '../types';
+import type { MailConversation, PrivateMessage } from '../types';
 
-type MailView = 'history' | 'thread' | 'compose';
+const THREAD_PAGE_SIZE = 10;
+
+type MailView = 'list' | 'thread' | 'compose';
 
 interface MessagesProps {
   composeToUserId?: number | null;
@@ -24,11 +25,14 @@ export default function Messages({
   onUnreadChange,
   onBack,
 }: MessagesProps) {
-  const [view, setView] = useState<MailView>(composeToUserId || composeToUsername ? 'compose' : 'history');
-  const [history, setHistory] = useState<PrivateMessage[]>([]);
+  const [view, setView] = useState<MailView>(composeToUserId || composeToUsername ? 'compose' : 'list');
+  const [conversations, setConversations] = useState<MailConversation[]>([]);
   const [thread, setThread] = useState<PrivateMessage[]>([]);
   const [threadUser, setThreadUser] = useState<PrivateMessage['otherUser'] | null>(null);
+  const [threadHasMore, setThreadHasMore] = useState(false);
+  const [threadTotal, setThreadTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadingEarlier, setLoadingEarlier] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [composeTo, setComposeTo] = useState(
@@ -36,13 +40,18 @@ export default function Messages({
   );
   const [composeText, setComposeText] = useState('');
   const [sending, setSending] = useState(false);
+  const threadRef = useRef<HTMLDivElement>(null);
+  const prependingRef = useRef(false);
 
-  const loadHistory = async () => {
+  const loadConversations = async () => {
     setLoading(true);
     setError('');
     try {
-      const [histRes, unreadRes] = await Promise.all([fetchMailHistory(), fetchUnreadMailCount()]);
-      setHistory(histRes.messages);
+      const [convRes, unreadRes] = await Promise.all([
+        fetchMailConversations(),
+        fetchUnreadMailCount(),
+      ]);
+      setConversations(convRes.conversations);
       onUnreadChange?.(unreadRes.count);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка загрузки');
@@ -51,25 +60,44 @@ export default function Messages({
     }
   };
 
-  const openThread = async (user: PrivateMessage['otherUser']) => {
-    setLoading(true);
-    setError('');
-    setThreadUser(user);
-    setView('thread');
+  const loadThread = async (
+    user: PrivateMessage['otherUser'],
+    opts?: { beforeId?: number; append?: boolean }
+  ) => {
+    if (!opts?.append) {
+      setLoading(true);
+      setError('');
+      setThreadUser(user);
+      setView('thread');
+    } else {
+      setLoadingEarlier(true);
+      prependingRef.current = true;
+    }
+
     try {
-      const { messages, unreadCount } = await fetchMailThread(user.id);
-      setThread(messages);
+      const { messages, hasMore, total, unreadCount } = await fetchMailThread(user.id, {
+        limit: THREAD_PAGE_SIZE,
+        beforeId: opts?.beforeId,
+      });
+
+      setThread((prev) => (opts?.append ? [...messages, ...prev] : messages));
+      setThreadHasMore(hasMore);
+      setThreadTotal(total);
       onUnreadChange?.(unreadCount);
-      await loadHistory();
+
+      if (!opts?.append) {
+        await loadConversations();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка загрузки');
     } finally {
       setLoading(false);
+      setLoadingEarlier(false);
     }
   };
 
   useEffect(() => {
-    void loadHistory();
+    void loadConversations();
   }, []);
 
   useEffect(() => {
@@ -82,16 +110,23 @@ export default function Messages({
     }
   }, [composeToUserId, composeToUsername]);
 
-  const handleRead = async (msg: PrivateMessage) => {
-    if (msg.direction !== 'in' || msg.isRead) return;
-    try {
-      const { unreadCount } = await markMessageRead(msg.id);
-      setHistory((prev) => prev.map((m) => (m.id === msg.id ? { ...m, isRead: true } : m)));
-      onUnreadChange?.(unreadCount);
-    } catch {
-      /* ignore */
+  useEffect(() => {
+    const el = threadRef.current;
+    if (!el) return;
+
+    if (prependingRef.current) {
+      const prevHeight = el.scrollHeight;
+      requestAnimationFrame(() => {
+        el.scrollTop += el.scrollHeight - prevHeight;
+        prependingRef.current = false;
+      });
+      return;
     }
-  };
+
+    if (view === 'thread' && thread.length > 0 && !loading) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [thread, view, loading]);
 
   const handleSend = async (e: FormEvent) => {
     e.preventDefault();
@@ -103,8 +138,8 @@ export default function Messages({
       await sendPrivateMessage(recipient, composeText.trim());
       setComposeText('');
       setSuccess('Сообщение отправлено');
-      setView('history');
-      await loadHistory();
+      await loadConversations();
+      setView('list');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка отправки');
     } finally {
@@ -112,8 +147,18 @@ export default function Messages({
     }
   };
 
-  const replyInThread = (username: string) => {
-    setComposeTo(`@${username}`);
+  const loadEarlier = () => {
+    if (!threadUser || !thread.length || loadingEarlier || !threadHasMore) return;
+    void loadThread(threadUser, { beforeId: thread[0].id, append: true });
+  };
+
+  const openConversation = (conv: MailConversation) => {
+    void loadThread(conv.otherUser);
+  };
+
+  const replyInThread = () => {
+    if (!threadUser) return;
+    setComposeTo(`@${threadUser.username}`);
     setView('compose');
   };
 
@@ -124,14 +169,15 @@ export default function Messages({
           type="button"
           className="btn btn-ghost btn-sm"
           onClick={() => {
-            if (view === 'history' || view === 'compose') onBack();
+            if (view === 'list' || view === 'compose') onBack();
             else {
-              setView('history');
+              setView('list');
               setThreadUser(null);
+              setThread([]);
             }
           }}
         >
-          {view === 'thread' ? '← История' : '← Кабинет'}
+          {view === 'thread' ? '← Диалоги' : '← Кабинет'}
         </button>
         {view !== 'compose' && (
           <button type="button" className="btn btn-primary btn-sm" onClick={() => setView('compose')}>
@@ -149,11 +195,12 @@ export default function Messages({
               : '✉️ Письма'}
         </h1>
         {view === 'thread' && threadUser && (
-          <p className="muted">@{threadUser.username}</p>
+          <p className="muted">
+            @{threadUser.username}
+            {threadTotal > 0 && ` · ${threadTotal} сообщ.`}
+          </p>
         )}
-        {view === 'history' && (
-          <p className="muted">История всех сообщений</p>
-        )}
+        {view === 'list' && <p className="muted">Диалоги по именам</p>}
       </header>
 
       {error && <div className="auth-error">{error}</div>}
@@ -196,7 +243,7 @@ export default function Messages({
             />
           </label>
           <div className="profile-actions">
-            <button type="button" className="btn btn-ghost" onClick={() => setView('history')}>
+            <button type="button" className="btn btn-ghost" onClick={() => setView('list')}>
               Отмена
             </button>
             <button type="submit" className="btn btn-primary" disabled={sending}>
@@ -206,20 +253,17 @@ export default function Messages({
         </form>
       )}
 
-      {view === 'history' && (
+      {view === 'list' && (
         <>
           {loading && <p className="muted">Загрузка...</p>}
           {!loading && (
-            <div className="mail-list">
-              {history.length === 0 && <p className="muted">Сообщений пока нет</p>}
-              {history.map((msg) => (
-                <HistoryItem
-                  key={msg.id}
-                  msg={msg}
-                  onOpen={() => {
-                    void handleRead(msg);
-                    void openThread(msg.otherUser);
-                  }}
+            <div className="mail-list mail-conversation-list">
+              {conversations.length === 0 && <p className="muted">Диалогов пока нет</p>}
+              {conversations.map((conv) => (
+                <ConversationItem
+                  key={conv.otherUser.id}
+                  conv={conv}
+                  onOpen={() => openConversation(conv)}
                 />
               ))}
             </div>
@@ -231,17 +275,25 @@ export default function Messages({
         <>
           {loading && <p className="muted">Загрузка...</p>}
           {!loading && (
-            <div className="mail-thread">
+            <div className="mail-thread" ref={threadRef}>
+              {threadHasMore && (
+                <div className="mail-thread-load-more">
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    disabled={loadingEarlier}
+                    onClick={loadEarlier}
+                  >
+                    {loadingEarlier ? 'Загрузка...' : '↑ Ранее'}
+                  </button>
+                </div>
+              )}
               {thread.length === 0 && <p className="muted">Переписки пока нет</p>}
               {thread.map((msg) => (
                 <ThreadBubble key={msg.id} msg={msg} />
               ))}
               <div className="mail-thread-actions">
-                <button
-                  type="button"
-                  className="btn btn-primary btn-sm"
-                  onClick={() => replyInThread(threadUser.username)}
-                >
+                <button type="button" className="btn btn-primary btn-sm" onClick={replyInThread}>
                   Ответить
                 </button>
               </div>
@@ -253,36 +305,66 @@ export default function Messages({
   );
 }
 
-function HistoryItem({ msg, onOpen }: { msg: PrivateMessage; onOpen: () => void }) {
+function ConversationItem({
+  conv,
+  onOpen,
+}: {
+  conv: MailConversation;
+  onOpen: () => void;
+}) {
+  const { otherUser, lastMessage, unreadCount } = conv;
+  const preview =
+    lastMessage.direction === 'out' ? `Вы: ${lastMessage.text}` : lastMessage.text;
+
   return (
-    <button type="button" className={`mail-item mail-history-item ${!msg.isRead && msg.direction === 'in' ? 'unread' : ''}`} onClick={onOpen}>
+    <button
+      type="button"
+      className={`mail-item mail-conversation-item ${unreadCount > 0 ? 'unread' : ''}`}
+      onClick={onOpen}
+    >
       <div className="mail-item-header">
-        {msg.otherUser.avatar ? (
-          <img src={avatarUrl(msg.otherUser.avatar) ?? undefined} alt="" className="mail-avatar" />
+        {otherUser.avatar ? (
+          <img src={avatarUrl(otherUser.avatar) ?? undefined} alt="" className="mail-avatar" />
         ) : (
           <span className="mail-avatar placeholder">👤</span>
         )}
-        <div>
-          <strong>{msg.otherUser.displayName}</strong>
-          <span className="muted">@{msg.otherUser.username}</span>
+        <div className="mail-conversation-body">
+          <div className="mail-conversation-top">
+            <strong>{otherUser.displayName}</strong>
+            <span className="muted mail-time">
+              {new Date(lastMessage.createdAt).toLocaleString('ru-RU', {
+                day: 'numeric',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </span>
+          </div>
+          <span className="muted mail-conversation-login">@{otherUser.username}</span>
+          <p className="mail-text mail-conversation-preview">{preview}</p>
         </div>
-        <span className={`mail-direction ${msg.direction === 'out' ? 'out' : 'in'}`}>
-          {msg.direction === 'out' ? '↑ исх.' : '↓ вх.'}
-        </span>
-        <span className="muted mail-time">{new Date(msg.createdAt).toLocaleString('ru-RU')}</span>
+        {unreadCount > 0 && <span className="mail-conversation-badge">{unreadCount}</span>}
       </div>
-      <p className="mail-text">{msg.text}</p>
     </button>
   );
 }
 
 function ThreadBubble({ msg }: { msg: PrivateMessage }) {
   const isOut = msg.direction === 'out';
+  const authorName = isOut ? 'Вы' : msg.otherUser.displayName;
+
   return (
     <div className={`mail-thread-bubble ${isOut ? 'out' : 'in'}`}>
       <div className="mail-thread-meta">
-        <span>{isOut ? 'Вы' : msg.otherUser.displayName}</span>
-        <span className="muted">{new Date(msg.createdAt).toLocaleString('ru-RU')}</span>
+        <strong>{authorName}</strong>
+        <span className="muted">
+          {new Date(msg.createdAt).toLocaleString('ru-RU', {
+            day: 'numeric',
+            month: 'short',
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
+        </span>
       </div>
       <p>{msg.text}</p>
     </div>

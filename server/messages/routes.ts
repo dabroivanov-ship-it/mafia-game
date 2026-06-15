@@ -6,6 +6,7 @@ import {
   listInbox,
   listOutbox,
   listHistory,
+  listConversations,
   listThread,
   markThreadRead,
   getUnreadCount,
@@ -43,13 +44,23 @@ export function createMessagesRouter({ onMessageSent, onMessageRead }: MessagesR
     res.json({ messages: listHistory(req.userId!) });
   });
 
+  router.get('/conversations', (req, res) => {
+    res.json({ conversations: listConversations(req.userId!) });
+  });
+
   router.get('/thread/:otherUserId', (req, res) => {
     const otherUserId = Number(req.params.otherUserId);
     if (!otherUserId) return res.status(400).json({ error: 'Некорректный пользователь' });
+    const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 100);
+    const beforeId = req.query.beforeId ? Number(req.query.beforeId) : undefined;
     markThreadRead(req.userId!, otherUserId);
     const unreadCount = getUnreadCount(req.userId!);
     onMessageRead?.(req.userId!, unreadCount);
-    res.json({ messages: listThread(req.userId!, otherUserId), unreadCount });
+    const page = listThread(req.userId!, otherUserId, {
+      limit,
+      beforeId: beforeId && !Number.isNaN(beforeId) ? beforeId : undefined,
+    });
+    res.json({ ...page, unreadCount });
   });
 
   router.post('/', (req, res) => {
