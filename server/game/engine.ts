@@ -1294,6 +1294,7 @@ export function serializeRoomForPlayer(
       id: p.id,
       userId: p.userId || null,
       name: p.name,
+      username: p.username || p.name,
       connected: p.connected,
     })),
     chat: chatView.messages,

@@ -16,6 +16,9 @@ export default function PlayersList({
   const alive = players.filter((p) => p.alive);
   const dead = players.filter((p) => !p.alive);
 
+  const displayName = (p: RoomPlayer | RoomSpectator) =>
+    'username' in p ? p.username || p.name : p.name;
+
   const renderPerson = (p: RoomPlayer | RoomSpectator, showRole = false, isSpectator = false) => (
     <li key={p.id} className={p.id === myId ? 'me' : ''}>
       <button
@@ -25,7 +28,7 @@ export default function PlayersList({
         disabled={!p.userId}
         title={p.userId ? 'Открыть профиль' : undefined}
       >
-        {p.username || p.name}
+        {displayName(p)}
       </button>
       {isSpectator && <span className="spectator-badge">👁</span>}
       {showRole && 'roleLabel' in p && p.roleLabel && (

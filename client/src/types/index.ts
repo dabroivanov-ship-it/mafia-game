@@ -96,6 +96,7 @@ export interface RoomSpectator {
   id: number;
   userId: number | null;
   name: string;
+  username: string;
   connected: boolean;
 }
 

@@ -184,7 +184,7 @@ export interface RoomState {
   myRoleLabel: string | null;
   isDon: boolean;
   players: RoomStatePlayer[];
-  spectators: { id: number; userId: number | null; name: string; connected: boolean }[];
+  spectators: { id: number; userId: number | null; name: string; username: string; connected: boolean }[];
   chat: ChatMessage[];
   chatMode: 'spectator' | 'dead' | 'alive';
   hasMoreChat: boolean;
