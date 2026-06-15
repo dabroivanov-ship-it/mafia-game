@@ -3,7 +3,7 @@ import { Socket } from 'socket.io-client';
 import Chat from './Chat';
 import ActionPanel from './ActionPanel';
 import UserProfileModal from './UserProfileModal';
-import type { GamePhase, RoomState } from '../types';
+import type { GamePhase, RoomState, ChatReplyTarget } from '../types';
 
 const PHASE_LABELS: Record<GamePhase, string> = {
   waiting: 'Ожидание',
@@ -61,6 +61,8 @@ export default function Room({ socket, state, onLeave, currentUserId }: RoomProp
   const [mafiaTab, setMafiaTab] = useState(false);
   const [profileUserId, setProfileUserId] = useState<number | null>(null);
   const [loadingMoreChat, setLoadingMoreChat] = useState(false);
+  const [chatReplyTo, setChatReplyTo] = useState<ChatReplyTarget | null>(null);
+  const [chatPrivateMode, setChatPrivateMode] = useState(false);
 
   const timerLeft = useTimer(state?.timerEnd ?? null);
   const joinCooldown = useCountdown(state?.joinGameCooldownSec || 0);
@@ -85,6 +87,23 @@ export default function Room({ socket, state, onLeave, currentUserId }: RoomProp
     new Promise<{ error?: string } | undefined>((resolve) => {
       socket?.emit(event, data, resolve);
     });
+
+  const resolveReplyTarget = (userId: number): ChatReplyTarget | null => {
+    const player = state.players.find((p) => p.userId === userId);
+    if (player) return { playerId: player.id, playerName: player.name, userId };
+    const spectator = state.spectators.find((p) => p.userId === userId);
+    if (spectator) return { playerId: spectator.id, playerName: spectator.name, userId };
+    return null;
+  };
+
+  const openChatWithUser = (userId: number) => {
+    const target = resolveReplyTarget(userId);
+    if (target && target.playerId !== state.myId) {
+      setChatReplyTo(target);
+      setChatPrivateMode(false);
+      setProfileUserId(null);
+    }
+  };
 
   const loadMoreChat = async () => {
     setLoadingMoreChat(true);
@@ -189,8 +208,23 @@ export default function Room({ socket, state, onLeave, currentUserId }: RoomProp
               <Chat
                 messages={state.chat}
                 canSend={state.canChat}
-                onSend={(text) => {
-                  void emit('chat:send', { text });
+                myPlayerId={state.myId}
+                replyTo={chatReplyTo}
+                onReplyToChange={setChatReplyTo}
+                privateMode={chatPrivateMode}
+                onPrivateModeChange={setChatPrivateMode}
+                onSend={(text, opts) => {
+                  void emit('chat:send', {
+                    text,
+                    toPlayerId: opts?.toPlayerId,
+                    isPrivate: opts?.isPrivate,
+                  }).then((res) => {
+                    if (res?.error) alert(res.error);
+                    else {
+                      setChatReplyTo(null);
+                      setChatPrivateMode(false);
+                    }
+                  });
                 }}
                 onViewProfile={setProfileUserId}
                 canModerate={state.canModerate}
@@ -203,11 +237,13 @@ export default function Room({ socket, state, onLeave, currentUserId }: RoomProp
                         emit('admin:deleteMessage', {
                           messageId,
                           channel:
-                            sourceChannel === 'spectator'
-                              ? 'spectator'
-                              : state.chatMode === 'dead'
-                                ? 'dead'
-                                : 'public',
+                            sourceChannel === 'private'
+                              ? 'private'
+                              : sourceChannel === 'spectator'
+                                ? 'spectator'
+                                : state.chatMode === 'dead'
+                                  ? 'dead'
+                                  : 'public',
                         })
                     : null
                 }
@@ -272,6 +308,7 @@ export default function Room({ socket, state, onLeave, currentUserId }: RoomProp
           viewerIsAdmin={state.isAdmin}
           viewerCanModerate={state.canModerate}
           onClose={() => setProfileUserId(null)}
+          onWriteInChat={openChatWithUser}
         />
       )}
     </div>

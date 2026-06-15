@@ -19,6 +19,7 @@ interface UserProfileModalProps {
   viewerCanModerate?: boolean;
   onClose: () => void;
   onAdminAction?: () => void;
+  onWriteInChat?: (userId: number) => void;
 }
 
 interface ProfileData {
@@ -35,6 +36,7 @@ export default function UserProfileModal({
   viewerCanModerate = false,
   onClose,
   onAdminAction,
+  onWriteInChat,
 }: UserProfileModalProps) {
   const [data, setData] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -197,9 +199,21 @@ export default function UserProfileModal({
                 )}
                 {canWriteMail && !editMode && (
                   <div className="profile-mail-actions">
+                    {onWriteInChat && (
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-primary"
+                        onClick={() => {
+                          onWriteInChat(userId);
+                          onClose();
+                        }}
+                      >
+                        💬 Написать в чат
+                      </button>
+                    )}
                     {!showCompose ? (
-                      <button type="button" className="btn btn-sm btn-primary" onClick={() => setShowCompose(true)}>
-                        ✉️ Написать
+                      <button type="button" className="btn btn-sm btn-ghost" onClick={() => setShowCompose(true)}>
+                        ✉️ Письмо
                       </button>
                     ) : (
                       <div className="mail-compose-inline">

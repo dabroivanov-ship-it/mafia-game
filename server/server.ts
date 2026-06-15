@@ -31,6 +31,7 @@ import {
   castDayVote,
   submitNightAction,
   addChatMessage,
+  addPrivateChatMessage,
   deleteChatMessage,
   clearRoomChat,
   getModerationSnapshot,
@@ -466,7 +467,7 @@ io.on('connection', (socket) => {
     cb?.({ ok: true });
   });
 
-  socket.on('chat:send', ({ text }, cb) => {
+  socket.on('chat:send', ({ text, toPlayerId, isPrivate }, cb) => {
     const session = sessions.get(socket.id);
     if (!session) return cb?.({ error: 'Вы не в комнате' });
 
@@ -474,6 +475,21 @@ io.on('connection', (socket) => {
     if (!room) return cb?.({ error: 'Комната не найдена' });
     const me = room.players.find((p) => p.id === session.playerId);
     if (!me) return cb?.({ error: 'Игрок не найден' });
+
+    const trimmed = String(text || '').trim();
+    if (!trimmed) return cb?.({ error: 'Пустое сообщение' });
+
+    const targetId = toPlayerId ? Number(toPlayerId) : null;
+
+    if (isPrivate && targetId) {
+      const target = room.players.find((p) => p.id === targetId && p.connected);
+      if (!target) return cb?.({ error: 'Получатель не в комнате' });
+      if (targetId === session.playerId) return cb?.({ error: 'Нельзя написать себе' });
+      const msg = addPrivateChatMessage(room, session.playerId, targetId, trimmed);
+      if (!msg) return cb?.({ error: 'Не удалось отправить' });
+      broadcastRoom(room.id);
+      return cb?.({ ok: true });
+    }
 
     const gameRunning = isActiveGamePhase(room.phase);
     const isSpectator = !me.inGame && gameRunning;
@@ -485,7 +501,9 @@ io.on('connection', (socket) => {
       channel = me.alive ? 'public' : 'dead';
     }
 
-    const msg = addChatMessage(room, session.playerId, text, channel);
+    const msg = addChatMessage(room, session.playerId, trimmed, channel, {
+      toPlayerId: targetId && targetId !== session.playerId ? targetId : undefined,
+    });
     if (!msg) return cb?.({ error: 'Не удалось отправить' });
 
     broadcastRoom(room.id);

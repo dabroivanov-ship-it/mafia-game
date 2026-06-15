@@ -2,7 +2,11 @@ import { useEffect, useState } from 'react';
 import { avatarUrl, fetchStaffList } from '../api';
 import type { StaffMember } from '../types';
 
-export default function Staff() {
+interface StaffProps {
+  embedded?: boolean;
+}
+
+export default function Staff({ embedded = false }: StaffProps) {
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -26,10 +30,14 @@ export default function Staff() {
   const moderators = staff.filter((m) => m.role === 'moderator');
 
   return (
-    <div className="staff-page">
+    <div className={embedded ? 'staff-embedded' : 'staff-page'}>
       <header className="page-header">
-        <h1>🛡️ Команда проекта</h1>
-        <p className="muted">Администраторы и модераторы, следящие за порядком в игре</p>
+        <h1>{embedded ? '🛡️ Команда' : '🛡️ Команда проекта'}</h1>
+        <p className="muted">
+          {embedded
+            ? 'Администраторы и модераторы проекта'
+            : 'Администраторы и модераторы, следящие за порядком в игре'}
+        </p>
       </header>
 
       {loading && <p className="muted">Загрузка...</p>}

@@ -40,10 +40,11 @@ export interface LobbyRoom {
   phase: GamePhase;
 }
 
-export type ChatChannel = 'public' | 'mafia' | 'dead' | 'spectator';
+export type ChatChannel = 'public' | 'mafia' | 'dead' | 'spectator' | 'private';
 
 export interface ChatMessage {
   id: string | number;
+  playerId?: number | null;
   playerName: string;
   text: string;
   time: string;
@@ -51,6 +52,15 @@ export interface ChatMessage {
   system?: boolean;
   deleted?: boolean;
   sourceChannel?: ChatChannel;
+  isPrivate?: boolean;
+  toPlayerId?: number | null;
+  toPlayerName?: string | null;
+}
+
+export interface ChatReplyTarget {
+  playerId: number;
+  playerName: string;
+  userId?: number | null;
 }
 
 export type GameRole =

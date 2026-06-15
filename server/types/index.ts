@@ -18,7 +18,7 @@ export type RoleId =
   | 'highlander'
   | 'civilian';
 
-export type ChatChannel = 'public' | 'mafia' | 'dead' | 'spectator';
+export type ChatChannel = 'public' | 'mafia' | 'dead' | 'spectator' | 'private';
 
 export type TimerReason = 'registration' | 'day' | 'night';
 
@@ -83,6 +83,9 @@ export interface ChatMessage {
   system?: boolean;
   deleted?: boolean;
   sourceChannel?: ChatChannel;
+  isPrivate?: boolean;
+  toPlayerId?: number | null;
+  toPlayerName?: string | null;
 }
 
 export interface GamePlayer {
@@ -113,6 +116,7 @@ export interface GameRoom {
   mafiaChat: ChatMessage[];
   deadChat: ChatMessage[];
   spectatorChat: ChatMessage[];
+  privateChat: ChatMessage[];
   nightNumber: number;
   timerEnd: number | null;
   timerReason: TimerReason | null;

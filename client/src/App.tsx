@@ -2,10 +2,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import Auth from './components/Auth';
 import Menu from './components/Menu';
-import Lobby from './components/Lobby';
+import Lobby, { type CabinetTab, type LobbyTab } from './components/Lobby';
 import Info from './components/Info';
-import Staff from './components/Staff';
-import Profile from './components/Profile';
 import AdminPanel from './components/AdminPanel';
 import Room from './components/Room';
 import { clearSession, fetchMe, fetchUnreadMailCount, saveSession } from './api';
@@ -15,7 +13,7 @@ const SOCKET_URL =
   import.meta.env.VITE_SOCKET_URL ??
   (import.meta.env.DEV ? 'http://localhost:3001' : undefined);
 
-type AppView = 'lobby' | 'info' | 'staff' | 'profile' | 'admin' | 'room';
+type AppView = 'lobby' | 'info' | 'admin' | 'room';
 
 interface RoomJoinResponse {
   error?: string;
@@ -41,7 +39,8 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [unreadMailCount, setUnreadMailCount] = useState(0);
   const [pmNotice, setPmNotice] = useState<string | null>(null);
-  const [profileTab, setProfileTab] = useState<'settings' | 'messages'>('settings');
+  const [lobbyTab, setLobbyTab] = useState<LobbyTab>('rooms');
+  const [cabinetTab, setCabinetTab] = useState<CabinetTab>('settings');
   const [composeToUserId, setComposeToUserId] = useState<number | null>(null);
   const [composeToUsername, setComposeToUsername] = useState<string | null>(null);
 
@@ -137,10 +136,11 @@ export default function App() {
   }, [token]);
 
   const openMessages = useCallback((opts?: { userId?: number; username?: string }) => {
-    setProfileTab('messages');
+    setCabinetTab('messages');
     setComposeToUserId(opts?.userId ?? null);
     setComposeToUsername(opts?.username ?? null);
-    setView('profile');
+    setView('lobby');
+    setLobbyTab('cabinet');
     setPmNotice(null);
   }, []);
 
@@ -298,29 +298,25 @@ export default function App() {
         {view === 'lobby' && (
           <Lobby
             rooms={rooms}
+            user={user}
+            tab={lobbyTab}
+            onTabChange={setLobbyTab}
             onJoin={joinRoom}
+            onUserUpdate={handleUserUpdate}
+            cabinetTab={cabinetTab}
+            onCabinetTabChange={setCabinetTab}
+            composeToUserId={composeToUserId}
+            composeToUsername={composeToUsername}
+            onComposeReset={() => {
+              setComposeToUserId(null);
+              setComposeToUsername(null);
+            }}
             unreadMailCount={unreadMailCount}
+            onUnreadChange={setUnreadMailCount}
             onOpenMessages={() => openMessages()}
           />
         )}
         {view === 'info' && <Info />}
-        {view === 'staff' && <Staff />}
-        {view === 'profile' && (
-          <Profile
-            user={user}
-            onUpdate={handleUserUpdate}
-            onBack={() => {
-              setView('lobby');
-              setComposeToUserId(null);
-              setComposeToUsername(null);
-              setProfileTab('settings');
-            }}
-            initialTab={profileTab}
-            composeToUserId={composeToUserId}
-            composeToUsername={composeToUsername}
-            onUnreadChange={setUnreadMailCount}
-          />
-        )}
         {view === 'admin' && user.isAdmin && (
           <AdminPanel onBack={() => setView('lobby')} />
         )}
@@ -329,11 +325,12 @@ export default function App() {
       <Menu
         user={user}
         view={view}
-        unreadMailCount={unreadMailCount}
         onNavigate={(v) => {
-          if (v === 'profile') {
-            setProfileTab('settings');
+          if (v === 'lobby') {
+            setLobbyTab('rooms');
+            setCabinetTab('settings');
             setComposeToUserId(null);
+            setComposeToUsername(null);
           }
           setView(v);
         }}

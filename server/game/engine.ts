@@ -48,6 +48,7 @@ function createRoom(id: number): GameRoom {
     mafiaChat: [],
     deadChat: [],
     spectatorChat: [],
+    privateChat: [],
     nightNumber: 0,
     timerEnd: null,
     timerReason: null,
@@ -760,6 +761,7 @@ export function resetRoom(room: GameRoom): void {
   const mafiaChat = room.mafiaChat;
   const deadChat = room.deadChat;
   const spectatorChat = room.spectatorChat;
+  const privateChat = room.privateChat;
   const historyLoaded = room.historyLoaded;
   const connectedPlayers = room.players.filter((p) => p.connected);
   Object.assign(room, createRoom(id));
@@ -768,6 +770,7 @@ export function resetRoom(room: GameRoom): void {
   room.mafiaChat = mafiaChat;
   room.deadChat = deadChat;
   room.spectatorChat = spectatorChat;
+  room.privateChat = privateChat;
   room.historyLoaded = historyLoaded;
   room.players = connectedPlayers.map((p) => ({
     ...p,
@@ -787,7 +790,8 @@ export function addChatMessage(
   room: GameRoom,
   playerId: number,
   text: string,
-  channel: ChatChannel = 'public'
+  channel: ChatChannel = 'public',
+  options: { toPlayerId?: number } = {}
 ): ChatMessage | null {
   const player = room.players.find((p) => p.id === playerId);
   if (!player) return null;
@@ -800,7 +804,16 @@ export function addChatMessage(
     text,
     time: new Date().toISOString(),
     deleted: false,
+    isPrivate: false,
   };
+
+  if (options.toPlayerId) {
+    const target = room.players.find((p) => p.id === options.toPlayerId);
+    if (target) {
+      msg.toPlayerId = target.id;
+      msg.toPlayerName = target.username || target.name;
+    }
+  }
 
   if (channel === 'mafia') room.mafiaChat.push(msg);
   else if (channel === 'dead') room.deadChat.push(msg);
@@ -808,6 +821,35 @@ export function addChatMessage(
   else room.chat.push(msg);
 
   saveChatMessage(room.id, room.sessionId, msg, channel);
+  return msg;
+}
+
+export function addPrivateChatMessage(
+  room: GameRoom,
+  fromPlayerId: number,
+  toPlayerId: number,
+  text: string
+): ChatMessage | null {
+  const from = room.players.find((p) => p.id === fromPlayerId);
+  const to = room.players.find((p) => p.id === toPlayerId);
+  if (!from || !to || fromPlayerId === toPlayerId) return null;
+
+  const msg: ChatMessage = {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    playerId: fromPlayerId,
+    userId: from.userId || null,
+    playerName: from.username || from.name,
+    toPlayerId: to.id,
+    toPlayerName: to.username || to.name,
+    text,
+    time: new Date().toISOString(),
+    deleted: false,
+    isPrivate: true,
+  };
+
+  room.privateChat = room.privateChat || [];
+  room.privateChat.push(msg);
+  saveChatMessage(room.id, room.sessionId, msg, 'private');
   return msg;
 }
 
@@ -823,7 +865,9 @@ export function deleteChatMessage(
         ? room.deadChat
         : channel === 'spectator'
           ? room.spectatorChat
-          : room.chat;
+          : channel === 'private'
+            ? room.privateChat
+            : room.chat;
   const msg = list.find((m) => m.id === messageId);
   if (!msg || msg.system) return false;
   msg.deleted = true;
@@ -834,11 +878,16 @@ export function deleteChatMessage(
 
 export function clearRoomChat(room: GameRoom): number {
   const cleared =
-    room.chat.length + room.mafiaChat.length + room.deadChat.length + room.spectatorChat.length;
+    room.chat.length +
+    room.mafiaChat.length +
+    room.deadChat.length +
+    room.spectatorChat.length +
+    room.privateChat.length;
   room.chat = [];
   room.mafiaChat = [];
   room.deadChat = [];
   room.spectatorChat = [];
+  room.privateChat = [];
   deleteRoomChatLog(room.id);
   addSystemMessage(room, '🧹 История чата очищена администратором.');
   return cleared;
@@ -927,6 +976,22 @@ function sliceChatMessages(
   };
 }
 
+function appendPrivateMessages(
+  messages: ChatMessage[],
+  room: GameRoom,
+  myPlayerId: number | undefined
+): ChatMessage[] {
+  if (!myPlayerId) return messages;
+  const privateChat = room.privateChat || [];
+  const mine = privateChat.filter(
+    (m) => m.playerId === myPlayerId || m.toPlayerId === myPlayerId
+  );
+  if (mine.length === 0) return messages;
+  return [...messages, ...mine].sort(
+    (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
+  );
+}
+
 /** Чат для конкретного игрока */
 function buildChatView(
   room: GameRoom,
@@ -935,12 +1000,17 @@ function buildChatView(
 ): { messages: ChatMessage[]; mode: 'spectator' | 'dead' | 'alive'; hasMoreChat: boolean } {
   const gameRunning = isActiveGamePhase(room.phase);
   const isSpectator = me && !me.inGame && gameRunning;
+  const myId = me?.id;
 
   if (isSpectator) {
     const gameMsgs = room.chat.map((m) => ({ ...m, sourceChannel: 'public' as ChatChannel }));
     const specMsgs = room.spectatorChat.map((m) => ({ ...m, sourceChannel: 'spectator' as ChatChannel }));
-    const combined = [...gameMsgs, ...specMsgs].sort(
-      (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
+    const combined = appendPrivateMessages(
+      [...gameMsgs, ...specMsgs].sort(
+        (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
+      ),
+      room,
+      myId
     );
     const sliced = sliceChatMessages(combined, chatLimit);
     return { messages: sliced.messages, mode: 'spectator', hasMoreChat: sliced.hasMoreChat };
@@ -949,7 +1019,8 @@ function buildChatView(
   const systemMsgs = room.chat.filter((m) => m.system);
 
   if (!me || !me.inGame || !me.role || me.alive) {
-    const sliced = sliceChatMessages(room.chat, chatLimit);
+    const combined = appendPrivateMessages(room.chat, room, myId);
+    const sliced = sliceChatMessages(combined, chatLimit);
     return {
       messages: sliced.messages,
       mode: me?.inGame && me?.role && !me.alive ? 'dead' : 'alive',
@@ -957,8 +1028,12 @@ function buildChatView(
     };
   }
 
-  const combined = [...systemMsgs, ...room.deadChat].sort(
-    (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
+  const combined = appendPrivateMessages(
+    [...systemMsgs, ...room.deadChat].sort(
+      (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
+    ),
+    room,
+    myId
   );
   const sliced = sliceChatMessages(combined, chatLimit);
 

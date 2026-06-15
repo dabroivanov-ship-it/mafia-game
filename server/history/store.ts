@@ -29,6 +29,25 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_room_game_room ON room_game_log(room_id, created_at);
 `);
 
+function migrateChatLogColumns(): void {
+  const cols = db.prepare('PRAGMA table_info(room_chat_log)').all() as { name: string }[];
+  const names = new Set(cols.map((c) => c.name));
+  if (!names.has('player_id')) {
+    db.exec('ALTER TABLE room_chat_log ADD COLUMN player_id INTEGER');
+  }
+  if (!names.has('to_player_id')) {
+    db.exec('ALTER TABLE room_chat_log ADD COLUMN to_player_id INTEGER');
+  }
+  if (!names.has('to_player_name')) {
+    db.exec('ALTER TABLE room_chat_log ADD COLUMN to_player_name TEXT');
+  }
+  if (!names.has('is_private')) {
+    db.exec('ALTER TABLE room_chat_log ADD COLUMN is_private INTEGER NOT NULL DEFAULT 0');
+  }
+}
+
+migrateChatLogColumns();
+
 interface ChatRow {
   id: number;
   room_id: number;
@@ -36,7 +55,11 @@ interface ChatRow {
   msg_key: string;
   channel: string;
   user_id: number | null;
+  player_id: number | null;
   player_name: string | null;
+  to_player_id: number | null;
+  to_player_name: string | null;
+  is_private: number;
   text: string;
   is_system: number;
   deleted: number;
@@ -56,13 +79,16 @@ function rowToMsg(row: ChatRow): ChatMessage {
   return {
     id: row.msg_key,
     dbId: row.id,
-    playerId: null,
+    playerId: row.player_id,
     userId: row.user_id,
     playerName: row.player_name || '🤖 Ведущий',
     text: row.text,
     time: row.created_at.includes('T') ? row.created_at : `${row.created_at.replace(' ', 'T')}Z`,
     system: !!row.is_system,
     deleted: !!row.deleted,
+    isPrivate: !!row.is_private,
+    toPlayerId: row.to_player_id,
+    toPlayerName: row.to_player_name,
   };
 }
 
@@ -73,15 +99,19 @@ export function saveChatMessage(
   channel: ChatChannel = 'public'
 ): void {
   db.prepare(
-    `INSERT INTO room_chat_log (room_id, session_id, msg_key, channel, user_id, player_name, text, is_system, deleted, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO room_chat_log (room_id, session_id, msg_key, channel, user_id, player_id, player_name, to_player_id, to_player_name, is_private, text, is_system, deleted, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     roomId,
     sessionId || null,
     String(msg.id),
     channel,
     msg.userId || null,
+    msg.playerId ?? null,
     msg.playerName || null,
+    msg.toPlayerId ?? null,
+    msg.toPlayerName ?? null,
+    msg.isPrivate ? 1 : 0,
     msg.text,
     msg.system ? 1 : 0,
     msg.deleted ? 1 : 0,
@@ -118,6 +148,7 @@ export function loadRoomChatHistory(
   mafiaChat: ChatMessage[];
   deadChat: ChatMessage[];
   spectatorChat: ChatMessage[];
+  privateChat: ChatMessage[];
 } {
   const rows = db
     .prepare(
@@ -130,16 +161,18 @@ export function loadRoomChatHistory(
   const mafiaChat: ChatMessage[] = [];
   const deadChat: ChatMessage[] = [];
   const spectatorChat: ChatMessage[] = [];
+  const privateChat: ChatMessage[] = [];
 
   for (const row of rows) {
     const msg = rowToMsg(row);
     if (row.channel === 'mafia') mafiaChat.push(msg);
     else if (row.channel === 'dead') deadChat.push(msg);
     else if (row.channel === 'spectator') spectatorChat.push(msg);
+    else if (row.channel === 'private') privateChat.push(msg);
     else chat.push(msg);
   }
 
-  return { chat, mafiaChat, deadChat, spectatorChat };
+  return { chat, mafiaChat, deadChat, spectatorChat, privateChat };
 }
 
 export interface GameEvent {
@@ -181,11 +214,12 @@ export function getRecentGameEvents(limit = 30): GameEvent[] {
 
 export function hydrateRoomHistory(room: GameRoom): void {
   if (room.historyLoaded) return;
-  const { chat, mafiaChat, deadChat, spectatorChat } = loadRoomChatHistory(room.id);
+  const { chat, mafiaChat, deadChat, spectatorChat, privateChat } = loadRoomChatHistory(room.id);
   room.chat = chat;
   room.mafiaChat = mafiaChat;
   room.deadChat = deadChat;
   room.spectatorChat = spectatorChat;
+  room.privateChat = privateChat;
   room.historyLoaded = true;
 }
 

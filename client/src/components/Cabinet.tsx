@@ -5,31 +5,41 @@ import type { User } from '../types';
 
 const CHAT_LIMIT_OPTIONS = [15, 30, 50, 100];
 
-type ProfileTab = 'settings' | 'messages';
+export type CabinetTab = 'settings' | 'messages';
 
-interface ProfileProps {
+interface CabinetProps {
   user: User;
   onUpdate: (user: User) => void;
-  onBack: () => void;
-  initialTab?: ProfileTab;
+  onBackToRooms: () => void;
+  initialTab?: CabinetTab;
+  onTabChange?: (tab: CabinetTab) => void;
   composeToUserId?: number | null;
   composeToUsername?: string | null;
   onUnreadChange?: (count: number) => void;
+  embedded?: boolean;
 }
 
-export default function Profile({
+export default function Cabinet({
   user,
   onUpdate,
-  onBack,
+  onBackToRooms,
   initialTab = 'settings',
+  onTabChange,
   composeToUserId = null,
   composeToUsername = null,
   onUnreadChange,
-}: ProfileProps) {
-  const [tab, setTab] = useState<ProfileTab>(initialTab);
+  embedded = false,
+}: CabinetProps) {
+  const [tab, setTab] = useState<CabinetTab>(initialTab);
   useEffect(() => {
     setTab(initialTab);
   }, [initialTab]);
+
+  const switchTab = (next: CabinetTab) => {
+    setTab(next);
+    onTabChange?.(next);
+  };
+
   const [form, setForm] = useState({
     displayName: user.displayName || '',
     city: user.city || '',
@@ -50,7 +60,7 @@ export default function Profile({
     try {
       const { user: updated } = await updateProfile(form);
       onUpdate(updated);
-      setSuccess('Профиль сохранён');
+      setSuccess('Настройки сохранены');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка сохранения');
     } finally {
@@ -76,22 +86,22 @@ export default function Profile({
   };
 
   return (
-    <div className="profile-page">
-      <div className="profile-card">
-        <h2>Мой профиль</h2>
+    <div className={embedded ? 'cabinet-embedded' : 'cabinet-page'}>
+      <div className="profile-card cabinet-card">
+        {!embedded && <h2>Кабинет</h2>}
 
         <div className="profile-tabs">
           <button
             type="button"
             className={tab === 'settings' ? 'active' : ''}
-            onClick={() => setTab('settings')}
+            onClick={() => switchTab('settings')}
           >
             Настройки
           </button>
           <button
             type="button"
             className={tab === 'messages' ? 'active' : ''}
-            onClick={() => setTab('messages')}
+            onClick={() => switchTab('messages')}
           >
             ✉️ Письма
           </button>
@@ -175,8 +185,8 @@ export default function Profile({
                 </select>
               </label>
               <div className="profile-actions">
-                <button type="button" className="btn btn-ghost" onClick={onBack}>
-                  Назад
+                <button type="button" className="btn btn-ghost" onClick={onBackToRooms}>
+                  К комнатам
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={loading}>
                   {loading ? 'Сохранение...' : 'Сохранить'}

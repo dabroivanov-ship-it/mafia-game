@@ -1,31 +1,26 @@
-import { avatarUrl } from '../api';
 import type { User } from '../types';
 
-type MenuView = 'lobby' | 'info' | 'staff' | 'profile' | 'admin' | 'room';
+type MenuView = 'lobby' | 'info' | 'admin' | 'room';
 
 interface MenuItem {
   id: MenuView;
-  icon: string | null;
+  icon: string;
   label: string;
-  avatar?: boolean;
 }
 
 const ITEMS: MenuItem[] = [
   { id: 'lobby', icon: '🏠', label: 'Комнаты' },
   { id: 'info', icon: 'ℹ️', label: 'Информация' },
-  { id: 'staff', icon: '🛡️', label: 'Команда' },
-  { id: 'profile', icon: null, label: 'Профиль', avatar: true },
 ];
 
 interface MenuProps {
   user: User;
   view: MenuView;
-  unreadMailCount?: number;
   onNavigate: (view: MenuView) => void;
   onLogout: () => void;
 }
 
-export default function Menu({ user, view, unreadMailCount = 0, onNavigate, onLogout }: MenuProps) {
+export default function Menu({ user, view, onNavigate, onLogout }: MenuProps) {
   return (
     <nav className="main-menu" aria-label="Главное меню">
       <div className="menu-logo" aria-hidden="true">
@@ -40,19 +35,8 @@ export default function Menu({ user, view, unreadMailCount = 0, onNavigate, onLo
             className={`menu-item ${view === item.id ? 'active' : ''}`}
             onClick={() => onNavigate(item.id)}
           >
-            {item.avatar ? (
-              user.avatar ? (
-                <img src={avatarUrl(user.avatar) ?? undefined} alt="" className="menu-avatar" />
-              ) : (
-                <span className="menu-icon menu-avatar placeholder">👤</span>
-              )
-            ) : (
-              <span className="menu-icon">{item.icon}</span>
-            )}
+            <span className="menu-icon">{item.icon}</span>
             <span className="menu-label">{item.label}</span>
-            {item.id === 'profile' && unreadMailCount > 0 && (
-              <span className="menu-badge">{unreadMailCount > 99 ? '99+' : unreadMailCount}</span>
-            )}
           </button>
         ))}
         {user.isAdmin && (
