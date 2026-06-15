@@ -1,6 +1,6 @@
 import express from 'express';
 import { createServer } from 'http';
-import { Server } from 'socket.io';
+import { Server, type Socket } from 'socket.io';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -9,8 +9,10 @@ import authRoutes from './auth/routes.js';
 import { createProfileRouter } from './profile/routes.js';
 import { createAdminRouter } from './admin/routes.js';
 import { createModerationRouter } from './moderation/routes.js';
+import { createMessagesRouter } from './messages/routes.js';
+import { getUnreadCount } from './messages/store.js';
 import { socketAuthMiddleware } from './auth/jwt.js';
-import { findUserById, updateUserScore, isAdmin, isStaff, uploadsDir, normalizeChatLimit } from './auth/db.js';
+import { findUserById, updateUserScore, isAdmin, isStaff, updateUserConnectionInfo, uploadsDir, normalizeChatLimit } from './auth/db.js';
 import { hydrateRoomHistory, loadGameEvents, getRecentGameEvents, getAdminChatHistory, getRecentChatForAdmin } from './history/store.js';
 import {
   createInitialRooms,
@@ -54,6 +56,7 @@ for (const room of rooms.values()) {
   hydrateRoomHistory(room);
 }
 const sessions = new Map<string, Session>();
+const userSocketIds = new Map<number, Set<string>>();
 const DEFAULT_CHAT_LIMIT = 15;
 const CHAT_LOAD_STEP = 30;
 const MAX_CHAT_LIMIT = 300;
@@ -183,6 +186,34 @@ app.use(
   })
 );
 app.use('/api/moderation', createModerationRouter());
+app.use(
+  '/api/messages',
+  createMessagesRouter({
+    onMessageSent: (recipientId, payload) => {
+      notifyUser(recipientId, 'pm:received', payload);
+    },
+  })
+);
+
+function attachUserSocket(userId: number, socketId: string): void {
+  if (!userSocketIds.has(userId)) userSocketIds.set(userId, new Set());
+  userSocketIds.get(userId)!.add(socketId);
+}
+
+function detachUserSocket(userId: number, socketId: string): void {
+  const set = userSocketIds.get(userId);
+  if (!set) return;
+  set.delete(socketId);
+  if (set.size === 0) userSocketIds.delete(userId);
+}
+
+function notifyUser(userId: number, event: string, data: unknown): void {
+  const socketIds = userSocketIds.get(userId);
+  if (!socketIds) return;
+  for (const socketId of socketIds) {
+    io.to(socketId).emit(event, data);
+  }
+}
 
 function serializeForSocketUser(
   room: GameRoom,
@@ -281,6 +312,23 @@ setInterval(() => {
   }
 }, 1000);
 
+function getClientIp(socket: Socket): string {
+  const forwarded = socket.handshake.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string' && forwarded.trim()) {
+    return forwarded.split(',')[0].trim();
+  }
+  if (Array.isArray(forwarded) && forwarded[0]) {
+    return forwarded[0].split(',')[0].trim();
+  }
+  return socket.handshake.address || '';
+}
+
+function trackUserConnection(socket: Socket): void {
+  if (!socket.userId) return;
+  const userAgent = String(socket.handshake.headers['user-agent'] || '');
+  updateUserConnectionInfo(socket.userId, getClientIp(socket), userAgent);
+}
+
 io.use(socketAuthMiddleware);
 
 io.on('connection', (socket) => {
@@ -294,6 +342,9 @@ io.on('connection', (socket) => {
   socket.isAdmin = isAdmin(user);
   socket.isModerator = user.role === 'moderator';
   socket.isStaff = isStaff(user);
+  trackUserConnection(socket);
+  attachUserSocket(socket.userId!, socket.id);
+  socket.emit('pm:unread', { count: getUnreadCount(socket.userId!) });
 
   socket.emit('lobby:update', getLobbySnapshot(rooms));
 
@@ -509,6 +560,8 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
+    if (socket.userId) detachUserSocket(socket.userId, socket.id);
+
     const session = sessions.get(socket.id);
     if (!session) return;
 

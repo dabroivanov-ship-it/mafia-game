@@ -4,7 +4,7 @@ import {
   saveChatMessage,
   saveGameEvent,
   markChatDeleted,
-  markRoomChatDeleted,
+  deleteRoomChatLog,
   hydrateRoomHistory,
 } from '../history/store.js';
 import { loadRoomNames, saveRoomName, deleteRoomName } from '../rooms/store.js';
@@ -327,7 +327,10 @@ export function onRegistrationTimerEnd(room: GameRoom): void {
     room.players.forEach((p) => {
       p.inGame = true;
     });
-    addSystemMessage(room, `Недостаточно игроков (минимум ${CONFIG.MIN_PLAYERS}). Игра отменена.`);
+    addSystemMessage(
+      room,
+      `⏱ Регистрация завершена: записалось ${registered.length} из ${CONFIG.MIN_PLAYERS} нужных. Игра не состоялась — можно запустить снова, когда наберётся больше игроков.`
+    );
     return;
   }
   beginGame(room);
@@ -830,22 +833,15 @@ export function deleteChatMessage(
 }
 
 export function clearRoomChat(room: GameRoom): number {
-  let changed = 0;
-  const clearList = (messages: ChatMessage[]) => {
-    for (const msg of messages) {
-      if (msg.system || msg.deleted) continue;
-      msg.deleted = true;
-      msg.text = '[сообщение удалено модератором]';
-      changed += 1;
-    }
-  };
-
-  clearList(room.chat);
-  clearList(room.mafiaChat);
-  clearList(room.deadChat);
-  clearList(room.spectatorChat);
-  markRoomChatDeleted(room.id);
-  return changed;
+  const cleared =
+    room.chat.length + room.mafiaChat.length + room.deadChat.length + room.spectatorChat.length;
+  room.chat = [];
+  room.mafiaChat = [];
+  room.deadChat = [];
+  room.spectatorChat = [];
+  deleteRoomChatLog(room.id);
+  addSystemMessage(room, '🧹 История чата очищена администратором.');
+  return cleared;
 }
 
 export interface ModerationSnapshot {

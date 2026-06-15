@@ -54,9 +54,10 @@ interface RoomProps {
   socket: Socket | null;
   state: RoomState | null;
   onLeave: () => void;
+  currentUserId: number;
 }
 
-export default function Room({ socket, state, onLeave }: RoomProps) {
+export default function Room({ socket, state, onLeave, currentUserId }: RoomProps) {
   const [mafiaTab, setMafiaTab] = useState(false);
   const [profileUserId, setProfileUserId] = useState<number | null>(null);
   const [loadingMoreChat, setLoadingMoreChat] = useState(false);
@@ -267,6 +268,7 @@ export default function Room({ socket, state, onLeave }: RoomProps) {
       {profileUserId && (
         <UserProfileModal
           userId={profileUserId}
+          currentUserId={currentUserId}
           viewerIsAdmin={state.isAdmin}
           viewerCanModerate={state.canModerate}
           onClose={() => setProfileUserId(null)}

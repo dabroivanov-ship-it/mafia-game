@@ -139,3 +139,30 @@ export interface RoomState {
 export interface ApiError {
   error: string;
 }
+
+export interface StaffMember {
+  id: number;
+  username: string;
+  displayName: string;
+  city: string;
+  avatar: string | null;
+  role: 'admin' | 'moderator';
+}
+
+export interface ProfileStaffMeta {
+  lastIp: string | null;
+  lastUserAgent: string | null;
+}
+
+export interface PrivateMessage {
+  id: number;
+  text: string;
+  createdAt: string;
+  isRead: boolean;
+  otherUser: {
+    id: number;
+    username: string;
+    displayName: string;
+    avatar: string | null;
+  };
+}

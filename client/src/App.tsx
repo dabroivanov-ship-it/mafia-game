@@ -3,18 +3,19 @@ import { io, Socket } from 'socket.io-client';
 import Auth from './components/Auth';
 import Menu from './components/Menu';
 import Lobby from './components/Lobby';
-import Rules from './components/Rules';
+import Info from './components/Info';
+import Staff from './components/Staff';
 import Profile from './components/Profile';
 import AdminPanel from './components/AdminPanel';
 import Room from './components/Room';
-import { clearSession, fetchMe, saveSession } from './api';
+import { clearSession, fetchMe, fetchUnreadMailCount, saveSession } from './api';
 import type { LobbyRoom, RoomState, User } from './types';
 
 const SOCKET_URL =
   import.meta.env.VITE_SOCKET_URL ??
   (import.meta.env.DEV ? 'http://localhost:3001' : undefined);
 
-type AppView = 'lobby' | 'rules' | 'profile' | 'admin' | 'room';
+type AppView = 'lobby' | 'info' | 'staff' | 'profile' | 'admin' | 'room';
 
 interface RoomJoinResponse {
   error?: string;
@@ -38,6 +39,11 @@ export default function App() {
   const [currentRoomId, setCurrentRoomId] = useState<number | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [unreadMailCount, setUnreadMailCount] = useState(0);
+  const [pmNotice, setPmNotice] = useState<string | null>(null);
+  const [profileTab, setProfileTab] = useState<'settings' | 'messages'>('settings');
+  const [composeToUserId, setComposeToUserId] = useState<number | null>(null);
+  const [composeToUsername, setComposeToUsername] = useState<string | null>(null);
 
   useEffect(() => {
     async function checkAuth() {
@@ -88,6 +94,26 @@ export default function App() {
       setTimeout(() => setNotification(null), 8000);
     });
 
+    s.on('pm:unread', ({ count }: { count: number }) => {
+      setUnreadMailCount(count);
+    });
+
+    s.on(
+      'pm:received',
+      ({
+        fromDisplayName,
+        preview,
+        unreadCount,
+      }: {
+        fromDisplayName: string;
+        preview: string;
+        unreadCount: number;
+      }) => {
+        setUnreadMailCount(unreadCount);
+        setPmNotice(`✉️ ${fromDisplayName}: ${preview}`);
+      }
+    );
+
     s.on('room:kicked', ({ reason }: { reason?: string }) => {
       setCurrentRoomId(null);
       setRoomState(null);
@@ -102,6 +128,21 @@ export default function App() {
       s.disconnect();
     };
   }, [token, user]);
+
+  useEffect(() => {
+    if (!token) return;
+    void fetchUnreadMailCount()
+      .then(({ count }) => setUnreadMailCount(count))
+      .catch(() => {});
+  }, [token]);
+
+  const openMessages = useCallback((opts?: { userId?: number; username?: string }) => {
+    setProfileTab('messages');
+    setComposeToUserId(opts?.userId ?? null);
+    setComposeToUsername(opts?.username ?? null);
+    setView('profile');
+    setPmNotice(null);
+  }, []);
 
   const handleAuthSuccess = useCallback((authUser: User, authToken: string) => {
     setUser(authUser);
@@ -209,18 +250,33 @@ export default function App() {
             🔒 {notification}
           </div>
         )}
+        {pmNotice && (
+          <div className="toast pm-toast" onClick={() => setPmNotice(null)}>
+            {pmNotice}
+          </div>
+        )}
         {error && (
           <div className="toast error" onClick={() => setError(null)}>
             {error}
           </div>
         )}
-        <Room socket={socket} state={roomState} onLeave={leaveRoom} />
+        <Room
+          socket={socket}
+          state={roomState}
+          onLeave={leaveRoom}
+          currentUserId={user.id}
+        />
       </div>
     );
   }
 
   return (
     <div className="app app-shell">
+      {pmNotice && (
+        <div className="toast pm-toast" onClick={() => setPmNotice(null)}>
+          {pmNotice}
+        </div>
+      )}
       {notification && (
         <div className="toast" onClick={() => setNotification(null)}>
           🔒 {notification}
@@ -233,17 +289,50 @@ export default function App() {
       )}
 
       <div className="app-body">
-        {view === 'lobby' && <Lobby rooms={rooms} onJoin={joinRoom} />}
-        {view === 'rules' && <Rules />}
+        {view === 'lobby' && (
+          <Lobby
+            rooms={rooms}
+            onJoin={joinRoom}
+            unreadMailCount={unreadMailCount}
+            onOpenMessages={() => openMessages()}
+          />
+        )}
+        {view === 'info' && <Info />}
+        {view === 'staff' && <Staff />}
         {view === 'profile' && (
-          <Profile user={user} onUpdate={handleUserUpdate} onBack={() => setView('lobby')} />
+          <Profile
+            user={user}
+            onUpdate={handleUserUpdate}
+            onBack={() => {
+              setView('lobby');
+              setComposeToUserId(null);
+              setComposeToUsername(null);
+              setProfileTab('settings');
+            }}
+            initialTab={profileTab}
+            composeToUserId={composeToUserId}
+            composeToUsername={composeToUsername}
+            onUnreadChange={setUnreadMailCount}
+          />
         )}
         {view === 'admin' && user.isAdmin && (
           <AdminPanel onBack={() => setView('lobby')} />
         )}
       </div>
 
-      <Menu user={user} view={view} onNavigate={(v) => setView(v)} onLogout={handleLogout} />
+      <Menu
+        user={user}
+        view={view}
+        unreadMailCount={unreadMailCount}
+        onNavigate={(v) => {
+          if (v === 'profile') {
+            setProfileTab('settings');
+            setComposeToUserId(null);
+          }
+          setView(v);
+        }}
+        onLogout={handleLogout}
+      />
     </div>
   );
 }

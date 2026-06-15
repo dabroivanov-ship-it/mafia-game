@@ -1,8 +1,12 @@
-export default function Rules() {
+interface RulesProps {
+  embedded?: boolean;
+}
+
+export default function Rules({ embedded = false }: RulesProps) {
   return (
-    <div className="rules-page">
+    <div className={embedded ? 'rules-embedded' : 'rules-page'}>
       <div className="rules-card">
-        <h2>Правила игры</h2>
+        {!embedded && <h2>Правила игры</h2>}
 
         <section className="rules-section">
           <h3>Цель</h3>
@@ -16,7 +20,7 @@ export default function Rules() {
           <h3>Как начать</h3>
           <ul>
             <li>Выберите комнату и нажмите «Войти».</li>
-            <li>Кто-то нажимает «Запустить игру» — открывается регистрация (30 сек).</li>
+            <li>Кто-то нажимает «Запустить игру» — открывается регистрация (60 сек).</li>
             <li>
               Остальные нажимают <strong>«Присоединиться к игре»</strong>, иначе остаются
               наблюдателями.

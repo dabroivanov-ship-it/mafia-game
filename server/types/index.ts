@@ -40,6 +40,17 @@ export interface User {
   total_score: number;
   created_at: string;
   chat_limit?: number;
+  last_ip?: string | null;
+  last_user_agent?: string | null;
+}
+
+export interface StaffMember {
+  id: number;
+  username: string;
+  displayName: string;
+  city: string;
+  avatar: string | null;
+  role: 'admin' | 'moderator';
 }
 
 export interface PublicUser {

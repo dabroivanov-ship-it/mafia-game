@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
-import type { PublicUser, User } from '../types/index.js';
+import type { PublicUser, User, StaffMember } from '../types/index.js';
 import { getDataDir, getDbPath, getUploadsDir } from '../paths.js';
 
 const dataDir = getDataDir();
@@ -51,6 +51,8 @@ function migrateColumns(): void {
   if (!cols.includes('ban_reason')) add('ALTER TABLE users ADD COLUMN ban_reason TEXT DEFAULT NULL');
   if (!cols.includes('banned_until')) add('ALTER TABLE users ADD COLUMN banned_until TEXT DEFAULT NULL');
   if (!cols.includes('chat_limit')) add('ALTER TABLE users ADD COLUMN chat_limit INTEGER NOT NULL DEFAULT 15');
+  if (!cols.includes('last_ip')) add('ALTER TABLE users ADD COLUMN last_ip TEXT DEFAULT NULL');
+  if (!cols.includes('last_user_agent')) add('ALTER TABLE users ADD COLUMN last_user_agent TEXT DEFAULT NULL');
 }
 
 migrateColumns();
@@ -228,6 +230,36 @@ export function listAllUsers(): PublicUser[] {
     )
     .all() as User[];
   return rows.map((row) => publicUser(row)!);
+}
+
+export function listStaffUsers(): StaffMember[] {
+  const rows = db
+    .prepare(
+      `SELECT id, username, display_name, city, avatar, role
+       FROM users WHERE role IN ('admin', 'moderator')
+       ORDER BY CASE role WHEN 'admin' THEN 0 ELSE 1 END, display_name COLLATE NOCASE`
+    )
+    .all() as Pick<User, 'id' | 'username' | 'display_name' | 'city' | 'avatar' | 'role'>[];
+  return rows.map((row) => ({
+    id: row.id,
+    username: row.username,
+    displayName: row.display_name,
+    city: row.city || '',
+    avatar: row.avatar || null,
+    role: row.role as 'admin' | 'moderator',
+  }));
+}
+
+export function updateUserConnectionInfo(
+  userId: number,
+  ip: string | null,
+  userAgent: string | null
+): void {
+  db.prepare('UPDATE users SET last_ip = ?, last_user_agent = ? WHERE id = ?').run(
+    ip || null,
+    userAgent ? userAgent.slice(0, 500) : null,
+    userId
+  );
 }
 
 export function banUser(userId: number, reason: string | undefined, until: string | null = null): PublicUser | null {

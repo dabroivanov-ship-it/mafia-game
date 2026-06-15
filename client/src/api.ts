@@ -1,4 +1,4 @@
-import type { User } from './types';
+import type { User, StaffMember, ProfileStaffMeta, PrivateMessage } from './types';
 
 const API_BASE =
   import.meta.env.VITE_API_URL ??
@@ -95,10 +95,41 @@ export async function uploadAvatar(file: File): Promise<{ user: User }> {
   return data as { user: User };
 }
 
+export async function fetchUnreadMailCount(): Promise<{ count: number }> {
+  return apiRequest('/api/messages/unread-count');
+}
+
+export async function fetchInbox(): Promise<{ messages: PrivateMessage[] }> {
+  return apiRequest('/api/messages/inbox');
+}
+
+export async function fetchOutbox(): Promise<{ messages: PrivateMessage[] }> {
+  return apiRequest('/api/messages/outbox');
+}
+
+export async function sendPrivateMessage(
+  toUserId: number,
+  text: string
+): Promise<{ message: PrivateMessage }> {
+  return apiRequest('/api/messages', {
+    method: 'POST',
+    body: JSON.stringify({ toUserId, text }),
+  });
+}
+
+export async function markMessageRead(messageId: number): Promise<{ unreadCount: number }> {
+  return apiRequest(`/api/messages/${messageId}/read`, { method: 'POST' });
+}
+
+export async function fetchStaffList(): Promise<{ staff: StaffMember[] }> {
+  return apiRequest('/api/profile/staff/list');
+}
+
 export async function fetchUserProfile(userId: number): Promise<{
   user: User & { messageCount?: number };
   canAdmin: boolean;
   canModerate: boolean;
+  staffMeta?: ProfileStaffMeta;
 }> {
   return apiRequest(`/api/profile/${userId}`);
 }

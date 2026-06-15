@@ -12,15 +12,27 @@ const PHASE_LABELS: Record<GamePhase, string> = {
 interface LobbyProps {
   rooms: LobbyRoom[];
   onJoin: (roomId: number) => void;
+  unreadMailCount?: number;
+  onOpenMessages?: () => void;
 }
 
-export default function Lobby({ rooms, onJoin }: LobbyProps) {
+export default function Lobby({ rooms, onJoin, unreadMailCount = 0, onOpenMessages }: LobbyProps) {
   return (
     <div className="lobby">
       <header className="lobby-header">
         <h1>🎭 Мафия</h1>
         <p>Выберите комнату для игры</p>
       </header>
+
+      {unreadMailCount > 0 && (
+        <button type="button" className="lobby-mail-notice" onClick={onOpenMessages}>
+          <span className="lobby-mail-notice-icon">✉️</span>
+          <span>
+            У вас {unreadMailCount} нов{unreadMailCount === 1 ? 'ое' : unreadMailCount < 5 ? 'ых' : 'ых'}{' '}
+            сообщени{unreadMailCount === 1 ? 'е' : unreadMailCount < 5 ? 'я' : 'й'} — открыть письма
+          </span>
+        </button>
+      )}
 
       <div className="rooms-list">
         {rooms.length === 0 && <p className="muted">Загрузка комнат...</p>}

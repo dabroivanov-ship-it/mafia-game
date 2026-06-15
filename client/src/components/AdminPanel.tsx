@@ -37,6 +37,7 @@ export default function AdminPanel({ onBack }: AdminPanelProps) {
   const [banTarget, setBanTarget] = useState<User | null>(null);
   const [banReason, setBanReason] = useState('Нарушение правил');
   const [banHours, setBanHours] = useState('');
+  const [userSearch, setUserSearch] = useState('');
   const [editUser, setEditUser] = useState<User | null>(null);
   const [editForm, setEditForm] = useState({ displayName: '', city: '', bio: '' });
   const [newRoomName, setNewRoomName] = useState('');
@@ -243,6 +244,17 @@ export default function AdminPanel({ onBack }: AdminPanelProps) {
 
   const roomNameById = (id: number) => rooms.find((r) => r.id === id)?.name || `Комната ${id}`;
 
+  const filteredUsers = users.filter((u) => {
+    const q = userSearch.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      u.username.toLowerCase().includes(q) ||
+      u.displayName.toLowerCase().includes(q) ||
+      (u.city || '').toLowerCase().includes(q) ||
+      (u.isAdmin ? 'admin' : u.isModerator ? 'mod moderator' : 'user').includes(q)
+    );
+  });
+
   if (loading && users.length === 0) {
     return <div className="admin-page"><p className="muted">Загрузка...</p></div>;
   }
@@ -278,7 +290,16 @@ export default function AdminPanel({ onBack }: AdminPanelProps) {
         <div className="admin-content">
           {section === 'users' && (
             <section className="admin-section">
-              <h3>Управление пользователями ({users.length})</h3>
+              <h3>Управление пользователями ({filteredUsers.length}{userSearch ? ` из ${users.length}` : ''})</h3>
+              <div className="admin-search-row">
+                <input
+                  type="search"
+                  className="admin-search-input"
+                  placeholder="Поиск по логину, имени, городу или роли..."
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                />
+              </div>
               <div className="admin-table-wrap">
                 <table className="admin-table">
                   <thead>
@@ -292,7 +313,12 @@ export default function AdminPanel({ onBack }: AdminPanelProps) {
                     </tr>
                   </thead>
                   <tbody>
-                    {users.map((u) => (
+                    {filteredUsers.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="muted">Ничего не найдено</td>
+                      </tr>
+                    )}
+                    {filteredUsers.map((u) => (
                       <tr key={u.id}>
                         <td>
                           <div className="admin-user-cell">

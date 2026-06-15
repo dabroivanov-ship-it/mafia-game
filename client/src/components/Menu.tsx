@@ -1,7 +1,7 @@
 import { avatarUrl } from '../api';
 import type { User } from '../types';
 
-type MenuView = 'lobby' | 'rules' | 'profile' | 'admin' | 'room';
+type MenuView = 'lobby' | 'info' | 'staff' | 'profile' | 'admin' | 'room';
 
 interface MenuItem {
   id: MenuView;
@@ -12,18 +12,20 @@ interface MenuItem {
 
 const ITEMS: MenuItem[] = [
   { id: 'lobby', icon: '🏠', label: 'Комнаты' },
-  { id: 'rules', icon: '📖', label: 'Правила' },
+  { id: 'info', icon: 'ℹ️', label: 'Информация' },
+  { id: 'staff', icon: '🛡️', label: 'Команда' },
   { id: 'profile', icon: null, label: 'Профиль', avatar: true },
 ];
 
 interface MenuProps {
   user: User;
   view: MenuView;
+  unreadMailCount?: number;
   onNavigate: (view: MenuView) => void;
   onLogout: () => void;
 }
 
-export default function Menu({ user, view, onNavigate, onLogout }: MenuProps) {
+export default function Menu({ user, view, unreadMailCount = 0, onNavigate, onLogout }: MenuProps) {
   return (
     <nav className="main-menu" aria-label="Главное меню">
       <div className="menu-logo" aria-hidden="true">
@@ -48,6 +50,9 @@ export default function Menu({ user, view, onNavigate, onLogout }: MenuProps) {
               <span className="menu-icon">{item.icon}</span>
             )}
             <span className="menu-label">{item.label}</span>
+            {item.id === 'profile' && unreadMailCount > 0 && (
+              <span className="menu-badge">{unreadMailCount > 99 ? '99+' : unreadMailCount}</span>
+            )}
           </button>
         ))}
         {user.isAdmin && (
@@ -56,7 +61,7 @@ export default function Menu({ user, view, onNavigate, onLogout }: MenuProps) {
             className={`menu-item admin ${view === 'admin' ? 'active' : ''}`}
             onClick={() => onNavigate('admin')}
           >
-            <span className="menu-icon">🛡️</span>
+            <span className="menu-icon">⚙️</span>
             <span className="menu-label">Админ</span>
           </button>
         )}

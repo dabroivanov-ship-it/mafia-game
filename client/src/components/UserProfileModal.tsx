@@ -8,11 +8,13 @@ import {
   modUnban,
   adminDeleteUser,
   adminUpdateUser,
+  sendPrivateMessage,
 } from '../api';
-import type { User } from '../types';
+import type { User, ProfileStaffMeta } from '../types';
 
 interface UserProfileModalProps {
   userId: number;
+  currentUserId: number;
   viewerIsAdmin: boolean;
   viewerCanModerate?: boolean;
   onClose: () => void;
@@ -23,10 +25,12 @@ interface ProfileData {
   user: User & { messageCount?: number };
   canAdmin: boolean;
   canModerate: boolean;
+  staffMeta?: ProfileStaffMeta;
 }
 
 export default function UserProfileModal({
   userId,
+  currentUserId,
   viewerIsAdmin,
   viewerCanModerate = false,
   onClose,
@@ -40,6 +44,10 @@ export default function UserProfileModal({
   const [banReason, setBanReason] = useState('Нарушение правил');
   const [banHours, setBanHours] = useState('');
   const [showBanForm, setShowBanForm] = useState(false);
+  const [showCompose, setShowCompose] = useState(false);
+  const [mailText, setMailText] = useState('');
+  const [mailSending, setMailSending] = useState(false);
+  const [mailSuccess, setMailSuccess] = useState('');
 
   const load = async () => {
     setLoading(true);
@@ -111,6 +119,24 @@ export default function UserProfileModal({
   const user = data?.user;
   const canAdmin = data?.canAdmin && viewerIsAdmin;
   const canModerate = (data?.canModerate && viewerCanModerate) || canAdmin;
+  const canWriteMail = userId !== currentUserId;
+
+  const handleSendMail = async () => {
+    if (!mailText.trim()) return;
+    setMailSending(true);
+    setError('');
+    setMailSuccess('');
+    try {
+      await sendPrivateMessage(userId, mailText.trim());
+      setMailText('');
+      setShowCompose(false);
+      setMailSuccess('Письмо отправлено');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка отправки');
+    } finally {
+      setMailSending(false);
+    }
+  };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -122,6 +148,7 @@ export default function UserProfileModal({
 
         {loading && <p className="muted">Загрузка...</p>}
         {error && <div className="auth-error">{error}</div>}
+        {mailSuccess && <div className="auth-success">{mailSuccess}</div>}
 
         {!loading && user && (
           <>
@@ -151,6 +178,53 @@ export default function UserProfileModal({
                 {user.isBanned && (
                   <div className="auth-error">
                     Заблокирован{user.banReason ? `: ${user.banReason}` : ''}
+                  </div>
+                )}
+                {canModerate && data?.staffMeta && (
+                  <div className="profile-staff-meta">
+                    <h4>Данные подключения</h4>
+                    <div className="profile-staff-meta-row">
+                      <span className="muted">IP</span>
+                      <strong>{data.staffMeta.lastIp || '—'}</strong>
+                    </div>
+                    <div className="profile-staff-meta-row">
+                      <span className="muted">Софт / браузер</span>
+                      <strong className="profile-user-agent">
+                        {data.staffMeta.lastUserAgent || '—'}
+                      </strong>
+                    </div>
+                  </div>
+                )}
+                {canWriteMail && !editMode && (
+                  <div className="profile-mail-actions">
+                    {!showCompose ? (
+                      <button type="button" className="btn btn-sm btn-primary" onClick={() => setShowCompose(true)}>
+                        ✉️ Написать
+                      </button>
+                    ) : (
+                      <div className="mail-compose-inline">
+                        <textarea
+                          value={mailText}
+                          onChange={(e) => setMailText(e.target.value)}
+                          rows={4}
+                          maxLength={2000}
+                          placeholder="Личное сообщение..."
+                        />
+                        <div className="profile-actions">
+                          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowCompose(false)}>
+                            Отмена
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-primary btn-sm"
+                            disabled={mailSending}
+                            onClick={() => void handleSendMail()}
+                          >
+                            {mailSending ? 'Отправка...' : 'Отправить'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </>
@@ -192,10 +266,15 @@ export default function UserProfileModal({
               </div>
             )}
 
-            {canModerate && !editMode && !canAdmin && (
+            {canModerate && !editMode && (
               <div className="admin-profile-actions">
-                <h4>Модерация</h4>
+                <h4>{canAdmin ? 'Администрирование' : 'Модерация'}</h4>
                 <div className="admin-profile-buttons">
+                  {canAdmin && (
+                    <button type="button" className="btn btn-sm" onClick={() => setEditMode(true)}>
+                      Редактировать
+                    </button>
+                  )}
                   {!user.isBanned ? (
                     <button type="button" className="btn btn-sm danger" onClick={() => setShowBanForm(true)}>
                       Забанить
@@ -205,56 +284,11 @@ export default function UserProfileModal({
                       Разбанить
                     </button>
                   )}
-                </div>
-
-                {showBanForm && (
-                  <div className="ban-form">
-                    <label>
-                      Причина
-                      <input value={banReason} onChange={(e) => setBanReason(e.target.value)} />
-                    </label>
-                    <label>
-                      Часов (пусто = навсегда)
-                      <input
-                        type="number"
-                        min="1"
-                        value={banHours}
-                        onChange={(e) => setBanHours(e.target.value)}
-                        placeholder="24"
-                      />
-                    </label>
-                    <div className="profile-actions">
-                      <button type="button" className="btn btn-ghost" onClick={() => setShowBanForm(false)}>
-                        Отмена
-                      </button>
-                      <button type="button" className="btn btn-primary danger" onClick={handleBan}>
-                        Забанить
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {canAdmin && !editMode && (
-              <div className="admin-profile-actions">
-                <h4>Администрирование</h4>
-                <div className="admin-profile-buttons">
-                  <button type="button" className="btn btn-sm" onClick={() => setEditMode(true)}>
-                    Редактировать
-                  </button>
-                  {!user.isBanned ? (
-                    <button type="button" className="btn btn-sm danger" onClick={() => setShowBanForm(true)}>
-                      Забанить
-                    </button>
-                  ) : (
-                    <button type="button" className="btn btn-sm" onClick={handleUnban}>
-                      Разбанить
+                  {canAdmin && (
+                    <button type="button" className="btn btn-sm btn-ghost" onClick={handleDelete}>
+                      Удалить
                     </button>
                   )}
-                  <button type="button" className="btn btn-sm btn-ghost" onClick={handleDelete}>
-                    Удалить
-                  </button>
                 </div>
 
                 {showBanForm && (
