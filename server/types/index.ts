@@ -176,6 +176,8 @@ export interface RoomState {
     username: string;
     inGame: boolean;
     connected: boolean;
+    alive: boolean;
+    hasVoted: boolean;
   } | null;
   myRole: RoleId | null;
   myRoleLabel: string | null;
