@@ -5,7 +5,6 @@ import {
   adminBan,
   adminUnban,
   adminDeleteUser,
-  adminDeleteMessage,
   adminClearRoomMessages,
   adminRenameRoom,
   adminCreateRoom,
@@ -14,27 +13,19 @@ import {
   adminSetUserRole,
   adminUploadUserAvatar,
   adminRemoveUserAvatar,
-  fetchAdminNews,
-  adminCreateNews,
-  adminUpdateNews,
-  adminDeleteNews,
-  type AdminGameEvent,
-  type AdminMessage,
   type AdminRoom,
 } from '../api';
-import type { User, NewsPost } from '../types';
+import type { User } from '../types';
 
 interface AdminPanelProps {
   onBack: () => void;
 }
 
-type AdminSection = 'users' | 'rooms' | 'messages' | 'news' | 'system';
+type AdminSection = 'users' | 'rooms' | 'system';
 
 export default function AdminPanel({ onBack }: AdminPanelProps) {
   const [section, setSection] = useState<AdminSection>('users');
   const [users, setUsers] = useState<User[]>([]);
-  const [messages, setMessages] = useState<AdminMessage[]>([]);
-  const [gameEvents, setGameEvents] = useState<AdminGameEvent[]>([]);
   const [rooms, setRooms] = useState<AdminRoom[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -49,10 +40,6 @@ export default function AdminPanel({ onBack }: AdminPanelProps) {
   const dirtyRoomsRef = useRef(new Set<number>());
   const roomEditsInitializedRef = useRef(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
-  const [newsPosts, setNewsPosts] = useState<NewsPost[]>([]);
-  const [newsLoading, setNewsLoading] = useState(false);
-  const [newsForm, setNewsForm] = useState({ title: '', body: '', isPublished: true });
-  const [editNews, setEditNews] = useState<NewsPost | null>(null);
 
   const load = async ({ silent = false, syncRoomNames = false } = {}) => {
     if (!silent) setLoading(true);
@@ -60,8 +47,6 @@ export default function AdminPanel({ onBack }: AdminPanelProps) {
     try {
       const data = await fetchAdminOverview();
       setUsers(data.users || []);
-      setMessages(data.messages || []);
-      setGameEvents(data.gameEvents || []);
       setRooms(data.rooms || []);
 
       if (!roomEditsInitializedRef.current || syncRoomNames) {
@@ -85,22 +70,6 @@ export default function AdminPanel({ onBack }: AdminPanelProps) {
     const id = setInterval(() => void load({ silent: true }), 10000);
     return () => clearInterval(id);
   }, []);
-
-  const loadNews = async () => {
-    setNewsLoading(true);
-    try {
-      const { news } = await fetchAdminNews();
-      setNewsPosts(news);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка загрузки новостей');
-    } finally {
-      setNewsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (section === 'news') void loadNews();
-  }, [section]);
 
   const openEditUser = (u: User) => {
     setEditUser(u);
@@ -240,15 +209,6 @@ export default function AdminPanel({ onBack }: AdminPanelProps) {
     }
   };
 
-  const handleDeleteMsg = async (msg: AdminMessage) => {
-    try {
-      await adminDeleteMessage(msg.roomId, msg.id, msg.channel);
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка удаления');
-    }
-  };
-
   const handleClearRoomMessages = async (roomId: number, roomName: string) => {
     if (!confirm(`Очистить все сообщения в комнате «${roomName}»?`)) return;
     try {
@@ -258,78 +218,6 @@ export default function AdminPanel({ onBack }: AdminPanelProps) {
       setError(err instanceof Error ? err.message : 'Ошибка очистки сообщений');
     }
   };
-
-  const resetNewsForm = () => {
-    setNewsForm({ title: '', body: '', isPublished: true });
-    setEditNews(null);
-  };
-
-  const handleSaveNews = async (e: FormEvent) => {
-    e.preventDefault();
-    const title = newsForm.title.trim();
-    const body = newsForm.body.trim();
-    if (!title || !body) {
-      setError('Заголовок и текст новости обязательны');
-      return;
-    }
-    try {
-      if (editNews) {
-        await adminUpdateNews(editNews.id, {
-          title,
-          body,
-          isPublished: newsForm.isPublished,
-        });
-      } else {
-        await adminCreateNews({
-          title,
-          body,
-          isPublished: newsForm.isPublished,
-        });
-      }
-      resetNewsForm();
-      await loadNews();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка сохранения новости');
-    }
-  };
-
-  const handleEditNews = (item: NewsPost) => {
-    setEditNews(item);
-    setNewsForm({
-      title: item.title,
-      body: item.body,
-      isPublished: item.isPublished,
-    });
-  };
-
-  const handleDeleteNews = async (id: number) => {
-    if (!confirm('Удалить эту новость?')) return;
-    try {
-      await adminDeleteNews(id);
-      if (editNews?.id === id) resetNewsForm();
-      await loadNews();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка удаления новости');
-    }
-  };
-
-  const handleToggleNewsPublished = async (item: NewsPost) => {
-    try {
-      await adminUpdateNews(item.id, { isPublished: !item.isPublished });
-      await loadNews();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка обновления');
-    }
-  };
-
-  const eventLabel = (type: string) => {
-    if (type === 'registration_start') return '📝 Регистрация';
-    if (type === 'game_start') return '🎮 Старт игры';
-    if (type === 'game_end') return '🏁 Конец игры';
-    return type;
-  };
-
-  const roomNameById = (id: number) => rooms.find((r) => r.id === id)?.name || `Комната ${id}`;
 
   const filteredUsers = users.filter((u) => {
     const q = userSearch.trim().toLowerCase();
@@ -366,14 +254,8 @@ export default function AdminPanel({ onBack }: AdminPanelProps) {
           <button type="button" className={section === 'rooms' ? 'active' : ''} onClick={() => setSection('rooms')}>
             Комнаты
           </button>
-          <button type="button" className={section === 'messages' ? 'active' : ''} onClick={() => setSection('messages')}>
-            Очистка сообщений
-          </button>
-          <button type="button" className={section === 'news' ? 'active' : ''} onClick={() => setSection('news')}>
-            Новости
-          </button>
           <button type="button" className={section === 'system' ? 'active' : ''} onClick={() => setSection('system')}>
-            Система и настройки
+            Система
           </button>
         </aside>
 
@@ -499,6 +381,13 @@ export default function AdminPanel({ onBack }: AdminPanelProps) {
                     </button>
                     <button
                       type="button"
+                      className="btn btn-sm btn-ghost"
+                      onClick={() => void handleClearRoomMessages(r.id, r.name)}
+                    >
+                      Очистить чат
+                    </button>
+                    <button
+                      type="button"
                       className="btn btn-sm danger"
                       onClick={() => void handleDeleteRoom(r.id, r.name)}
                       disabled={rooms.length <= 1}
@@ -521,180 +410,25 @@ export default function AdminPanel({ onBack }: AdminPanelProps) {
             </section>
           )}
 
-          {section === 'messages' && (
-            <>
-              <section className="admin-section">
-                <h3>Очистка комнат от сообщений</h3>
-                <div className="admin-clear-grid">
-                  {rooms.map((room) => (
-                    <div key={room.id} className="admin-clear-card">
-                      <div>
-                        <strong>{room.name}</strong>
-                        <span className="muted">{room.playerCount}/{room.maxPlayers} · {room.phase}</span>
-                      </div>
-                      <button type="button" className="btn btn-sm danger" onClick={() => void handleClearRoomMessages(room.id, room.name)}>
-                        Очистить чат
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <section className="admin-section">
-                <h3>Последние сообщения ({messages.length})</h3>
-                <div className="admin-messages">
-                  {messages.length === 0 && <p className="muted">Сообщений пока нет</p>}
-                  {messages.map((msg) => (
-                    <div key={`${msg.roomId}-${msg.id}`} className={`admin-msg ${msg.deleted ? 'deleted' : ''}`}>
-                      <div className="admin-msg-meta">
-                        <span>{msg.roomName}</span>
-                        <span>
-                          {msg.channel === 'mafia' ? '🔫 мафия' : msg.channel === 'dead' ? '💀 выбывшие' : msg.channel === 'spectator' ? '👁 наблюдатели' : '💬 общий'}
-                        </span>
-                        <span>{new Date(msg.time).toLocaleString('ru-RU')}</span>
-                      </div>
-                      <div className="admin-msg-body">
-                        <strong>{msg.playerName}:</strong> {msg.text}
-                      </div>
-                      {!msg.deleted && (
-                        <button type="button" className="btn btn-sm danger" onClick={() => void handleDeleteMsg(msg)}>
-                          Удалить
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </section>
-            </>
-          )}
-
-          {section === 'news' && (
+          {section === 'system' && (
             <section className="admin-section">
-              <h3>Новости ({newsPosts.length})</h3>
-
-              <form className="admin-news-form" onSubmit={handleSaveNews}>
-                <h4>{editNews ? `Редактирование #${editNews.id}` : 'Новая публикация'}</h4>
-                <label>
-                  Заголовок
-                  <input
-                    value={newsForm.title}
-                    onChange={(e) => setNewsForm({ ...newsForm, title: e.target.value })}
-                    maxLength={200}
-                    required
-                  />
-                </label>
-                <label>
-                  Текст
-                  <textarea
-                    value={newsForm.body}
-                    onChange={(e) => setNewsForm({ ...newsForm, body: e.target.value })}
-                    rows={6}
-                    maxLength={10000}
-                    required
-                  />
-                </label>
-                <label className="admin-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={newsForm.isPublished}
-                    onChange={(e) => setNewsForm({ ...newsForm, isPublished: e.target.checked })}
-                  />
-                  Опубликовать сразу
-                </label>
-                <div className="profile-actions">
-                  {editNews && (
-                    <button type="button" className="btn btn-ghost" onClick={resetNewsForm}>
-                      Отмена
-                    </button>
-                  )}
-                  <button type="submit" className="btn btn-primary">
-                    {editNews ? 'Сохранить' : 'Добавить новость'}
-                  </button>
+              <h3>Система</h3>
+              <div className="admin-system-grid">
+                <div className="admin-system-card">
+                  <span className="muted">Пользователей</span>
+                  <strong>{users.length}</strong>
                 </div>
-              </form>
-
-              {newsLoading && newsPosts.length === 0 && <p className="muted">Загрузка...</p>}
-
-              <div className="news-list admin-news-list">
-                {newsPosts.length === 0 && !newsLoading && <p className="muted">Новостей пока нет</p>}
-                {newsPosts.map((item) => (
-                  <article key={item.id} className="news-card">
-                    <header className="news-card-header">
-                      <h2>{item.title}</h2>
-                      <time className="muted" dateTime={item.createdAt}>
-                        {new Date(item.createdAt).toLocaleString('ru-RU')}
-                      </time>
-                    </header>
-                    <p className="news-author muted">
-                      {item.authorName || '—'} · {item.isPublished ? 'опубликовано' : 'черновик'}
-                    </p>
-                    <div className="news-body">{item.body}</div>
-                    <div className="admin-actions">
-                      <button type="button" className="btn btn-sm" onClick={() => handleEditNews(item)}>
-                        Редактировать
-                      </button>
-                      <button type="button" className="btn btn-sm" onClick={() => void handleToggleNewsPublished(item)}>
-                        {item.isPublished ? 'Снять с публикации' : 'Опубликовать'}
-                      </button>
-                      <button type="button" className="btn btn-sm danger" onClick={() => void handleDeleteNews(item.id)}>
-                        Удалить
-                      </button>
-                    </div>
-                  </article>
-                ))}
+                <div className="admin-system-card">
+                  <span className="muted">Комнат</span>
+                  <strong>{rooms.length}</strong>
+                </div>
+              </div>
+              <div className="admin-settings-actions">
+                <button type="button" className="btn btn-primary" onClick={() => void load({ syncRoomNames: true })}>
+                  Синхронизировать данные
+                </button>
               </div>
             </section>
-          )}
-
-          {section === 'system' && (
-            <>
-              <section className="admin-section">
-                <h3>Управление системой</h3>
-                <div className="admin-system-grid">
-                  <div className="admin-system-card">
-                    <span className="muted">Пользователей</span>
-                    <strong>{users.length}</strong>
-                  </div>
-                  <div className="admin-system-card">
-                    <span className="muted">Комнат</span>
-                    <strong>{rooms.length}</strong>
-                  </div>
-                  <div className="admin-system-card">
-                    <span className="muted">Последних сообщений</span>
-                    <strong>{messages.length}</strong>
-                  </div>
-                  <div className="admin-system-card">
-                    <span className="muted">Событий игр</span>
-                    <strong>{gameEvents.length}</strong>
-                  </div>
-                </div>
-                <div className="admin-settings-actions">
-                  <button type="button" className="btn btn-primary" onClick={() => void load({ syncRoomNames: true })}>
-                    Синхронизировать данные
-                  </button>
-                </div>
-              </section>
-
-              <section className="admin-section">
-                <h3>История игр ({gameEvents.length})</h3>
-                <div className="admin-game-events">
-                  {gameEvents.length === 0 && <p className="muted">Запусков игр пока нет</p>}
-                  {gameEvents.map((ev) => (
-                    <div key={ev.id} className="admin-game-event">
-                      <span className="admin-game-event-type">{eventLabel(ev.eventType)}</span>
-                      <span>{roomNameById(ev.roomId)}</span>
-                      {ev.payload?.playerCount != null && (
-                        <span className="muted">{ev.payload.playerCount} игроков</span>
-                      )}
-                      {ev.payload?.winnerTeam && (
-                        <span className="muted">победа: {ev.payload.winnerTeam}</span>
-                      )}
-                      <span className="muted">{new Date(ev.time).toLocaleString('ru-RU')}</span>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            </>
           )}
         </div>
       </div>
