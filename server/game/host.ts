@@ -120,47 +120,91 @@ export function buildVotingReminderNotes(room: GameRoom): PrivateNote[] {
 }
 
 export interface NightReport {
+  prostituteSeduced?: GamePlayer;
   commissarChecked?: GamePlayer;
   commissarKilled?: GamePlayer;
-  doctorSaved?: GamePlayer;
-  highlanderAttacked?: GamePlayer;
+  homelessChecked?: GamePlayer;
+  doctorHealed?: GamePlayer;
+  doctorSelfHeal?: boolean;
+  mafiaAttacked?: GamePlayer;
   mafiaKilled?: GamePlayer;
+  mafiaTied?: boolean;
+  highlanderAttacked?: GamePlayer;
   maniacKilled?: GamePlayer;
   wifeKilled?: GamePlayer;
+  clownSwapped?: [GamePlayer, GamePlayer];
   killed: GamePlayer[];
 }
 
 export function buildMorningReportMessages(_room: GameRoom, report: NightReport): string[] {
   const messages: string[] = [getNightCompleteMessage()];
 
+  if (report.prostituteSeduced) {
+    messages.push(
+      `Путана соблазнила ${playerNick(report.prostituteSeduced)} — его ночное действие заблокировано.`
+    );
+  }
+
   if (report.commissarChecked) {
-    messages.push(`Комиссар Катани провёл проверку игрока ${playerNick(report.commissarChecked)}.`);
+    messages.push(`Комиссар Катани проверил ${playerNick(report.commissarChecked)}.`);
   }
   if (report.commissarKilled) {
     messages.push(
-      `Инспектор Катани казнил ${playerNick(report.commissarKilled)} (${getRoleLabel(report.commissarKilled.role)})!`
+      `Комиссар Катани убил ${playerNick(report.commissarKilled)} (${getRoleLabel(report.commissarKilled.role)})!`
     );
   }
-  if (report.doctorSaved) {
-    messages.push(`Доктор вылечил ${playerNick(report.doctorSaved)} — мафия не смогла его убить!`);
+
+  if (report.homelessChecked) {
+    messages.push(`Бомж проверил ${playerNick(report.homelessChecked)}.`);
   }
-  if (report.highlanderAttacked) {
-    messages.push(`Горец ${playerNick(report.highlanderAttacked)} пережил атаку мафии!`);
+
+  if (report.doctorHealed) {
+    const nick = playerNick(report.doctorHealed);
+    if (report.doctorSelfHeal) {
+      messages.push(`Доктор вылечил себя (${nick}).`);
+    } else {
+      messages.push(`Доктор вылечил ${nick}.`);
+    }
   }
-  if (report.mafiaKilled) {
-    messages.push(
-      `Мафия зверски расправилась с ${playerNick(report.mafiaKilled)} (${getRoleLabel(report.mafiaKilled.role)})!`
-    );
-  }
+
   if (report.maniacKilled) {
     messages.push(
       `Маньяк убил ${playerNick(report.maniacKilled)} (${getRoleLabel(report.maniacKilled.role)})!`
     );
   }
+
   if (report.wifeKilled) {
     messages.push(
-      `Жена комиссара отомстила — ${playerNick(report.wifeKilled)} (${getRoleLabel(report.wifeKilled.role)}) не дожил(а) до утра!`
+      `Жена комиссара отомстила — убила ${playerNick(report.wifeKilled)} (${getRoleLabel(report.wifeKilled.role)})!`
     );
+  }
+
+  if (report.clownSwapped) {
+    const [a, b] = report.clownSwapped;
+    messages.push(`Клоун поменял роли ${playerNick(a)} и ${playerNick(b)}!`);
+  }
+
+  if (report.mafiaTied) {
+    messages.push('Мафия не договорилась о жертве — от их рук никто не пострадал.');
+  } else if (report.mafiaAttacked) {
+    if (report.highlanderAttacked) {
+      messages.push(
+        `Мафия напала на ${playerNick(report.highlanderAttacked)}, но горец пережил атаку!`
+      );
+    } else if (report.mafiaKilled) {
+      messages.push(
+        `Мафия убила ${playerNick(report.mafiaKilled)} (${getRoleLabel(report.mafiaKilled.role)})!`
+      );
+    } else if (
+      report.doctorHealed &&
+      report.mafiaAttacked.id === report.doctorHealed.id
+    ) {
+      messages.push(
+        `Мафия напала на ${playerNick(report.mafiaAttacked)}, но доктор спас ${playerNick(report.mafiaAttacked)}!`
+      );
+    } else {
+      messages.push(`Мафия выбрала жертвой ${playerNick(report.mafiaAttacked)}.`);
+    }
   }
 
   messages.push(getMorningIntroMessage(report.killed));
