@@ -55,10 +55,11 @@ interface RoomProps {
   socket: Socket | null;
   state: RoomState | null;
   onLeave: () => void;
+  onStateUpdate?: (state: RoomState) => void;
   currentUserId: number;
 }
 
-export default function Room({ socket, state, onLeave, currentUserId }: RoomProps) {
+export default function Room({ socket, state, onLeave, onStateUpdate, currentUserId }: RoomProps) {
   const [mafiaTab, setMafiaTab] = useState(false);
   const [profileTarget, setProfileTarget] = useState<ChatReplyTarget | null>(null);
   const [loadingMoreChat, setLoadingMoreChat] = useState(false);
@@ -85,7 +86,7 @@ export default function Room({ socket, state, onLeave, currentUserId }: RoomProp
     state.registeredCount < state.maxPlayers;
 
   const emit = (event: string, data?: unknown) =>
-    new Promise<{ error?: string } | undefined>((resolve) => {
+    new Promise<{ error?: string; state?: RoomState } | undefined>((resolve) => {
       socket?.emit(event, data, resolve);
     });
 
@@ -153,6 +154,7 @@ export default function Room({ socket, state, onLeave, currentUserId }: RoomProp
             onClick={async () => {
               const res = await emit('room:joinGame');
               if (res?.error) alert(res.error);
+              else if (res?.state) onStateUpdate?.(res.state);
             }}
           >
             {joinCooldown > 0
@@ -296,6 +298,7 @@ export default function Room({ socket, state, onLeave, currentUserId }: RoomProp
             onClick={async () => {
               const res = await emit('room:start');
               if (res?.error) alert(res.error);
+              else if (res?.state) onStateUpdate?.(res.state);
             }}
           >
             Запустить игру

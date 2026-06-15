@@ -403,9 +403,12 @@ io.on('connection', (socket) => {
       const playerName = socket.displayName!;
       const playerUsername = socket.username!;
       let player;
+      let joinPrivateNotes: PrivateNote[] = [];
 
       if (reconnectId) {
-        player = reconnectPlayer(room, reconnectId, socket.id, playerName, playerUsername);
+        const reconnected = reconnectPlayer(room, reconnectId, socket.id, playerName, playerUsername);
+        player = reconnected.player;
+        joinPrivateNotes = reconnected.privateNotes;
       }
       if (!player) {
         const joined = addPlayerToRoom(room, {
@@ -415,9 +418,7 @@ io.on('connection', (socket) => {
           userId: socket.userId!,
         });
         player = joined.player;
-        if (joined.privateNotes.length) {
-          deliverHostNotes(room, joined.privateNotes);
-        }
+        joinPrivateNotes = joined.privateNotes;
       }
 
       cancelDisconnectTimer(room.id, player.id);
@@ -427,6 +428,9 @@ io.on('connection', (socket) => {
 
       attachSession(socket.id, room.id, player.id, socket.userId);
       socket.join(`room:${room.id}`);
+      if (joinPrivateNotes.length) {
+        deliverHostNotes(room, joinPrivateNotes);
+      }
       broadcastRoom(room.id);
       cb?.({ ok: true, playerId: player.id, state: serializeForSocketUser(room, player.id, socket.userId, socket.id) });
     } catch (e) {
@@ -472,7 +476,10 @@ io.on('connection', (socket) => {
       const { privateNotes } = joinGame(room, session.playerId);
       broadcastRoom(room.id);
       deliverHostNotes(room, privateNotes);
-      cb?.({ ok: true });
+      cb?.({
+        ok: true,
+        state: serializeForSocketUser(room, session.playerId, socket.userId, socket.id),
+      });
     } catch (e) {
       const err = e as Error;
       cb?.({ error: err.message });

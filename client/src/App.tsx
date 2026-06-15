@@ -200,8 +200,6 @@ export default function App() {
     socket?.emit('room:detach');
     setCurrentRoomId(null);
     setRoomState(null);
-    localStorage.removeItem('mafia_player_id');
-    setPlayerId(null);
     setView('lobby');
   }, [socket]);
 
@@ -273,6 +271,7 @@ export default function App() {
           socket={socket}
           state={roomState}
           onLeave={leaveRoom}
+          onStateUpdate={setRoomState}
           currentUserId={user.id}
         />
       </div>
