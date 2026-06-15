@@ -1266,6 +1266,8 @@ export function serializeRoomForPlayer(
           username: me.username || me.name,
           inGame: !!me.inGame,
           connected: me.connected,
+          alive: me.alive,
+          hasVoted: me.hasVoted,
         }
       : null,
     myRole: me?.inGame ? me.role || null : null,

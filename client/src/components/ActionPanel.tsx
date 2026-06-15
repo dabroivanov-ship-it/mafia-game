@@ -11,9 +11,10 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
   const [clownFirst, setClownFirst] = useState<number | null>(null);
   const [commissarMode, setCommissarMode] = useState<'check' | 'kill' | null>(null);
 
-  const me =
-    state.myPlayer || state.players.find((p) => p.id === state.myId);
-  if (!state.isInGame || !me?.alive || !state.myRole) return null;
+  const me = state.myPlayer;
+  const meInList = state.players.find((p) => p.id === state.myId);
+  const alive = me?.alive ?? meInList?.alive;
+  if (!state.isInGame || !alive || !state.myRole) return null;
 
   const aliveOthers = state.players.filter((p) => p.alive && p.id !== state.myId);
   const allAlive = state.players.filter((p) => p.alive);
@@ -45,7 +46,8 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
   }
 
   if (state.phase === 'voting') {
-    if (me.hasVoted) {
+    const hasVoted = me?.hasVoted ?? meInList?.hasVoted;
+    if (hasVoted) {
       return (
         <div className="action-panel">
           <p className="muted">Вы проголосовали ✓</p>
