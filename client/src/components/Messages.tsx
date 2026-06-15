@@ -29,7 +29,7 @@ export default function Messages({
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [composeTo, setComposeTo] = useState(
-    composeToUserId ? String(composeToUserId) : ''
+    composeToUsername ? `@${composeToUsername}` : composeToUserId ? String(composeToUserId) : ''
   );
   const [composeText, setComposeText] = useState('');
   const [sending, setSending] = useState(false);
@@ -61,8 +61,11 @@ export default function Messages({
     if (composeToUserId) {
       setComposeTo(String(composeToUserId));
       setTab('compose');
+    } else if (composeToUsername) {
+      setComposeTo(`@${composeToUsername}`);
+      setTab('compose');
     }
-  }, [composeToUserId]);
+  }, [composeToUserId, composeToUsername]);
 
   const handleRead = async (msg: PrivateMessage) => {
     if (msg.isRead) return;
@@ -83,7 +86,8 @@ export default function Messages({
     setSuccess('');
     setSending(true);
     try {
-      await sendPrivateMessage(Number(composeTo), composeText.trim());
+      const recipient = composeToUserId ?? composeTo.trim();
+      await sendPrivateMessage(recipient, composeText.trim());
       setComposeText('');
       setSuccess('Сообщение отправлено');
       setTab('outbox');
@@ -95,8 +99,8 @@ export default function Messages({
     }
   };
 
-  const replyTo = (userId: number) => {
-    setComposeTo(String(userId));
+  const replyTo = (username: string) => {
+    setComposeTo(`@${username}`);
     setTab('compose');
   };
 
@@ -126,7 +130,7 @@ export default function Messages({
         <div className="mail-list">
           {inbox.length === 0 && <p className="muted">Входящих писем нет</p>}
           {inbox.map((msg) => (
-            <MailItem key={msg.id} msg={msg} direction="inbox" onOpen={() => void handleRead(msg)} onReply={() => replyTo(msg.otherUser.id)} />
+            <MailItem key={msg.id} msg={msg} direction="inbox" onOpen={() => void handleRead(msg)} onReply={() => replyTo(msg.otherUser.username)} />
           ))}
         </div>
       )}
@@ -135,7 +139,7 @@ export default function Messages({
         <div className="mail-list">
           {outbox.length === 0 && <p className="muted">Исходящих писем нет</p>}
           {outbox.map((msg) => (
-            <MailItem key={msg.id} msg={msg} direction="outbox" onReply={() => replyTo(msg.otherUser.id)} />
+            <MailItem key={msg.id} msg={msg} direction="outbox" onReply={() => replyTo(msg.otherUser.username)} />
           ))}
         </div>
       )}
@@ -151,13 +155,12 @@ export default function Messages({
               </>
             ) : (
               <>
-                Кому (ID пользователя)
+                Кому (логин)
                 <input
-                  type="number"
-                  min="1"
+                  type="text"
                   value={composeTo}
                   onChange={(e) => setComposeTo(e.target.value)}
-                  placeholder="ID получателя"
+                  placeholder="@username"
                   required
                 />
               </>

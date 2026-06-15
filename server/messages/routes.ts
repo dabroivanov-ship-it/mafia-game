@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authMiddleware } from '../auth/jwt.js';
-import { findUserById } from '../auth/db.js';
+import { findUserById, findUserByUsername } from '../auth/db.js';
 import {
   sendPrivateMessage,
   listInbox,
@@ -37,9 +37,15 @@ export function createMessagesRouter({ onMessageSent, onMessageRead }: MessagesR
   });
 
   router.post('/', (req, res) => {
-    const toUserId = Number(req.body.toUserId);
+    let toUserId = Number(req.body.toUserId);
+    if (!toUserId && req.body.toUsername) {
+      const name = String(req.body.toUsername).trim().replace(/^@/, '');
+      const byName = findUserByUsername(name);
+      if (!byName) return res.status(404).json({ error: 'Пользователь не найден' });
+      toUserId = byName.id;
+    }
     const text = String(req.body.text || '').trim();
-    if (!toUserId) return res.status(400).json({ error: 'Укажите получателя' });
+    if (!toUserId) return res.status(400).json({ error: 'Укажите получателя (логин или ID)' });
     if (!text) return res.status(400).json({ error: 'Сообщение не может быть пустым' });
     if (text.length > 2000) return res.status(400).json({ error: 'Слишком длинное сообщение' });
 

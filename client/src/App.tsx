@@ -251,7 +251,13 @@ export default function App() {
           </div>
         )}
         {pmNotice && (
-          <div className="toast pm-toast" onClick={() => setPmNotice(null)}>
+          <div
+            className="toast pm-toast"
+            onClick={() => {
+              leaveRoom();
+              openMessages();
+            }}
+          >
             {pmNotice}
           </div>
         )}
@@ -273,7 +279,7 @@ export default function App() {
   return (
     <div className="app app-shell">
       {pmNotice && (
-        <div className="toast pm-toast" onClick={() => setPmNotice(null)}>
+        <div className="toast pm-toast" onClick={() => { setPmNotice(null); openMessages(); }}>
           {pmNotice}
         </div>
       )}

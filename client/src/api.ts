@@ -108,12 +108,16 @@ export async function fetchOutbox(): Promise<{ messages: PrivateMessage[] }> {
 }
 
 export async function sendPrivateMessage(
-  toUserId: number,
+  to: number | string,
   text: string
 ): Promise<{ message: PrivateMessage }> {
+  const body =
+    typeof to === 'number' || /^\d+$/.test(String(to).trim())
+      ? { toUserId: Number(to), text }
+      : { toUsername: String(to).trim().replace(/^@/, ''), text };
   return apiRequest('/api/messages', {
     method: 'POST',
-    body: JSON.stringify({ toUserId, text }),
+    body: JSON.stringify(body),
   });
 }
 
