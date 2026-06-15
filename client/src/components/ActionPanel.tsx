@@ -13,10 +13,14 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
 
   const me =
     state.myPlayer || state.players.find((p) => p.id === state.myId);
-  if (!state.canPlay || !me?.alive) return null;
+  if (!state.isInGame || !me?.alive || !state.myRole) return null;
 
   const aliveOthers = state.players.filter((p) => p.alive && p.id !== state.myId);
   const allAlive = state.players.filter((p) => p.alive);
+
+  if (state.phase !== 'night' && state.phase !== 'day' && state.phase !== 'voting') {
+    return null;
+  }
 
   const targetBtn = (player: RoomPlayer, onClick: (id: number) => void, selected = false) => (
     <button

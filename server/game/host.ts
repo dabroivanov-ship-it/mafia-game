@@ -1,46 +1,55 @@
 import { CONFIG, ROLE_LABELS } from './config.js';
-import { getRoleLabel, isMafia } from './roles.js';
+import { getRoleLabel, isEvil, isMafia } from './roles.js';
 import type { GamePlayer, GameRoom, PrivateNote, RoleId } from '../types/index.js';
 
 function pick<T>(items: T[]): T {
   return items[Math.floor(Math.random() * items.length)];
 }
 
-function aliveNames(room: GameRoom): string[] {
-  return room.players.filter((p) => p.alive && p.inGame && p.role).map((p) => p.name);
+function aliveNames(room: GameRoom, excludeId?: number): string[] {
+  return room.players
+    .filter((p) => p.alive && p.inGame && p.role && p.id !== excludeId)
+    .map((p) => p.name);
 }
 
-function actionHint(player: GamePlayer, room: GameRoom): string {
+function nightActionPrompt(player: GamePlayer, room: GameRoom): string {
   if (!player.role || !player.alive) return 'Ожидайте следующей фазы.';
+
+  const targets = aliveNames(room, player.id);
+  const list = targets.length ? `\nИгроки: ${targets.join(', ')}.` : '';
 
   switch (player.role) {
     case 'mafia':
       return player.isDon
-        ? 'Ночью вы — главарь мафии. Выберите жертву (ваш голос решающий при равенстве).'
-        : 'Ночью выберите жертву вместе с мафией.';
+        ? `Вы — главарь мафии. Выберите жертву в панели действий (ваш голос решающий).${list}`
+        : `Выберите жертву вместе с мафией в панели действий.${list}`;
     case 'commissar':
-      return 'Ночью проверьте игрока или совершите выстрел.';
+      return `Комиссар Катани: проверьте игрока (узнаете роль в личном сообщении) или совершите выстрел.${list}`;
     case 'doctor':
-      return 'Ночью выберите, кого вылечить (себя — не чаще раза в 3 ночи).';
+      return `Выберите, кого вылечить этой ночью (себя — не чаще раза в 3 ночи).${list}`;
     case 'homeless':
-      return 'Ночью выберите игрока для проверки — узнаете его роль.';
+      return `Выберите игрока для проверки — роль узнаете в личном сообщении.${list}`;
     case 'prostitute':
-      return 'Ночью выберите, кого соблазнить — его действие будет заблокировано.';
+      return `Выберите, кого соблазнить — его ночное действие будет заблокировано.${list}`;
     case 'maniac':
-      return 'Ночью выберите жертву для убийства.';
+      return `Выберите жертву для убийства.${list}`;
     case 'clown':
       return room.clownUsed
         ? 'Способность клоуна уже использована.'
-        : 'Один раз за игру ночью можно поменять роли двух игроков.';
+        : `Один раз за игру: выберите двух игроков для обмена ролями.${list}`;
     case 'commissar_wife':
       return room.wifeRevengeAvailable && !room.wifeRevengeUsed
-        ? 'Доступна месть: выберите игрока для убийства.'
+        ? `Доступна месть! Выберите игрока для убийства.${list}`
         : 'Пока комиссар жив — особых действий нет.';
     case 'highlander':
       return 'Вы горец — мафия не может вас убить. Ночных действий нет.';
     default:
       return 'У вашей роли нет ночных действий. Дождитесь утра.';
   }
+}
+
+function actionHint(player: GamePlayer, room: GameRoom): string {
+  return nightActionPrompt(player, room).replace(/\nИгроки:.*$/, '');
 }
 
 export function buildRoleRevealNotes(room: GameRoom): PrivateNote[] {
@@ -73,18 +82,114 @@ export function buildNightReminderNotes(room: GameRoom): PrivateNote[] {
 
     if (!needsAction) continue;
 
-    const targets = aliveNames(room).filter((n) => n !== player.name);
-    const targetHint = targets.length ? ` Игроки: ${targets.join(', ')}.` : '';
-
     notes.push({
       playerId: player.id,
-      message: `🌙 Ночь ${room.nightNumber}. ${actionHint(player, room)}${targetHint}`,
+      message: `🌙 Ночь ${room.nightNumber}.\n${nightActionPrompt(player, room)}`,
     });
   }
   return notes;
 }
 
-export function getRolesRevealSystemMessage(playerCount: number): string {
+export function buildDayDiscussionNotes(room: GameRoom): PrivateNote[] {
+  const notes: PrivateNote[] = [];
+  const alive = room.players.filter((p) => p.alive && p.inGame && p.role);
+  for (const player of alive) {
+    notes.push({
+      playerId: player.id,
+      message: `☀️ День ${room.nightNumber + 1}. Обсудите подозреваемых в общем чате. Когда будете готовы — нажмите «Начать голосование» в панели действий.`,
+    });
+  }
+  return notes;
+}
+
+export function buildVotingReminderNotes(room: GameRoom): PrivateNote[] {
+  const notes: PrivateNote[] = [];
+  const alive = room.players.filter((p) => p.alive && p.inGame && p.role);
+  for (const player of alive) {
+    const others = aliveNames(room, player.id);
+    notes.push({
+      playerId: player.id,
+      message: `🗳️ Голосование! Кого подозреваете? Выберите игрока в панели действий.\n${others.length ? `Участники: ${others.join(', ')}.` : ''}`,
+    });
+  }
+  return notes;
+}
+
+export interface NightReport {
+  commissarChecked?: GamePlayer;
+  commissarKilled?: GamePlayer;
+  doctorSaved?: GamePlayer;
+  highlanderAttacked?: GamePlayer;
+  mafiaKilled?: GamePlayer;
+  maniacKilled?: GamePlayer;
+  wifeKilled?: GamePlayer;
+  killed: GamePlayer[];
+}
+
+export function buildMorningReportMessages(_room: GameRoom, report: NightReport): string[] {
+  const messages: string[] = [getNightCompleteMessage()];
+
+  if (report.commissarChecked) {
+    messages.push(`Комиссар Катани провёл проверку игрока ${report.commissarChecked.name}.`);
+  }
+  if (report.commissarKilled) {
+    messages.push(
+      `Инспектор Катани казнил ${report.commissarKilled.name} (${getRoleLabel(report.commissarKilled.role)})!`
+    );
+  }
+  if (report.doctorSaved) {
+    messages.push(`Доктор вылечил ${report.doctorSaved.name} — мафия не смогла его убить!`);
+  }
+  if (report.highlanderAttacked) {
+    messages.push(`Горец ${report.highlanderAttacked.name} пережил атаку мафии!`);
+  }
+  if (report.mafiaKilled) {
+    messages.push(
+      `Мафия зверски расправилась с ${report.mafiaKilled.name} (${getRoleLabel(report.mafiaKilled.role)})!`
+    );
+  }
+  if (report.maniacKilled) {
+    messages.push(
+      `Маньяк убил ${report.maniacKilled.name} (${getRoleLabel(report.maniacKilled.role)})!`
+    );
+  }
+  if (report.wifeKilled) {
+    messages.push(
+      `Жена комиссара отомстила — ${report.wifeKilled.name} (${getRoleLabel(report.wifeKilled.role)}) не дожил(а) до утра!`
+    );
+  }
+
+  messages.push(getMorningIntroMessage(report.killed));
+  return messages;
+}
+
+export function getCommissarCheckResultMessage(target: GamePlayer): string {
+  const role = getRoleLabel(target.role);
+  const verdict = isEvil(target.role) ? 'Это мафия (или зло)!' : 'Это не мафия.';
+  return `🔍 Результат проверки: ${target.name} — ${role}. ${verdict}`;
+}
+
+export function getHomelessCheckResultMessage(target: GamePlayer): string {
+  return `🔍 Результат проверки: ${target.name} — ${getRoleLabel(target.role)}.`;
+}
+
+export function getHangVerdictMessage(player: GamePlayer): string {
+  return `Город решил повесить ${player.name}. Он оказался ${getRoleLabel(player.role)}.`;
+}
+
+export function getVotingTieMessage(): string {
+  return 'Голоса разделились — никто не был повешен этим днём.';
+}
+
+export function getDayDiscussionMessage(dayNumber: number): string {
+  return `☀️ День ${dayNumber}. Обсуждайте подозреваемых и готовьтесь к голосованию.`;
+}
+
+export function getVotingStartMessage(): string {
+  return '🗳️ Голосование началось! Выберите, кого повесить.';
+}
+
+export function getRolesRevealSystemMessage(_playerCount: number): string {
   return `Раздача ролей окончена! Ночь начнётся через ${CONFIG.ROLE_REVEAL_SEC} сек.`;
 }
 
@@ -114,9 +219,7 @@ const DOCTOR_ATMOSPHERE = [
   'Доктор готовит аптечку и выбирает, кого спасти этой ночью...',
 ];
 
-const MANIAC_ATMOSPHERE = [
-  'Где-то в темноте маньяк выбирает новую жертву...',
-];
+const MANIAC_ATMOSPHERE = ['Где-то в темноте маньяк выбирает новую жертву...'];
 
 export function getNightAtmosphereMessages(room: GameRoom): string[] {
   const messages = [pick(NIGHT_FALL)];
@@ -149,10 +252,10 @@ export function getMorningIntroMessage(killed: GamePlayer[]): string {
   const parts = killed.map((p) => {
     const role = getRoleLabel(p.role);
     if (p.role === 'commissar') {
-      return `Мафия расправилась с комиссаром ${p.name}!`;
+      return `Не все дожили до рассвета — среди погибших комиссар ${p.name}.`;
     }
     if (isMafia(p.role)) {
-      return `Мафия сегодня не оставила шансов ${p.name} (${role})!`;
+      return `${p.name} (${role}) не дожил(а) до утра.`;
     }
     return `${p.name} (${role}) не дожил(а) до рассвета.`;
   });

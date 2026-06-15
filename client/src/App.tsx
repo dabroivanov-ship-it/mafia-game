@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import Auth from './components/Auth';
-import Menu from './components/Menu';
+import Menu, { type MenuView } from './components/Menu';
 import Lobby, { type LobbyScreen } from './components/Lobby';
 import Info from './components/Info';
 import AdminPanel from './components/AdminPanel';
@@ -13,7 +13,7 @@ const SOCKET_URL =
   import.meta.env.VITE_SOCKET_URL ??
   (import.meta.env.DEV ? 'http://localhost:3001' : undefined);
 
-type AppView = 'lobby' | 'info' | 'admin' | 'room';
+type AppView = MenuView | 'room';
 
 interface RoomJoinResponse {
   error?: string;
@@ -137,7 +137,7 @@ export default function App() {
   const openMessages = useCallback((opts?: { userId?: number; username?: string }) => {
     setComposeToUserId(opts?.userId ?? null);
     setComposeToUsername(opts?.username ?? null);
-    setView('lobby');
+    setView('cabinet');
     setLobbyScreen('cabinet-messages');
     setPmNotice(null);
   }, []);
@@ -193,12 +193,13 @@ export default function App() {
   );
 
   const leaveRoom = useCallback(() => {
+    socket?.emit('room:detach');
     setCurrentRoomId(null);
     setRoomState(null);
     localStorage.removeItem('mafia_player_id');
     setPlayerId(null);
     setView('lobby');
-  }, []);
+  }, [socket]);
 
   useEffect(() => {
     if (!socket || !currentRoomId) return;
@@ -297,19 +298,43 @@ export default function App() {
           <Lobby
             rooms={rooms}
             user={user}
-            screen={lobbyScreen}
-            onScreenChange={setLobbyScreen}
             onJoin={joinRoom}
-            onUserUpdate={handleUserUpdate}
-            composeToUserId={composeToUserId}
-            composeToUsername={composeToUsername}
-            onComposeReset={() => {
-              setComposeToUserId(null);
-              setComposeToUsername(null);
+            onOpenNews={() => setView('news')}
+            onOpenCabinet={() => {
+              setLobbyScreen('cabinet');
+              setView('cabinet');
             }}
             unreadMailCount={unreadMailCount}
-            onUnreadChange={setUnreadMailCount}
             onOpenMessages={() => openMessages()}
+          />
+        )}
+        {view === 'news' && <News onBack={() => setView('lobby')} />}
+        {view === 'cabinet' && lobbyScreen === 'cabinet-settings' && (
+          <CabinetSettings
+            user={user}
+            onUpdate={handleUserUpdate}
+            onBack={() => setLobbyScreen('cabinet')}
+          />
+        )}
+        {view === 'cabinet' && lobbyScreen === 'cabinet-messages' && (
+          <Messages
+            composeToUserId={composeToUserId}
+            composeToUsername={composeToUsername}
+            onUnreadChange={setUnreadMailCount}
+            onBack={() => {
+              setComposeToUserId(null);
+              setComposeToUsername(null);
+              setLobbyScreen('cabinet');
+            }}
+          />
+        )}
+        {view === 'cabinet' && lobbyScreen === 'cabinet' && (
+          <CabinetHub
+            user={user}
+            unreadMailCount={unreadMailCount}
+            onOpenSettings={() => setLobbyScreen('cabinet-settings')}
+            onOpenMessages={() => setLobbyScreen('cabinet-messages')}
+            onBack={() => setView('lobby')}
           />
         )}
         {view === 'info' && <Info />}
@@ -320,16 +345,22 @@ export default function App() {
 
       <Menu
         user={user}
-        view={view}
+        view={view === 'room' ? 'lobby' : view}
         onNavigate={(v) => {
           if (v === 'lobby') {
             setLobbyScreen('rooms');
             setComposeToUserId(null);
             setComposeToUsername(null);
           }
+          if (v === 'cabinet') {
+            setLobbyScreen('cabinet');
+            setComposeToUserId(null);
+            setComposeToUsername(null);
+          }
           setView(v);
         }}
         onLogout={handleLogout}
+        unreadMailCount={unreadMailCount}
       />
     </div>
   );

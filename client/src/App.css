@@ -1434,6 +1434,19 @@ body {
   font-family: inherit;
   font-size: 0.9rem;
   transition: background 0.15s, border-color 0.15s;
+  position: relative;
+}
+
+.menu-badge {
+  margin-left: auto;
+  min-width: 20px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-align: center;
 }
 
 .menu-icon {
@@ -3019,5 +3032,9 @@ body {
     flex: 1;
     min-width: 0;
     padding-bottom: 0;
+  }
+
+  .lobby-mobile-shortcuts {
+    display: none;
   }
 }

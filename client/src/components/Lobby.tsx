@@ -1,8 +1,4 @@
 import { avatarUrl } from '../api';
-import News from './News';
-import CabinetHub from './CabinetHub';
-import CabinetSettings from './CabinetSettings';
-import Messages from './Messages';
 import type { GamePhase, LobbyRoom, User } from '../types';
 
 const PHASE_LABELS: Record<GamePhase, string> = {
@@ -15,77 +11,27 @@ const PHASE_LABELS: Record<GamePhase, string> = {
   ended: 'Игра окончена',
 };
 
-export type LobbyScreen = 'rooms' | 'news' | 'cabinet' | 'cabinet-settings' | 'cabinet-messages';
+export type LobbyScreen = 'rooms' | 'cabinet' | 'cabinet-settings' | 'cabinet-messages';
 
 interface LobbyProps {
   rooms: LobbyRoom[];
   user: User;
-  screen: LobbyScreen;
-  onScreenChange: (screen: LobbyScreen) => void;
   onJoin: (roomId: number) => void;
-  onUserUpdate: (user: User) => void;
-  composeToUserId?: number | null;
-  composeToUsername?: string | null;
-  onComposeReset?: () => void;
+  onOpenNews?: () => void;
+  onOpenCabinet?: () => void;
   unreadMailCount?: number;
-  onUnreadChange?: (count: number) => void;
   onOpenMessages?: () => void;
 }
 
 export default function Lobby({
   rooms,
   user,
-  screen,
-  onScreenChange,
   onJoin,
-  onUserUpdate,
-  composeToUserId = null,
-  composeToUsername = null,
-  onComposeReset,
+  onOpenNews,
+  onOpenCabinet,
   unreadMailCount = 0,
-  onUnreadChange,
   onOpenMessages,
 }: LobbyProps) {
-  if (screen === 'news') {
-    return <News onBack={() => onScreenChange('rooms')} />;
-  }
-
-  if (screen === 'cabinet') {
-    return (
-      <CabinetHub
-        user={user}
-        unreadMailCount={unreadMailCount}
-        onOpenSettings={() => onScreenChange('cabinet-settings')}
-        onOpenMessages={() => onScreenChange('cabinet-messages')}
-        onBack={() => onScreenChange('rooms')}
-      />
-    );
-  }
-
-  if (screen === 'cabinet-settings') {
-    return (
-      <CabinetSettings
-        user={user}
-        onUpdate={onUserUpdate}
-        onBack={() => onScreenChange('cabinet')}
-      />
-    );
-  }
-
-  if (screen === 'cabinet-messages') {
-    return (
-      <Messages
-        composeToUserId={composeToUserId}
-        composeToUsername={composeToUsername}
-        onUnreadChange={onUnreadChange}
-        onBack={() => {
-          onComposeReset?.();
-          onScreenChange('cabinet');
-        }}
-      />
-    );
-  }
-
   return (
     <div className="lobby">
       <header className="lobby-header">
@@ -124,8 +70,8 @@ export default function Lobby({
         ))}
       </div>
 
-      <section className="lobby-cabinet-section">
-        <button type="button" className="lobby-news-card" onClick={() => onScreenChange('news')}>
+      <section className="lobby-cabinet-section lobby-mobile-shortcuts">
+        <button type="button" className="lobby-news-card" onClick={onOpenNews}>
           <span className="info-hub-icon" aria-hidden="true">📰</span>
           <span className="lobby-cabinet-body">
             <strong>Новости</strong>
@@ -135,7 +81,7 @@ export default function Lobby({
         </button>
 
         <h2 className="lobby-cabinet-title">👤 Кабинет</h2>
-        <button type="button" className="lobby-cabinet-card" onClick={() => onScreenChange('cabinet')}>
+        <button type="button" className="lobby-cabinet-card" onClick={onOpenCabinet}>
           {user.avatar ? (
             <img src={avatarUrl(user.avatar) ?? undefined} alt="" className="lobby-cabinet-avatar" />
           ) : (

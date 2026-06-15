@@ -3,13 +3,21 @@ import { distributeRoles, isMafia, isTown, isEvil, isMafiaImmune, isSeductionImm
 import {
   buildRoleRevealNotes,
   buildNightReminderNotes,
+  buildDayDiscussionNotes,
+  buildVotingReminderNotes,
+  buildMorningReportMessages,
+  getCommissarCheckResultMessage,
+  getHomelessCheckResultMessage,
   getGameStartSystemMessage,
   getRolesRevealSystemMessage,
   getNightAtmosphereMessages,
-  getNightCompleteMessage,
-  getMorningIntroMessage,
   getGameEndRolesMessage,
   getScoreSummaryMessage,
+  getDayDiscussionMessage,
+  getVotingStartMessage,
+  getHangVerdictMessage,
+  getVotingTieMessage,
+  type NightReport,
 } from './host.js';
 import {
   saveChatMessage,
@@ -205,6 +213,70 @@ export function addPlayerToRoom(
   return { player, privateNotes };
 }
 
+export function markPlayerDisconnected(room: GameRoom, socketId: string): GamePlayer | null {
+  const player = room.players.find((p) => p.socketId === socketId);
+  if (!player) return null;
+
+  player.connected = false;
+  player.socketId = null;
+  player.disconnectedAt = Date.now();
+
+  const gameActive = !isLobbyPhase(room.phase);
+  if (gameActive && player.inGame && player.alive) {
+    addSystemMessage(
+      room,
+      `${player.name} отошёл от игры. Есть ${CONFIG.DISCONNECT_GRACE_SEC} сек. на возвращение.`
+    );
+  }
+
+  if (room.phase === PHASE.WAITING && room.players.every((p) => !p.connected)) {
+    resetRoom(room);
+  }
+
+  return player;
+}
+
+export function finalizePlayerLeave(room: GameRoom, playerId: number): boolean {
+  const player = room.players.find((p) => p.id === playerId);
+  if (!player || player.connected) return false;
+
+  const gameActive = !isLobbyPhase(room.phase);
+  if (!gameActive || !player.inGame || !player.alive) return false;
+
+  player.score -= 100;
+  player.leftEarly = true;
+  player.alive = false;
+  addSystemMessage(
+    room,
+    `${player.name} покинул игру из-за неактивности (−100 очков). Роль: ${getRoleLabel(player.role)}.`
+  );
+
+  if (player.role === 'commissar') {
+    room.commissarAlive = false;
+    const wife = room.players.find((p) => p.role === 'commissar_wife' && p.alive);
+    if (wife) {
+      room.wifeRevengeAvailable = true;
+      room.wifeRevengeUsed = false;
+    }
+  }
+
+  if (player.role === 'mafia' && player.isDon) {
+    const nextMafia = room.players.find((p) => p.alive && p.role === 'mafia');
+    room.players.forEach((p) => {
+      p.isDon = false;
+    });
+    if (nextMafia) {
+      nextMafia.isDon = true;
+      room.mafiaDonId = nextMafia.id;
+      addSystemMessage(room, `🎩 ${nextMafia.name} стал(а) главным мафиози.`);
+    } else {
+      room.mafiaDonId = null;
+    }
+  }
+
+  return true;
+}
+
 export function removePlayer(room: GameRoom, socketId: string, applyPenalty = true): GamePlayer | null {
   const player = room.players.find((p) => p.socketId === socketId);
   if (!player) return null;
@@ -238,6 +310,7 @@ export function reconnectPlayer(
   if (!player) return null;
   player.socketId = socketId;
   player.connected = true;
+  player.disconnectedAt = null;
   if (name) player.name = name;
   if (username) player.username = username;
   return player;
@@ -404,19 +477,20 @@ function beginGame(room: GameRoom): PrivateNote[] {
   return buildRoleRevealNotes(room);
 }
 
-export function startDayPhase(room: GameRoom): void {
+export function startDayPhase(room: GameRoom): PrivateNote[] {
   room.phase = PHASE.DAY;
   room.votes = {};
   room.votingStarted = false;
   room.players.forEach((p) => {
     p.hasVoted = false;
   });
-  addSystemMessage(room, `☀️ День ${room.nightNumber + 1}. Обсуждайте и голосуйте.`);
+  addSystemMessage(room, getDayDiscussionMessage(room.nightNumber + 1));
   setTimer(room, CONFIG.DAY_DISCUSSION_SEC * 1000, 'day');
+  return buildDayDiscussionNotes(room);
 }
 
-export function startVoting(room: GameRoom): void {
-  if (room.phase !== PHASE.DAY) return;
+export function startVoting(room: GameRoom): PrivateNote[] {
+  if (room.phase !== PHASE.DAY) return [];
   room.phase = PHASE.VOTING;
   room.votingStarted = true;
   clearTimer(room);
@@ -424,11 +498,13 @@ export function startVoting(room: GameRoom): void {
   room.players.forEach((p) => {
     p.hasVoted = false;
   });
-  addSystemMessage(room, '🗳️ Голосование началось! Выберите игрока.');
+  addSystemMessage(room, getVotingStartMessage());
+  return buildVotingReminderNotes(room);
 }
 
-export function onDayTimerEnd(room: GameRoom): void {
-  if (room.phase === PHASE.DAY) startVoting(room);
+export function onDayTimerEnd(room: GameRoom): PrivateNote[] {
+  if (room.phase === PHASE.DAY) return startVoting(room);
+  return [];
 }
 
 export function castDayVote(room: GameRoom, voterId: number, targetId: number): PrivateNote[] {
@@ -443,7 +519,7 @@ export function castDayVote(room: GameRoom, voterId: number, targetId: number): 
   room.votes[voterId] = targetId;
   voter.hasVoted = true;
 
-  const alive = room.players.filter((p) => p.alive && p.inGame && p.role);
+  const alive = room.players.filter((p) => p.alive && p.inGame && p.role && p.connected);
   if (alive.every((p) => p.hasVoted)) return resolveDayVote(room);
   return [];
 }
@@ -466,9 +542,13 @@ function resolveDayVote(room: GameRoom): PrivateNote[] {
   }
 
   if (candidates.length === 1 && maxVotes > 0) {
-    eliminatePlayer(room, candidates[0]);
+    const hanged = room.players.find((p) => p.id === candidates[0]);
+    if (hanged) {
+      addSystemMessage(room, getHangVerdictMessage(hanged));
+      eliminatePlayer(room, candidates[0], { silent: true });
+    }
   } else {
-    addSystemMessage(room, '🗳️ Ничья — никто не выбывает.');
+    addSystemMessage(room, getVotingTieMessage());
   }
 
   if (checkWin(room)) return [];
@@ -555,7 +635,7 @@ export function submitNightAction(
 
 function getPlayersNeedingNightAction(room: GameRoom): GamePlayer[] {
   return room.players.filter((p) => {
-    if (!p.alive) return false;
+    if (!p.alive || !p.connected) return false;
     if (p.role === 'prostitute') return true;
     if (p.role === 'mafia') return true;
     if (p.role === 'commissar') return true;
@@ -575,6 +655,7 @@ export function resolveNight(room: GameRoom): NightResolveResult {
   const deaths = new Set<number>();
   const heals = new Set<number>();
   const privateNotes: PrivateNote[] = [];
+  const report: NightReport = { killed: [] };
 
   const prostitute = room.players.find((p) => p.alive && p.role === 'prostitute');
   if (prostitute && actions[prostitute.id]?.type === 'seduce') {
@@ -617,9 +698,10 @@ export function resolveNight(room: GameRoom): NightResolveResult {
       const target = room.players.find((p) => p.id === act.targetId);
       if (target) {
         commissar.score += 5;
+        report.commissarChecked = target;
         privateNotes.push({
           playerId: commissar.id,
-          message: `Проверка: ${target.name} — ${getRoleLabel(target.role)}`,
+          message: getCommissarCheckResultMessage(target),
         });
       }
     } else if (act?.type === 'kill') {
@@ -628,6 +710,7 @@ export function resolveNight(room: GameRoom): NightResolveResult {
         if (isEvil(target.role)) commissar.score += 20;
         else commissar.score -= 5;
         deaths.add(target.id);
+        report.commissarKilled = target;
       }
     }
   }
@@ -641,6 +724,7 @@ export function resolveNight(room: GameRoom): NightResolveResult {
         if (isMafia(target.role)) maniac.score += 20;
         else maniac.score -= 5;
         deaths.add(target.id);
+        report.maniacKilled = target;
       }
     }
   }
@@ -667,7 +751,7 @@ export function resolveNight(room: GameRoom): NightResolveResult {
         homeless.score += 5;
         privateNotes.push({
           playerId: homeless.id,
-          message: `Проверка: ${target.name} — ${getRoleLabel(target.role)}`,
+          message: getHomelessCheckResultMessage(target),
         });
       }
     }
@@ -700,10 +784,14 @@ export function resolveNight(room: GameRoom): NightResolveResult {
   if (wife && room.wifeRevengeAvailable && !room.wifeRevengeUsed && !isSeduced(wife.id)) {
     const act = actions[wife.id];
     if (act?.type === 'revenge') {
-      deaths.add(act.targetId);
-      wife.score += 50;
-      room.wifeRevengeUsed = true;
-      room.wifeRevengeAvailable = false;
+      const target = room.players.find((p) => p.id === act.targetId);
+      if (target) {
+        deaths.add(act.targetId);
+        wife.score += 50;
+        room.wifeRevengeUsed = true;
+        room.wifeRevengeAvailable = false;
+        report.wifeKilled = target;
+      }
     }
   }
 
@@ -711,16 +799,17 @@ export function resolveNight(room: GameRoom): NightResolveResult {
     const target = room.players.find((p) => p.id === mafiaTarget);
     if (target?.alive) {
       if (isMafiaImmune(target.role)) {
-        addSystemMessage(room, '🏔️ Горец пережил атаку мафии!');
+        report.highlanderAttacked = target;
       } else if (!heals.has(mafiaTarget)) {
         deaths.add(mafiaTarget);
+        report.mafiaKilled = target;
         room.players.filter((p) => p.alive && p.role === 'mafia').forEach((m) => {
           m.score += 10;
         });
       } else {
         const doc = room.players.find((p) => p.role === 'doctor' && p.alive);
         if (doc) doc.score += 15;
-        addSystemMessage(room, '💊 Доктор спас жертву мафии!');
+        report.doctorSaved = target;
       }
     }
   }
@@ -730,20 +819,21 @@ export function resolveNight(room: GameRoom): NightResolveResult {
     const p = room.players.find((pl) => pl.id === id);
     if (p?.alive) killedTonight.push(p);
   }
+  report.killed = killedTonight;
 
-  addSystemMessage(room, getNightCompleteMessage());
-  addSystemMessage(room, getMorningIntroMessage(killedTonight));
+  for (const msg of buildMorningReportMessages(room, report)) {
+    addSystemMessage(room, msg);
+  }
 
-  if (killedTonight.length === 0) {
-    /* утро без жертв */
-  } else {
+  if (killedTonight.length > 0) {
     killedTonight.forEach((p) => eliminatePlayer(room, p.id, { silent: true }));
   }
 
   room.nightActions = {};
 
   if (checkWin(room)) return { privateNotes };
-  startDayPhase(room);
+  const dayNotes = startDayPhase(room);
+  privateNotes.push(...dayNotes);
   return { privateNotes };
 }
 
@@ -859,6 +949,29 @@ export function addChatMessage(
 
   saveChatMessage(room.id, room.sessionId, msg, channel);
   return msg;
+}
+
+export function addHostPrivateMessage(room: GameRoom, toPlayerId: number, text: string): void {
+  const to = room.players.find((p) => p.id === toPlayerId);
+  if (!to) return;
+
+  const msg: ChatMessage = {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    playerId: null,
+    userId: null,
+    playerName: '🤖 Ведущий',
+    toPlayerId: to.id,
+    toPlayerName: to.username || to.name,
+    text,
+    time: new Date().toISOString(),
+    system: true,
+    deleted: false,
+    isPrivate: true,
+  };
+
+  room.privateChat = room.privateChat || [];
+  room.privateChat.push(msg);
+  saveChatMessage(room.id, room.sessionId, msg, 'private');
 }
 
 export function addPrivateChatMessage(

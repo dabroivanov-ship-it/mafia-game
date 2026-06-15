@@ -1,6 +1,6 @@
 import type { User } from '../types';
 
-type MenuView = 'lobby' | 'info' | 'admin' | 'room';
+export type MenuView = 'lobby' | 'news' | 'cabinet' | 'info' | 'admin';
 
 interface MenuItem {
   id: MenuView;
@@ -10,6 +10,8 @@ interface MenuItem {
 
 const ITEMS: MenuItem[] = [
   { id: 'lobby', icon: '🏠', label: 'Комнаты' },
+  { id: 'news', icon: '📰', label: 'Новости' },
+  { id: 'cabinet', icon: '👤', label: 'Кабинет' },
   { id: 'info', icon: 'ℹ️', label: 'Информация' },
 ];
 
@@ -18,9 +20,10 @@ interface MenuProps {
   view: MenuView;
   onNavigate: (view: MenuView) => void;
   onLogout: () => void;
+  unreadMailCount?: number;
 }
 
-export default function Menu({ user, view, onNavigate, onLogout }: MenuProps) {
+export default function Menu({ user, view, onNavigate, onLogout, unreadMailCount = 0 }: MenuProps) {
   return (
     <nav className="main-menu" aria-label="Главное меню">
       <div className="menu-logo" aria-hidden="true">
@@ -37,6 +40,9 @@ export default function Menu({ user, view, onNavigate, onLogout }: MenuProps) {
           >
             <span className="menu-icon">{item.icon}</span>
             <span className="menu-label">{item.label}</span>
+            {item.id === 'cabinet' && unreadMailCount > 0 && (
+              <span className="menu-badge">{unreadMailCount > 99 ? '99+' : unreadMailCount}</span>
+            )}
           </button>
         ))}
         {user.isAdmin && (

@@ -19,7 +19,9 @@ import {
   createInitialRooms,
   getLobbySnapshot,
   addPlayerToRoom,
-  removePlayer,
+  markPlayerDisconnected,
+  finalizePlayerLeave,
+  addHostPrivateMessage,
   reconnectPlayer,
   startRegistration,
   joinGame,
@@ -42,6 +44,7 @@ import {
   renameRoom,
   addRoom,
   removeRoom,
+  checkWin,
 } from './game/engine.js';
 import type { ChatChannel, GameRoom, PrivateNote, PublicUser, RoomState, Session } from './types/index.js';
 
@@ -63,6 +66,36 @@ const userSocketIds = new Map<number, Set<string>>();
 const DEFAULT_CHAT_LIMIT = 15;
 const CHAT_LOAD_STEP = 30;
 const MAX_CHAT_LIMIT = 300;
+
+const disconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+function disconnectTimerKey(roomId: number, playerId: number): string {
+  return `${roomId}:${playerId}`;
+}
+
+function cancelDisconnectTimer(roomId: number, playerId: number): void {
+  const key = disconnectTimerKey(roomId, playerId);
+  const timer = disconnectTimers.get(key);
+  if (timer) {
+    clearTimeout(timer);
+    disconnectTimers.delete(key);
+  }
+}
+
+function scheduleDisconnectTimer(roomId: number, playerId: number): void {
+  cancelDisconnectTimer(roomId, playerId);
+  const key = disconnectTimerKey(roomId, playerId);
+  const timer = setTimeout(() => {
+    disconnectTimers.delete(key);
+    const room = rooms.get(roomId);
+    if (!room) return;
+    if (finalizePlayerLeave(room, playerId)) {
+      checkWin(room);
+      broadcastRoom(roomId);
+    }
+  }, CONFIG.DISCONNECT_GRACE_SEC * 1000);
+  disconnectTimers.set(key, timer);
+}
 
 function getUserChatLimit(userId: number | undefined): number {
   if (!userId) return DEFAULT_CHAT_LIMIT;
@@ -279,8 +312,9 @@ function broadcastRoom(roomId: number): void {
   broadcastLobby();
 }
 
-function sendPrivateNotes(room: GameRoom, privateNotes: PrivateNote[] = []): void {
+function deliverHostNotes(room: GameRoom, privateNotes: PrivateNote[] = []): void {
   for (const note of privateNotes) {
+    addHostPrivateMessage(room, note.playerId, note.message);
     const p = room.players.find((pl) => pl.id === note.playerId);
     if (p?.socketId) {
       io.to(p.socketId).emit('notification:private', { message: note.message });
@@ -310,14 +344,14 @@ setInterval(() => {
     } else if (reason === 'roles') {
       privateNotes = onRolesTimerEnd(room);
     } else if (reason === 'day') {
-      onDayTimerEnd(room);
+      privateNotes = onDayTimerEnd(room);
     } else if (reason === 'night') {
       const result = onNightTimerEnd(room);
       if (result?.privateNotes) privateNotes = result.privateNotes;
     }
 
     broadcastRoom(room.id);
-    sendPrivateNotes(room, privateNotes);
+    deliverHostNotes(room, privateNotes);
   }
 }, 1000);
 
@@ -382,9 +416,14 @@ io.on('connection', (socket) => {
         });
         player = joined.player;
         if (joined.privateNotes.length) {
-          sendPrivateNotes(room, joined.privateNotes);
+          deliverHostNotes(room, joined.privateNotes);
         }
       }
+
+      cancelDisconnectTimer(room.id, player.id);
+      player.socketId = socket.id;
+      player.connected = true;
+      player.disconnectedAt = null;
 
       attachSession(socket.id, room.id, player.id, socket.userId);
       socket.join(`room:${room.id}`);
@@ -394,6 +433,14 @@ io.on('connection', (socket) => {
       const err = e as Error;
       cb?.({ error: err.message });
     }
+  });
+
+  socket.on('room:detach', (_data, cb) => {
+    const session = sessions.get(socket.id);
+    if (!session) return cb?.({ ok: true });
+    socket.leave(`room:${session.roomId}`);
+    sessions.delete(socket.id);
+    cb?.({ ok: true });
   });
 
   socket.on('room:start', (_data, cb) => {
@@ -424,7 +471,7 @@ io.on('connection', (socket) => {
     try {
       const { privateNotes } = joinGame(room, session.playerId);
       broadcastRoom(room.id);
-      sendPrivateNotes(room, privateNotes);
+      deliverHostNotes(room, privateNotes);
       cb?.({ ok: true });
     } catch (e) {
       const err = e as Error;
@@ -540,8 +587,9 @@ io.on('connection', (socket) => {
 
     const room = rooms.get(session.roomId);
     if (!room) return cb?.({ error: 'Комната не найдена' });
-    startVoting(room);
+    const notes = startVoting(room);
     broadcastRoom(room.id);
+    deliverHostNotes(room, notes);
     cb?.({ ok: true });
   });
 
@@ -554,7 +602,7 @@ io.on('connection', (socket) => {
     try {
       const notes = castDayVote(room, session.playerId, targetId);
       broadcastRoom(room.id);
-      sendPrivateNotes(room, notes);
+      deliverHostNotes(room, notes);
       cb?.({ ok: true });
     } catch (e) {
       const err = e as Error;
@@ -571,7 +619,7 @@ io.on('connection', (socket) => {
     try {
       const result = submitNightAction(room, session.playerId, action);
       broadcastRoom(room.id);
-      sendPrivateNotes(room, result?.privateNotes || []);
+      deliverHostNotes(room, result?.privateNotes || []);
       cb?.({ ok: true });
     } catch (e) {
       const err = e as Error;
@@ -599,8 +647,14 @@ io.on('connection', (socket) => {
 
     const room = rooms.get(session.roomId);
     if (!room) return;
-    removePlayer(room, socket.id, true);
+
+    const player = markPlayerDisconnected(room, socket.id);
     sessions.delete(socket.id);
+
+    if (player && isActiveGamePhase(room.phase) && player.inGame && player.alive) {
+      scheduleDisconnectTimer(room.id, player.id);
+    }
+
     broadcastRoom(room.id);
   });
 });

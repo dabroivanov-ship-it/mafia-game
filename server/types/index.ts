@@ -105,6 +105,7 @@ export interface GamePlayer {
   nightActionDone: boolean;
   leftEarly?: boolean;
   joinGameAvailableAt?: number;
+  disconnectedAt?: number | null;
 }
 
 export interface GameRoom {
