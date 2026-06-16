@@ -3,8 +3,8 @@ import type { NextFunction, Request, Response } from 'express';
 import type { Socket } from 'socket.io';
 import { findUserById, isUserBanned, isAdmin, isModerator, isStaff } from './db.js';
 import type { User } from '../types/index.js';
+import { getJwtSecret } from '../config/env.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'mafia-dev-secret-change-in-production';
 const JWT_EXPIRES: SignOptions['expiresIn'] = (process.env.JWT_EXPIRES || '7d') as SignOptions['expiresIn'];
 
 interface AppJwtPayload {
@@ -16,13 +16,13 @@ interface AppJwtPayload {
 export function signToken(user: User): string {
   return jwt.sign(
     { sub: user.id, username: user.username, role: user.role },
-    JWT_SECRET,
+    getJwtSecret(),
     { expiresIn: JWT_EXPIRES }
   );
 }
 
 export function verifyToken(token: string): AppJwtPayload {
-  const payload = jwt.verify(token, JWT_SECRET);
+  const payload = jwt.verify(token, getJwtSecret());
   if (typeof payload === 'string' || payload.sub == null) {
     throw new Error('Invalid token');
   }
