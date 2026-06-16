@@ -59,7 +59,7 @@ assertProductionEnv();
 const corsOrigin = process.env.CORS_ORIGIN?.split(',').map((s) => s.trim()).filter(Boolean);
 
 const app = express();
-app.use(corsOrigin?.length ? { origin: corsOrigin, credentials: true } : cors());
+app.use(corsOrigin?.length ? cors({ origin: corsOrigin, credentials: true }) : cors());
 app.use(express.json({ limit: '256kb' }));
 
 const httpServer = createServer(app);
