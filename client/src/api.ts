@@ -1,4 +1,4 @@
-import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, MailConversation } from './types';
+import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, MailConversation, RoomKind } from './types';
 
 const API_BASE =
   import.meta.env.VITE_API_URL ??
