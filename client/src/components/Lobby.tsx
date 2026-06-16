@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { avatarUrl } from '../api';
 import type { GamePhase, LobbyRoom } from '../types';
 
 const PHASE_LABELS: Record<GamePhase, string> = {
