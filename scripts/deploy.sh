@@ -19,9 +19,15 @@ load_env() {
 
 require_jwt_secret() {
   local secret="${JWT_SECRET:-}"
-  if [[ -z "$secret" ]] || [[ ${#secret} -lt 32 ]]; then
-    echo "ERROR: Set a strong JWT_SECRET (min 32 chars) in server/.env"
+  if [[ -z "$secret" ]]; then
+    echo "ERROR: JWT_SECRET is empty in server/.env"
     echo "  cp server/.env.example server/.env && nano server/.env"
+    exit 1
+  fi
+  if [[ ${#secret} -lt 32 ]]; then
+    echo "ERROR: JWT_SECRET is too short (${#secret} chars, need at least 32)"
+    echo "  Generate: openssl rand -base64 48"
+    echo "  Then paste into server/.env: JWT_SECRET=..."
     exit 1
   fi
   case "$secret" in
