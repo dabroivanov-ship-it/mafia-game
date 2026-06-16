@@ -339,7 +339,7 @@ export function startRegistration(room: GameRoom, _starterPlayerId: number | nul
   });
   addSystemMessage(
     room,
-    '——— Регистрация открыта! Нажмите «Присоединиться к игре», чтобы участвовать. ———'
+    'Регистрация открыта! Нажмите «Присоединиться к игре», чтобы участвовать.'
   );
   setTimer(room, CONFIG.REGISTRATION_SEC * 1000, 'registration');
 }
@@ -923,6 +923,9 @@ export function resetRoom(room: GameRoom): void {
     hasVoted: false,
     nightActionDone: false,
     leftEarly: false,
+    silencedUntil: null,
+    silenceReason: null,
+    mutedChat: [],
   }));
   addSystemMessage(room, '——— Новая игра ———');
 }
@@ -965,6 +968,105 @@ export function addChatMessage(
   return msg;
 }
 
+const SILENCE_PERMANENT = -1;
+
+export function isPlayerSilenced(player: GamePlayer | undefined): boolean {
+  if (!player?.silencedUntil) return false;
+  if (player.silencedUntil === SILENCE_PERMANENT) return true;
+  if (Date.now() >= player.silencedUntil) {
+    player.silencedUntil = null;
+    player.silenceReason = null;
+    player.mutedChat = [];
+    return false;
+  }
+  return true;
+}
+
+export function setPlayerSilence(
+  room: GameRoom,
+  playerId: number,
+  hours: number | null,
+  reason: string
+): GamePlayer {
+  const player = room.players.find((p) => p.id === playerId);
+  if (!player) throw new Error('Игрок не найден');
+
+  player.silencedUntil =
+    hours && hours > 0 ? Date.now() + hours * 3600000 : SILENCE_PERMANENT;
+  player.silenceReason = reason.trim() || 'нарушение правил';
+  player.mutedChat = [];
+  return player;
+}
+
+export function clearPlayerSilence(room: GameRoom, playerId: number): GamePlayer {
+  const player = room.players.find((p) => p.id === playerId);
+  if (!player) throw new Error('Игрок не найден');
+  player.silencedUntil = null;
+  player.silenceReason = null;
+  player.mutedChat = [];
+  return player;
+}
+
+export function addMutedOnlyMessage(
+  room: GameRoom,
+  player: GamePlayer,
+  text: string,
+  channel: ChatChannel = 'public'
+): ChatMessage {
+  const msg: ChatMessage = {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    playerId: player.id,
+    userId: player.userId || null,
+    playerName: player.username || player.name,
+    text,
+    time: new Date().toISOString(),
+    deleted: false,
+    isPrivate: false,
+    sourceChannel: channel,
+  };
+  player.mutedChat = player.mutedChat || [];
+  player.mutedChat.push(msg);
+  if (player.mutedChat.length > 50) {
+    player.mutedChat = player.mutedChat.slice(-50);
+  }
+  return msg;
+}
+
+function isDeadInGame(p: GamePlayer | undefined): boolean {
+  return !!(p?.inGame && p.role && !p.alive);
+}
+
+function filterDeadChatMessages(room: GameRoom, messages: ChatMessage[]): ChatMessage[] {
+  return messages.filter((m) => {
+    if (m.system || m.playerId == null) return true;
+    const author = room.players.find((p) => p.id === m.playerId);
+    return isDeadInGame(author);
+  });
+}
+
+function appendPrivateMessagesForDead(
+  messages: ChatMessage[],
+  room: GameRoom,
+  myPlayerId: number | undefined
+): ChatMessage[] {
+  if (!myPlayerId) return messages;
+  const me = room.players.find((p) => p.id === myPlayerId);
+  if (!isDeadInGame(me)) return messages;
+
+  const privateChat = room.privateChat || [];
+  const mine = privateChat.filter((m) => {
+    if (m.playerId !== myPlayerId && m.toPlayerId !== myPlayerId) return false;
+    const otherId = m.playerId === myPlayerId ? m.toPlayerId : m.playerId;
+    if (!otherId) return false;
+    const other = room.players.find((p) => p.id === otherId);
+    return isDeadInGame(other);
+  });
+  if (mine.length === 0) return messages;
+  return [...messages, ...mine].sort(
+    (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
+  );
+}
+
 export function addHostPrivateMessage(room: GameRoom, toPlayerId: number, text: string): void {
   const to = room.players.find((p) => p.id === toPlayerId);
   if (!to) return;
@@ -997,6 +1099,7 @@ export function addPrivateChatMessage(
   const from = room.players.find((p) => p.id === fromPlayerId);
   const to = room.players.find((p) => p.id === toPlayerId);
   if (!from || !to || fromPlayerId === toPlayerId) return null;
+  if (isDeadInGame(from) && !isDeadInGame(to)) return null;
 
   const msg: ChatMessage = {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
@@ -1183,7 +1286,17 @@ function buildChatView(
   const systemMsgs = room.chat.filter((m) => m.system);
 
   if (!me || !me.inGame || !me.role || me.alive) {
-    const combined = appendPrivateMessages(room.chat, room, myId);
+    const liveChat = room.chat.filter((m) => {
+      if (m.system || m.playerId == null) return true;
+      const author = room.players.find((p) => p.id === m.playerId);
+      return !isDeadInGame(author);
+    });
+    let combined = appendPrivateMessages(liveChat, room, myId);
+    if (me && isPlayerSilenced(me) && me.mutedChat?.length) {
+      combined = [...combined, ...me.mutedChat].sort(
+        (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
+      );
+    }
     const sliced = sliceChatMessages(combined, chatLimit);
     return {
       messages: sliced.messages,
@@ -1192,13 +1305,22 @@ function buildChatView(
     };
   }
 
-  const combined = appendPrivateMessages(
-    [...systemMsgs, ...room.deadChat].sort(
+  const deadMsgs = filterDeadChatMessages(room, room.deadChat).map((m) => ({
+    ...m,
+    sourceChannel: 'dead' as ChatChannel,
+  }));
+  let combined = appendPrivateMessagesForDead(
+    [...systemMsgs, ...deadMsgs].sort(
       (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
     ),
     room,
     myId
   );
+  if (me && isPlayerSilenced(me) && me.mutedChat?.length) {
+    combined = [...combined, ...me.mutedChat].sort(
+      (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
+    );
+  }
   const sliced = sliceChatMessages(combined, chatLimit);
 
   return {
@@ -1208,7 +1330,12 @@ function buildChatView(
   };
 }
 
-function mapPlayerPublic(p: GamePlayer, _room: GameRoom, playerId: number): RoomStatePlayer {
+function mapPlayerPublic(
+  p: GamePlayer,
+  _room: GameRoom,
+  playerId: number,
+  viewerCanModerate = false
+): RoomStatePlayer {
   return {
     id: p.id,
     userId: p.userId || null,
@@ -1222,6 +1349,7 @@ function mapPlayerPublic(p: GamePlayer, _room: GameRoom, playerId: number): Room
     role: !p.alive || p.id === playerId ? p.role : null,
     roleLabel: !p.alive || p.id === playerId ? getRoleLabel(p.role) : null,
     isDon: p.isDon && p.id === playerId,
+    silenced: viewerCanModerate ? isPlayerSilenced(p) : undefined,
   };
 }
 
@@ -1284,12 +1412,13 @@ export function serializeRoomForPlayer(
           connected: me.connected,
           alive: me.alive,
           hasVoted: me.hasVoted,
+          silenced: isPlayerSilenced(me),
         }
       : null,
     myRole: me?.inGame ? me.role || null : null,
     myRoleLabel: me?.inGame && me.role ? getRoleLabel(me.role) : null,
     isDon: me?.isDon || false,
-    players: visiblePlayers.map((p) => mapPlayerPublic(p, room, playerId)),
+    players: visiblePlayers.map((p) => mapPlayerPublic(p, room, playerId, canModerate)),
     spectators: visibleSpectators.map((p) => ({
       id: p.id,
       userId: p.userId || null,

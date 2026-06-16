@@ -6,7 +6,6 @@ import {
   adminUnban,
   modBan,
   modUnban,
-  adminDeleteUser,
   adminUpdateUser,
   sendPrivateMessage,
 } from '../api';
@@ -27,6 +26,11 @@ interface UserProfileModalProps {
     text: string,
     opts: { toPlayerId?: number; isPrivate?: boolean }
   ) => Promise<{ error?: string } | void>;
+  targetPlayerId?: number;
+  targetSilenced?: boolean;
+  inRoom?: boolean;
+  onSilence?: (playerId: number, reason: string, hours: number | null) => Promise<void>;
+  onUnsilence?: (playerId: number) => Promise<void>;
 }
 
 interface ProfileData {
@@ -46,6 +50,11 @@ export default function UserProfileModal({
   replyTarget = null,
   canSendChat = false,
   onSendChat,
+  targetPlayerId,
+  targetSilenced = false,
+  inRoom = false,
+  onSilence,
+  onUnsilence,
 }: UserProfileModalProps) {
   const [data, setData] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -55,6 +64,9 @@ export default function UserProfileModal({
   const [banReason, setBanReason] = useState('Нарушение правил');
   const [banHours, setBanHours] = useState('');
   const [showBanForm, setShowBanForm] = useState(false);
+  const [silenceReason, setSilenceReason] = useState('Нарушение правил чата');
+  const [silenceHours, setSilenceHours] = useState('');
+  const [showSilenceForm, setShowSilenceForm] = useState(false);
   const [showMailCompose, setShowMailCompose] = useState(false);
   const [mailText, setMailText] = useState('');
   const [mailSending, setMailSending] = useState(false);
@@ -138,14 +150,28 @@ export default function UserProfileModal({
     }
   };
 
-  const handleDelete = async () => {
-    if (!confirm('Удалить пользователя и его профиль?')) return;
+  const handleSilence = async () => {
+    if (!targetPlayerId || !onSilence) return;
     try {
-      await adminDeleteUser(userId);
+      await onSilence(
+        targetPlayerId,
+        silenceReason,
+        silenceHours ? Number(silenceHours) : null
+      );
+      setShowSilenceForm(false);
       onAdminAction?.();
-      onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка удаления');
+      setError(err instanceof Error ? err.message : 'Ошибка молчания');
+    }
+  };
+
+  const handleUnsilence = async () => {
+    if (!targetPlayerId || !onUnsilence) return;
+    try {
+      await onUnsilence(targetPlayerId);
+      onAdminAction?.();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка снятия молчания');
     }
   };
 
@@ -420,12 +446,45 @@ export default function UserProfileModal({
                       Разбанить
                     </button>
                   )}
-                  {canAdmin && (
-                    <button type="button" className="btn btn-sm btn-ghost" onClick={handleDelete}>
-                      Удалить
-                    </button>
+                  {inRoom && targetPlayerId && onSilence && (
+                    targetSilenced ? (
+                      <button type="button" className="btn btn-sm" onClick={() => void handleUnsilence()}>
+                        Снять молчание
+                      </button>
+                    ) : (
+                      <button type="button" className="btn btn-sm" onClick={() => setShowSilenceForm(true)}>
+                        Молчание
+                      </button>
+                    )
                   )}
                 </div>
+
+                {showSilenceForm && (
+                  <div className="ban-form">
+                    <label>
+                      Причина
+                      <input value={silenceReason} onChange={(e) => setSilenceReason(e.target.value)} />
+                    </label>
+                    <label>
+                      Часов (пусто = бессрочно)
+                      <input
+                        type="number"
+                        min="1"
+                        value={silenceHours}
+                        onChange={(e) => setSilenceHours(e.target.value)}
+                        placeholder="24"
+                      />
+                    </label>
+                    <div className="profile-actions">
+                      <button type="button" className="btn btn-ghost" onClick={() => setShowSilenceForm(false)}>
+                        Отмена
+                      </button>
+                      <button type="button" className="btn btn-primary danger" onClick={() => void handleSilence()}>
+                        Наложить молчание
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {showBanForm && (
                   <div className="ban-form">

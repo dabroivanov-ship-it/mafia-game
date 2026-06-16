@@ -106,6 +106,10 @@ export interface GamePlayer {
   leftEarly?: boolean;
   joinGameAvailableAt?: number;
   disconnectedAt?: number | null;
+  /** -1 = permanent, null/0 = not silenced, else epoch ms */
+  silencedUntil?: number | null;
+  silenceReason?: string | null;
+  mutedChat?: ChatMessage[];
 }
 
 export interface GameRoom {
@@ -152,6 +156,7 @@ export interface RoomStatePlayer {
   role: RoleId | null;
   roleLabel: string | null;
   isDon: boolean;
+  silenced?: boolean;
 }
 
 export interface RoomState {
@@ -179,6 +184,7 @@ export interface RoomState {
     connected: boolean;
     alive: boolean;
     hasVoted: boolean;
+    silenced?: boolean;
   } | null;
   myRole: RoleId | null;
   myRoleLabel: string | null;

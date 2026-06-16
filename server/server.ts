@@ -13,7 +13,7 @@ import { createMessagesRouter } from './messages/routes.js';
 import { createNewsRouter } from './news/routes.js';
 import { getUnreadCount } from './messages/store.js';
 import { socketAuthMiddleware } from './auth/jwt.js';
-import { findUserById, updateUserScore, isAdmin, isStaff, updateUserConnectionInfo, uploadsDir, normalizeChatLimit } from './auth/db.js';
+import { findUserById, updateUserScore, isAdmin, isStaff, updateUserConnectionInfo, uploadsDir, normalizeChatLimit, canBanTarget } from './auth/db.js';
 import { hydrateRoomHistory, loadGameEvents, getRecentGameEvents, getAdminChatHistory, getRecentChatForAdmin } from './history/store.js';
 import {
   createInitialRooms,
@@ -46,6 +46,10 @@ import {
   addRoom,
   removeRoom,
   checkWin,
+  isPlayerSilenced,
+  setPlayerSilence,
+  clearPlayerSilence,
+  addMutedOnlyMessage,
 } from './game/engine.js';
 import type { ChatChannel, GameRoom, PrivateNote, PublicUser, RoomState, Session } from './types/index.js';
 
@@ -612,6 +616,11 @@ io.on('connection', (socket) => {
       const target = room.players.find((p) => p.id === targetId && p.connected);
       if (!target) return cb?.({ error: 'Получатель не в комнате' });
       if (targetId === session.playerId) return cb?.({ error: 'Нельзя написать себе' });
+      if (isPlayerSilenced(me)) {
+        addMutedOnlyMessage(room, me, trimmed, 'private');
+        broadcastRoom(room.id);
+        return cb?.({ ok: true });
+      }
       const msg = addPrivateChatMessage(room, session.playerId, targetId, trimmed);
       if (!msg) return cb?.({ error: 'Не удалось отправить' });
       broadcastRoom(room.id);
@@ -626,6 +635,12 @@ io.on('connection', (socket) => {
       channel = 'spectator';
     } else if (gameRunning && me.inGame && me.role) {
       channel = me.alive ? 'public' : 'dead';
+    }
+
+    if (isPlayerSilenced(me)) {
+      addMutedOnlyMessage(room, me, trimmed, channel);
+      broadcastRoom(room.id);
+      return cb?.({ ok: true });
     }
 
     const msg = addChatMessage(room, session.playerId, trimmed, channel, {
@@ -646,7 +661,15 @@ io.on('connection', (socket) => {
     const me = room.players.find((p) => p.id === session.playerId);
     if (me?.role !== 'mafia' || !me.alive) return cb?.({ error: 'Нет доступа' });
 
-    addChatMessage(room, session.playerId, text, 'mafia');
+    const trimmed = String(text || '').trim();
+    if (!trimmed) return cb?.({ error: 'Пустое сообщение' });
+    if (isPlayerSilenced(me)) {
+      addMutedOnlyMessage(room, me, trimmed, 'mafia');
+      broadcastRoom(room.id);
+      return cb?.({ ok: true });
+    }
+
+    addChatMessage(room, session.playerId, trimmed, 'mafia');
     broadcastRoom(room.id);
     cb?.({ ok: true });
   });
@@ -707,6 +730,72 @@ io.on('connection', (socket) => {
     if (!ok) return cb?.({ error: 'Сообщение не найдено' });
     broadcastRoom(room.id);
     cb?.({ ok: true });
+  });
+
+  socket.on('mod:silence', ({ targetPlayerId, reason, hours }, cb) => {
+    if (!socket.isStaff) return cb?.({ error: 'Нет доступа' });
+    const session = sessions.get(socket.id);
+    if (!session) return cb?.({ error: 'Вы не в комнате' });
+
+    const room = rooms.get(session.roomId);
+    if (!room) return cb?.({ error: 'Комната не найдена' });
+
+    const staffUser = findUserById(socket.userId!);
+    const target = room.players.find((p) => p.id === Number(targetPlayerId));
+    if (!target?.userId) return cb?.({ error: 'Игрок не найден' });
+
+    const targetUser = findUserById(target.userId);
+    if (!staffUser || !targetUser || !canBanTarget(staffUser, targetUser)) {
+      return cb?.({ error: 'Нет прав для молчания этого игрока' });
+    }
+
+    try {
+      const hoursNum = hours && Number(hours) > 0 ? Number(hours) : null;
+      setPlayerSilence(room, target.id, hoursNum, String(reason || ''));
+      const duration =
+        hoursNum && hoursNum > 0 ? `на ${hoursNum} ч.` : 'бессрочно';
+      const reasonText = String(reason || '').trim() || 'нарушение правил';
+      addSystemMessage(
+        room,
+        `🔇 ${target.username || target.name} получил(а) молчание (${duration}). Причина: ${reasonText}.`
+      );
+      broadcastRoom(room.id);
+      cb?.({ ok: true });
+    } catch (e) {
+      const err = e as Error;
+      cb?.({ error: err.message });
+    }
+  });
+
+  socket.on('mod:unsilence', ({ targetPlayerId }, cb) => {
+    if (!socket.isStaff) return cb?.({ error: 'Нет доступа' });
+    const session = sessions.get(socket.id);
+    if (!session) return cb?.({ error: 'Вы не в комнате' });
+
+    const room = rooms.get(session.roomId);
+    if (!room) return cb?.({ error: 'Комната не найдена' });
+
+    const staffUser = findUserById(socket.userId!);
+    const target = room.players.find((p) => p.id === Number(targetPlayerId));
+    if (!target?.userId) return cb?.({ error: 'Игрок не найден' });
+
+    const targetUser = findUserById(target.userId);
+    if (!staffUser || !targetUser || !canBanTarget(staffUser, targetUser)) {
+      return cb?.({ error: 'Нет прав' });
+    }
+
+    try {
+      clearPlayerSilence(room, target.id);
+      addSystemMessage(
+        room,
+        `🔊 С ${target.username || target.name} снято молчание.`
+      );
+      broadcastRoom(room.id);
+      cb?.({ ok: true });
+    } catch (e) {
+      const err = e as Error;
+      cb?.({ error: err.message });
+    }
   });
 
   socket.on('disconnect', () => {

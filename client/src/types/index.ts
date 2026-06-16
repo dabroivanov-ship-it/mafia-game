@@ -90,6 +90,7 @@ export interface RoomPlayer {
   role: GameRole;
   roleLabel: string | null;
   isDon: boolean;
+  silenced?: boolean;
 }
 
 export interface RoomSpectator {
@@ -109,6 +110,7 @@ export interface MyPlayer {
   connected: boolean;
   alive?: boolean;
   hasVoted?: boolean;
+  silenced?: boolean;
 }
 
 export interface RoomState {

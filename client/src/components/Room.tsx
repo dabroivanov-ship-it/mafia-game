@@ -213,7 +213,10 @@ export default function Room({ socket, state, onLeave, onStateUpdate, currentUse
                   <span className="chat-header-hint muted">👁 — только для зрителей</span>
                 )}
                 {state.chatMode === 'dead' && (
-                  <span className="chat-header-hint muted">Живые вас не видят</span>
+                  <span className="chat-header-hint muted">Только выбывшие · живые вас не видят</span>
+                )}
+                {state.myPlayer?.silenced && (
+                  <span className="chat-header-hint muted">🔇 Молчание — ваши сообщения видите только вы</span>
                 )}
               </div>
               <Chat
@@ -324,6 +327,19 @@ export default function Room({ socket, state, onLeave, onStateUpdate, currentUse
           canSendChat={state.canChat}
           onSendChat={sendRoomChat}
           onClose={() => setProfileTarget(null)}
+          inRoom
+          targetPlayerId={profileTarget.playerId}
+          targetSilenced={
+            state.players.find((p) => p.id === profileTarget.playerId)?.silenced ?? false
+          }
+          onSilence={async (playerId, reason, hours) => {
+            const res = await emit('mod:silence', { targetPlayerId: playerId, reason, hours });
+            if (res?.error) throw new Error(res.error);
+          }}
+          onUnsilence={async (playerId) => {
+            const res = await emit('mod:unsilence', { targetPlayerId: playerId });
+            if (res?.error) throw new Error(res.error);
+          }}
         />
       )}
     </div>

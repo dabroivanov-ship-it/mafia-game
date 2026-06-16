@@ -1319,6 +1319,11 @@ body {
   font-size: 0.75rem;
 }
 
+.chat-dead-tag {
+  margin-right: 4px;
+  font-size: 0.75rem;
+}
+
 .chat-time {
   color: var(--text-muted);
   font-size: 0.75rem;

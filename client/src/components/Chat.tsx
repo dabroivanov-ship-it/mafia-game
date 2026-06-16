@@ -150,6 +150,11 @@ export default function Chat({
                 👁
               </span>
             )}
+            {msg.sourceChannel === 'dead' && (
+              <span className="chat-dead-tag" title="Чат выбывших">
+                💀
+              </span>
+            )}
             {msg.system || !msg.userId ? (
               <span className="chat-author">{msg.playerName}:</span>
             ) : (
