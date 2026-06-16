@@ -42,17 +42,22 @@ load_env
 export NODE_ENV="${NODE_ENV:-production}"
 require_jwt_secret
 
+npm_install_build_deps() {
+  # NODE_ENV=production skips devDependencies; tsc/vite/typescript live there.
+  npm install --include=dev
+}
+
 echo "==> git pull"
 git pull --ff-only
 
 echo "==> build client"
 cd "$ROOT/client"
-npm install
+npm_install_build_deps
 npm run build
 
 echo "==> build server"
 cd "$ROOT/server"
-npm install
+npm_install_build_deps
 npm run build
 
 if [[ ! -f "$ROOT/server/dist/server.js" ]]; then
