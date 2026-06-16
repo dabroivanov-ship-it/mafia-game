@@ -1,9 +1,14 @@
+const path = require('path');
+
+const serverDir = path.join(__dirname, 'server');
+const serverEntry = path.join(serverDir, 'dist', 'server.js');
+
 module.exports = {
   apps: [
     {
       name: 'mafia-server',
-      cwd: './server',
-      script: 'dist/server.js',
+      cwd: serverDir,
+      script: serverEntry,
       interpreter: 'node',
       exec_mode: 'fork',
       instances: 1,
