@@ -11,7 +11,8 @@ export const CONFIG = {
   DISCONNECT_GRACE_SEC: 90,
   DAY_DISCUSSION_SEC: 60,
   NIGHT_ACTIONS_SEC: 60,
-  ROOM_COUNT: 3,
+  ROOM_COUNT: 1,
+  CHAT_ROOM_MAX_PLAYERS: 50,
 } as const;
 
 export const PHASE = {

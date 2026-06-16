@@ -43,8 +43,9 @@ import {
   resetRoom,
   serializeRoomForPlayer,
   renameRoom,
-  addRoom,
+  addChatRoom,
   removeRoom,
+  isChatRoom,
   checkWin,
   isPlayerSilenced,
   setPlayerSilence,
@@ -286,8 +287,8 @@ app.use(
     deleteMessage: adminDeleteMessage,
     clearRoomMessages: adminClearRoomMessages,
     renameRoom: (id, name) => renameRoom(rooms, id, name),
-    addRoom: (name) => addRoom(rooms, name),
-    deleteRoom: (id) => adminDeleteRoom(id),
+    addChatRoom: (name) => addChatRoom(rooms, name),
+    deleteChatRoom: (id) => adminDeleteRoom(id),
     onRoomsChanged,
     syncUserInRooms,
     onUserBanned: notifyRoomOfUserBan,
@@ -408,6 +409,7 @@ function attachSession(socketId: string, roomId: number, playerId: number, userI
 // Таймеры комнат — проверка каждую секунду
 setInterval(() => {
   for (const room of rooms.values()) {
+    if (isChatRoom(room)) continue;
     if (!room.timerEnd || Date.now() < room.timerEnd) continue;
 
     const reason = room.timerReason;
@@ -635,10 +637,12 @@ io.on('connection', (socket) => {
     }
 
     const gameRunning = isActiveGamePhase(room.phase);
-    const isSpectator = !me.inGame && gameRunning;
+    const isSpectator = !isChatRoom(room) && !me.inGame && gameRunning;
 
     let channel: ChatChannel = 'public';
-    if (isSpectator) {
+    if (isChatRoom(room)) {
+      channel = 'public';
+    } else if (isSpectator) {
       channel = 'spectator';
     } else if (gameRunning && me.inGame && me.role) {
       channel = me.alive ? 'public' : 'dead';
@@ -817,7 +821,7 @@ io.on('connection', (socket) => {
     const player = markPlayerDisconnected(room, socket.id);
     sessions.delete(socket.id);
 
-    if (player && isActiveGamePhase(room.phase) && player.inGame && player.alive) {
+    if (player && !isChatRoom(room) && isActiveGamePhase(room.phase) && player.inGame && player.alive) {
       scheduleDisconnectTimer(room.id, player.id);
     }
 

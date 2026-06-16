@@ -78,8 +78,10 @@ export default function Room({ socket, state, onLeave, onStateUpdate, currentUse
   }
 
   const me = state.myPlayer;
-  const isMafia = state.myRole === 'mafia' && me?.alive;
+  const isChatRoom = state.kind === 'chat';
+  const isMafia = !isChatRoom && state.myRole === 'mafia' && me?.alive;
   const showJoin =
+    !isChatRoom &&
     state.phase === 'registration' &&
     me &&
     !state.isInGame &&
@@ -121,15 +123,24 @@ export default function Room({ socket, state, onLeave, onStateUpdate, currentUse
         <div className="room-header-main">
           <h1>{state.name}</h1>
           <div className="room-header-meta">
-            <span className="phase-badge">{PHASE_LABELS[state.phase]}</span>
-            {timerLeft > 0 && <span className="timer">⏱ {timerLeft} сек</span>}
-            {state.phase === 'registration' && (
-              <span className="registration-count">
-                {state.registeredCount}/{state.maxPlayers} в игре
-              </span>
+            {!isChatRoom && (
+              <>
+                <span className="phase-badge">{PHASE_LABELS[state.phase]}</span>
+                {timerLeft > 0 && <span className="timer">⏱ {timerLeft} сек</span>}
+                {state.phase === 'registration' && (
+                  <span className="registration-count">
+                    {state.registeredCount}/{state.maxPlayers} в игре
+                  </span>
+                )}
+                {state.phase === 'roles' && (
+                  <span className="registration-count">Ночь начнётся после раздачи ролей</span>
+                )}
+              </>
             )}
-            {state.phase === 'roles' && (
-              <span className="registration-count">Ночь начнётся после раздачи ролей</span>
+            {isChatRoom && (
+              <span className="registration-count">
+                👥 {state.registeredCount}/{state.maxPlayers} в чате
+              </span>
             )}
           </div>
         </div>
@@ -138,13 +149,13 @@ export default function Room({ socket, state, onLeave, onStateUpdate, currentUse
         </button>
       </header>
 
-      {state.phase === 'roles' && !state.isSpectator && (
+      {!isChatRoom && state.phase === 'roles' && !state.isSpectator && (
         <div className="join-game-banner roles-banner">
           <p>🎭 Раздача ролей. Ведущий сообщит вашу роль в личных сообщениях [P]. Ожидайте ночи…</p>
         </div>
       )}
 
-      {showJoin && (
+      {!isChatRoom && showJoin && (
         <div className="join-game-banner">
           <p>Идёт регистрация — нажмите, чтобы участвовать в партии.</p>
           <button
@@ -164,7 +175,7 @@ export default function Room({ socket, state, onLeave, onStateUpdate, currentUse
         </div>
       )}
 
-      {state.canLeaveGame && (
+      {!isChatRoom && state.canLeaveGame && (
         <div className="join-game-banner leave-game-banner">
           <p>Вы зарегистрированы ({state.registeredCount}/{state.maxPlayers}). Ожидайте других или таймера.</p>
           <button type="button" className="btn btn-ghost btn-block" onClick={() => emit('room:leaveGame')}>
@@ -173,13 +184,13 @@ export default function Room({ socket, state, onLeave, onStateUpdate, currentUse
         </div>
       )}
 
-      {state.isSpectator && !showJoin && (
+      {!isChatRoom && state.isSpectator && !showJoin && (
         <div className="spectator-banner">
           👁 Вы наблюдаете. Видите чат игры; ваши сообщения видят только наблюдатели.
         </div>
       )}
 
-      {state.myRole && !state.isSpectator && (
+      {!isChatRoom && state.myRole && !state.isSpectator && (
         <div className="my-role-card">
           <strong>Ваша роль:</strong> {state.myRoleLabel}
           {state.isDon && ' (главный маф)'}
@@ -203,7 +214,9 @@ export default function Room({ socket, state, onLeave, onStateUpdate, currentUse
             <>
               <div className="chat-header-bar">
                 <span className="chat-header-title">
-                  {state.chatMode === 'spectator'
+                {isChatRoom
+                  ? '💬 Общий чат'
+                  : state.chatMode === 'spectator'
                     ? '👁 Игра + наблюдатели'
                     : state.chatMode === 'dead'
                       ? '💀 Чат выбывших'
@@ -262,14 +275,16 @@ export default function Room({ socket, state, onLeave, onStateUpdate, currentUse
                     : null
                 }
                 placeholder={
-                  state.chatMode === 'spectator'
-                    ? 'Для наблюдателей...'
-                    : state.chatMode === 'dead'
-                      ? 'Для выбывших...'
-                      : 'Сообщение...'
+                  isChatRoom
+                    ? 'Сообщение...'
+                    : state.chatMode === 'spectator'
+                      ? 'Для наблюдателей...'
+                      : state.chatMode === 'dead'
+                        ? 'Для выбывших...'
+                        : 'Сообщение...'
                 }
               />
-              {!state.isSpectator && <ActionPanel state={state} emit={emit} />}
+              {!isChatRoom && !state.isSpectator && <ActionPanel state={state} emit={emit} />}
             </>
           ) : (
             <Chat
@@ -293,29 +308,31 @@ export default function Room({ socket, state, onLeave, onStateUpdate, currentUse
         </main>
       </div>
 
-      <footer className="room-footer">
-        {state.canStartGame && state.phase === 'waiting' && (
-          <button
-            type="button"
-            className="btn btn-primary btn-lg btn-block"
-            onClick={async () => {
-              const res = await emit('room:start');
-              if (res?.error) alert(res.error);
-              else if (res?.state) onStateUpdate?.(res.state);
-            }}
-          >
-            Запустить игру
-          </button>
-        )}
-        {state.phase === 'registration' && me && !state.isInGame && !showJoin && (
-          <p className="muted">Все места заняты — дождитесь начала или наблюдайте в чате.</p>
-        )}
-        {state.phase === 'ended' && (
-          <button type="button" className="btn btn-primary btn-lg btn-block" onClick={() => emit('room:newGame')}>
-            Новая игра
-          </button>
-        )}
-      </footer>
+      {!isChatRoom && (
+        <footer className="room-footer">
+          {state.canStartGame && state.phase === 'waiting' && (
+            <button
+              type="button"
+              className="btn btn-primary btn-lg btn-block"
+              onClick={async () => {
+                const res = await emit('room:start');
+                if (res?.error) alert(res.error);
+                else if (res?.state) onStateUpdate?.(res.state);
+              }}
+            >
+              Запустить игру
+            </button>
+          )}
+          {state.phase === 'registration' && me && !state.isInGame && !showJoin && (
+            <p className="muted">Все места заняты — дождитесь начала или наблюдайте в чате.</p>
+          )}
+          {state.phase === 'ended' && (
+            <button type="button" className="btn btn-primary btn-lg btn-block" onClick={() => emit('room:newGame')}>
+              Новая игра
+            </button>
+          )}
+        </footer>
+      )}
 
       {profileTarget?.userId && (
         <UserProfileModal

@@ -33,8 +33,8 @@ export interface AdminRouterHandlers {
   deleteMessage: (roomId: number, messageId: string, channel: string) => boolean;
   clearRoomMessages: (roomId: number) => number;
   renameRoom: (id: number, name: string) => GameRoom;
-  addRoom: (name: string) => GameRoom;
-  deleteRoom: (id: number) => void;
+  addChatRoom: (name: string) => GameRoom;
+  deleteChatRoom: (id: number) => void;
   onRoomsChanged: (changedRoomId?: number | null) => void;
   syncUserInRooms?: (userId: number, displayName: string) => void;
   onUserBanned?: (userId: number, reason: string, until: string | null) => void;
@@ -69,24 +69,36 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     });
   });
 
-  /* --- Комнаты --- */
+  /* --- Игровые комнаты (переименование) --- */
   router.put('/rooms/:roomId', (req, res) => {
     try {
       const roomId = Number(req.params.roomId);
       const room = handlers.renameRoom(roomId, req.body.name);
       handlers.onRoomsChanged(roomId);
-      res.json({ room: { id: room.id, name: room.name } });
+      res.json({ room: { id: room.id, name: room.name, kind: room.kind } });
     } catch (e) {
       const err = e as Error;
       res.status(400).json({ error: err.message });
     }
   });
 
-  router.post('/rooms', (req, res) => {
+  /* --- Чат-комнаты --- */
+  router.post('/chat-rooms', (req, res) => {
     try {
-      const room = handlers.addRoom(req.body.name);
+      const room = handlers.addChatRoom(req.body.name);
       handlers.onRoomsChanged(room.id);
-      res.status(201).json({ room: { id: room.id, name: room.name } });
+      res.status(201).json({ room: { id: room.id, name: room.name, kind: room.kind } });
+    } catch (e) {
+      const err = e as Error;
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  router.delete('/chat-rooms/:roomId', (req, res) => {
+    try {
+      handlers.deleteChatRoom(Number(req.params.roomId));
+      handlers.onRoomsChanged();
+      res.json({ ok: true });
     } catch (e) {
       const err = e as Error;
       res.status(400).json({ error: err.message });
@@ -94,14 +106,7 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
   });
 
   router.delete('/rooms/:roomId', (req, res) => {
-    try {
-      handlers.deleteRoom(Number(req.params.roomId));
-      handlers.onRoomsChanged();
-      res.json({ ok: true });
-    } catch (e) {
-      const err = e as Error;
-      res.status(400).json({ error: err.message });
-    }
+    res.status(400).json({ error: 'Используйте DELETE /chat-rooms/:roomId для чат-комнат' });
   });
 
   /* --- Пользователи: профиль --- */

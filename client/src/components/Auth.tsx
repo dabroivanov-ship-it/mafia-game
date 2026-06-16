@@ -1,5 +1,5 @@
-import { useState, FormEvent } from 'react';
-import { login, register, saveSession } from '../api';
+import { useState, FormEvent, useEffect } from 'react';
+import { login, register, saveSession, loadRememberedLogin, saveRememberedLogin } from '../api';
 import type { User } from '../types';
 
 interface AuthProps {
@@ -10,6 +10,7 @@ export default function Auth({ onSuccess }: AuthProps) {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
 
   const [loginForm, setLoginForm] = useState({ login: '', password: '' });
   const [regForm, setRegForm] = useState({
@@ -20,12 +21,21 @@ export default function Auth({ onSuccess }: AuthProps) {
     displayName: '',
   });
 
+  useEffect(() => {
+    const saved = loadRememberedLogin();
+    setRememberMe(saved.remember);
+    if (saved.login) {
+      setLoginForm((prev) => ({ ...prev, login: saved.login }));
+    }
+  }, []);
+
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      const { token, user } = await login(loginForm);
+      const { token, user } = await login({ ...loginForm, remember: rememberMe });
+      saveRememberedLogin(loginForm.login.trim(), rememberMe);
       saveSession(token, user);
       onSuccess(user, token);
     } catch (err) {
@@ -38,6 +48,11 @@ export default function Auth({ onSuccess }: AuthProps) {
   const handleRegister = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (regForm.password.length < 8) {
+      setError('Пароль: минимум 8 символов');
+      return;
+    }
 
     if (regForm.password !== regForm.confirm) {
       setError('Пароли не совпадают');
@@ -52,6 +67,7 @@ export default function Auth({ onSuccess }: AuthProps) {
         password: regForm.password,
         displayName: regForm.displayName || regForm.username,
       });
+      saveRememberedLogin(regForm.username.trim(), true);
       saveSession(token, user);
       onSuccess(user, token);
     } catch (err) {
@@ -113,10 +129,18 @@ export default function Auth({ onSuccess }: AuthProps) {
                 type="password"
                 value={loginForm.password}
                 onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                placeholder="••••••"
+                placeholder="••••••••"
                 required
                 autoComplete="current-password"
               />
+            </label>
+            <label className="auth-remember">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+              />
+              <span>Запомнить меня</span>
             </label>
             <button type="submit" className="btn btn-primary btn-lg" disabled={loading}>
               {loading ? 'Вход...' : 'Войти'}
@@ -149,7 +173,7 @@ export default function Auth({ onSuccess }: AuthProps) {
               />
             </label>
             <label>
-              Имя в игре
+              Имя
               <input
                 type="text"
                 value={regForm.displayName}
@@ -164,9 +188,9 @@ export default function Auth({ onSuccess }: AuthProps) {
                 type="password"
                 value={regForm.password}
                 onChange={(e) => setRegForm({ ...regForm, password: e.target.value })}
-                placeholder="минимум 6 символов"
+                placeholder="минимум 8 символов"
                 required
-                minLength={6}
+                minLength={8}
                 autoComplete="new-password"
               />
             </label>
@@ -176,8 +200,9 @@ export default function Auth({ onSuccess }: AuthProps) {
                 type="password"
                 value={regForm.confirm}
                 onChange={(e) => setRegForm({ ...regForm, confirm: e.target.value })}
-                placeholder="••••••"
+                placeholder="••••••••"
                 required
+                minLength={8}
                 autoComplete="new-password"
               />
             </label>

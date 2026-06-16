@@ -32,6 +32,25 @@ export async function apiRequest<T = unknown>(
   return data as T;
 }
 
+const REMEMBER_LOGIN_KEY = 'mafia_remember_login';
+const REMEMBER_ME_KEY = 'mafia_remember_me';
+
+export function loadRememberedLogin(): { login: string; remember: boolean } {
+  const remember = localStorage.getItem(REMEMBER_ME_KEY) !== '0';
+  const login = remember ? localStorage.getItem(REMEMBER_LOGIN_KEY) || '' : '';
+  return { login, remember };
+}
+
+export function saveRememberedLogin(login: string, remember: boolean): void {
+  if (remember) {
+    localStorage.setItem(REMEMBER_ME_KEY, '1');
+    localStorage.setItem(REMEMBER_LOGIN_KEY, login);
+  } else {
+    localStorage.setItem(REMEMBER_ME_KEY, '0');
+    localStorage.removeItem(REMEMBER_LOGIN_KEY);
+  }
+}
+
 export function saveSession(token: string, user: User): void {
   localStorage.setItem('mafia_token', token);
   localStorage.setItem('mafia_user', JSON.stringify(user));
@@ -58,6 +77,7 @@ export async function register(payload: {
 export async function login(payload: {
   login: string;
   password: string;
+  remember?: boolean;
 }): Promise<{ token: string; user: User }> {
   return apiRequest('/api/auth/login', {
     method: 'POST',
@@ -224,6 +244,7 @@ export interface AdminGameEvent {
 export interface AdminRoom {
   id: number;
   name: string;
+  kind?: RoomKind;
   playerCount: number;
   maxPlayers: number;
   phase: string;
@@ -308,15 +329,25 @@ export async function adminRenameRoom(
   });
 }
 
-export async function adminCreateRoom(name: string): Promise<void> {
-  return apiRequest('/api/admin/rooms', {
+export async function adminCreateChatRoom(name: string): Promise<void> {
+  return apiRequest('/api/admin/chat-rooms', {
     method: 'POST',
     body: JSON.stringify({ name }),
   });
 }
 
+export async function adminDeleteChatRoom(roomId: number): Promise<void> {
+  return apiRequest(`/api/admin/chat-rooms/${roomId}`, { method: 'DELETE' });
+}
+
+/** @deprecated Use adminCreateChatRoom */
+export async function adminCreateRoom(name: string): Promise<void> {
+  return adminCreateChatRoom(name);
+}
+
+/** @deprecated Use adminDeleteChatRoom */
 export async function adminDeleteRoom(roomId: number): Promise<void> {
-  return apiRequest(`/api/admin/rooms/${roomId}`, { method: 'DELETE' });
+  return adminDeleteChatRoom(roomId);
 }
 
 export async function adminUpdateUser(

@@ -17,6 +17,7 @@ const dbModule = await load(path.join(dist, 'auth', 'db.js'));
 await load(path.join(dist, 'history', 'store.js'));
 await load(path.join(dist, 'news', 'store.js'));
 await load(path.join(dist, 'messages', 'store.js'));
+await load(path.join(dist, 'rooms', 'store.js'));
 
 const db = dbModule.default;
 
@@ -27,6 +28,7 @@ const tables = db
 
 const requiredTables = [
   'users',
+  'rooms_config',
   'room_chat_log',
   'room_game_log',
   'news_posts',
@@ -61,6 +63,16 @@ const requiredUserCols = [
 const missingUserCols = requiredUserCols.filter((name) => !userCols.includes(name));
 if (missingUserCols.length > 0) {
   console.error('ERROR: missing users columns:', missingUserCols.join(', '));
+  process.exit(1);
+}
+
+const roomsConfigCols = db
+  .prepare('PRAGMA table_info(rooms_config)')
+  .all()
+  .map((row) => row.name);
+
+if (!roomsConfigCols.includes('kind')) {
+  console.error('ERROR: missing rooms_config column: kind');
   process.exit(1);
 }
 

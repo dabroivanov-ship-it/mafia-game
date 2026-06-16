@@ -9,6 +9,8 @@ export type GamePhase =
 
 export type UserRole = 'user' | 'moderator' | 'admin';
 
+export type RoomKind = 'game' | 'chat';
+
 export interface User {
   id: number;
   username: string;
@@ -35,6 +37,7 @@ export interface PublicUser extends User {
 export interface LobbyRoom {
   id: number;
   name: string;
+  kind: RoomKind;
   playerCount: number;
   spectatorCount: number;
   maxPlayers: number;
@@ -116,6 +119,7 @@ export interface MyPlayer {
 export interface RoomState {
   id: number;
   name: string;
+  kind: RoomKind;
   phase: GamePhase;
   maxPlayers: number;
   registeredCount: number;

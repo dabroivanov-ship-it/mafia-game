@@ -25,6 +25,8 @@ export type TimerReason = 'registration' | 'roles' | 'day' | 'night';
 
 export type WinnerTeam = 'town' | 'mafia' | null;
 
+export type RoomKind = 'game' | 'chat';
+
 export interface User {
   id: number;
   username: string;
@@ -115,6 +117,7 @@ export interface GamePlayer {
 export interface GameRoom {
   id: number;
   name: string;
+  kind: RoomKind;
   phase: GamePhase;
   maxPlayers: number;
   players: GamePlayer[];
@@ -162,6 +165,7 @@ export interface RoomStatePlayer {
 export interface RoomState {
   id: number;
   name: string;
+  kind: RoomKind;
   phase: GamePhase;
   maxPlayers: number;
   registeredCount: number;
@@ -217,6 +221,7 @@ export interface Session {
 export interface LobbyRoom {
   id: number;
   name: string;
+  kind: RoomKind;
   playerCount: number;
   spectatorCount: number;
   maxPlayers: number;

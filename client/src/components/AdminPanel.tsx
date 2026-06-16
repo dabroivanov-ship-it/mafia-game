@@ -7,8 +7,8 @@ import {
   adminDeleteUser,
   adminClearRoomMessages,
   adminRenameRoom,
-  adminCreateRoom,
-  adminDeleteRoom,
+  adminCreateChatRoom,
+  adminDeleteChatRoom,
   adminUpdateUser,
   adminSetUserRole,
   adminUploadUserAvatar,
@@ -181,11 +181,11 @@ export default function AdminPanel({ onBack }: AdminPanelProps) {
     }
   };
 
-  const handleCreateRoom = async (e: FormEvent) => {
+  const handleCreateChatRoom = async (e: FormEvent) => {
     e.preventDefault();
     if (!newRoomName.trim()) return;
     try {
-      await adminCreateRoom(newRoomName.trim());
+      await adminCreateChatRoom(newRoomName.trim());
       setNewRoomName('');
       await load();
     } catch (err) {
@@ -193,10 +193,10 @@ export default function AdminPanel({ onBack }: AdminPanelProps) {
     }
   };
 
-  const handleDeleteRoom = async (roomId: number, name: string) => {
-    if (!confirm(`Удалить комнату «${name}»? Игроки будут выгнаны.`)) return;
+  const handleDeleteChatRoom = async (roomId: number, name: string) => {
+    if (!confirm(`Удалить чат-комнату «${name}»? Участники будут выгнаны.`)) return;
     try {
-      await adminDeleteRoom(roomId);
+      await adminDeleteChatRoom(roomId);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка удаления');
@@ -316,6 +316,9 @@ export default function AdminPanel({ onBack }: AdminPanelProps) {
       (u.isAdmin ? 'admin' : u.isModerator ? 'mod moderator' : 'user').includes(q)
     );
   });
+
+  const gameRooms = rooms.filter((r) => r.kind !== 'chat');
+  const chatRooms = rooms.filter((r) => r.kind === 'chat');
 
   if (loading && users.length === 0) {
     return <div className="admin-page"><p className="muted">Загрузка...</p></div>;
@@ -452,9 +455,9 @@ export default function AdminPanel({ onBack }: AdminPanelProps) {
 
           {section === 'rooms' && (
             <section className="admin-section">
-              <h3>Управление комнатами</h3>
+              <h3>Игровая комната (Мафия)</h3>
               <div className="admin-room-list">
-                {rooms.map((r) => (
+                {gameRooms.map((r) => (
                   <div key={r.id} className="admin-room-row">
                     <input
                       type="text"
@@ -476,26 +479,54 @@ export default function AdminPanel({ onBack }: AdminPanelProps) {
                     >
                       Очистить чат
                     </button>
+                  </div>
+                ))}
+              </div>
+
+              <h3 className="admin-subsection-title">Чат-комнаты</h3>
+              <div className="admin-room-list">
+                {chatRooms.length === 0 && <p className="muted">Чат-комнат пока нет</p>}
+                {chatRooms.map((r) => (
+                  <div key={r.id} className="admin-room-row">
+                    <input
+                      type="text"
+                      value={roomEdits[r.id] ?? r.name}
+                      onChange={(e) => handleRoomNameChange(r.id, e.target.value)}
+                      onKeyDown={(e) => handleRoomNameKeyDown(e, r.id)}
+                      maxLength={50}
+                    />
+                    <span className="muted room-meta">
+                      {r.playerCount}/{r.maxPlayers} · чат
+                    </span>
+                    <button type="button" className="btn btn-sm btn-primary" onClick={() => void handleRenameRoom(r.id)}>
+                      Сохранить
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-ghost"
+                      onClick={() => void handleClearRoomMessages(r.id, r.name)}
+                    >
+                      Очистить чат
+                    </button>
                     <button
                       type="button"
                       className="btn btn-sm danger"
-                      onClick={() => void handleDeleteRoom(r.id, r.name)}
-                      disabled={rooms.length <= 1}
+                      onClick={() => void handleDeleteChatRoom(r.id, r.name)}
                     >
                       Удалить
                     </button>
                   </div>
                 ))}
               </div>
-              <form className="admin-add-room" onSubmit={handleCreateRoom}>
+              <form className="admin-add-room" onSubmit={handleCreateChatRoom}>
                 <input
                   type="text"
-                  placeholder="Название новой комнаты"
+                  placeholder="Название новой чат-комнаты"
                   value={newRoomName}
                   onChange={(e) => setNewRoomName(e.target.value)}
                   maxLength={50}
                 />
-                <button type="submit" className="btn btn-primary">+ Создать комнату</button>
+                <button type="submit" className="btn btn-primary">+ Создать чат-комнату</button>
               </form>
             </section>
           )}
@@ -589,6 +620,9 @@ export default function AdminPanel({ onBack }: AdminPanelProps) {
                 <div className="admin-system-card">
                   <span className="muted">Комнат</span>
                   <strong>{rooms.length}</strong>
+                  <span className="muted admin-system-detail">
+                    {gameRooms.length} игр. · {chatRooms.length} чат
+                  </span>
                 </div>
               </div>
               <div className="admin-settings-actions">

@@ -24,6 +24,39 @@ interface LobbyProps {
   onOpenMessages?: () => void;
 }
 
+function RoomCard({
+  room,
+  onJoin,
+  joinLabel,
+  showPhase = true,
+}: {
+  room: LobbyRoom;
+  onJoin: (roomId: number) => void;
+  joinLabel: string;
+  showPhase?: boolean;
+}) {
+  return (
+    <div className="room-card">
+      <div className="room-card-info">
+        <h2>{room.name}</h2>
+        <div className="room-card-meta">
+          {showPhase && (
+            <span className="room-status">{PHASE_LABELS[room.phase] || room.phase}</span>
+          )}
+          {!showPhase && <span className="room-status">Общение</span>}
+          <span className="room-count">
+            👥 {room.playerCount}/{room.maxPlayers}
+            {room.spectatorCount > 0 && ` · 👁 ${room.spectatorCount}`}
+          </span>
+        </div>
+      </div>
+      <button type="button" className="btn btn-primary" onClick={() => onJoin(room.id)}>
+        {joinLabel}
+      </button>
+    </div>
+  );
+}
+
 export default function Lobby({
   rooms,
   onJoin,
@@ -36,6 +69,9 @@ export default function Lobby({
 }: LobbyProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const gameRooms = rooms.filter((r) => r.kind !== 'chat');
+  const chatRooms = rooms.filter((r) => r.kind === 'chat');
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -60,9 +96,9 @@ export default function Lobby({
         <div className="lobby-header-row">
           <div className="lobby-header-brand">
             <h1>🎭 Мафия</h1>
-            <p>Выберите комнату для игры</p>
+            <p>Выберите комнату для игры или общения</p>
             <button type="button" className="lobby-chat-link" onClick={onOpenMessages}>
-              <span>&gt; 💬 Чат для общения</span>
+              <span>&gt; 💬 Личные сообщения</span>
               {unreadMailCount > 0 && (
                 <span className="lobby-chat-badge">{unreadMailCount > 99 ? '99+' : unreadMailCount}</span>
               )}
@@ -146,26 +182,36 @@ export default function Lobby({
         </button>
       )}
 
-      <div className="rooms-list">
-        {rooms.length === 0 && <p className="muted">Загрузка комнат...</p>}
-        {rooms.map((room) => (
-          <div key={room.id} className="room-card">
-            <div className="room-card-info">
-              <h2>{room.name}</h2>
-              <div className="room-card-meta">
-                <span className="room-status">{PHASE_LABELS[room.phase] || room.phase}</span>
-                <span className="room-count">
-                  👥 {room.playerCount}/{room.maxPlayers}
-                  {room.spectatorCount > 0 && ` · 👁 ${room.spectatorCount}`}
-                </span>
-              </div>
-            </div>
-            <button type="button" className="btn btn-primary" onClick={() => onJoin(room.id)}>
-              Войти
-            </button>
-          </div>
-        ))}
-      </div>
+      <section className="lobby-rooms-section">
+        <h2 className="lobby-section-title">🎭 Мафия</h2>
+        <div className="rooms-list">
+          {rooms.length === 0 && <p className="muted">Загрузка комнат...</p>}
+          {gameRooms.length === 0 && rooms.length > 0 && (
+            <p className="muted">Игровых комнат нет</p>
+          )}
+          {gameRooms.map((room) => (
+            <RoomCard key={room.id} room={room} onJoin={onJoin} joinLabel="Войти" />
+          ))}
+        </div>
+      </section>
+
+      <section className="lobby-rooms-section">
+        <h2 className="lobby-section-title">💬 Чат</h2>
+        <div className="rooms-list">
+          {chatRooms.length === 0 && rooms.length > 0 && (
+            <p className="muted">Чат-комнат пока нет</p>
+          )}
+          {chatRooms.map((room) => (
+            <RoomCard
+              key={room.id}
+              room={room}
+              onJoin={onJoin}
+              joinLabel="Чат"
+              showPhase={false}
+            />
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

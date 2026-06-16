@@ -28,8 +28,8 @@ router.post('/register', async (req, res) => {
     if (!/^[a-zA-Z0-9_]+$/.test(u)) {
       return res.status(400).json({ error: 'Логин: только буквы, цифры и _' });
     }
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Пароль: минимум 6 символов' });
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'Пароль: минимум 8 символов' });
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) {
       return res.status(400).json({ error: 'Некорректный email' });
@@ -43,7 +43,7 @@ router.post('/register', async (req, res) => {
 
     const user = createUser({ username: u, email: e, passwordHash, displayName: name });
     if (!user) return res.status(500).json({ error: 'Ошибка регистрации' });
-    const token = signToken(user);
+    const token = signToken(user, true);
     res.status(201).json({ token, user: publicUser(user) });
   } catch (err) {
     console.error('register error:', err);
@@ -53,7 +53,7 @@ router.post('/register', async (req, res) => {
 
 router.post('/login', async (req, res) => {
   try {
-    const { login, password } = req.body;
+    const { login, password, remember } = req.body;
     if (!login?.trim() || !password) {
       return res.status(400).json({ error: 'Введите логин и пароль' });
     }
@@ -70,7 +70,7 @@ router.post('/login', async (req, res) => {
     const ok = await bcrypt.compare(password, user.password_hash);
     if (!ok) return res.status(401).json({ error: 'Неверный логин или пароль' });
 
-    const token = signToken(user);
+    const token = signToken(user, remember !== false);
     res.json({ token, user: publicUser(user) });
   } catch (err) {
     console.error('login error:', err);

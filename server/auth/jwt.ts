@@ -5,19 +5,23 @@ import { findUserById, isUserBanned, isAdmin, isModerator, isStaff } from './db.
 import type { User } from '../types/index.js';
 import { getJwtSecret } from '../config/env.js';
 
-const JWT_EXPIRES: SignOptions['expiresIn'] = (process.env.JWT_EXPIRES || '7d') as SignOptions['expiresIn'];
-
 interface AppJwtPayload {
   sub: number;
   username: string;
   role: string;
 }
 
-export function signToken(user: User): string {
+const JWT_REMEMBER_EXPIRES: SignOptions['expiresIn'] = (process.env.JWT_REMEMBER_EXPIRES ||
+  '90d') as SignOptions['expiresIn'];
+const JWT_SESSION_EXPIRES: SignOptions['expiresIn'] = (process.env.JWT_SESSION_EXPIRES ||
+  '1d') as SignOptions['expiresIn'];
+
+export function signToken(user: User, remember = true): string {
+  const expiresIn = remember ? JWT_REMEMBER_EXPIRES : JWT_SESSION_EXPIRES;
   return jwt.sign(
     { sub: user.id, username: user.username, role: user.role },
     getJwtSecret(),
-    { expiresIn: JWT_EXPIRES }
+    { expiresIn }
   );
 }
 

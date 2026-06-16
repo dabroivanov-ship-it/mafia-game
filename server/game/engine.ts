@@ -27,7 +27,7 @@ import {
   deleteRoomChatLog,
   hydrateRoomHistory,
 } from '../history/store.js';
-import { loadRoomNames, saveRoomName, deleteRoomName } from '../rooms/store.js';
+import { loadRoomConfigs, saveRoomConfig, deleteRoomConfig } from '../rooms/store.js';
 import type {
   ChatChannel,
   ChatMessage,
@@ -37,6 +37,7 @@ import type {
   NightAction,
   NightResolveResult,
   PrivateNote,
+  RoomKind,
   RoomState,
   RoomStatePlayer,
   TimerReason,
@@ -44,25 +45,46 @@ import type {
 
 let nextPlayerId = 1;
 
+export function isChatRoom(room: GameRoom): boolean {
+  return room.kind === 'chat';
+}
+
 export function createInitialRooms(): Map<number, GameRoom> {
   const rooms = new Map<number, GameRoom>();
-  const savedNames = loadRoomNames();
+  const savedConfigs = loadRoomConfigs();
+
   for (let i = 1; i <= CONFIG.ROOM_COUNT; i++) {
-    const room = createRoom(i);
-    if (savedNames.has(i)) {
-      room.name = savedNames.get(i)!;
+    const room = createRoom(i, 'game');
+    const saved = savedConfigs.get(i);
+    if (saved?.name) {
+      room.name = saved.name;
     }
     rooms.set(i, room);
   }
+
+  for (const [id, config] of savedConfigs) {
+    if (config.kind === 'chat') {
+      rooms.set(id, createChatRoom(id, config.name));
+    }
+  }
+
+  if (!Array.from(rooms.values()).some((r) => r.kind === 'chat')) {
+    const id = CONFIG.ROOM_COUNT + 1;
+    const room = createChatRoom(id, 'Общий чат');
+    rooms.set(id, room);
+    saveRoomConfig(id, room.name, 'chat');
+  }
+
   return rooms;
 }
 
-function createRoom(id: number): GameRoom {
+function createRoom(id: number, kind: RoomKind = 'game'): GameRoom {
   return {
     id,
-    name: `Комната ${id}`,
+    name: kind === 'chat' ? `Чат ${id}` : `Комната ${id}`,
+    kind,
     phase: PHASE.WAITING,
-    maxPlayers: CONFIG.DEFAULT_MAX_PLAYERS,
+    maxPlayers: kind === 'chat' ? CONFIG.CHAT_ROOM_MAX_PLAYERS : CONFIG.DEFAULT_MAX_PLAYERS,
     players: [],
     chat: [],
     mafiaChat: [],
@@ -90,14 +112,41 @@ function createRoom(id: number): GameRoom {
   };
 }
 
+function createChatRoom(id: number, name?: string): GameRoom {
+  const room = createRoom(id, 'chat');
+  if (name?.trim()) {
+    room.name = name.trim().slice(0, 50);
+  }
+  return room;
+}
+
 export function getLobbySnapshot(rooms: Map<number, GameRoom>): LobbyRoom[] {
-  return Array.from(rooms.values()).map((room) => {
+  return Array.from(rooms.values())
+    .sort((a, b) => {
+      if (a.kind !== b.kind) return a.kind === 'game' ? -1 : 1;
+      return a.id - b.id;
+    })
+    .map((room) => {
+    if (isChatRoom(room)) {
+      const connected = room.players.filter((p) => p.connected).length;
+      return {
+        id: room.id,
+        name: room.name,
+        kind: room.kind,
+        playerCount: connected,
+        spectatorCount: 0,
+        maxPlayers: room.maxPlayers,
+        phase: PHASE.WAITING,
+      };
+    }
+
     const inGame = room.players.filter((p) => p.connected && p.inGame).length;
     const connected = room.players.filter((p) => p.connected).length;
     const gameRunning = !isLobbyPhase(room.phase);
     return {
       id: room.id,
       name: room.name,
+      kind: room.kind,
       playerCount: gameRunning ? inGame : connected,
       spectatorCount: gameRunning ? room.players.filter((p) => p.connected && !p.inGame).length : 0,
       maxPlayers: room.maxPlayers,
@@ -112,29 +161,35 @@ export function renameRoom(rooms: Map<number, GameRoom>, roomId: number, name: s
   const trimmed = String(name || '').trim().slice(0, 50);
   if (!trimmed) throw new Error('Название не может быть пустым');
   room.name = trimmed;
-  saveRoomName(room.id, trimmed);
+  saveRoomConfig(room.id, trimmed, room.kind);
   return room;
 }
 
-export function addRoom(rooms: Map<number, GameRoom>, name: string): GameRoom {
+export function addChatRoom(rooms: Map<number, GameRoom>, name: string): GameRoom {
   let maxId = 0;
   for (const id of rooms.keys()) maxId = Math.max(maxId, id);
   const id = maxId + 1;
-  const room = createRoom(id);
   const trimmed = String(name || '').trim().slice(0, 50);
-  room.name = trimmed || `Комната ${id}`;
+  const room = createChatRoom(id, trimmed || `Чат ${id}`);
   rooms.set(id, room);
-  saveRoomName(id, room.name);
+  saveRoomConfig(id, room.name, 'chat');
   return room;
 }
 
+/** @deprecated Use addChatRoom for new rooms; game rooms are fixed at startup. */
+export function addRoom(rooms: Map<number, GameRoom>, name: string): GameRoom {
+  return addChatRoom(rooms, name);
+}
+
 export function removeRoom(rooms: Map<number, GameRoom>, roomId: number): GameRoom {
-  if (rooms.size <= 1) throw new Error('Нельзя удалить последнюю комнату');
   const id = Number(roomId);
   if (!rooms.has(id)) throw new Error('Комната не найдена');
   const room = rooms.get(id)!;
+  if (room.kind === 'game') {
+    throw new Error('Нельзя удалить игровую комнату');
+  }
   rooms.delete(id);
-  deleteRoomName(id);
+  deleteRoomConfig(id);
   return room;
 }
 
@@ -171,7 +226,7 @@ export function addPlayerToRoom(
     if (username) existingUser.username = username;
     existingUser.connected = true;
     existingUser.disconnectedAt = null;
-    if (isLobbyPhase(room.phase)) {
+    if (!isChatRoom(room) && isLobbyPhase(room.phase)) {
       existingUser.inGame = true;
     }
     return { player: existingUser, privateNotes: [] };
@@ -180,9 +235,13 @@ export function addPlayerToRoom(
   const connectedCount = room.players.filter((p) => p.connected).length;
   const inGameCount = room.players.filter((p) => p.connected && p.inGame).length;
   const isGamePhase = !isLobbyPhase(room.phase);
-  const defaultInGame = !isGamePhase;
+  const defaultInGame = isChatRoom(room) ? false : !isGamePhase;
 
-  if (isLobbyPhase(room.phase) && connectedCount >= room.maxPlayers + 20) {
+  if (isChatRoom(room)) {
+    if (connectedCount >= room.maxPlayers) {
+      throw new Error('Комната переполнена');
+    }
+  } else if (isLobbyPhase(room.phase) && connectedCount >= room.maxPlayers + 20) {
     throw new Error('Комната переполнена');
   }
 
@@ -208,7 +267,12 @@ export function addPlayerToRoom(
   hydrateRoomHistory(room);
 
   let privateNotes: PrivateNote[] = [];
-  if (room.phase === PHASE.REGISTRATION && player.inGame && inGameCount + 1 >= room.maxPlayers) {
+  if (
+    !isChatRoom(room) &&
+    room.phase === PHASE.REGISTRATION &&
+    player.inGame &&
+    inGameCount + 1 >= room.maxPlayers
+  ) {
     privateNotes = tryStartGameAfterRegistration(room);
   }
 
@@ -224,14 +288,18 @@ export function markPlayerDisconnected(room: GameRoom, socketId: string): GamePl
   player.disconnectedAt = Date.now();
 
   const gameActive = !isLobbyPhase(room.phase);
-  if (gameActive && player.inGame && player.alive) {
+  if (!isChatRoom(room) && gameActive && player.inGame && player.alive) {
     addSystemMessage(
       room,
       `${playerNick(player)} отошёл от игры. Есть ${CONFIG.DISCONNECT_GRACE_SEC} сек. на возвращение.`
     );
   }
 
-  if (room.phase === PHASE.WAITING && room.players.every((p) => !p.connected)) {
+  if (
+    !isChatRoom(room) &&
+    room.phase === PHASE.WAITING &&
+    room.players.every((p) => !p.connected)
+  ) {
     resetRoom(room);
   }
 
@@ -319,6 +387,9 @@ export function reconnectPlayer(
 }
 
 export function startRegistration(room: GameRoom, _starterPlayerId: number | null = null): void {
+  if (isChatRoom(room)) {
+    throw new Error('В чат-комнате нельзя запустить игру');
+  }
   if (room.phase !== PHASE.WAITING && room.phase !== PHASE.ENDED) {
     throw new Error('Игра уже идёт');
   }
@@ -345,6 +416,9 @@ export function startRegistration(room: GameRoom, _starterPlayerId: number | nul
 }
 
 export function joinGame(room: GameRoom, playerId: number): { player: GamePlayer; privateNotes: PrivateNote[] } {
+  if (isChatRoom(room)) {
+    throw new Error('В чат-комнате нет игры');
+  }
   if (room.phase !== PHASE.REGISTRATION) {
     throw new Error('Присоединиться можно только во время регистрации');
   }
@@ -374,6 +448,9 @@ export function joinGame(room: GameRoom, playerId: number): { player: GamePlayer
 }
 
 export function leaveGame(room: GameRoom, playerId: number): GamePlayer {
+  if (isChatRoom(room)) {
+    throw new Error('В чат-комнате нет игры');
+  }
   if (room.phase !== PHASE.REGISTRATION) {
     throw new Error('Выйти из игры можно только во время регистрации');
   }
@@ -896,8 +973,11 @@ function endGame(room: GameRoom, team: 'town' | 'mafia', message: string): void 
 }
 
 export function resetRoom(room: GameRoom): void {
+  if (isChatRoom(room)) return;
+
   const id = room.id;
   const name = room.name;
+  const kind = room.kind;
   const chat = room.chat;
   const mafiaChat = room.mafiaChat;
   const deadChat = room.deadChat;
@@ -905,7 +985,7 @@ export function resetRoom(room: GameRoom): void {
   const privateChat = room.privateChat;
   const historyLoaded = room.historyLoaded;
   const connectedPlayers = room.players.filter((p) => p.connected);
-  Object.assign(room, createRoom(id));
+  Object.assign(room, createRoom(id, kind));
   room.name = name;
   room.chat = chat;
   room.mafiaChat = mafiaChat;
@@ -1217,7 +1297,7 @@ export function addSystemMessage(room: GameRoom, text: string): void {
   const msg: ChatMessage = {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
     playerId: null,
-    playerName: '🤖 Ведущий',
+    playerName: isChatRoom(room) ? '🛡️ Система' : '🤖 Ведущий',
     text,
     time,
     system: true,
@@ -1265,6 +1345,17 @@ function buildChatView(
   me: GamePlayer | undefined,
   chatLimit = DEFAULT_CHAT_LIMIT
 ): { messages: ChatMessage[]; mode: 'spectator' | 'dead' | 'alive'; hasMoreChat: boolean } {
+  if (isChatRoom(room)) {
+    let combined = appendPrivateMessages(room.chat, room, me?.id);
+    if (me && isPlayerSilenced(me) && me.mutedChat?.length) {
+      combined = [...combined, ...me.mutedChat].sort(
+        (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
+      );
+    }
+    const sliced = sliceChatMessages(combined, chatLimit);
+    return { messages: sliced.messages, mode: 'alive', hasMoreChat: sliced.hasMoreChat };
+  }
+
   const gameRunning = isActiveGamePhase(room.phase);
   const isSpectator = me && !me.inGame && gameRunning;
   const myId = me?.id;
@@ -1366,6 +1457,61 @@ export function serializeRoomForPlayer(
   const me = room.players.find((p) => p.id === playerId);
   const { isAdmin = false, canModerate = false, chatLimit = DEFAULT_CHAT_LIMIT } = options;
   const chatView = buildChatView(room, me, chatLimit);
+
+  if (isChatRoom(room)) {
+    const connectedUsers = room.players.filter((p) => p.connected);
+    return {
+      id: room.id,
+      name: room.name,
+      kind: 'chat',
+      phase: PHASE.WAITING,
+      maxPlayers: room.maxPlayers,
+      registeredCount: connectedUsers.length,
+      nightNumber: 0,
+      timerEnd: null,
+      timerReason: null,
+      winnerTeam: null,
+      myId: playerId,
+      isSpectator: false,
+      isInGame: false,
+      canJoinGame: false,
+      joinGameCooldownSec: 0,
+      canLeaveGame: false,
+      myPlayer: me
+        ? {
+            id: me.id,
+            userId: me.userId || null,
+            name: me.name,
+            username: me.username || me.name,
+            inGame: false,
+            connected: me.connected,
+            alive: true,
+            hasVoted: false,
+            silenced: isPlayerSilenced(me),
+          }
+        : null,
+      myRole: null,
+      myRoleLabel: null,
+      isDon: false,
+      players: connectedUsers.map((p) => mapPlayerPublic(p, room, playerId, canModerate)),
+      spectators: [],
+      chat: chatView.messages,
+      chatMode: chatView.mode,
+      hasMoreChat: chatView.hasMoreChat,
+      mafiaChat: [],
+      canStartGame: false,
+      canChat: !!me?.connected,
+      canPlay: false,
+      wifeRevengeAvailable: false,
+      clownAvailable: false,
+      votingStarted: false,
+      myVote: null,
+      nightActionDone: false,
+      isAdmin,
+      canModerate,
+    };
+  }
+
   const gameRunning = isActiveGamePhase(room.phase);
   const isSpectator = !!(me && !me.inGame && gameRunning);
   const registeredCount = room.players.filter((p) => p.connected && p.inGame).length;
@@ -1382,6 +1528,7 @@ export function serializeRoomForPlayer(
   return {
     id: room.id,
     name: room.name,
+    kind: room.kind,
     phase: room.phase,
     maxPlayers: room.maxPlayers,
     registeredCount,
