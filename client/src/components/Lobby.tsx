@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { avatarUrl } from '../api';
-import type { GamePhase, LobbyRoom, User } from '../types';
+import type { GamePhase, LobbyRoom } from '../types';
 
 const PHASE_LABELS: Record<GamePhase, string> = {
   waiting: 'Ожидание',
@@ -15,23 +16,25 @@ export type LobbyScreen = 'rooms' | 'cabinet' | 'cabinet-settings' | 'cabinet-me
 
 interface LobbyProps {
   rooms: LobbyRoom[];
-  user: User;
   onJoin: (roomId: number) => void;
   onOpenNews?: () => void;
-  onOpenCabinet?: () => void;
+  onOpenInfo?: () => void;
+  onLogout?: () => void;
   unreadMailCount?: number;
   onOpenMessages?: () => void;
 }
 
 export default function Lobby({
   rooms,
-  user,
   onJoin,
   onOpenNews,
-  onOpenCabinet,
+  onOpenInfo,
+  onLogout,
   unreadMailCount = 0,
   onOpenMessages,
 }: LobbyProps) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   return (
     <div className="lobby">
       <header className="lobby-header">
@@ -70,34 +73,55 @@ export default function Lobby({
         ))}
       </div>
 
-      <section className="lobby-cabinet-section lobby-mobile-shortcuts">
-        <button type="button" className="lobby-news-card" onClick={onOpenNews}>
-          <span className="info-hub-icon" aria-hidden="true">📰</span>
-          <span className="lobby-cabinet-body">
-            <strong>Новости</strong>
-            <span className="muted">Объявления и обновления</span>
-          </span>
-          <span className="info-hub-arrow" aria-hidden="true">→</span>
-        </button>
-
-        <h2 className="lobby-cabinet-title">👤 Кабинет</h2>
-        <button type="button" className="lobby-cabinet-card" onClick={onOpenCabinet}>
-          {user.avatar ? (
-            <img src={avatarUrl(user.avatar) ?? undefined} alt="" className="lobby-cabinet-avatar" />
-          ) : (
-            <div className="lobby-cabinet-avatar placeholder">👤</div>
-          )}
-          <span className="lobby-cabinet-body">
-            <strong>{user.displayName}</strong>
-            <span className="muted">@{user.username} · 🏆 {user.totalScore}</span>
-          </span>
-          {unreadMailCount > 0 && (
-            <span className="lobby-cabinet-badge">{unreadMailCount > 99 ? '99+' : unreadMailCount}</span>
-          )}
-          <span className="info-hub-arrow" aria-hidden="true">
-            →
+      <section className="lobby-mobile-menu">
+        <button
+          type="button"
+          className={`lobby-mobile-menu-toggle ${mobileMenuOpen ? 'open' : ''}`}
+          onClick={() => setMobileMenuOpen((open) => !open)}
+          aria-expanded={mobileMenuOpen}
+        >
+          <span>☰ Меню</span>
+          <span className="lobby-mobile-menu-chevron" aria-hidden="true">
+            {mobileMenuOpen ? '▲' : '▼'}
           </span>
         </button>
+        {mobileMenuOpen && (
+          <div className="lobby-mobile-menu-items">
+            <button
+              type="button"
+              className="lobby-mobile-menu-item"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                onOpenNews?.();
+              }}
+            >
+              <span aria-hidden="true">📰</span>
+              <span>Новости</span>
+            </button>
+            <button
+              type="button"
+              className="lobby-mobile-menu-item"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                onOpenInfo?.();
+              }}
+            >
+              <span aria-hidden="true">ℹ️</span>
+              <span>Информация</span>
+            </button>
+            <button
+              type="button"
+              className="lobby-mobile-menu-item logout"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                onLogout?.();
+              }}
+            >
+              <span aria-hidden="true">🚪</span>
+              <span>Выход</span>
+            </button>
+          </div>
+        )}
       </section>
     </div>
   );

@@ -307,22 +307,6 @@ export default function UserProfileModal({
                   </div>
                 )}
 
-                {canModerate && data?.staffMeta && (
-                  <div className="profile-staff-meta">
-                    <h4>Данные подключения</h4>
-                    <div className="profile-staff-meta-row">
-                      <span className="muted">IP</span>
-                      <strong>{data.staffMeta.lastIp || '—'}</strong>
-                    </div>
-                    <div className="profile-staff-meta-row">
-                      <span className="muted">Софт / браузер</span>
-                      <strong className="profile-user-agent">
-                        {data.staffMeta.lastUserAgent || '—'}
-                      </strong>
-                    </div>
-                  </div>
-                )}
-
                 {canWriteMail && (
                   <div className="player-page-actions">
                     {!showMailCompose ? (
@@ -361,6 +345,22 @@ export default function UserProfileModal({
                         </div>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {canModerate && data?.staffMeta && (
+                  <div className="profile-staff-meta">
+                    <h4>Данные подключения</h4>
+                    <div className="profile-staff-meta-row">
+                      <span className="muted">IP</span>
+                      <strong>{data.staffMeta.lastIp || '—'}</strong>
+                    </div>
+                    <div className="profile-staff-meta-row">
+                      <span className="muted">Софт / браузер</span>
+                      <strong className="profile-user-agent">
+                        {data.staffMeta.lastUserAgent || '—'}
+                      </strong>
+                    </div>
                   </div>
                 )}
               </>

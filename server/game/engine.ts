@@ -1108,7 +1108,7 @@ export function getModerationSnapshot(rooms: Map<number, GameRoom>): ModerationS
   };
 }
 
-function addSystemMessage(room: GameRoom, text: string): void {
+export function addSystemMessage(room: GameRoom, text: string): void {
   const time = new Date().toISOString();
   room.systemMessages.push({ text, time });
   const msg: ChatMessage = {

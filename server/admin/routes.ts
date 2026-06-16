@@ -37,6 +37,7 @@ export interface AdminRouterHandlers {
   deleteRoom: (id: number) => void;
   onRoomsChanged: (changedRoomId?: number | null) => void;
   syncUserInRooms?: (userId: number, displayName: string) => void;
+  onUserBanned?: (userId: number, reason: string, until: string | null) => void;
   getGameEvents?: () => GameEvent[];
   getChatHistory?: (roomId: number) => ChatMessage[];
   getRoomGameEvents?: (roomId: number) => GameEvent[];
@@ -159,6 +160,7 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
       until = new Date(Date.now() + Number(hours) * 3600000).toISOString();
     }
     const user = banUser(targetId, reason, until);
+    handlers.onUserBanned?.(targetId, reason || '', until);
     res.json({ user });
   });
 

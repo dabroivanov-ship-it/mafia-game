@@ -15,6 +15,8 @@ const ITEMS: MenuItem[] = [
   { id: 'info', icon: 'ℹ️', label: 'Информация' },
 ];
 
+const MOBILE_LOBBY_MENU_IDS: MenuView[] = ['news', 'info'];
+
 interface MenuProps {
   user: User;
   view: MenuView;
@@ -35,7 +37,9 @@ export default function Menu({ user, view, onNavigate, onLogout, unreadMailCount
           <button
             key={item.id}
             type="button"
-            className={`menu-item ${view === item.id ? 'active' : ''}`}
+            className={`menu-item ${view === item.id ? 'active' : ''}${
+              MOBILE_LOBBY_MENU_IDS.includes(item.id) ? ' menu-item-lobby-extra' : ''
+            }`}
             onClick={() => onNavigate(item.id)}
           >
             <span className="menu-icon">{item.icon}</span>
@@ -55,7 +59,7 @@ export default function Menu({ user, view, onNavigate, onLogout, unreadMailCount
             <span className="menu-label">Админ</span>
           </button>
         )}
-        <button type="button" className="menu-item logout" onClick={onLogout}>
+        <button type="button" className="menu-item logout menu-item-lobby-extra" onClick={onLogout}>
           <span className="menu-icon">🚪</span>
           <span className="menu-label">Выйти</span>
         </button>

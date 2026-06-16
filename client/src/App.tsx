@@ -300,13 +300,10 @@ export default function App() {
         {view === 'lobby' && (
           <Lobby
             rooms={rooms}
-            user={user}
             onJoin={joinRoom}
             onOpenNews={() => setView('news')}
-            onOpenCabinet={() => {
-              setLobbyScreen('cabinet');
-              setView('cabinet');
-            }}
+            onOpenInfo={() => setView('info')}
+            onLogout={handleLogout}
             unreadMailCount={unreadMailCount}
             onOpenMessages={() => openMessages()}
           />

@@ -38,6 +38,7 @@ import {
   addPrivateChatMessage,
   deleteChatMessage,
   clearRoomChat,
+  addSystemMessage,
   getModerationSnapshot,
   resetRoom,
   serializeRoomForPlayer,
@@ -145,12 +146,73 @@ function adminDeleteMessage(roomId: number, messageId: string, channel: string):
   return ok;
 }
 
+const CLEAR_WARNING_MS = 60_000;
+const CLEAR_TOTAL_MS = 120_000;
+
+interface PendingRoomClear {
+  warningTimer: ReturnType<typeof setTimeout>;
+  clearTimer: ReturnType<typeof setTimeout>;
+}
+
+const pendingRoomClears = new Map<number, PendingRoomClear>();
+
+function findRoomForUser(userId: number): GameRoom | null {
+  for (const room of rooms.values()) {
+    if (room.players.some((p) => p.userId === userId)) {
+      return room;
+    }
+  }
+  return null;
+}
+
+function notifyRoomOfUserBan(userId: number, reason: string, until: string | null): void {
+  const room = findRoomForUser(userId);
+  if (!room) return;
+
+  const user = findUserById(userId);
+  const name = user?.displayName || user?.username || 'Игрок';
+  const duration = until
+    ? `до ${new Date(until).toLocaleString('ru-RU')}`
+    : 'навсегда';
+  const reasonText = reason.trim() || 'не указана';
+
+  addSystemMessage(
+    room,
+    `🚫 ${name} заблокирован(а) администратором. Срок: ${duration}. Причина: ${reasonText}.`
+  );
+  broadcastRoom(room.id);
+}
+
 function adminClearRoomMessages(roomId: number): number {
   const room = rooms.get(roomId);
   if (!room) return 0;
-  const cleared = clearRoomChat(room);
-  broadcastRoom(roomId);
-  return cleared;
+
+  const existing = pendingRoomClears.get(roomId);
+  if (existing) {
+    clearTimeout(existing.warningTimer);
+    clearTimeout(existing.clearTimer);
+  }
+
+  const warningTimer = setTimeout(() => {
+    const r = rooms.get(roomId);
+    if (!r) return;
+    addSystemMessage(
+      r,
+      '⚠️ Чат будет очищен через 1 минуту по решению администратора.'
+    );
+    broadcastRoom(roomId);
+  }, CLEAR_WARNING_MS);
+
+  const clearTimer = setTimeout(() => {
+    pendingRoomClears.delete(roomId);
+    const r = rooms.get(roomId);
+    if (!r) return;
+    clearRoomChat(r);
+    broadcastRoom(roomId);
+  }, CLEAR_TOTAL_MS);
+
+  pendingRoomClears.set(roomId, { warningTimer, clearTimer });
+  return 0;
 }
 
 function kickPlayersFromRoom(room: GameRoom): void {
@@ -217,6 +279,7 @@ app.use(
     deleteRoom: (id) => adminDeleteRoom(id),
     onRoomsChanged,
     syncUserInRooms,
+    onUserBanned: notifyRoomOfUserBan,
     getGameEvents: () => getRecentGameEvents(40),
     getChatHistory: (roomId) => getAdminChatHistory(roomId, 300),
     getRoomGameEvents: (roomId) => loadGameEvents(roomId, 50),
