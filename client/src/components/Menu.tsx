@@ -6,16 +6,16 @@ interface MenuItem {
   id: MenuView;
   icon: string;
   label: string;
+  mobileBottom?: boolean;
+  desktopOnly?: boolean;
 }
 
 const ITEMS: MenuItem[] = [
-  { id: 'lobby', icon: '🏠', label: 'Комнаты' },
-  { id: 'news', icon: '📰', label: 'Новости' },
-  { id: 'cabinet', icon: '👤', label: 'Кабинет' },
-  { id: 'info', icon: 'ℹ️', label: 'Информация' },
+  { id: 'lobby', icon: '🏠', label: 'Комнаты', mobileBottom: true },
+  { id: 'news', icon: '📰', label: 'Новости', desktopOnly: true },
+  { id: 'cabinet', icon: '👤', label: 'Кабинет', mobileBottom: true },
+  { id: 'info', icon: 'ℹ️', label: 'Информация', desktopOnly: true },
 ];
-
-const MOBILE_LOBBY_MENU_IDS: MenuView[] = ['news', 'info'];
 
 interface MenuProps {
   user: User;
@@ -38,8 +38,8 @@ export default function Menu({ user, view, onNavigate, onLogout, unreadMailCount
             key={item.id}
             type="button"
             className={`menu-item ${view === item.id ? 'active' : ''}${
-              MOBILE_LOBBY_MENU_IDS.includes(item.id) ? ' menu-item-lobby-extra' : ''
-            }`}
+              item.mobileBottom ? ' menu-item-mobile-nav' : ''
+            }${item.desktopOnly ? ' menu-item-desktop-only' : ''}`}
             onClick={() => onNavigate(item.id)}
           >
             <span className="menu-icon">{item.icon}</span>
@@ -52,14 +52,14 @@ export default function Menu({ user, view, onNavigate, onLogout, unreadMailCount
         {user.isAdmin && (
           <button
             type="button"
-            className={`menu-item admin ${view === 'admin' ? 'active' : ''}`}
+            className={`menu-item admin menu-item-mobile-nav ${view === 'admin' ? 'active' : ''}`}
             onClick={() => onNavigate('admin')}
           >
             <span className="menu-icon">⚙️</span>
             <span className="menu-label">Админ</span>
           </button>
         )}
-        <button type="button" className="menu-item logout menu-item-lobby-extra" onClick={onLogout}>
+        <button type="button" className="menu-item logout menu-item-desktop-only" onClick={onLogout}>
           <span className="menu-icon">🚪</span>
           <span className="menu-label">Выйти</span>
         </button>

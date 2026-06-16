@@ -303,6 +303,10 @@ export default function App() {
             onJoin={joinRoom}
             onOpenNews={() => setView('news')}
             onOpenInfo={() => setView('info')}
+            onOpenCabinet={() => {
+              setLobbyScreen('cabinet');
+              setView('cabinet');
+            }}
             onLogout={handleLogout}
             unreadMailCount={unreadMailCount}
             onOpenMessages={() => openMessages()}
