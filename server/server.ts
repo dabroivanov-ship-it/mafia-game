@@ -115,10 +115,10 @@ function syncUserProfileInRooms(userId: number, user: PublicUser | null): void {
     const player = room.players.find((p) => p.userId === userId);
     if (!player?.socketId) continue;
     const session = sessions.get(player.socketId);
-    if (session && user?.chatLimit) {
-      session.chatLimit = normalizeChatLimit(user.chatLimit);
+    if (session && user?.chat_limit) {
+      session.chatLimit = normalizeChatLimit(user.chat_limit);
     }
-    if (user?.displayName) player.name = user.displayName;
+    if (user?.display_name) player.name = user.display_name;
     io.to(player.socketId).emit(
       'room:state',
       serializeForSocketUser(room, player.id, userId, player.socketId)
@@ -170,7 +170,7 @@ function notifyRoomOfUserBan(userId: number, reason: string, until: string | nul
   if (!room) return;
 
   const user = findUserById(userId);
-  const name = user?.displayName || user?.username || 'Игрок';
+  const name = user?.display_name || user?.username || 'Игрок';
   const duration = until
     ? `до ${new Date(until).toLocaleString('ru-RU')}`
     : 'навсегда';
