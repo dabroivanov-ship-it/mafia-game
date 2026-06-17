@@ -23,7 +23,6 @@ import {
 } from '../api';
 import type { User, NewsPost, ThemeId } from '../types';
 import ThemePicker from './ThemePicker';
-import { applyTheme, resolveTheme, type ThemeId } from '../themes';
 
 interface AdminPanelProps {
   onBack: () => void;
