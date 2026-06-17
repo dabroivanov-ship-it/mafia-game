@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import {
   findUserByUsername,
   findUserByEmail,
+  createUser,
   publicUser,
   isUserBanned,
 } from './db.js';
