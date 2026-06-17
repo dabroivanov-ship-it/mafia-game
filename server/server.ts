@@ -11,6 +11,7 @@ import { createAdminRouter } from './admin/routes.js';
 import { createModerationRouter } from './moderation/routes.js';
 import { createMessagesRouter } from './messages/routes.js';
 import { createNewsRouter } from './news/routes.js';
+import settingsRoutes from './settings/routes.js';
 import { getUnreadCount } from './messages/store.js';
 import { socketAuthMiddleware } from './auth/jwt.js';
 import { findUserById, updateUserScore, isAdmin, isStaff, updateUserConnectionInfo, uploadsDir, normalizeChatLimit, canBanTarget } from './auth/db.js';
@@ -143,6 +144,7 @@ app.get('/api/health', (_req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/settings', settingsRoutes);
 app.use(
   '/api/profile',
   createProfileRouter({ onProfileUpdated: syncUserProfileInRooms })

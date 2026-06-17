@@ -1,18 +1,5 @@
-/* === Тёмная тема, mobile-first === */
+/* === Layout & shared tokens (colors in themes.css) === */
 :root {
-  --bg: #0a0b10;
-  --bg-card: #151821;
-  --bg-hover: #1e2230;
-  --bg-elevated: #252a3a;
-  --border: #2a3044;
-  --text: #eef0f4;
-  --text-muted: #8b93a8;
-  --accent: #7c6cf0;
-  --accent-hover: #9588f5;
-  --accent-glow: rgba(124, 108, 240, 0.35);
-  --danger: #ef5350;
-  --success: #4caf87;
-  --warning: #f0b429;
   --radius: 14px;
   --radius-sm: 10px;
   --font: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
@@ -37,8 +24,8 @@ body {
   font-family: var(--font);
   background: var(--bg);
   background-image:
-    radial-gradient(ellipse 120% 80% at 50% -20%, rgba(124, 108, 240, 0.12), transparent),
-    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(76, 175, 135, 0.06), transparent);
+    radial-gradient(ellipse 120% 80% at 50% -20%, var(--body-glow-1), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 100%, var(--body-glow-2), transparent);
   color: var(--text);
   min-height: 100vh;
   min-height: 100dvh;

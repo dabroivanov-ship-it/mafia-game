@@ -11,6 +11,8 @@ export type UserRole = 'user' | 'moderator' | 'admin';
 
 export type RoomKind = 'game' | 'chat';
 
+export type ThemeId = 'midnight' | 'emerald' | 'crimson' | 'aurora' | 'sunset' | 'ocean';
+
 export interface User {
   id: number;
   username: string;
@@ -28,6 +30,7 @@ export interface User {
   isBanned: boolean;
   banReason: string | null;
   chatLimit: number;
+  theme: string | null;
 }
 
 export interface PublicUser extends User {

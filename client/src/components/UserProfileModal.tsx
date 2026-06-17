@@ -214,7 +214,11 @@ export default function UserProfileModal({
         setError(res.error);
       } else {
         setChatText('');
-        setChatSuccess('Сообщение отправлено в чат');
+        if (inRoom) {
+          onClose();
+        } else {
+          setChatSuccess('Сообщение отправлено в чат');
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка отправки');

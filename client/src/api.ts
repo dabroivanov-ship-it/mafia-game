@@ -1,4 +1,4 @@
-import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, MailConversation, RoomKind } from './types';
+import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, MailConversation, RoomKind, ThemeId } from './types';
 
 const API_BASE =
   import.meta.env.VITE_API_URL ??
@@ -89,11 +89,26 @@ export async function fetchMe(): Promise<{ user: User }> {
   return apiRequest('/api/auth/me');
 }
 
+export async function fetchThemeSettings(): Promise<{
+  defaultTheme: ThemeId;
+  themes: { id: ThemeId; name: string }[];
+}> {
+  return apiRequest('/api/settings/theme');
+}
+
+export async function adminSetDefaultTheme(theme: ThemeId): Promise<{ defaultTheme: ThemeId }> {
+  return apiRequest('/api/settings/theme', {
+    method: 'PUT',
+    body: JSON.stringify({ theme }),
+  });
+}
+
 export async function updateProfile(payload: {
   displayName: string;
   city: string;
   bio: string;
   chatLimit: number;
+  theme?: string | null;
 }): Promise<{ user: User }> {
   return apiRequest('/api/profile', {
     method: 'PUT',

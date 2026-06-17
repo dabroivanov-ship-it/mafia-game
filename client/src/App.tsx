@@ -10,8 +10,9 @@ import Messages from './components/Messages';
 import Info from './components/Info';
 import AdminPanel from './components/AdminPanel';
 import Room from './components/Room';
-import { clearSession, fetchMe, fetchUnreadMailCount, saveSession } from './api';
-import type { LobbyRoom, RoomState, User } from './types';
+import { clearSession, fetchMe, fetchUnreadMailCount, fetchThemeSettings, saveSession } from './api';
+import type { LobbyRoom, RoomState, User, ThemeId } from './types';
+import { applyTheme, resolveTheme, DEFAULT_THEME } from './themes';
 
 const SOCKET_URL =
   import.meta.env.VITE_SOCKET_URL ??
@@ -46,6 +47,17 @@ export default function App() {
   const [lobbyScreen, setLobbyScreen] = useState<LobbyScreen>('rooms');
   const [composeToUserId, setComposeToUserId] = useState<number | null>(null);
   const [composeToUsername, setComposeToUsername] = useState<string | null>(null);
+  const [siteDefaultTheme, setSiteDefaultTheme] = useState<ThemeId>(DEFAULT_THEME);
+
+  useEffect(() => {
+    fetchThemeSettings()
+      .then(({ defaultTheme }) => setSiteDefaultTheme(defaultTheme))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    applyTheme(resolveTheme(user?.theme ?? null, siteDefaultTheme));
+  }, [user?.theme, siteDefaultTheme]);
 
   useEffect(() => {
     async function checkAuth() {
@@ -343,7 +355,10 @@ export default function App() {
         )}
         {view === 'info' && <Info />}
         {view === 'admin' && user.isAdmin && (
-          <AdminPanel onBack={() => setView('lobby')} />
+          <AdminPanel
+            onBack={() => setView('lobby')}
+            onDefaultThemeChange={setSiteDefaultTheme}
+          />
         )}
       </div>
 

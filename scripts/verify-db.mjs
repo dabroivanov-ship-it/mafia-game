@@ -18,6 +18,7 @@ await load(path.join(dist, 'history', 'store.js'));
 await load(path.join(dist, 'news', 'store.js'));
 await load(path.join(dist, 'messages', 'store.js'));
 await load(path.join(dist, 'rooms', 'store.js'));
+await load(path.join(dist, 'settings', 'store.js'));
 
 const db = dbModule.default;
 
@@ -29,6 +30,7 @@ const tables = db
 const requiredTables = [
   'users',
   'rooms_config',
+  'app_settings',
   'room_chat_log',
   'room_game_log',
   'news_posts',
@@ -58,6 +60,7 @@ const requiredUserCols = [
   'chat_limit',
   'last_ip',
   'last_user_agent',
+  'theme',
 ];
 
 const missingUserCols = requiredUserCols.filter((name) => !userCols.includes(name));

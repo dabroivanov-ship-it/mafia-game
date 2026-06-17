@@ -53,6 +53,7 @@ function migrateColumns(): void {
   if (!cols.includes('chat_limit')) add('ALTER TABLE users ADD COLUMN chat_limit INTEGER NOT NULL DEFAULT 15');
   if (!cols.includes('last_ip')) add('ALTER TABLE users ADD COLUMN last_ip TEXT DEFAULT NULL');
   if (!cols.includes('last_user_agent')) add('ALTER TABLE users ADD COLUMN last_user_agent TEXT DEFAULT NULL');
+  if (!cols.includes('theme')) add('ALTER TABLE users ADD COLUMN theme TEXT DEFAULT NULL');
 }
 
 migrateColumns();
@@ -128,6 +129,7 @@ export function publicUser(user: User | null | undefined): PublicUser | null {
     isBanned: isUserBanned(user),
     banReason: user.ban_reason || null,
     chatLimit: normalizeChatLimit(user.chat_limit),
+    theme: user.theme && user.theme.trim() ? user.theme.trim() : null,
   };
 }
 
@@ -177,18 +179,24 @@ export function updateUserProfile(
     city,
     bio,
     chatLimit,
+    theme,
   }: {
     displayName: string;
     city?: string;
     bio?: string;
     chatLimit?: number;
+    theme?: string | null;
   }
 ): PublicUser | null {
   const fields = ['display_name = ?', 'city = ?', 'bio = ?'];
-  const values: (string | number)[] = [displayName, city || '', bio || ''];
+  const values: (string | number | null)[] = [displayName, city || '', bio || ''];
   if (chatLimit != null) {
     fields.push('chat_limit = ?');
     values.push(normalizeChatLimit(chatLimit));
+  }
+  if (theme !== undefined) {
+    fields.push('theme = ?');
+    values.push(theme && theme.trim() ? theme.trim() : null);
   }
   values.push(userId);
   db.prepare(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`).run(...values);

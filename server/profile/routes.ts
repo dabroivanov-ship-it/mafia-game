@@ -14,6 +14,7 @@ import {
 } from '../auth/db.js';
 import { createAvatarUpload } from '../upload/avatar.js';
 import { getUserMessageCount } from '../history/store.js';
+import { isValidThemeId } from '../settings/themes.js';
 import type { PublicUser } from '../types/index.js';
 
 interface ProfileRouterOptions {
@@ -25,18 +26,27 @@ export function createProfileRouter({ onProfileUpdated }: ProfileRouterOptions =
   const upload = createAvatarUpload((req) => req.userId!);
 
   router.put('/', authMiddleware, (req, res) => {
-    const { displayName, city, bio, chatLimit } = req.body;
+    const { displayName, city, bio, chatLimit, theme } = req.body;
     if (!displayName?.trim()) {
       return res.status(400).json({ error: 'Укажите имя' });
     }
     if (chatLimit != null && !(CHAT_LIMIT_OPTIONS as readonly number[]).includes(Number(chatLimit))) {
       return res.status(400).json({ error: 'Недопустимое число сообщений в чате' });
     }
+    if (theme !== undefined && theme !== null && theme !== '' && !isValidThemeId(theme)) {
+      return res.status(400).json({ error: 'Недопустимая тема' });
+    }
     const user = updateUserProfile(req.userId!, {
       displayName: displayName.trim().slice(0, 30),
       city: (city || '').trim().slice(0, 50),
       bio: (bio || '').trim().slice(0, 500),
       chatLimit: chatLimit != null ? Number(chatLimit) : undefined,
+      theme:
+        theme === undefined
+          ? undefined
+          : theme === null || theme === ''
+            ? null
+            : String(theme),
     });
     onProfileUpdated?.(req.userId!, user);
     res.json({ user, chatLimitOptions: CHAT_LIMIT_OPTIONS });

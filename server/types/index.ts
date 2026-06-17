@@ -45,6 +45,7 @@ export interface User {
   chat_limit?: number;
   last_ip?: string | null;
   last_user_agent?: string | null;
+  theme?: string | null;
 }
 
 export interface StaffMember {
@@ -73,6 +74,7 @@ export interface PublicUser {
   isBanned: boolean;
   banReason?: string | null;
   chatLimit: number;
+  theme: string | null;
 }
 
 export interface ChatMessage {

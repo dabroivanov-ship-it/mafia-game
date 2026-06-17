@@ -17,17 +17,22 @@ import {
   adminCreateNews,
   adminUpdateNews,
   adminDeleteNews,
+  fetchThemeSettings,
+  adminSetDefaultTheme,
   type AdminRoom,
 } from '../api';
-import type { User, NewsPost } from '../types';
+import type { User, NewsPost, ThemeId } from '../types';
+import ThemePicker from './ThemePicker';
+import { applyTheme, resolveTheme, type ThemeId } from '../themes';
 
 interface AdminPanelProps {
   onBack: () => void;
+  onDefaultThemeChange?: (theme: ThemeId) => void;
 }
 
 type AdminSection = 'users' | 'rooms' | 'news' | 'system';
 
-export default function AdminPanel({ onBack }: AdminPanelProps) {
+export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelProps) {
   const [section, setSection] = useState<AdminSection>('users');
   const [users, setUsers] = useState<User[]>([]);
   const [rooms, setRooms] = useState<AdminRoom[]>([]);
@@ -48,6 +53,8 @@ export default function AdminPanel({ onBack }: AdminPanelProps) {
   const [newsLoading, setNewsLoading] = useState(false);
   const [newsForm, setNewsForm] = useState({ title: '', body: '', isPublished: true });
   const [editNews, setEditNews] = useState<NewsPost | null>(null);
+  const [defaultTheme, setDefaultTheme] = useState<ThemeId>('midnight');
+  const [themeSaving, setThemeSaving] = useState(false);
 
   const load = async ({ silent = false, syncRoomNames = false } = {}) => {
     if (!silent) setLoading(true);
@@ -78,6 +85,27 @@ export default function AdminPanel({ onBack }: AdminPanelProps) {
     const id = setInterval(() => void load({ silent: true }), 10000);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    if (section !== 'system') return;
+    fetchThemeSettings()
+      .then(({ defaultTheme: dt }) => setDefaultTheme(dt))
+      .catch(() => {});
+  }, [section]);
+
+  const handleDefaultThemeChange = async (themeId: ThemeId) => {
+    setThemeSaving(true);
+    setError('');
+    try {
+      const { defaultTheme: saved } = await adminSetDefaultTheme(themeId);
+      setDefaultTheme(saved);
+      onDefaultThemeChange?.(saved);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка сохранения темы');
+    } finally {
+      setThemeSaving(false);
+    }
+  };
 
   const loadNews = async () => {
     setNewsLoading(true);
@@ -629,6 +657,18 @@ export default function AdminPanel({ onBack }: AdminPanelProps) {
                 <button type="button" className="btn btn-primary" onClick={() => void load({ syncRoomNames: true })}>
                   Синхронизировать данные
                 </button>
+              </div>
+
+              <div className="theme-settings-block admin-theme-block">
+                <h3>Тема оформления сайта</h3>
+                <p className="theme-settings-hint">
+                  Основная тема для всех пользователей. Личная тема в кабинете перекрывает эту настройку.
+                </p>
+                <ThemePicker
+                  value={defaultTheme}
+                  onChange={(id) => void handleDefaultThemeChange(id)}
+                  disabled={themeSaving}
+                />
               </div>
             </section>
           )}
