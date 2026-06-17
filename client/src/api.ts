@@ -105,6 +105,16 @@ export async function telegramLogin(payload: {
   });
 }
 
+export async function telegramWebAppLogin(
+  initData: string,
+  remember = true
+): Promise<{ token: string; user: User }> {
+  return apiRequest('/api/auth/telegram', {
+    method: 'POST',
+    body: JSON.stringify({ initData, remember }),
+  });
+}
+
 export async function fetchMe(): Promise<{ user: User }> {
   return apiRequest('/api/auth/me');
 }

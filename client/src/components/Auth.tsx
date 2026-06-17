@@ -7,6 +7,7 @@ import {
   saveRememberedLogin,
   fetchTelegramSettings,
   telegramLogin,
+  telegramWebAppLogin,
   type TelegramAuthPayload,
 } from '../api';
 import type { User } from '../types';
@@ -18,6 +19,16 @@ interface AuthProps {
 declare global {
   interface Window {
     onTelegramAuth?: (payload: TelegramAuthPayload) => void;
+    Telegram?: {
+      WebApp: {
+        initData: string;
+        initDataUnsafe: {
+          user?: { id: number; username?: string; first_name?: string };
+        };
+        ready: () => void;
+        expand: () => void;
+      };
+    };
   }
 }
 
@@ -29,6 +40,7 @@ export default function Auth({ onSuccess }: AuthProps) {
   const [telegramBotUsername, setTelegramBotUsername] = useState<string | null>(null);
   const [telegramWebAppUrl, setTelegramWebAppUrl] = useState<string | null>(null);
   const [telegramLoading, setTelegramLoading] = useState(false);
+  const [telegramWebAppMode, setTelegramWebAppMode] = useState(false);
   const telegramWidgetRef = useRef<HTMLDivElement | null>(null);
 
   const [loginForm, setLoginForm] = useState({ login: '', password: '' });
@@ -61,7 +73,33 @@ export default function Auth({ onSuccess }: AuthProps) {
   }, []);
 
   useEffect(() => {
-    if (!telegramBotUsername || !telegramWidgetRef.current) return;
+    const webApp = window.Telegram?.WebApp;
+    if (!webApp?.initData) return;
+
+    webApp.ready();
+    webApp.expand();
+    setTelegramWebAppMode(true);
+    setTelegramLoading(true);
+    setError('');
+
+    telegramWebAppLogin(webApp.initData, true)
+      .then(({ token, user }) => {
+        const username =
+          webApp.initDataUnsafe.user?.username || String(webApp.initDataUnsafe.user?.id || '');
+        saveRememberedLogin(username, true);
+        saveSession(token, user);
+        onSuccess(user, token);
+      })
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : 'Ошибка Telegram входа');
+      })
+      .finally(() => {
+        setTelegramLoading(false);
+      });
+  }, [onSuccess]);
+
+  useEffect(() => {
+    if (!telegramBotUsername || !telegramWidgetRef.current || telegramWebAppMode) return;
     telegramWidgetRef.current.innerHTML = '';
     window.onTelegramAuth = async (payload: TelegramAuthPayload) => {
       setError('');
@@ -84,13 +122,12 @@ export default function Auth({ onSuccess }: AuthProps) {
     script.setAttribute('data-size', 'large');
     script.setAttribute('data-radius', '8');
     script.setAttribute('data-userpic', 'false');
-    script.setAttribute('data-request-access', 'write');
     script.setAttribute('data-onauth', 'onTelegramAuth(user)');
     telegramWidgetRef.current.appendChild(script);
     return () => {
       if (window.onTelegramAuth) delete window.onTelegramAuth;
     };
-  }, [telegramBotUsername, onSuccess]);
+  }, [telegramBotUsername, onSuccess, telegramWebAppMode]);
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
@@ -173,62 +210,66 @@ export default function Auth({ onSuccess }: AuthProps) {
 
         {error && <div className="auth-error">{error}</div>}
 
-        {telegramBotUsername && mode === 'login' && (
-          <div className="auth-telegram-block">
-            <p className="muted">Быстрый вход через Telegram</p>
-            <div ref={telegramWidgetRef} />
-            {telegramLoading && <p className="muted">Проверяем Telegram...</p>}
-          </div>
+        {telegramWebAppMode && telegramLoading && (
+          <p className="muted auth-telegram-block">Входим через Telegram...</p>
         )}
 
-        {mode === 'login' ? (
-          <form className="auth-form" onSubmit={handleLogin}>
-            <label>
-              Логин или email
-              <input
-                type="text"
-                value={loginForm.login}
-                onChange={(e) => setLoginForm({ ...loginForm, login: e.target.value })}
-                placeholder="username или email"
-                required
-                autoComplete="username"
-              />
-            </label>
-            <label>
-              Пароль
-              <input
-                type="password"
-                value={loginForm.password}
-                onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                placeholder="••••••••"
-                required
-                autoComplete="current-password"
-              />
-            </label>
-            <label className="auth-remember">
-              <input
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-              />
-              <span>Запомнить меня</span>
-            </label>
-            <button type="submit" className="btn btn-primary btn-lg" disabled={loading}>
-              {loading ? 'Вход...' : 'Войти'}
-            </button>
-            {telegramWebAppUrl && (
-              <a
-                className="btn btn-ghost btn-sm auth-telegram-link"
-                href={telegramWebAppUrl}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Открыть сайт в Telegram-боте
-              </a>
-            )}
-          </form>
-        ) : (
-          <form className="auth-form" onSubmit={handleRegister}>
+        {!(mode === 'login' && telegramWebAppMode && telegramLoading) &&
+          (mode === 'login' ? (
+            <form className="auth-form" onSubmit={handleLogin}>
+              <label>
+                Логин или email
+                <input
+                  type="text"
+                  value={loginForm.login}
+                  onChange={(e) => setLoginForm({ ...loginForm, login: e.target.value })}
+                  placeholder="username или email"
+                  required
+                  autoComplete="username"
+                />
+              </label>
+              <label>
+                Пароль
+                <input
+                  type="password"
+                  value={loginForm.password}
+                  onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                  placeholder="••••••••"
+                  required
+                  autoComplete="current-password"
+                />
+              </label>
+              <label className="auth-remember">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                />
+                <span>Запомнить меня</span>
+              </label>
+              <button type="submit" className="btn btn-primary btn-lg" disabled={loading}>
+                {loading ? 'Вход...' : 'Войти'}
+              </button>
+              {telegramWebAppUrl && (
+                <a
+                  className="btn btn-ghost btn-sm auth-telegram-link"
+                  href={telegramWebAppUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Открыть сайт в Telegram-боте
+                </a>
+              )}
+              {telegramBotUsername && !telegramWebAppMode && (
+                <div className="auth-telegram-block">
+                  <p className="muted">Быстрый вход через Telegram</p>
+                  <div ref={telegramWidgetRef} />
+                  {telegramLoading && <p className="muted">Проверяем Telegram...</p>}
+                </div>
+              )}
+            </form>
+          ) : (
+            <form className="auth-form" onSubmit={handleRegister}>
             <label>
               Логин
               <input
@@ -290,8 +331,8 @@ export default function Auth({ onSuccess }: AuthProps) {
             <button type="submit" className="btn btn-primary btn-lg" disabled={loading}>
               {loading ? 'Регистрация...' : 'Зарегистрироваться'}
             </button>
-          </form>
-        )}
+            </form>
+          ))}
       </div>
     </div>
   );
