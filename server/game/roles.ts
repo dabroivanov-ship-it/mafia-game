@@ -33,10 +33,13 @@ export function distributeRoles(playerCount: number): RoleId[] {
     pool.push('clown');
   }
   if (playerCount >= 10) {
-    // 10 игроков: добавляем жену, горца, убираем одного мирного
-    const idx = pool.lastIndexOf('civilian');
-    if (idx !== -1) pool.splice(idx, 1);
-    pool.push('commissar_wife', 'highlander', 'civilian');
+    // 10 игроков: 3 мафии (первый — дон), 6 мирных, 1 маньяк
+    while (pool.includes('civilian')) {
+      const idx = pool.lastIndexOf('civilian');
+      if (idx === -1) break;
+      pool.splice(idx, 1);
+    }
+    pool.push('commissar_wife', 'highlander', 'mafia');
   }
 
   // Обрезаем до нужного количества

@@ -89,6 +89,7 @@ export default function Rules({ embedded = false }: RulesProps) {
           </dl>
           <p className="muted small">
             Состав ролей зависит от числа игроков. При 3 игроках: мафия, Катани и мирный.
+            При 10 игроках: 3 мафиози (один — дон), 6 мирных и маньяк.
           </p>
         </section>
 
