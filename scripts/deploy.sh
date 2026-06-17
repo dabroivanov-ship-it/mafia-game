@@ -38,9 +38,20 @@ require_jwt_secret() {
   esac
 }
 
+require_cors_origin() {
+  local cors="${CORS_ORIGIN:-}"
+  if [[ -z "$cors" ]]; then
+    echo "ERROR: CORS_ORIGIN is empty in server/.env"
+    echo "  Add your public site URL, e.g.:"
+    echo "  CORS_ORIGIN=https://your-domain.ru"
+    exit 1
+  fi
+}
+
 load_env
 export NODE_ENV="${NODE_ENV:-production}"
 require_jwt_secret
+require_cors_origin
 
 npm_install_build_deps() {
   # NODE_ENV=production skips devDependencies; tsc/vite/typescript live there.
