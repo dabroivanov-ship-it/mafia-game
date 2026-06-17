@@ -4,7 +4,7 @@ import { Server, type Socket } from 'socket.io';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { CONFIG, isActiveGamePhase } from './game/config.js';
+import { CONFIG, PHASE, isActiveGamePhase } from './game/config.js';
 import authRoutes from './auth/routes.js';
 import { createProfileRouter } from './profile/routes.js';
 import { createAdminRouter } from './admin/routes.js';
