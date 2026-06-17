@@ -38,7 +38,6 @@ export default function Auth({ onSuccess }: AuthProps) {
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [telegramBotUsername, setTelegramBotUsername] = useState<string | null>(null);
-  const [telegramWebAppUrl, setTelegramWebAppUrl] = useState<string | null>(null);
   const [telegramLoading, setTelegramLoading] = useState(false);
   const [telegramWebAppMode, setTelegramWebAppMode] = useState(false);
   const telegramWidgetRef = useRef<HTMLDivElement | null>(null);
@@ -62,13 +61,11 @@ export default function Auth({ onSuccess }: AuthProps) {
 
   useEffect(() => {
     fetchTelegramSettings()
-      .then(({ botUsername, webAppUrl }) => {
+      .then(({ botUsername }) => {
         setTelegramBotUsername(botUsername);
-        setTelegramWebAppUrl(webAppUrl);
       })
       .catch(() => {
         setTelegramBotUsername(null);
-        setTelegramWebAppUrl(null);
       });
   }, []);
 
@@ -250,16 +247,6 @@ export default function Auth({ onSuccess }: AuthProps) {
               <button type="submit" className="btn btn-primary btn-lg" disabled={loading}>
                 {loading ? 'Вход...' : 'Войти'}
               </button>
-              {telegramWebAppUrl && (
-                <a
-                  className="btn btn-ghost btn-sm auth-telegram-link"
-                  href={telegramWebAppUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Открыть сайт в Telegram-боте
-                </a>
-              )}
               {telegramBotUsername && !telegramWebAppMode && (
                 <div className="auth-telegram-block">
                   <p className="muted">Быстрый вход через Telegram</p>

@@ -167,10 +167,6 @@ body {
   gap: 10px;
 }
 
-.auth-telegram-link {
-  align-self: flex-start;
-}
-
 .auth-form select {
   padding: 12px 14px;
   border-radius: var(--radius);
