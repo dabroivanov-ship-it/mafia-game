@@ -1387,6 +1387,7 @@ body {
 .chat-msg.system {
   color: var(--text-muted);
   font-style: italic;
+  white-space: pre-line;
 }
 
 .chat-msg.spectator-only {

@@ -136,79 +136,92 @@ export interface NightReport {
   killed: GamePlayer[];
 }
 
-export function buildMorningReportMessages(_room: GameRoom, report: NightReport): string[] {
-  const messages: string[] = [getNightCompleteMessage()];
+export function buildMorningReportMessage(
+  _room: GameRoom,
+  report: NightReport,
+  hadActions: boolean
+): string {
+  const parts: string[] = [];
+
+  if (hadActions) {
+    parts.push(getNightCompleteMessage());
+  }
 
   if (report.prostituteSeduced) {
-    messages.push(
+    parts.push(
       `Путана соблазнила ${playerNick(report.prostituteSeduced)} — его ночное действие заблокировано.`
     );
   }
 
   if (report.commissarChecked) {
-    messages.push(`Комиссар Катани проверил ${playerNick(report.commissarChecked)}.`);
+    parts.push(`Комиссар Катани проверил ${playerNick(report.commissarChecked)}.`);
   }
   if (report.commissarKilled) {
-    messages.push(
+    parts.push(
       `Комиссар Катани убил ${playerNick(report.commissarKilled)} (${getRoleLabel(report.commissarKilled.role)})!`
     );
   }
 
   if (report.homelessChecked) {
-    messages.push(`Бомж проверил ${playerNick(report.homelessChecked)}.`);
+    parts.push(`Бомж проверил ${playerNick(report.homelessChecked)}.`);
   }
 
   if (report.doctorHealed) {
     const nick = playerNick(report.doctorHealed);
     if (report.doctorSelfHeal) {
-      messages.push(`Доктор вылечил себя (${nick}).`);
+      parts.push(`Доктор вылечил себя (${nick}).`);
     } else {
-      messages.push(`Доктор вылечил ${nick}.`);
+      parts.push(`Доктор вылечил ${nick}.`);
     }
   }
 
   if (report.maniacKilled) {
-    messages.push(
+    parts.push(
       `Маньяк убил ${playerNick(report.maniacKilled)} (${getRoleLabel(report.maniacKilled.role)})!`
     );
   }
 
   if (report.wifeKilled) {
-    messages.push(
+    parts.push(
       `Жена комиссара отомстила — убила ${playerNick(report.wifeKilled)} (${getRoleLabel(report.wifeKilled.role)})!`
     );
   }
 
   if (report.clownSwapped) {
     const [a, b] = report.clownSwapped;
-    messages.push(`Клоун поменял роли ${playerNick(a)} и ${playerNick(b)}!`);
+    parts.push(`Клоун поменял роли ${playerNick(a)} и ${playerNick(b)}!`);
   }
 
   if (report.mafiaTied) {
-    messages.push('Мафия не договорилась о жертве — от их рук никто не пострадал.');
+    parts.push('Мафия не договорилась о жертве — от их рук никто не пострадал.');
   } else if (report.mafiaAttacked) {
     if (report.highlanderAttacked) {
-      messages.push(
+      parts.push(
         `Мафия напала на ${playerNick(report.highlanderAttacked)}, но горец пережил атаку!`
       );
     } else if (report.mafiaKilled) {
-      messages.push(
+      parts.push(
         `Мафия убила ${playerNick(report.mafiaKilled)} (${getRoleLabel(report.mafiaKilled.role)})!`
       );
     } else if (
       report.doctorHealed &&
       report.mafiaAttacked.id === report.doctorHealed.id
     ) {
-      messages.push(
+      parts.push(
         `Мафия напала на ${playerNick(report.mafiaAttacked)}, но доктор спас ${playerNick(report.mafiaAttacked)}!`
       );
     } else {
-      messages.push(`Мафия выбрала жертвой ${playerNick(report.mafiaAttacked)}.`);
+      parts.push(`Мафия выбрала жертвой ${playerNick(report.mafiaAttacked)}.`);
     }
   }
 
-  messages.push(getMorningIntroMessage(report.killed));
-  return messages;
+  parts.push(getMorningIntroMessage(report.killed));
+  return parts.join('\n');
+}
+
+/** @deprecated Use buildMorningReportMessage */
+export function buildMorningReportMessages(room: GameRoom, report: NightReport): string[] {
+  return [buildMorningReportMessage(room, report, true)];
 }
 
 export function getCommissarCheckResultMessage(target: GamePlayer): string {
@@ -268,6 +281,26 @@ const DOCTOR_ATMOSPHERE = [
 ];
 
 const MANIAC_ATMOSPHERE = ['Где-то в темноте маньяк выбирает новую жертву...'];
+
+export function getNightFallMessage(): string {
+  return pick(NIGHT_FALL);
+}
+
+/** Одно атмосферное сообщение для роли после ночного хода (или null). */
+export function getRoleNightAtmosphereMessage(role: RoleId): string | null {
+  switch (role) {
+    case 'mafia':
+      return pick(MAFIA_ATMOSPHERE);
+    case 'commissar':
+      return pick(COMMISSAR_ATMOSPHERE);
+    case 'doctor':
+      return pick(DOCTOR_ATMOSPHERE);
+    case 'maniac':
+      return pick(MANIAC_ATMOSPHERE);
+    default:
+      return null;
+  }
+}
 
 export function getNightAtmosphereMessages(room: GameRoom): string[] {
   const messages = [pick(NIGHT_FALL)];

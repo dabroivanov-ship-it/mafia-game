@@ -5,12 +5,13 @@ import {
   buildNightReminderNotes,
   buildDayDiscussionNotes,
   buildVotingReminderNotes,
-  buildMorningReportMessages,
+  buildMorningReportMessage,
   getCommissarCheckResultMessage,
   getHomelessCheckResultMessage,
   getGameStartSystemMessage,
   getRolesRevealSystemMessage,
-  getNightAtmosphereMessages,
+  getNightFallMessage,
+  getRoleNightAtmosphereMessage,
   getGameEndRolesMessage,
   getScoreSummaryMessage,
   getDayDiscussionMessage,
@@ -531,9 +532,6 @@ export function onRegistrationTimerEnd(room: GameRoom): PrivateNote[] {
 
 export function onRolesTimerEnd(room: GameRoom): PrivateNote[] {
   if (room.phase !== PHASE.ROLES) return [];
-  for (const msg of getNightAtmosphereMessages(room)) {
-    addSystemMessage(room, msg);
-  }
   return startNightPhase(room);
 }
 
@@ -701,15 +699,12 @@ export function startNightPhase(room: GameRoom): PrivateNote[] {
   room.nightNumber += 1;
   room.nightActions = {};
   room.seducedPlayerId = null;
+  room.nightAtmosphereSent = {};
   room.players.forEach((p) => {
     p.nightActionDone = false;
   });
 
-  if (room.nightNumber > 1) {
-    for (const msg of getNightAtmosphereMessages(room)) {
-      addSystemMessage(room, msg);
-    }
-  }
+  addSystemMessage(room, getNightFallMessage());
 
   setTimer(room, CONFIG.NIGHT_ACTIONS_SEC * 1000, 'night');
   return buildNightReminderNotes(room);
@@ -718,6 +713,38 @@ export function startNightPhase(room: GameRoom): PrivateNote[] {
 export function onNightTimerEnd(room: GameRoom): NightResolveResult | null {
   if (room.phase === PHASE.NIGHT) return resolveNight(room);
   return null;
+}
+
+function emitNightAtmosphereForAction(room: GameRoom, player: GamePlayer, action: NightAction): void {
+  if (!player.role || !player.alive) return;
+
+  let atmosphereKey: string | null = null;
+  switch (player.role) {
+    case 'mafia':
+      if (action.type === 'kill') atmosphereKey = 'mafia';
+      break;
+    case 'commissar':
+      if (action.type === 'check' || action.type === 'kill') atmosphereKey = 'commissar';
+      break;
+    case 'doctor':
+      if (action.type === 'heal') atmosphereKey = 'doctor';
+      break;
+    case 'maniac':
+      if (action.type === 'kill') atmosphereKey = 'maniac';
+      break;
+    default:
+      break;
+  }
+
+  if (!atmosphereKey) return;
+  if (!room.nightAtmosphereSent) room.nightAtmosphereSent = {};
+  if (room.nightAtmosphereSent[atmosphereKey]) return;
+
+  const msg = getRoleNightAtmosphereMessage(player.role);
+  if (!msg) return;
+
+  addSystemMessage(room, msg);
+  room.nightAtmosphereSent[atmosphereKey] = true;
 }
 
 export function submitNightAction(
@@ -732,6 +759,7 @@ export function submitNightAction(
 
   room.nightActions[playerId] = action;
   player.nightActionDone = true;
+  emitNightAtmosphereForAction(room, player, action);
 
   const needAction = getPlayersNeedingNightAction(room);
   if (needAction.every((p) => p.nightActionDone)) {
@@ -940,8 +968,10 @@ export function resolveNight(room: GameRoom): NightResolveResult {
   }
   report.killed = killedTonight;
 
-  for (const msg of buildMorningReportMessages(room, report)) {
-    addSystemMessage(room, msg);
+  const hadActions = Object.keys(actions).length > 0;
+  const morningReport = buildMorningReportMessage(room, report, hadActions);
+  if (morningReport.trim()) {
+    addSystemMessage(room, morningReport);
   }
 
   if (killedTonight.length > 0) {
@@ -1140,7 +1170,8 @@ export function addMutedOnlyMessage(
   return msg;
 }
 
-function isDeadInGame(p: GamePlayer | undefined): boolean {
+function isDeadInGame(p: GamePlayer | undefined, room?: GameRoom): boolean {
+  if (room?.phase === PHASE.ENDED) return false;
   return !!(p?.inGame && p.role && !p.alive);
 }
 
@@ -1148,7 +1179,7 @@ function filterDeadChatMessages(room: GameRoom, messages: ChatMessage[]): ChatMe
   return messages.filter((m) => {
     if (m.system || m.playerId == null) return true;
     const author = room.players.find((p) => p.id === m.playerId);
-    return isDeadInGame(author);
+    return isDeadInGame(author, room);
   });
 }
 
@@ -1159,7 +1190,7 @@ function appendPrivateMessagesForDead(
 ): ChatMessage[] {
   if (!myPlayerId) return messages;
   const me = room.players.find((p) => p.id === myPlayerId);
-  if (!isDeadInGame(me)) return messages;
+  if (!isDeadInGame(me, room)) return messages;
 
   const privateChat = room.privateChat || [];
   const mine = privateChat.filter((m) => {
@@ -1167,7 +1198,7 @@ function appendPrivateMessagesForDead(
     const otherId = m.playerId === myPlayerId ? m.toPlayerId : m.playerId;
     if (!otherId) return false;
     const other = room.players.find((p) => p.id === otherId);
-    return isDeadInGame(other);
+    return isDeadInGame(other, room);
   });
   if (mine.length === 0) return messages;
   return [...messages, ...mine].sort(
@@ -1207,7 +1238,7 @@ export function addPrivateChatMessage(
   const from = room.players.find((p) => p.id === fromPlayerId);
   const to = room.players.find((p) => p.id === toPlayerId);
   if (!from || !to || fromPlayerId === toPlayerId) return null;
-  if (isDeadInGame(from) && !isDeadInGame(to)) return null;
+  if (isDeadInGame(from, room) && !isDeadInGame(to, room)) return null;
 
   const msg: ChatMessage = {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
@@ -1388,6 +1419,17 @@ function buildChatView(
   const isSpectator = me && !me.inGame && gameRunning;
   const myId = me?.id;
 
+  if (room.phase === PHASE.ENDED) {
+    let combined = appendPrivateMessages(room.chat, room, myId);
+    if (me && isPlayerSilenced(me) && me.mutedChat?.length) {
+      combined = [...combined, ...me.mutedChat].sort(
+        (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
+      );
+    }
+    const sliced = sliceChatMessages(combined, chatLimit);
+    return { messages: sliced.messages, mode: 'alive', hasMoreChat: sliced.hasMoreChat };
+  }
+
   if (isSpectator) {
     const gameMsgs = room.chat.map((m) => ({ ...m, sourceChannel: 'public' as ChatChannel }));
     const specMsgs = room.spectatorChat.map((m) => ({ ...m, sourceChannel: 'spectator' as ChatChannel }));
@@ -1408,7 +1450,7 @@ function buildChatView(
     const liveChat = room.chat.filter((m) => {
       if (m.system || m.playerId == null) return true;
       const author = room.players.find((p) => p.id === m.playerId);
-      return !isDeadInGame(author);
+      return !isDeadInGame(author, room);
     });
     let combined = appendPrivateMessages(liveChat, room, myId);
     if (me && isPlayerSilenced(me) && me.mutedChat?.length) {

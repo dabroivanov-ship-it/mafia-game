@@ -649,6 +649,8 @@ io.on('connection', (socket) => {
     let channel: ChatChannel = 'public';
     if (isChatRoom(room)) {
       channel = 'public';
+    } else if (room.phase === PHASE.ENDED) {
+      channel = 'public';
     } else if (isSpectator) {
       channel = 'spectator';
     } else if (gameRunning && me.inGame && me.role) {

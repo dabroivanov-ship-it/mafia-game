@@ -146,6 +146,7 @@ export interface GameRoom {
   scoresSynced: boolean;
   sessionId: number | null;
   historyLoaded: boolean;
+  nightAtmosphereSent?: Record<string, boolean>;
 }
 
 export interface RoomStatePlayer {
