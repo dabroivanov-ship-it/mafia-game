@@ -11,8 +11,9 @@ interface AppJwtPayload {
   role: string;
 }
 
+const JWT_ALGORITHM = 'HS256' as const;
 const JWT_REMEMBER_EXPIRES: SignOptions['expiresIn'] = (process.env.JWT_REMEMBER_EXPIRES ||
-  '90d') as SignOptions['expiresIn'];
+  '30d') as SignOptions['expiresIn'];
 const JWT_SESSION_EXPIRES: SignOptions['expiresIn'] = (process.env.JWT_SESSION_EXPIRES ||
   '1d') as SignOptions['expiresIn'];
 
@@ -21,12 +22,12 @@ export function signToken(user: User, remember = true): string {
   return jwt.sign(
     { sub: user.id, username: user.username, role: user.role },
     getJwtSecret(),
-    { expiresIn }
+    { expiresIn, algorithm: JWT_ALGORITHM }
   );
 }
 
 export function verifyToken(token: string): AppJwtPayload {
-  const payload = jwt.verify(token, getJwtSecret());
+  const payload = jwt.verify(token, getJwtSecret(), { algorithms: [JWT_ALGORITHM] });
   if (typeof payload === 'string' || payload.sub == null) {
     throw new Error('Invalid token');
   }
@@ -76,6 +77,19 @@ export function staffMiddleware(req: Request, res: Response, next: NextFunction)
     return;
   }
   next();
+}
+
+export function refreshSocketUser(socket: Socket): User | null {
+  if (!socket.userId) return null;
+  const user = findUserById(socket.userId);
+  if (!user || isUserBanned(user)) return null;
+  socket.displayName = user.display_name;
+  socket.username = user.username;
+  socket.userRole = user.role;
+  socket.isAdmin = isAdmin(user);
+  socket.isModerator = isModerator(user);
+  socket.isStaff = isStaff(user);
+  return user;
 }
 
 export function socketAuthMiddleware(socket: Socket, next: (err?: Error) => void): void {

@@ -1,4 +1,4 @@
-import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, MailConversation, RoomKind, ThemeId } from './types';
+import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, MailConversation, RoomKind, ThemeId, ViolationLogEntry } from './types';
 
 const API_BASE =
   import.meta.env.VITE_API_URL ??
@@ -281,6 +281,7 @@ export async function fetchAdminNews(): Promise<{ news: NewsPost[] }> {
 export async function adminCreateNews(payload: {
   title: string;
   body: string;
+  coverImage?: string | null;
   isPublished?: boolean;
 }): Promise<{ news: NewsPost }> {
   return apiRequest('/api/admin/news', {
@@ -291,7 +292,7 @@ export async function adminCreateNews(payload: {
 
 export async function adminUpdateNews(
   id: number,
-  payload: { title?: string; body?: string; isPublished?: boolean }
+  payload: { title?: string; body?: string; coverImage?: string | null; isPublished?: boolean }
 ): Promise<{ news: NewsPost }> {
   return apiRequest(`/api/admin/news/${id}`, {
     method: 'PUT',
@@ -301,6 +302,20 @@ export async function adminUpdateNews(
 
 export async function adminDeleteNews(id: number): Promise<void> {
   await apiRequest(`/api/admin/news/${id}`, { method: 'DELETE' });
+}
+
+export async function adminUploadNewsImage(file: File): Promise<{ url: string }> {
+  const form = new FormData();
+  form.append('image', file);
+  return apiRequest('/api/admin/news/upload-image', { method: 'POST', body: form });
+}
+
+export async function fetchViolationLog(): Promise<{ violations: ViolationLogEntry[] }> {
+  return apiRequest('/api/admin/violations');
+}
+
+export async function adminClearViolationLog(): Promise<{ cleared: number }> {
+  return apiRequest('/api/admin/violations', { method: 'DELETE' });
 }
 
 export async function fetchUserProfile(userId: number): Promise<{

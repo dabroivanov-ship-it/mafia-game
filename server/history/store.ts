@@ -1,6 +1,18 @@
 import db from '../auth/db.js';
 import type { ChatChannel, ChatMessage, GameRoom } from '../types/index.js';
 
+function safeEventPayload(raw: string | null | undefined): Record<string, unknown> {
+  if (!raw) return {};
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS room_chat_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -204,7 +216,7 @@ export function loadGameEvents(roomId: number, limit = 50): GameEvent[] {
     roomId: row.room_id,
     sessionId: row.session_id,
     eventType: row.event_type,
-    payload: row.payload ? JSON.parse(row.payload) : {},
+    payload: safeEventPayload(row.payload),
     time: row.created_at,
   }));
 }
@@ -217,7 +229,7 @@ export function getRecentGameEvents(limit = 30): GameEvent[] {
     roomId: row.room_id,
     sessionId: row.session_id,
     eventType: row.event_type,
-    payload: row.payload ? JSON.parse(row.payload) : {},
+    payload: safeEventPayload(row.payload),
     time: row.created_at,
   }));
 }

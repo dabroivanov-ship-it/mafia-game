@@ -1,4 +1,5 @@
 import { CONFIG, PHASE, isLobbyPhase, isActiveGamePhase } from './config.js';
+import { isValidNightActionForRole } from '../security/validate.js';
 import { distributeRoles, isMafia, isTown, isEvil, isMafiaImmune, isSeductionImmune, getRoleLabel } from './roles.js';
 import {
   buildRoleRevealNotes,
@@ -754,6 +755,16 @@ export function submitNightAction(
   const player = room.players.find((p) => p.id === playerId);
   if (!player?.alive || !player.inGame || !player.role) throw new Error('Вы не можете действовать');
 
+  if (
+    !isValidNightActionForRole(player.role, action, {
+      clownUsed: room.clownUsed,
+      wifeRevengeAvailable: room.wifeRevengeAvailable,
+      wifeRevengeUsed: room.wifeRevengeUsed,
+    })
+  ) {
+    throw new Error('Недопустимое ночное действие для вашей роли');
+  }
+
   room.nightActions[playerId] = action;
   player.nightActionDone = true;
   emitNightAtmosphereForAction(room, player, action);
@@ -1305,6 +1316,19 @@ export function deleteChatMessage(
   messageId: string,
   channel: ChatChannel = 'public'
 ): boolean {
+  const msg = getChatMessageForModeration(room, messageId, channel);
+  if (!msg) return false;
+  msg.deleted = true;
+  msg.text = '[сообщение удалено модератором]';
+  markChatDeleted(messageId);
+  return true;
+}
+
+export function getChatMessageForModeration(
+  room: GameRoom,
+  messageId: string,
+  channel: ChatChannel = 'public'
+): ChatMessage | null {
   const list =
     channel === 'mafia'
       ? room.mafiaChat
@@ -1316,11 +1340,8 @@ export function deleteChatMessage(
             ? room.privateChat
             : room.chat;
   const msg = list.find((m) => m.id === messageId);
-  if (!msg || msg.system) return false;
-  msg.deleted = true;
-  msg.text = '[сообщение удалено модератором]';
-  markChatDeleted(messageId);
-  return true;
+  if (!msg || msg.system || msg.deleted) return null;
+  return msg;
 }
 
 export function clearRoomChat(room: GameRoom): number {

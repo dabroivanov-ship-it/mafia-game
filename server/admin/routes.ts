@@ -16,6 +16,8 @@ import {
   type AssignableRole,
 } from '../auth/db.js';
 import { createAvatarUpload } from '../upload/avatar.js';
+import { validateImageFile, normalizeModerationReason } from '../security/validate.js';
+import fs from 'fs';
 import type { GameEvent } from '../history/store.js';
 import type { ChatMessage, GameRoom, LobbyRoom } from '../types/index.js';
 import {
@@ -24,6 +26,8 @@ import {
   deleteNews,
   listAllNews,
 } from '../news/store.js';
+import { listViolations, clearViolations } from '../moderation/violationLog.js';
+import { newsImageUpload, newsImagePublicPath } from '../upload/newsImage.js';
 
 export interface AdminRouterHandlers {
   getModerationData: () => {
@@ -38,6 +42,7 @@ export interface AdminRouterHandlers {
   onRoomsChanged: (changedRoomId?: number | null) => void;
   syncUserInRooms?: (userId: number, displayName: string) => void;
   onUserBanned?: (userId: number, reason: string, until: string | null) => void;
+  onUserRoleChanged?: (userId: number) => void;
   getGameEvents?: () => GameEvent[];
   getChatHistory?: (roomId: number) => ChatMessage[];
   getRoomGameEvents?: (roomId: number) => GameEvent[];
@@ -140,6 +145,10 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     avatarUpload.single('avatar')(req, res, (err) => {
       if (err) return res.status(400).json({ error: err.message || 'Ошибка загрузки' });
       if (!req.file) return res.status(400).json({ error: 'Файл не выбран' });
+      if (!validateImageFile(req.file.path, req.file.mimetype)) {
+        fs.unlinkSync(req.file.path);
+        return res.status(400).json({ error: 'Файл не является допустимым изображением' });
+      }
 
       const avatarUrl = `/uploads/avatars/${req.file.filename}`;
       const { oldAvatar, user } = updateUserAvatar(id, avatarUrl);
@@ -168,8 +177,8 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     if (hours && Number(hours) > 0) {
       until = new Date(Date.now() + Number(hours) * 3600000).toISOString();
     }
-    const user = banUser(targetId, reason, until);
-    handlers.onUserBanned?.(targetId, reason || '', until);
+    const user = banUser(targetId, normalizeModerationReason(reason), until);
+    handlers.onUserBanned?.(targetId, normalizeModerationReason(reason), until);
     res.json({ user });
   });
 
@@ -188,6 +197,7 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     }
     const user = updateUserRole(id, role);
     if (!user) return res.status(404).json({ error: 'Пользователь не найден или это администратор' });
+    handlers.onUserRoleChanged?.(id);
     res.json({ user });
   });
 
@@ -200,11 +210,29 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     res.json({ ok: true });
   });
 
-  router.delete('/messages', (req, res) => {
-    const { roomId, messageId, channel } = req.body;
-    const ok = handlers.deleteMessage(Number(roomId), messageId, channel || 'public');
-    if (!ok) return res.status(404).json({ error: 'Сообщение не найдено' });
-    res.json({ ok: true });
+  router.delete('/messages', (_req, res) => {
+    res.status(400).json({ error: 'Удаляйте сообщения из комнаты с указанием типа нарушения' });
+  });
+
+  router.get('/violations', (_req, res) => {
+    res.json({ violations: listViolations(300) });
+  });
+
+  router.delete('/violations', (_req, res) => {
+    const cleared = clearViolations();
+    res.json({ ok: true, cleared });
+  });
+
+  router.post('/news/upload-image', (req, res) => {
+    newsImageUpload.single('image')(req, res, (err) => {
+      if (err) return res.status(400).json({ error: err.message || 'Ошибка загрузки' });
+      if (!req.file) return res.status(400).json({ error: 'Файл не выбран' });
+      if (!validateImageFile(req.file.path, req.file.mimetype)) {
+        fs.unlinkSync(req.file.path);
+        return res.status(400).json({ error: 'Файл не является допустимым изображением' });
+      }
+      res.json({ url: newsImagePublicPath(req.file.filename) });
+    });
   });
 
   router.delete('/rooms/:roomId/messages', (req, res) => {
@@ -221,6 +249,7 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
       const news = createNews(req.userId!, {
         title: req.body.title,
         body: req.body.body,
+        coverImage: req.body.coverImage ?? null,
         isPublished: req.body.isPublished !== false,
       });
       res.status(201).json({ news });
@@ -233,6 +262,7 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     const news = updateNews(Number(req.params.id), {
       title: req.body.title,
       body: req.body.body,
+      coverImage: req.body.coverImage,
       isPublished: req.body.isPublished,
     });
     if (!news) return res.status(404).json({ error: 'Новость не найдена' });

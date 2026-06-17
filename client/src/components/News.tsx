@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { fetchNews } from '../api';
+import { fetchNews, avatarUrl } from '../api';
 import type { NewsPost } from '../types';
+import NewsBody from './NewsBody';
 
 interface NewsProps {
   onBack: () => void;
@@ -54,7 +55,14 @@ export default function News({ onBack }: NewsProps) {
                 </time>
               </header>
               {item.authorName && <p className="news-author muted">Автор: {item.authorName}</p>}
-              <div className="news-body">{item.body}</div>
+              {item.coverImage && (
+                <img
+                  src={avatarUrl(item.coverImage) ?? undefined}
+                  alt=""
+                  className="news-cover-image"
+                />
+              )}
+              <NewsBody body={item.body} />
             </article>
           ))}
         </div>

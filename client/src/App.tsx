@@ -125,6 +125,18 @@ export default function App() {
       }
     );
 
+    s.on('auth:kicked', ({ reason }: { reason?: string }) => {
+      clearSession();
+      setUser(null);
+      setToken(null);
+      setSocket(null);
+      setCurrentRoomId(null);
+      setRoomState(null);
+      clearStoredPlayerIds();
+      setView('lobby');
+      setError(reason || 'Сессия завершена');
+    });
+
     s.on('room:kicked', ({ reason }: { reason?: string }) => {
       setCurrentRoomId(null);
       setRoomState(null);

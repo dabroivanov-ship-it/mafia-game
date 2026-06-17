@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, FormEvent } from 'react';
-import type { ChatChannel, ChatMessage, ChatReplyTarget } from '../types';
+import type { ChatChannel, ChatMessage, ChatReplyTarget, ViolationType } from '../types';
+import DeleteMessageModal from './DeleteMessageModal';
 
 export interface ChatSendOptions {
   toPlayerId?: number;
@@ -12,7 +13,11 @@ interface ChatProps {
   myPlayerId?: number;
   currentUserId?: number;
   onSend: (text: string, opts?: ChatSendOptions) => void;
-  onDeleteMessage?: ((messageId: string | number, sourceChannel?: ChatChannel) => void) | null;
+  onDeleteMessage?: (
+    messageId: string | number,
+    sourceChannel: ChatChannel | undefined,
+    violationType: ViolationType
+  ) => void;
   onOpenPlayerPage?: (target: ChatReplyTarget) => void;
   canModerate?: boolean;
   placeholder?: string;
@@ -44,6 +49,7 @@ export default function Chat({
   onPrivateModeChange,
 }: ChatProps) {
   const [text, setText] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<ChatMessage | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -189,9 +195,7 @@ export default function Chat({
                 type="button"
                 className="chat-delete-btn"
                 title="Удалить сообщение"
-                onClick={() =>
-                  onDeleteMessage(msg.id, msg.isPrivate ? 'private' : msg.sourceChannel)
-                }
+                onClick={() => setDeleteTarget(msg)}
               >
                 ✕
               </button>
@@ -252,6 +256,22 @@ export default function Chat({
           ➤
         </button>
       </form>
+
+      {deleteTarget && onDeleteMessage && (
+        <DeleteMessageModal
+          authorName={deleteTarget.playerName}
+          messageText={deleteTarget.text}
+          onCancel={() => setDeleteTarget(null)}
+          onConfirm={(violationType) => {
+            onDeleteMessage(
+              deleteTarget.id,
+              deleteTarget.isPrivate ? 'private' : deleteTarget.sourceChannel,
+              violationType
+            );
+            setDeleteTarget(null);
+          }}
+        />
+      )}
     </div>
   );
 }

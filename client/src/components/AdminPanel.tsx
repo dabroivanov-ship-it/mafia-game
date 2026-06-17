@@ -17,21 +17,31 @@ import {
   adminCreateNews,
   adminUpdateNews,
   adminDeleteNews,
+  fetchViolationLog,
+  adminClearViolationLog,
   fetchThemeSettings,
   adminSetDefaultTheme,
   fetchTelegramSettings,
   adminSetTelegramSettings,
   type AdminRoom,
 } from '../api';
-import type { User, NewsPost, ThemeId } from '../types';
+import type { User, NewsPost, ThemeId, ViolationLogEntry, ViolationType } from '../types';
 import ThemePicker from './ThemePicker';
+import NewsEditor, { type NewsEditorValue } from './NewsEditor';
+import NewsBody from './NewsBody';
+
+const VIOLATION_LABELS: Record<ViolationType, string> = {
+  profanity: 'Мат',
+  advertising: 'Реклама',
+  other: 'Другое',
+};
 
 interface AdminPanelProps {
   onBack: () => void;
   onDefaultThemeChange?: (theme: ThemeId) => void;
 }
 
-type AdminSection = 'users' | 'rooms' | 'news' | 'system';
+type AdminSection = 'users' | 'rooms' | 'news' | 'violations' | 'system';
 
 export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelProps) {
   const [section, setSection] = useState<AdminSection>('users');
@@ -52,7 +62,14 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [newsPosts, setNewsPosts] = useState<NewsPost[]>([]);
   const [newsLoading, setNewsLoading] = useState(false);
-  const [newsForm, setNewsForm] = useState({ title: '', body: '', isPublished: true });
+  const [newsForm, setNewsForm] = useState<NewsEditorValue>({
+    title: '',
+    body: '',
+    coverImage: null,
+    isPublished: true,
+  });
+  const [violations, setViolations] = useState<ViolationLogEntry[]>([]);
+  const [violationsLoading, setViolationsLoading] = useState(false);
   const [editNews, setEditNews] = useState<NewsPost | null>(null);
   const [defaultTheme, setDefaultTheme] = useState<ThemeId>('midnight');
   const [themeSaving, setThemeSaving] = useState(false);
@@ -145,8 +162,21 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
     }
   };
 
+  const loadViolations = async () => {
+    setViolationsLoading(true);
+    try {
+      const { violations: list } = await fetchViolationLog();
+      setViolations(list);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка загрузки лога');
+    } finally {
+      setViolationsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (section === 'news') void loadNews();
+    if (section === 'violations') void loadViolations();
   }, [section]);
 
   const openEditUser = (u: User) => {
@@ -298,7 +328,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
   };
 
   const resetNewsForm = () => {
-    setNewsForm({ title: '', body: '', isPublished: true });
+    setNewsForm({ title: '', body: '', coverImage: null, isPublished: true });
     setEditNews(null);
   };
 
@@ -311,18 +341,16 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
       return;
     }
     try {
+      const payload = {
+        title,
+        body,
+        coverImage: newsForm.coverImage,
+        isPublished: newsForm.isPublished,
+      };
       if (editNews) {
-        await adminUpdateNews(editNews.id, {
-          title,
-          body,
-          isPublished: newsForm.isPublished,
-        });
+        await adminUpdateNews(editNews.id, payload);
       } else {
-        await adminCreateNews({
-          title,
-          body,
-          isPublished: newsForm.isPublished,
-        });
+        await adminCreateNews(payload);
       }
       resetNewsForm();
       await loadNews();
@@ -336,8 +364,19 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
     setNewsForm({
       title: item.title,
       body: item.body,
+      coverImage: item.coverImage ?? null,
       isPublished: item.isPublished,
     });
+  };
+
+  const handleClearViolations = async () => {
+    if (!confirm('Очистить весь лог нарушений?')) return;
+    try {
+      await adminClearViolationLog();
+      await loadViolations();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка очистки лога');
+    }
   };
 
   const handleDeleteNews = async (id: number) => {
@@ -403,6 +442,13 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
           </button>
           <button type="button" className={section === 'news' ? 'active' : ''} onClick={() => setSection('news')}>
             Новости
+          </button>
+          <button
+            type="button"
+            className={section === 'violations' ? 'active' : ''}
+            onClick={() => setSection('violations')}
+          >
+            Лог нарушений
           </button>
           <button type="button" className={section === 'system' ? 'active' : ''} onClick={() => setSection('system')}>
             Система
@@ -592,46 +638,15 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
             <section className="admin-section">
               <h3>Новости ({newsPosts.length})</h3>
 
-              <form className="admin-news-form" onSubmit={handleSaveNews}>
-                <h4>{editNews ? `Редактирование #${editNews.id}` : 'Новая публикация'}</h4>
-                <label>
-                  Заголовок
-                  <input
-                    value={newsForm.title}
-                    onChange={(e) => setNewsForm({ ...newsForm, title: e.target.value })}
-                    maxLength={200}
-                    required
-                  />
-                </label>
-                <label>
-                  Текст
-                  <textarea
-                    value={newsForm.body}
-                    onChange={(e) => setNewsForm({ ...newsForm, body: e.target.value })}
-                    rows={6}
-                    maxLength={10000}
-                    required
-                  />
-                </label>
-                <label className="admin-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={newsForm.isPublished}
-                    onChange={(e) => setNewsForm({ ...newsForm, isPublished: e.target.checked })}
-                  />
-                  Опубликовать сразу
-                </label>
-                <div className="profile-actions">
-                  {editNews && (
-                    <button type="button" className="btn btn-ghost" onClick={resetNewsForm}>
-                      Отмена
-                    </button>
-                  )}
-                  <button type="submit" className="btn btn-primary">
-                    {editNews ? 'Сохранить' : 'Добавить новость'}
-                  </button>
-                </div>
-              </form>
+              {editNews && <p className="muted">Редактирование #{editNews.id}</p>}
+
+              <NewsEditor
+                value={newsForm}
+                onChange={setNewsForm}
+                onSubmit={handleSaveNews}
+                submitLabel={editNews ? 'Сохранить' : 'Добавить новость'}
+                onCancel={editNews ? resetNewsForm : undefined}
+              />
 
               {newsLoading && newsPosts.length === 0 && <p className="muted">Загрузка...</p>}
 
@@ -648,7 +663,14 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
                     <p className="news-author muted">
                       {item.authorName || '—'} · {item.isPublished ? 'опубликовано' : 'черновик'}
                     </p>
-                    <div className="news-body">{item.body}</div>
+                    {item.coverImage && (
+                      <img
+                        src={avatarUrl(item.coverImage) ?? undefined}
+                        alt=""
+                        className="news-cover-image"
+                      />
+                    )}
+                    <NewsBody body={item.body} />
                     <div className="admin-actions">
                       <button type="button" className="btn btn-sm" onClick={() => handleEditNews(item)}>
                         Редактировать
@@ -662,6 +684,61 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
                     </div>
                   </article>
                 ))}
+              </div>
+            </section>
+          )}
+
+          {section === 'violations' && (
+            <section className="admin-section">
+              <div className="admin-section-head">
+                <h3>Лог нарушений ({violations.length})</h3>
+                <button
+                  type="button"
+                  className="btn btn-sm danger"
+                  onClick={() => void handleClearViolations()}
+                  disabled={violations.length === 0}
+                >
+                  Очистить лог
+                </button>
+              </div>
+              {violationsLoading && violations.length === 0 && <p className="muted">Загрузка...</p>}
+              {violations.length === 0 && !violationsLoading && (
+                <p className="muted">Записей пока нет. Они появляются при удалении сообщений в чате.</p>
+              )}
+              <div className="admin-table-wrap">
+                <table className="admin-table violation-log-table">
+                  <thead>
+                    <tr>
+                      <th>Когда</th>
+                      <th>Тип</th>
+                      <th>Автор</th>
+                      <th>Сообщение</th>
+                      <th>Комната</th>
+                      <th>Модератор</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {violations.map((v) => (
+                      <tr key={v.id}>
+                        <td className="violation-time">
+                          {new Date(v.createdAt).toLocaleString('ru-RU')}
+                        </td>
+                        <td>
+                          <span className={`violation-badge violation-${v.violationType}`}>
+                            {VIOLATION_LABELS[v.violationType]}
+                          </span>
+                        </td>
+                        <td>{v.authorName}</td>
+                        <td className="violation-message">{v.messageText}</td>
+                        <td>
+                          {v.roomName}
+                          <span className="muted"> · {v.channel}</span>
+                        </td>
+                        <td>{v.moderatorName}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </section>
           )}

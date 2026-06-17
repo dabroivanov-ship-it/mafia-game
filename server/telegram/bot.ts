@@ -1,4 +1,5 @@
 import { getTelegramSettings } from '../settings/store.js';
+import { isValidWebAppUrl } from '../security/validate.js';
 
 const API_BASE = 'https://api.telegram.org';
 
@@ -12,16 +13,17 @@ interface TelegramUpdate {
 }
 
 function resolveWebAppUrl(): string | null {
-  const fromDb = getTelegramSettings().webAppUrl?.trim();
-  if (fromDb) return fromDb;
-
-  const fromEnv = process.env.TELEGRAM_WEBAPP_URL?.trim();
-  if (fromEnv) return fromEnv;
-
-  const cors = process.env.CORS_ORIGIN?.split(',')
-    .map((s) => s.trim())
-    .find(Boolean);
-  return cors || null;
+  const candidates = [
+    getTelegramSettings().webAppUrl?.trim(),
+    process.env.TELEGRAM_WEBAPP_URL?.trim(),
+    process.env.CORS_ORIGIN?.split(',').map((s) => s.trim()).find(Boolean),
+  ];
+  for (const url of candidates) {
+    if (!url || !isValidWebAppUrl(url)) continue;
+    if (process.env.NODE_ENV === 'production' && !url.startsWith('https://')) continue;
+    return url;
+  }
+  return null;
 }
 
 async function callBotApi<T>(token: string, method: string, body?: Record<string, unknown>): Promise<T> {

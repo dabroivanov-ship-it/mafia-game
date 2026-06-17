@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { authMiddleware } from '../auth/jwt.js';
 import { findUserById, findUserByUsername } from '../auth/db.js';
+import { createRateLimitMiddleware, pmRateLimiter } from '../security/rateLimit.js';
+import { MAX_PM_MESSAGE_LENGTH } from '../security/constants.js';
 import {
   sendPrivateMessage,
   listInbox,
@@ -27,7 +29,7 @@ export interface MessagesRouterOptions {
 export function createMessagesRouter({ onMessageSent, onMessageRead }: MessagesRouterOptions = {}) {
   const router = Router();
   router.use(authMiddleware);
-
+  const pmRateLimit = createRateLimitMiddleware(pmRateLimiter, (req) => String(req.userId || 'anon'));
   router.get('/unread-count', (req, res) => {
     res.json({ count: getUnreadCount(req.userId!) });
   });
@@ -63,7 +65,7 @@ export function createMessagesRouter({ onMessageSent, onMessageRead }: MessagesR
     res.json({ ...page, unreadCount });
   });
 
-  router.post('/', (req, res) => {
+  router.post('/', pmRateLimit, (req, res) => {
     let toUserId = Number(req.body.toUserId);
     if (!toUserId && req.body.toUsername) {
       const name = String(req.body.toUsername).trim().replace(/^@/, '');
@@ -74,7 +76,9 @@ export function createMessagesRouter({ onMessageSent, onMessageRead }: MessagesR
     const text = String(req.body.text || '').trim();
     if (!toUserId) return res.status(400).json({ error: 'Укажите получателя (логин или ID)' });
     if (!text) return res.status(400).json({ error: 'Сообщение не может быть пустым' });
-    if (text.length > 2000) return res.status(400).json({ error: 'Слишком длинное сообщение' });
+    if (text.length > MAX_PM_MESSAGE_LENGTH) {
+      return res.status(400).json({ error: `Слишком длинное сообщение (макс. ${MAX_PM_MESSAGE_LENGTH})` });
+    }
 
     const recipient = findUserById(toUserId);
     if (!recipient) return res.status(404).json({ error: 'Пользователь не найден' });

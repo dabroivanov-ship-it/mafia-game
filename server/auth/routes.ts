@@ -6,6 +6,7 @@ import {
   createUser,
   publicUser,
   isUserBanned,
+  isAdminReservedUsername,
 } from './db.js';
 import { signToken, authMiddleware } from './jwt.js';
 import {
@@ -16,10 +17,13 @@ import {
   getTelegramAuthDate,
   getOrCreateUserFromTelegram,
 } from './telegram.js';
+import { createRateLimitMiddleware, authRateLimiter } from '../security/rateLimit.js';
+import { MAX_PASSWORD_LENGTH } from '../security/constants.js';
 
 const router = Router();
+const authRateLimit = createRateLimitMiddleware(authRateLimiter);
 
-router.post('/register', async (req, res) => {
+router.post('/register', authRateLimit, async (req, res) => {
   try {
     const { username, email, password, displayName } = req.body;
 
@@ -36,8 +40,14 @@ router.post('/register', async (req, res) => {
     if (!/^[a-zA-Z0-9_]+$/.test(u)) {
       return res.status(400).json({ error: 'Логин: только буквы, цифры и _' });
     }
+    if (isAdminReservedUsername(u)) {
+      return res.status(400).json({ error: 'Этот логин зарезервирован' });
+    }
     if (password.length < 8) {
       return res.status(400).json({ error: 'Пароль: минимум 8 символов' });
+    }
+    if (password.length > MAX_PASSWORD_LENGTH) {
+      return res.status(400).json({ error: 'Пароль слишком длинный' });
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) {
       return res.status(400).json({ error: 'Некорректный email' });
@@ -51,7 +61,7 @@ router.post('/register', async (req, res) => {
 
     const user = createUser({ username: u, email: e, passwordHash, displayName: name });
     if (!user) return res.status(500).json({ error: 'Ошибка регистрации' });
-    const token = signToken(user, true);
+    const token = signToken(user, false);
     res.status(201).json({ token, user: publicUser(user) });
   } catch (err) {
     console.error('register error:', err);
@@ -59,7 +69,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
-router.post('/login', async (req, res) => {
+router.post('/login', authRateLimit, async (req, res) => {
   try {
     const { login, password, remember } = req.body;
     if (!login?.trim() || !password) {
@@ -86,7 +96,7 @@ router.post('/login', async (req, res) => {
   }
 });
 
-router.post('/telegram', async (req, res) => {
+router.post('/telegram', authRateLimit, async (req, res) => {
   try {
     const remember = req.body?.remember !== false;
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
@@ -102,7 +112,7 @@ router.post('/telegram', async (req, res) => {
         return res.status(401).json({ error: 'Ошибка проверки Telegram Web App' });
       }
       const authDate = getTelegramAuthDate(initData);
-      if (!authDate || Date.now() - authDate > 24 * 60 * 60 * 1000) {
+      if (!authDate || Date.now() - authDate > 60 * 60 * 1000) {
         return res.status(401).json({ error: 'Данные Telegram устарели, попробуйте снова' });
       }
       const tgUser = parseTelegramWebAppUser(initData);
@@ -125,7 +135,7 @@ router.post('/telegram', async (req, res) => {
       }
 
       const authDate = Number(payload.auth_date) * 1000;
-      if (!Number.isFinite(authDate) || Date.now() - authDate > 24 * 60 * 60 * 1000) {
+      if (!Number.isFinite(authDate) || Date.now() - authDate > 60 * 60 * 1000) {
         return res.status(401).json({ error: 'Данные Telegram устарели, попробуйте снова' });
       }
 

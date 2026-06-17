@@ -37,3 +37,7 @@ export function getDbPath(): string {
 export function getUploadsDir(): string {
   return process.env.UPLOADS_DIR || path.join(getServerRoot(), 'uploads', 'avatars');
 }
+
+export function getNewsUploadsDir(): string {
+  return process.env.NEWS_UPLOADS_DIR || path.join(getServerRoot(), 'uploads', 'news');
+}

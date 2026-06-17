@@ -176,11 +176,29 @@ export interface NewsPost {
   id: number;
   title: string;
   body: string;
+  coverImage?: string | null;
   isPublished: boolean;
   authorId?: number;
   authorName?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export type ViolationType = 'profanity' | 'advertising' | 'other';
+
+export interface ViolationLogEntry {
+  id: number;
+  violationType: ViolationType;
+  messageText: string;
+  authorUserId: number | null;
+  authorName: string;
+  roomId: number;
+  roomName: string;
+  channel: string;
+  messageId: string;
+  moderatorId: number;
+  moderatorName: string;
+  createdAt: string;
 }
 
 export interface ProfileStaffMeta {

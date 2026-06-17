@@ -40,7 +40,18 @@ export function verifyTelegramWidgetAuth(payload: TelegramAuthPayload, botToken:
     .join('\n');
   const secret = crypto.createHash('sha256').update(botToken).digest();
   const digest = crypto.createHmac('sha256', secret).update(checkString).digest('hex');
-  return digest === payload.hash;
+  return secureCompareHex(digest, payload.hash);
+}
+
+function secureCompareHex(a: string, b: string): boolean {
+  try {
+    const bufA = Buffer.from(a, 'hex');
+    const bufB = Buffer.from(b, 'hex');
+    if (bufA.length !== bufB.length) return false;
+    return crypto.timingSafeEqual(bufA, bufB);
+  } catch {
+    return false;
+  }
 }
 
 export function verifyTelegramWebAppInitData(initData: string, botToken: string): boolean {
@@ -61,7 +72,7 @@ export function verifyTelegramWebAppInitData(initData: string, botToken: string)
     .createHmac('sha256', secretKey)
     .update(dataCheckString)
     .digest('hex');
-  return calculatedHash === hash;
+  return secureCompareHex(calculatedHash, hash);
 }
 
 export function parseTelegramWebAppUser(initData: string): TelegramWebAppUser | null {
@@ -85,8 +96,15 @@ export function getTelegramAuthDate(initData: string): number | null {
 }
 
 function safeTelegramUsername(input: string | undefined, fallback: string): string {
-  const base = (input || fallback).toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 20);
-  return base.length >= 3 ? base : `tg_${fallback}`.slice(0, 20);
+  const adminNames = new Set(
+    (process.env.ADMIN_USERNAMES || 'admin').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
+  );
+  let base = (input || fallback).toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 20);
+  if (base.length < 3) base = `tg_${fallback}`.slice(0, 20);
+  if (adminNames.has(base)) {
+    base = `tg_${fallback}`.slice(0, 20);
+  }
+  return base;
 }
 
 export async function getOrCreateUserFromTelegram(input: {

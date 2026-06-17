@@ -13,8 +13,8 @@ import { createMessagesRouter } from './messages/routes.js';
 import { createNewsRouter } from './news/routes.js';
 import settingsRoutes from './settings/routes.js';
 import { getUnreadCount } from './messages/store.js';
-import { socketAuthMiddleware } from './auth/jwt.js';
-import { findUserById, updateUserScore, isAdmin, isStaff, updateUserConnectionInfo, uploadsDir, normalizeChatLimit, canBanTarget } from './auth/db.js';
+import { socketAuthMiddleware, refreshSocketUser } from './auth/jwt.js';
+import { findUserById, updateUserScore, isAdmin, isStaff, isModerator, updateUserConnectionInfo, uploadsDir, normalizeChatLimit, canBanTarget } from './auth/db.js';
 import { hydrateRoomHistory, loadGameEvents, getRecentGameEvents, getAdminChatHistory, getRecentChatForAdmin } from './history/store.js';
 import {
   createInitialRooms,
@@ -40,6 +40,7 @@ import {
   deleteChatMessage,
   clearRoomChat,
   addSystemMessage,
+  getChatMessageForModeration,
   getModerationSnapshot,
   resetRoom,
   serializeRoomForPlayer,
@@ -54,14 +55,21 @@ import {
   findRoomPlayer,
   addMutedOnlyMessage,
 } from './game/engine.js';
-import type { ChatChannel, GameRoom, PrivateNote, PublicUser, RoomState, Session } from './types/index.js';
+import type { ChatChannel, GameRoom, GamePlayer, PrivateNote, PublicUser, RoomState, Session, User } from './types/index.js';
 import { assertProductionEnv } from './config/env.js';
+import { securityHeadersMiddleware } from './security/headers.js';
+import { chatSocketRateLimiter } from './security/rateLimit.js';
+import { normalizeChatText, normalizeModerationReason, parseViolationType } from './security/validate.js';
+import { addViolation } from './moderation/violationLog.js';
+import fs from 'fs';
+import { ensureNewsUploadsDir } from './upload/newsImage.js';
 
 assertProductionEnv();
 
 const corsOrigin = process.env.CORS_ORIGIN?.split(',').map((s) => s.trim()).filter(Boolean);
 
 const app = express();
+app.use(securityHeadersMiddleware);
 app.use(corsOrigin?.length ? cors({ origin: corsOrigin, credentials: true }) : cors());
 app.use(express.json({ limit: '256kb' }));
 
@@ -141,7 +149,7 @@ function syncUserProfileInRooms(userId: number, user: PublicUser | null): void {
 }
 
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, rooms: getLobbySnapshot(rooms) });
+  res.json({ ok: true });
 });
 
 app.use('/api/auth', authRoutes);
@@ -151,7 +159,26 @@ app.use(
   createProfileRouter({ onProfileUpdated: syncUserProfileInRooms })
 );
 app.use('/api/news', createNewsRouter());
-app.use('/uploads/avatars', express.static(uploadsDir));
+app.use(
+  '/uploads/avatars',
+  (_req, res, next) => {
+    res.setHeader('Content-Disposition', 'attachment');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    next();
+  },
+  express.static(uploadsDir)
+);
+
+const newsUploadsDir = ensureNewsUploadsDir();
+if (!fs.existsSync(newsUploadsDir)) fs.mkdirSync(newsUploadsDir, { recursive: true });
+app.use(
+  '/uploads/news',
+  (_req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    next();
+  },
+  express.static(newsUploadsDir)
+);
 
 function adminDeleteMessage(roomId: number, messageId: string, channel: string): boolean {
   const room = rooms.get(roomId);
@@ -294,13 +321,16 @@ app.use(
     deleteChatRoom: (id) => adminDeleteRoom(id),
     onRoomsChanged,
     syncUserInRooms,
-    onUserBanned: notifyRoomOfUserBan,
+    onUserBanned: handleUserBanned,
+    onUserRoleChanged: (userId) => {
+      disconnectUserSockets(userId, 'Права доступа изменены. Войдите снова.');
+    },
     getGameEvents: () => getRecentGameEvents(40),
     getChatHistory: (roomId) => getAdminChatHistory(roomId, 300),
     getRoomGameEvents: (roomId) => loadGameEvents(roomId, 50),
   })
 );
-app.use('/api/moderation', createModerationRouter());
+app.use('/api/moderation', createModerationRouter({ onUserBanned: handleUserBanned }));
 app.use(
   '/api/messages',
   createMessagesRouter({
@@ -323,6 +353,75 @@ function detachUserSocket(userId: number, socketId: string): void {
   if (!set) return;
   set.delete(socketId);
   if (set.size === 0) userSocketIds.delete(userId);
+}
+
+function disconnectUserSockets(userId: number, reason: string): void {
+  const socketIds = userSocketIds.get(userId);
+  if (!socketIds) return;
+  for (const socketId of [...socketIds]) {
+    io.to(socketId).emit('auth:kicked', { reason });
+    io.sockets.sockets.get(socketId)?.disconnect(true);
+  }
+}
+
+function handleUserBanned(userId: number, reason: string, until: string | null): void {
+  notifyRoomOfUserBan(userId, reason, until);
+  disconnectUserSockets(
+    userId,
+    `Аккаунт заблокирован${reason ? `: ${reason}` : ''}`
+  );
+}
+
+function requireSocketUser(
+  socket: Socket,
+  cb?: (res: { error?: string }) => void
+): User | null {
+  const user = refreshSocketUser(socket);
+  if (!user) {
+    socket.emit('auth:kicked', { reason: 'Сессия завершена или аккаунт заблокирован' });
+    socket.disconnect(true);
+    cb?.({ error: 'Сессия завершена' });
+    return null;
+  }
+  return user;
+}
+
+function requireRoomPlayer(
+  socket: Socket,
+  cb?: (res: { error?: string }) => void
+): { session: Session; room: GameRoom; me: GamePlayer } | null {
+  const user = requireSocketUser(socket, cb);
+  if (!user) return null;
+
+  const session = sessions.get(socket.id);
+  if (!session) {
+    cb?.({ error: 'Вы не в комнате' });
+    return null;
+  }
+  const room = rooms.get(session.roomId);
+  if (!room) {
+    cb?.({ error: 'Комната не найдена' });
+    return null;
+  }
+  const me = room.players.find((p) => p.id === session.playerId);
+  if (!me) {
+    cb?.({ error: 'Игрок не найден' });
+    return null;
+  }
+  return { session, room, me };
+}
+
+function requireSocketStaff(
+  socket: Socket,
+  cb?: (res: { error?: string }) => void
+): User | null {
+  const user = requireSocketUser(socket, cb);
+  if (!user) return null;
+  if (!isStaff(user)) {
+    cb?.({ error: 'Нет доступа' });
+    return null;
+  }
+  return user;
 }
 
 function notifyUser(userId: number, event: string, data: unknown): void {
@@ -472,10 +571,12 @@ io.on('connection', (socket) => {
   socket.emit('lobby:update', getLobbySnapshot(rooms));
 
   socket.on('lobby:get', () => {
+    if (!requireSocketUser(socket)) return;
     socket.emit('lobby:update', getLobbySnapshot(rooms));
   });
 
   socket.on('room:join', ({ roomId, playerId: reconnectId }, cb) => {
+    if (!requireSocketUser(socket, cb)) return;
     try {
       const room = rooms.get(Number(roomId));
       if (!room) return cb?.({ error: 'Комната не найдена' });
@@ -534,6 +635,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('room:detach', (_data, cb) => {
+    if (!requireSocketUser(socket, cb)) return;
     const session = sessions.get(socket.id);
     if (!session) return cb?.({ ok: true });
 
@@ -553,12 +655,13 @@ io.on('connection', (socket) => {
   });
 
   socket.on('room:start', (_data, cb) => {
-    const session = sessions.get(socket.id);
-    if (!session) return cb?.({ error: 'Вы не в комнате' });
-
-    const room = rooms.get(session.roomId);
-    if (!room) return cb?.({ error: 'Комната не найдена' });
+    const ctx = requireRoomPlayer(socket, cb);
+    if (!ctx) return;
+    const { session, room } = ctx;
     if (isChatRoom(room)) return cb?.({ error: 'В чат-комнате нельзя запустить игру' });
+    if (room.phase !== PHASE.WAITING && room.phase !== PHASE.ENDED) {
+      return cb?.({ error: 'Игра уже идёт' });
+    }
     try {
       startRegistration(room, session.playerId);
       broadcastRoom(room.id);
@@ -573,11 +676,9 @@ io.on('connection', (socket) => {
   });
 
   socket.on('room:joinGame', (_data, cb) => {
-    const session = sessions.get(socket.id);
-    if (!session) return cb?.({ error: 'Вы не в комнате' });
-
-    const room = rooms.get(session.roomId);
-    if (!room) return cb?.({ error: 'Комната не найдена' });
+    const ctx = requireRoomPlayer(socket, cb);
+    if (!ctx) return;
+    const { session, room } = ctx;
     if (isChatRoom(room)) return cb?.({ error: 'В чат-комнате нет игры' });
     try {
       const { privateNotes } = joinGame(room, session.playerId);
@@ -594,11 +695,9 @@ io.on('connection', (socket) => {
   });
 
   socket.on('room:leaveGame', (_data, cb) => {
-    const session = sessions.get(socket.id);
-    if (!session) return cb?.({ error: 'Вы не в комнате' });
-
-    const room = rooms.get(session.roomId);
-    if (!room) return cb?.({ error: 'Комната не найдена' });
+    const ctx = requireRoomPlayer(socket, cb);
+    if (!ctx) return;
+    const { session, room } = ctx;
     if (isChatRoom(room)) return cb?.({ error: 'В чат-комнате нет игры' });
     try {
       leaveGame(room, session.playerId);
@@ -611,11 +710,9 @@ io.on('connection', (socket) => {
   });
 
   socket.on('room:loadMoreChat', (_data, cb) => {
-    const session = sessions.get(socket.id);
-    if (!session) return cb?.({ error: 'Вы не в комнате' });
-
-    const room = rooms.get(session.roomId);
-    if (!room) return cb?.({ error: 'Комната не найдена' });
+    const ctx = requireRoomPlayer(socket, cb);
+    if (!ctx) return;
+    const { session, room } = ctx;
 
     session.chatLimit = Math.min(
       MAX_CHAT_LIMIT,
@@ -629,27 +726,32 @@ io.on('connection', (socket) => {
   });
 
   socket.on('room:newGame', (_data, cb) => {
-    const session = sessions.get(socket.id);
-    if (!session) return cb?.({ error: 'Вы не в комнате' });
-
-    const room = rooms.get(session.roomId);
-    if (!room) return cb?.({ error: 'Комната не найдена' });
+    const user = requireSocketUser(socket, cb);
+    if (!user) return;
+    const ctx = requireRoomPlayer(socket, cb);
+    if (!ctx) return;
+    const { room } = ctx;
     if (isChatRoom(room)) return cb?.({ error: 'В чат-комнате нет игры' });
+    if (room.phase !== PHASE.ENDED && !isAdmin(user)) {
+      return cb?.({ error: 'Новую игру можно начать только после окончания партии' });
+    }
     resetRoom(room);
     broadcastRoom(room.id);
     cb?.({ ok: true });
   });
 
   socket.on('chat:send', ({ text, toPlayerId, isPrivate }, cb) => {
-    const session = sessions.get(socket.id);
-    if (!session) return cb?.({ error: 'Вы не в комнате' });
+    const user = requireSocketUser(socket, cb);
+    if (!user) return;
+    if (!chatSocketRateLimiter.try(`chat:${user.id}`)) {
+      return cb?.({ error: 'Слишком много сообщений. Подождите.' });
+    }
 
-    const room = rooms.get(session.roomId);
-    if (!room) return cb?.({ error: 'Комната не найдена' });
-    const me = room.players.find((p) => p.id === session.playerId);
-    if (!me) return cb?.({ error: 'Игрок не найден' });
+    const ctx = requireRoomPlayer(socket, cb);
+    if (!ctx) return;
+    const { session, room, me } = ctx;
 
-    const trimmed = String(text || '').trim();
+    const trimmed = normalizeChatText(text);
     if (!trimmed) return cb?.({ error: 'Пустое сообщение' });
 
     const targetId = toPlayerId ? Number(toPlayerId) : null;
@@ -699,15 +801,18 @@ io.on('connection', (socket) => {
   });
 
   socket.on('chat:mafia', ({ text }, cb) => {
-    const session = sessions.get(socket.id);
-    if (!session) return cb?.({ error: 'Вы не в комнате' });
+    const user = requireSocketUser(socket, cb);
+    if (!user) return;
+    if (!chatSocketRateLimiter.try(`mafia:${user.id}`)) {
+      return cb?.({ error: 'Слишком много сообщений. Подождите.' });
+    }
 
-    const room = rooms.get(session.roomId);
-    if (!room) return cb?.({ error: 'Комната не найдена' });
-    const me = room.players.find((p) => p.id === session.playerId);
-    if (me?.role !== 'mafia' || !me.alive) return cb?.({ error: 'Нет доступа' });
+    const ctx = requireRoomPlayer(socket, cb);
+    if (!ctx) return;
+    const { session, room, me } = ctx;
+    if (me.role !== 'mafia' || !me.alive) return cb?.({ error: 'Нет доступа' });
 
-    const trimmed = String(text || '').trim();
+    const trimmed = normalizeChatText(text);
     if (!trimmed) return cb?.({ error: 'Пустое сообщение' });
     if (isPlayerSilenced(me)) {
       addMutedOnlyMessage(room, me, trimmed, 'mafia');
@@ -721,11 +826,12 @@ io.on('connection', (socket) => {
   });
 
   socket.on('game:startVoting', (_data, cb) => {
-    const session = sessions.get(socket.id);
-    if (!session) return cb?.({ error: 'Вы не в комнате' });
-
-    const room = rooms.get(session.roomId);
-    if (!room) return cb?.({ error: 'Комната не найдена' });
+    const ctx = requireRoomPlayer(socket, cb);
+    if (!ctx) return;
+    const { room, me } = ctx;
+    if (!me.inGame || !me.alive) return cb?.({ error: 'Нет доступа' });
+    if (room.phase !== PHASE.DAY) return cb?.({ error: 'Голосование можно начать только днём' });
+    if (room.votingStarted) return cb?.({ error: 'Голосование уже началось' });
     const notes = startVoting(room);
     broadcastRoom(room.id);
     deliverHostNotes(room, notes);
@@ -733,11 +839,9 @@ io.on('connection', (socket) => {
   });
 
   socket.on('game:vote', ({ targetId }, cb) => {
-    const session = sessions.get(socket.id);
-    if (!session) return cb?.({ error: 'Вы не в комнате' });
-
-    const room = rooms.get(session.roomId);
-    if (!room) return cb?.({ error: 'Комната не найдена' });
+    const ctx = requireRoomPlayer(socket, cb);
+    if (!ctx) return;
+    const { session, room } = ctx;
     try {
       const notes = castDayVote(room, session.playerId, targetId);
       broadcastRoom(room.id);
@@ -750,11 +854,9 @@ io.on('connection', (socket) => {
   });
 
   socket.on('game:nightAction', (action, cb) => {
-    const session = sessions.get(socket.id);
-    if (!session) return cb?.({ error: 'Вы не в комнате' });
-
-    const room = rooms.get(session.roomId);
-    if (!room) return cb?.({ error: 'Комната не найдена' });
+    const ctx = requireRoomPlayer(socket, cb);
+    if (!ctx) return;
+    const { session, room } = ctx;
     try {
       const result = submitNightAction(room, session.playerId, action);
       broadcastRoom(room.id);
@@ -766,20 +868,41 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('admin:deleteMessage', ({ messageId, channel }, cb) => {
-    if (!socket.isStaff) return cb?.({ error: 'Нет доступа' });
+  socket.on('admin:deleteMessage', ({ messageId, channel, violationType }, cb) => {
+    const staff = requireSocketStaff(socket, cb);
+    if (!staff) return;
+    const vType = parseViolationType(violationType);
+    if (!vType) return cb?.({ error: 'Укажите тип нарушения' });
+
     const session = sessions.get(socket.id);
     if (!session) return cb?.({ error: 'Вы не в комнате' });
     const room = rooms.get(session.roomId);
     if (!room) return cb?.({ error: 'Комната не найдена' });
-    const ok = deleteChatMessage(room, messageId, (channel || 'public') as ChatChannel);
+
+    const chatChannel = (channel || 'public') as ChatChannel;
+    const msg = getChatMessageForModeration(room, String(messageId), chatChannel);
+    if (!msg) return cb?.({ error: 'Сообщение не найдено' });
+
+    addViolation({
+      violationType: vType,
+      messageText: msg.text,
+      authorUserId: msg.userId ?? null,
+      authorName: msg.playerName,
+      roomId: room.id,
+      roomName: room.name,
+      channel: chatChannel,
+      messageId: String(messageId),
+      moderatorId: staff.id,
+    });
+
+    const ok = deleteChatMessage(room, String(messageId), chatChannel);
     if (!ok) return cb?.({ error: 'Сообщение не найдено' });
     broadcastRoom(room.id);
     cb?.({ ok: true });
   });
 
   socket.on('mod:silence', ({ targetPlayerId, targetUserId, reason, hours }, cb) => {
-    if (!socket.isStaff) return cb?.({ error: 'Нет доступа' });
+    if (!requireSocketStaff(socket, cb)) return;
     const session = sessions.get(socket.id);
     if (!session) return cb?.({ error: 'Вы не в комнате' });
 
@@ -804,11 +927,11 @@ io.on('connection', (socket) => {
         room,
         { playerId: target.id, userId: target.userId },
         hoursNum,
-        String(reason || '')
+        String(normalizeModerationReason(reason))
       );
       const duration =
         hoursNum && hoursNum > 0 ? `на ${hoursNum} ч.` : 'бессрочно';
-      const reasonText = String(reason || '').trim() || 'нарушение правил';
+      const reasonText = normalizeModerationReason(reason) || 'нарушение правил';
       addSystemMessage(
         room,
         `🔇 ${target.username || target.name} получил(а) молчание (${duration}). Причина: ${reasonText}.`
@@ -822,7 +945,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('mod:unsilence', ({ targetPlayerId, targetUserId }, cb) => {
-    if (!socket.isStaff) return cb?.({ error: 'Нет доступа' });
+    if (!requireSocketStaff(socket, cb)) return;
     const session = sessions.get(socket.id);
     if (!session) return cb?.({ error: 'Вы не в комнате' });
 

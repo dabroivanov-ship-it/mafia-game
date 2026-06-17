@@ -71,6 +71,14 @@ function syncAdminRoles(): void {
 }
 syncAdminRoles();
 
+export function isAdminReservedUsername(username: string): boolean {
+  const admins = (process.env.ADMIN_USERNAMES || 'admin')
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+  return admins.includes(username.trim().toLowerCase());
+}
+
 export type AssignableRole = 'user' | 'moderator';
 
 export function isAdmin(user: User | null | undefined): boolean {
@@ -176,8 +184,7 @@ export function createUser({
   telegramId?: string | null;
   telegramUsername?: string | null;
 }): User | undefined {
-  const adminList = (process.env.ADMIN_USERNAMES || 'admin').split(',').map((s) => s.trim().toLowerCase());
-  const role = adminList.includes(username.toLowerCase()) ? 'admin' : 'user';
+  const role = 'user';
 
   const result = db
     .prepare(

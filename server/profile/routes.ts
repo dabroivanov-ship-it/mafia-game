@@ -13,6 +13,8 @@ import {
   CHAT_LIMIT_OPTIONS,
 } from '../auth/db.js';
 import { createAvatarUpload } from '../upload/avatar.js';
+import { validateImageFile } from '../security/validate.js';
+import fs from 'fs';
 import { getUserMessageCount } from '../history/store.js';
 import { isValidThemeId } from '../settings/themes.js';
 import type { PublicUser } from '../types/index.js';
@@ -56,6 +58,10 @@ export function createProfileRouter({ onProfileUpdated }: ProfileRouterOptions =
     upload.single('avatar')(req, res, (err) => {
       if (err) return res.status(400).json({ error: err.message || 'Ошибка загрузки' });
       if (!req.file) return res.status(400).json({ error: 'Файл не выбран' });
+      if (!validateImageFile(req.file.path, req.file.mimetype)) {
+        fs.unlinkSync(req.file.path);
+        return res.status(400).json({ error: 'Файл не является допустимым изображением' });
+      }
 
       const avatarUrl = `/uploads/avatars/${req.file.filename}`;
       const { oldAvatar, user } = updateUserAvatar(req.userId!, avatarUrl);

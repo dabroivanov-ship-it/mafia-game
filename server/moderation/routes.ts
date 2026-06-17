@@ -1,8 +1,13 @@
 import { Router } from 'express';
 import { authMiddleware, staffMiddleware } from '../auth/jwt.js';
 import { findUserById, findUserPublic, banUser, clearBan, canBanTarget } from '../auth/db.js';
+import { normalizeModerationReason } from '../security/validate.js';
 
-export function createModerationRouter() {
+export interface ModerationRouterOptions {
+  onUserBanned?: (userId: number, reason: string, until: string | null) => void;
+}
+
+export function createModerationRouter({ onUserBanned }: ModerationRouterOptions = {}) {
   const router = Router();
   router.use(authMiddleware, staffMiddleware);
 
@@ -19,7 +24,9 @@ export function createModerationRouter() {
     if (hours && Number(hours) > 0) {
       until = new Date(Date.now() + Number(hours) * 3600000).toISOString();
     }
-    const user = banUser(targetId, reason, until);
+    const reasonText = normalizeModerationReason(reason);
+    const user = banUser(targetId, reasonText, until);
+    onUserBanned?.(targetId, reasonText, until);
     res.json({ user });
   });
 

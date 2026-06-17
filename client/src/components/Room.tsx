@@ -3,7 +3,7 @@ import { Socket } from 'socket.io-client';
 import Chat from './Chat';
 import ActionPanel from './ActionPanel';
 import UserProfileModal from './UserProfileModal';
-import type { GamePhase, RoomState, ChatReplyTarget } from '../types';
+import type { GamePhase, RoomState, ChatReplyTarget, ChatChannel, ViolationType } from '../types';
 
 const PHASE_LABELS: Record<GamePhase, string> = {
   waiting: 'Ожидание',
@@ -111,6 +111,30 @@ export default function Room({ socket, state, onLeave, onStateUpdate, currentUse
       toPlayerId: opts?.toPlayerId,
       isPrivate: opts?.isPrivate,
     });
+  };
+
+  const resolveDeleteChannel = (
+    sourceChannel: ChatChannel | undefined,
+    chatMode: RoomState['chatMode']
+  ): string => {
+    if (sourceChannel === 'private') return 'private';
+    if (sourceChannel === 'spectator') return 'spectator';
+    if (sourceChannel === 'dead' || chatMode === 'dead') return 'dead';
+    if (sourceChannel === 'mafia') return 'mafia';
+    return 'public';
+  };
+
+  const deleteModeratedMessage = async (
+    messageId: string | number,
+    sourceChannel: ChatChannel | undefined,
+    violationType: ViolationType
+  ) => {
+    const res = await emit('admin:deleteMessage', {
+      messageId,
+      channel: resolveDeleteChannel(sourceChannel, state.chatMode),
+      violationType,
+    });
+    if (res?.error) alert(res.error);
   };
 
   const loadMoreChat = async () => {
@@ -264,19 +288,9 @@ export default function Room({ socket, state, onLeave, onStateUpdate, currentUse
                 loadingMore={loadingMoreChat}
                 onDeleteMessage={
                   state.canModerate
-                    ? (messageId, sourceChannel) =>
-                        emit('admin:deleteMessage', {
-                          messageId,
-                          channel:
-                            sourceChannel === 'private'
-                              ? 'private'
-                              : sourceChannel === 'spectator'
-                                ? 'spectator'
-                                : state.chatMode === 'dead'
-                                  ? 'dead'
-                                  : 'public',
-                        })
-                    : null
+                    ? (messageId, sourceChannel, violationType) =>
+                        void deleteModeratedMessage(messageId, sourceChannel, violationType)
+                    : undefined
                 }
                 placeholder={
                   isChatRoom
@@ -304,8 +318,9 @@ export default function Room({ socket, state, onLeave, onStateUpdate, currentUse
               hasMoreChat={false}
               onDeleteMessage={
                 state.canModerate
-                  ? (messageId) => emit('admin:deleteMessage', { messageId, channel: 'mafia' })
-                  : null
+                  ? (messageId, _sourceChannel, violationType) =>
+                      void deleteModeratedMessage(messageId, 'mafia', violationType)
+                  : undefined
               }
               placeholder="Сообщение для мафии..."
             />
