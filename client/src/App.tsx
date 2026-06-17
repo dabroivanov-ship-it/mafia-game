@@ -132,7 +132,7 @@ export default function App() {
       setRoomState(null);
       setPlayerId(null);
       setView('lobby');
-      localStorage.removeItem('mafia_player_id');
+      clearStoredPlayerIds();
       setError(reason || 'Вы вышли из комнаты');
     });
 
