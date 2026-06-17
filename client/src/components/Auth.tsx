@@ -178,16 +178,6 @@ export default function Auth({ onSuccess }: AuthProps) {
             <p className="muted">Быстрый вход через Telegram</p>
             <div ref={telegramWidgetRef} />
             {telegramLoading && <p className="muted">Проверяем Telegram...</p>}
-            {telegramWebAppUrl && (
-              <a
-                className="btn btn-ghost btn-sm auth-telegram-link"
-                href={telegramWebAppUrl}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Открыть сайт в Telegram-боте
-              </a>
-            )}
           </div>
         )}
 
@@ -226,6 +216,16 @@ export default function Auth({ onSuccess }: AuthProps) {
             <button type="submit" className="btn btn-primary btn-lg" disabled={loading}>
               {loading ? 'Вход...' : 'Войти'}
             </button>
+            {telegramWebAppUrl && (
+              <a
+                className="btn btn-ghost btn-sm auth-telegram-link"
+                href={telegramWebAppUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Открыть сайт в Telegram-боте
+              </a>
+            )}
           </form>
         ) : (
           <form className="auth-form" onSubmit={handleRegister}>
