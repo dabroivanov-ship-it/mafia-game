@@ -52,7 +52,7 @@ const IMAGE_SIGNATURES: { mime: string; check: (buf: Buffer) => boolean }[] = [
 export function validateImageFile(filePath: string, mimetype: string): boolean {
   let buf: Buffer;
   try {
-    buf = fs.readFileSync(filePath, { start: 0, end: 12 });
+    buf = fs.readFileSync(filePath).subarray(0, 13);
   } catch {
     return false;
   }
