@@ -345,14 +345,26 @@ export default function Room({ socket, state, onLeave, onStateUpdate, currentUse
           inRoom
           targetPlayerId={profileTarget.playerId}
           targetSilenced={
-            state.players.find((p) => p.id === profileTarget.playerId)?.silenced ?? false
+            state.players.find(
+              (p) =>
+                p.id === profileTarget.playerId ||
+                (profileTarget.userId != null && p.userId === profileTarget.userId)
+            )?.silenced ?? false
           }
-          onSilence={async (playerId, reason, hours) => {
-            const res = await emit('mod:silence', { targetPlayerId: playerId, reason, hours });
+          onSilence={async ({ userId: targetUserId, playerId, reason, hours }) => {
+            const res = await emit('mod:silence', {
+              targetUserId,
+              targetPlayerId: playerId,
+              reason,
+              hours,
+            });
             if (res?.error) throw new Error(res.error);
           }}
-          onUnsilence={async (playerId) => {
-            const res = await emit('mod:unsilence', { targetPlayerId: playerId });
+          onUnsilence={async ({ userId: targetUserId, playerId }) => {
+            const res = await emit('mod:unsilence', {
+              targetUserId,
+              targetPlayerId: playerId,
+            });
             if (res?.error) throw new Error(res.error);
           }}
         />

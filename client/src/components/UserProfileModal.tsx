@@ -29,8 +29,13 @@ interface UserProfileModalProps {
   targetPlayerId?: number;
   targetSilenced?: boolean;
   inRoom?: boolean;
-  onSilence?: (playerId: number, reason: string, hours: number | null) => Promise<void>;
-  onUnsilence?: (playerId: number) => Promise<void>;
+  onSilence?: (payload: {
+    userId: number;
+    playerId?: number;
+    reason: string;
+    hours: number | null;
+  }) => Promise<void>;
+  onUnsilence?: (payload: { userId: number; playerId?: number }) => Promise<void>;
 }
 
 interface ProfileData {
@@ -151,13 +156,14 @@ export default function UserProfileModal({
   };
 
   const handleSilence = async () => {
-    if (!targetPlayerId || !onSilence) return;
+    if (!onSilence) return;
     try {
-      await onSilence(
-        targetPlayerId,
-        silenceReason,
-        silenceHours ? Number(silenceHours) : null
-      );
+      await onSilence({
+        userId,
+        playerId: targetPlayerId,
+        reason: silenceReason,
+        hours: silenceHours ? Number(silenceHours) : null,
+      });
       setShowSilenceForm(false);
       onAdminAction?.();
     } catch (err) {
@@ -166,9 +172,9 @@ export default function UserProfileModal({
   };
 
   const handleUnsilence = async () => {
-    if (!targetPlayerId || !onUnsilence) return;
+    if (!onUnsilence) return;
     try {
-      await onUnsilence(targetPlayerId);
+      await onUnsilence({ userId, playerId: targetPlayerId });
       onAdminAction?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка снятия молчания');
@@ -229,7 +235,9 @@ export default function UserProfileModal({
 
   const user = data?.user;
   const canAdmin = data?.canAdmin && viewerIsAdmin;
-  const canModerate = (data?.canModerate && viewerCanModerate) || canAdmin;
+  const canProfileModerate = (data?.canModerate && viewerCanModerate) || canAdmin;
+  const canRoomSilence =
+    inRoom && viewerCanModerate && userId !== currentUserId && !!onSilence;
   const canWriteMail = userId !== currentUserId;
   const displayTitle = user?.displayName || replyTarget?.playerName || 'Игрок';
 
@@ -378,7 +386,7 @@ export default function UserProfileModal({
                   </div>
                 )}
 
-                {canModerate && data?.staffMeta && (
+                {canProfileModerate && data?.staffMeta && (
                   <div className="profile-staff-meta">
                     <h4>Данные подключения</h4>
                     <div className="profile-staff-meta-row">
@@ -432,7 +440,7 @@ export default function UserProfileModal({
               </div>
             )}
 
-            {canModerate && !editMode && (
+            {(canProfileModerate || canRoomSilence) && !editMode && (
               <div className="admin-profile-actions">
                 <h4>{canAdmin ? 'Администрирование' : 'Модерация'}</h4>
                 <div className="admin-profile-buttons">
@@ -441,7 +449,8 @@ export default function UserProfileModal({
                       Редактировать
                     </button>
                   )}
-                  {!user.isBanned ? (
+                  {canProfileModerate &&
+                    (!user.isBanned ? (
                     <button type="button" className="btn btn-sm danger" onClick={() => setShowBanForm(true)}>
                       Забанить
                     </button>
@@ -449,9 +458,9 @@ export default function UserProfileModal({
                     <button type="button" className="btn btn-sm" onClick={handleUnban}>
                       Разбанить
                     </button>
-                  )}
-                  {inRoom && targetPlayerId && onSilence && (
-                    targetSilenced ? (
+                  ))}
+                  {canRoomSilence &&
+                    (targetSilenced ? (
                       <button type="button" className="btn btn-sm" onClick={() => void handleUnsilence()}>
                         Снять молчание
                       </button>
@@ -459,8 +468,7 @@ export default function UserProfileModal({
                       <button type="button" className="btn btn-sm" onClick={() => setShowSilenceForm(true)}>
                         Молчание
                       </button>
-                    )
-                  )}
+                    ))}
                 </div>
 
                 {showSilenceForm && (

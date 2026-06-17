@@ -1106,9 +1106,11 @@ export function addChatMessage(
 const SILENCE_PERMANENT = -1;
 
 export function isPlayerSilenced(player: GamePlayer | undefined): boolean {
-  if (!player?.silencedUntil) return false;
-  if (player.silencedUntil === SILENCE_PERMANENT) return true;
-  if (Date.now() >= player.silencedUntil) {
+  if (!player) return false;
+  const until = player.silencedUntil;
+  if (until == null || until === 0) return false;
+  if (until === SILENCE_PERMANENT) return true;
+  if (Date.now() >= until) {
     player.silencedUntil = null;
     player.silenceReason = null;
     player.mutedChat = [];
@@ -1117,20 +1119,63 @@ export function isPlayerSilenced(player: GamePlayer | undefined): boolean {
   return true;
 }
 
+export function findRoomPlayer(
+  room: GameRoom,
+  ids: { playerId?: number | null; userId?: number | null }
+): GamePlayer | undefined {
+  if (ids.userId) {
+    const matches = room.players.filter((p) => p.userId === Number(ids.userId));
+    if (matches.length > 0) {
+      return matches.find((p) => p.connected) || matches[matches.length - 1];
+    }
+  }
+  if (ids.playerId != null && Number.isFinite(Number(ids.playerId))) {
+    return room.players.find((p) => p.id === Number(ids.playerId));
+  }
+  return undefined;
+}
+
 export function setPlayerSilence(
   room: GameRoom,
   playerId: number,
   hours: number | null,
   reason: string
 ): GamePlayer {
-  const player = room.players.find((p) => p.id === playerId);
+  const player = findRoomPlayer(room, { playerId });
   if (!player) throw new Error('Игрок не найден');
+  return applyPlayerSilence(player, hours, reason);
+}
 
+export function setPlayerSilenceForUser(
+  room: GameRoom,
+  ids: { playerId?: number | null; userId?: number | null },
+  hours: number | null,
+  reason: string
+): GamePlayer {
+  const player = findRoomPlayer(room, ids);
+  if (!player) throw new Error('Игрок не найден в комнате');
+  return applyPlayerSilence(player, hours, reason);
+}
+
+function applyPlayerSilence(
+  player: GamePlayer,
+  hours: number | null,
+  reason: string
+): GamePlayer {
   player.silencedUntil =
     hours && hours > 0 ? Date.now() + hours * 3600000 : SILENCE_PERMANENT;
   player.silenceReason = reason.trim() || 'нарушение правил';
   player.mutedChat = [];
   return player;
+}
+
+export function clearPlayerSilenceForUser(
+  room: GameRoom,
+  ids: { playerId?: number | null; userId?: number | null }
+): GamePlayer {
+  const player = findRoomPlayer(room, ids);
+  if (!player) throw new Error('Игрок не найден в комнате');
+  return clearPlayerSilence(room, player.id);
 }
 
 export function clearPlayerSilence(room: GameRoom, playerId: number): GamePlayer {
@@ -1430,13 +1475,18 @@ function buildChatView(
   if (isSpectator) {
     const gameMsgs = room.chat.map((m) => ({ ...m, sourceChannel: 'public' as ChatChannel }));
     const specMsgs = room.spectatorChat.map((m) => ({ ...m, sourceChannel: 'spectator' as ChatChannel }));
-    const combined = appendPrivateMessages(
+    let combined = appendPrivateMessages(
       [...gameMsgs, ...specMsgs].sort(
         (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
       ),
       room,
       myId
     );
+    if (me && isPlayerSilenced(me) && me.mutedChat?.length) {
+      combined = [...combined, ...me.mutedChat].sort(
+        (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
+      );
+    }
     const sliced = sliceChatMessages(combined, chatLimit);
     return { messages: sliced.messages, mode: 'spectator', hasMoreChat: sliced.hasMoreChat };
   }
