@@ -22,11 +22,11 @@ declare global {
 }
 
 function applyTelegramViewport(webApp: TelegramWebApp): void {
-  document.documentElement.classList.add('telegram-webapp');
   const height = webApp.viewportStableHeight || webApp.viewportHeight;
-  if (height > 0) {
-    document.documentElement.style.setProperty('--tg-viewport-height', `${height}px`);
-  }
+  if (height <= 0) return;
+
+  document.documentElement.classList.add('telegram-webapp');
+  document.documentElement.style.setProperty('--tg-viewport-height', `${height}px`);
 }
 
 function maximizeTelegramWebApp(webApp: TelegramWebApp): void {
@@ -42,15 +42,21 @@ export function isTelegramWebApp(): boolean {
 }
 
 export function getTelegramWebApp(): TelegramWebApp | null {
-  return window.Telegram?.WebApp ?? null;
+  const webApp = window.Telegram?.WebApp;
+  if (!webApp?.initData) return null;
+  return webApp;
 }
 
 export function initTelegramWebApp(): boolean {
-  const webApp = window.Telegram?.WebApp;
+  const webApp = getTelegramWebApp();
   if (!webApp) return false;
 
-  maximizeTelegramWebApp(webApp);
-  webApp.onEvent('viewportChanged', () => maximizeTelegramWebApp(webApp));
+  try {
+    maximizeTelegramWebApp(webApp);
+    webApp.onEvent('viewportChanged', () => maximizeTelegramWebApp(webApp));
+  } catch (err) {
+    console.warn('Telegram WebApp init failed:', err);
+  }
 
-  return Boolean(webApp.initData);
+  return true;
 }
