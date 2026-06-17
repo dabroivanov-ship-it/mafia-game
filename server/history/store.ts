@@ -75,16 +75,26 @@ interface GameEventRow {
   created_at: string;
 }
 
+const SYSTEM_SENDER_NAME = '🛡️ Система';
+
+function normalizeSystemSender(name: string | null | undefined): string {
+  if (!name || name === '🤖 Ведущий') return SYSTEM_SENDER_NAME;
+  return name;
+}
+
 function rowToMsg(row: ChatRow): ChatMessage {
+  const isSystem = !!row.is_system;
   return {
     id: row.msg_key,
     dbId: row.id,
     playerId: row.player_id,
     userId: row.user_id,
-    playerName: row.player_name || '🤖 Ведущий',
+    playerName: isSystem
+      ? normalizeSystemSender(row.player_name)
+      : row.player_name || '?',
     text: row.text,
     time: row.created_at.includes('T') ? row.created_at : `${row.created_at.replace(' ', 'T')}Z`,
-    system: !!row.is_system,
+    system: isSystem,
     deleted: !!row.deleted,
     isPrivate: !!row.is_private,
     toPlayerId: row.to_player_id,
@@ -215,11 +225,13 @@ export function getRecentGameEvents(limit = 30): GameEvent[] {
 export function hydrateRoomHistory(room: GameRoom): void {
   if (room.historyLoaded) return;
   const { chat, mafiaChat, deadChat, spectatorChat, privateChat } = loadRoomChatHistory(room.id);
-  room.chat = chat;
+  room.chat = chat.map((msg) =>
+    msg.system ? { ...msg, playerName: normalizeSystemSender(msg.playerName) } : msg
+  );
   room.mafiaChat = mafiaChat;
   room.deadChat = deadChat;
   room.spectatorChat = spectatorChat;
-  room.privateChat = privateChat;
+  room.privateChat = room.kind === 'chat' ? [] : privateChat;
   room.historyLoaded = true;
 }
 

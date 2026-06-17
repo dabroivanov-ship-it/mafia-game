@@ -390,6 +390,7 @@ function broadcastRoom(roomId: number): void {
 }
 
 function deliverHostNotes(room: GameRoom, privateNotes: PrivateNote[] = []): void {
+  if (isChatRoom(room) || privateNotes.length === 0) return;
   for (const note of privateNotes) {
     addHostPrivateMessage(room, note.playerId, note.message);
     const p = room.players.find((pl) => pl.id === note.playerId);
@@ -531,6 +532,7 @@ io.on('connection', (socket) => {
 
     const room = rooms.get(session.roomId);
     if (!room) return cb?.({ error: 'Комната не найдена' });
+    if (isChatRoom(room)) return cb?.({ error: 'В чат-комнате нельзя запустить игру' });
     try {
       startRegistration(room, session.playerId);
       broadcastRoom(room.id);
@@ -550,6 +552,7 @@ io.on('connection', (socket) => {
 
     const room = rooms.get(session.roomId);
     if (!room) return cb?.({ error: 'Комната не найдена' });
+    if (isChatRoom(room)) return cb?.({ error: 'В чат-комнате нет игры' });
     try {
       const { privateNotes } = joinGame(room, session.playerId);
       broadcastRoom(room.id);
@@ -570,6 +573,7 @@ io.on('connection', (socket) => {
 
     const room = rooms.get(session.roomId);
     if (!room) return cb?.({ error: 'Комната не найдена' });
+    if (isChatRoom(room)) return cb?.({ error: 'В чат-комнате нет игры' });
     try {
       leaveGame(room, session.playerId);
       broadcastRoom(room.id);
@@ -604,6 +608,7 @@ io.on('connection', (socket) => {
 
     const room = rooms.get(session.roomId);
     if (!room) return cb?.({ error: 'Комната не найдена' });
+    if (isChatRoom(room)) return cb?.({ error: 'В чат-комнате нет игры' });
     resetRoom(room);
     broadcastRoom(room.id);
     cb?.({ ok: true });

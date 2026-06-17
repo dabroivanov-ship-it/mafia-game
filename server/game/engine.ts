@@ -45,6 +45,26 @@ import type {
 
 let nextPlayerId = 1;
 
+export const SYSTEM_SENDER_NAME = '🛡️ Система';
+
+function freshChatRoomState(room: GameRoom): void {
+  room.historyLoaded = true;
+  room.chat = [];
+  room.mafiaChat = [];
+  room.deadChat = [];
+  room.spectatorChat = [];
+  room.privateChat = [];
+  room.systemMessages = [];
+  room.phase = PHASE.WAITING;
+  room.sessionId = null;
+  room.timerEnd = null;
+  room.timerReason = null;
+  room.winnerTeam = null;
+  room.nightNumber = 0;
+  room.votes = {};
+  room.nightActions = {};
+}
+
 export function isChatRoom(room: GameRoom): boolean {
   return room.kind === 'chat';
 }
@@ -74,6 +94,8 @@ export function createInitialRooms(): Map<number, GameRoom> {
   if (!Array.from(rooms.values()).some((r) => r.kind === 'chat')) {
     const id = CONFIG.ROOM_COUNT + 1;
     const room = createChatRoom(id, 'Общий чат');
+    freshChatRoomState(room);
+    addSystemMessage(room, `💬 Добро пожаловать в «${room.name}».`);
     rooms.set(id, room);
     saveRoomConfig(id, room.name, 'chat');
   }
@@ -175,6 +197,8 @@ export function addChatRoom(rooms: Map<number, GameRoom>, name: string): GameRoo
   }
   const id = nextRoomId(rooms.keys());
   const room = createChatRoom(id, trimmed);
+  freshChatRoomState(room);
+  addSystemMessage(room, `💬 Чат-комната «${room.name}» создана.`);
   rooms.set(id, room);
   saveRoomConfig(id, room.name, 'chat');
   return room;
@@ -1301,7 +1325,7 @@ export function addSystemMessage(room: GameRoom, text: string): void {
   const msg: ChatMessage = {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
     playerId: null,
-    playerName: isChatRoom(room) ? '🛡️ Система' : '🤖 Ведущий',
+    playerName: SYSTEM_SENDER_NAME,
     text,
     time,
     system: true,
