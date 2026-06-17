@@ -1062,7 +1062,6 @@ export function resetRoom(room: GameRoom): void {
     silenceReason: null,
     mutedChat: [],
   }));
-  addSystemMessage(room, '——— Новая игра ———');
 }
 
 export function addChatMessage(
