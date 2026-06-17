@@ -486,8 +486,17 @@ io.on('connection', (socket) => {
       let joinPrivateNotes: PrivateNote[] = [];
 
       if (reconnectId) {
-        const reconnected = reconnectPlayer(room, reconnectId, socket.id, playerName, playerUsername);
-        player = reconnected.player;
+        const candidate = room.players.find((p) => p.id === Number(reconnectId));
+        if (candidate && candidate.userId === socket.userId) {
+          const reconnected = reconnectPlayer(
+            room,
+            Number(reconnectId),
+            socket.id,
+            playerName,
+            playerUsername
+          );
+          player = reconnected.player;
+        }
       }
       if (!player && socket.userId) {
         const existing = room.players.find((p) => p.userId === socket.userId);

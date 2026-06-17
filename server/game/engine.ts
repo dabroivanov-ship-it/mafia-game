@@ -1440,33 +1440,33 @@ function appendPrivateMessages(
   );
 }
 
-function enrichChatMessage(room: GameRoom, msg: ChatMessage): ChatMessage {
-  if (msg.system || msg.userId) return msg;
-
-  let userId = msg.userId ?? null;
-  let playerId = msg.playerId ?? null;
-
-  if (playerId != null) {
-    const author = room.players.find((p) => p.id === playerId);
-    if (author?.userId) userId = author.userId;
+function findMessageAuthor(room: GameRoom, msg: ChatMessage): GamePlayer | undefined {
+  if (msg.playerId != null) {
+    const byId = room.players.find((p) => p.id === msg.playerId);
+    if (byId) return byId;
   }
-
-  if (!userId && msg.playerName) {
-    const normalized = msg.playerName.trim().toLowerCase();
-    const author = room.players.find(
-      (p) =>
-        p.userId &&
-        ((p.username || '').toLowerCase() === normalized ||
-          (p.name || '').toLowerCase() === normalized)
-    );
-    if (author) {
-      userId = author.userId;
-      if (playerId == null) playerId = author.id;
+  if (msg.userId) {
+    const matches = room.players.filter((p) => p.userId === msg.userId);
+    if (matches.length === 1) return matches[0];
+    if (matches.length > 1) {
+      return matches.find((p) => p.connected) || matches[matches.length - 1];
     }
   }
+  return undefined;
+}
 
-  if (!userId) return msg;
-  return { ...msg, userId, playerId };
+function enrichChatMessage(room: GameRoom, msg: ChatMessage): ChatMessage {
+  if (msg.system) return msg;
+
+  const author = findMessageAuthor(room, msg);
+  if (!author) return msg;
+
+  return {
+    ...msg,
+    userId: author.userId ?? msg.userId,
+    playerId: author.id,
+    playerName: author.username || author.name || msg.playerName,
+  };
 }
 
 function enrichChatMessages(room: GameRoom, messages: ChatMessage[]): ChatMessage[] {

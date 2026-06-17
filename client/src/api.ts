@@ -34,6 +34,46 @@ export async function apiRequest<T = unknown>(
 
 const REMEMBER_LOGIN_KEY = 'mafia_remember_login';
 const REMEMBER_ME_KEY = 'mafia_remember_me';
+const PLAYER_ID_KEY_PREFIX = 'mafia_player_id:';
+
+export function loadStoredPlayerId(userId: number | null | undefined): number | null {
+  if (!userId) return null;
+  const scoped = localStorage.getItem(`${PLAYER_ID_KEY_PREFIX}${userId}`);
+  if (scoped) {
+    const n = Number(scoped);
+    return Number.isFinite(n) ? n : null;
+  }
+  const legacy = localStorage.getItem('mafia_player_id');
+  if (!legacy) return null;
+  try {
+    const raw = localStorage.getItem('mafia_user');
+    const parsed = raw ? (JSON.parse(raw) as { id?: number }) : null;
+    if (parsed?.id === userId) {
+      localStorage.setItem(`${PLAYER_ID_KEY_PREFIX}${userId}`, legacy);
+      localStorage.removeItem('mafia_player_id');
+      const n = Number(legacy);
+      return Number.isFinite(n) ? n : null;
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+export function saveStoredPlayerId(userId: number, playerId: number): void {
+  localStorage.setItem(`${PLAYER_ID_KEY_PREFIX}${userId}`, String(playerId));
+  localStorage.removeItem('mafia_player_id');
+}
+
+export function clearStoredPlayerIds(): void {
+  localStorage.removeItem('mafia_player_id');
+  const keys: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key?.startsWith(PLAYER_ID_KEY_PREFIX)) keys.push(key);
+  }
+  for (const key of keys) localStorage.removeItem(key);
+}
 
 export function loadRememberedLogin(): { login: string; remember: boolean } {
   const remember = localStorage.getItem(REMEMBER_ME_KEY) !== '0';
@@ -59,7 +99,7 @@ export function saveSession(token: string, user: User): void {
 export function clearSession(): void {
   localStorage.removeItem('mafia_token');
   localStorage.removeItem('mafia_user');
-  localStorage.removeItem('mafia_player_id');
+  clearStoredPlayerIds();
 }
 
 export async function register(payload: {

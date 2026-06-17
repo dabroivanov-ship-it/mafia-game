@@ -11,7 +11,7 @@ import Messages from './components/Messages';
 import Info from './components/Info';
 import AdminPanel from './components/AdminPanel';
 import Room from './components/Room';
-import { clearSession, fetchMe, fetchUnreadMailCount, fetchThemeSettings, saveSession } from './api';
+import { clearSession, fetchMe, fetchUnreadMailCount, fetchThemeSettings, saveSession, loadStoredPlayerId, saveStoredPlayerId, clearStoredPlayerIds } from './api';
 import type { LobbyRoom, RoomState, User, ThemeId } from './types';
 import { applyTheme, resolveTheme, DEFAULT_THEME } from './themes';
 
@@ -36,10 +36,7 @@ export default function App() {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [rooms, setRooms] = useState<LobbyRoom[]>([]);
   const [roomState, setRoomState] = useState<RoomState | null>(null);
-  const [playerId, setPlayerId] = useState<number | null>(() => {
-    const v = localStorage.getItem('mafia_player_id');
-    return v ? Number(v) : null;
-  });
+  const [playerId, setPlayerId] = useState<number | null>(null);
   const [currentRoomId, setCurrentRoomId] = useState<number | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -70,6 +67,7 @@ export default function App() {
         const { user: me } = await fetchMe();
         setUser(me);
         saveSession(token, me);
+        setPlayerId(loadStoredPlayerId(me.id));
       } catch {
         clearSession();
         setToken(null);
@@ -162,6 +160,7 @@ export default function App() {
   const handleAuthSuccess = useCallback((authUser: User, authToken: string) => {
     setUser(authUser);
     setToken(authToken);
+    setPlayerId(loadStoredPlayerId(authUser.id));
     setView('lobby');
   }, []);
 
@@ -175,6 +174,7 @@ export default function App() {
     setRoomState(null);
     setCurrentRoomId(null);
     setPlayerId(null);
+    clearStoredPlayerIds();
     setView('lobby');
   }, [socket]);
 
@@ -188,11 +188,12 @@ export default function App() {
 
   const joinRoom = useCallback(
     (roomId: number) => {
-      if (!socket) return;
+      if (!socket || !user) return;
       setError(null);
       setView('room');
 
-      socket.emit('room:join', { roomId, playerId }, (res: RoomJoinResponse) => {
+      const reconnectId = loadStoredPlayerId(user.id);
+      socket.emit('room:join', { roomId, playerId: reconnectId ?? undefined }, (res: RoomJoinResponse) => {
         if (res?.error) {
           setError(res.error);
           setView('lobby');
@@ -200,13 +201,13 @@ export default function App() {
         }
         if (res.playerId != null) {
           setPlayerId(res.playerId);
-          localStorage.setItem('mafia_player_id', String(res.playerId));
+          saveStoredPlayerId(user.id, res.playerId);
         }
         setCurrentRoomId(roomId);
         if (res.state) setRoomState(res.state);
       });
     },
-    [socket, playerId]
+    [socket, user]
   );
 
   const leaveRoom = useCallback(() => {
@@ -217,22 +218,23 @@ export default function App() {
   }, [socket]);
 
   useEffect(() => {
-    if (!socket || !currentRoomId) return;
+    if (!socket || !currentRoomId || !user) return;
 
     const resyncRoom = () => {
-      socket.emit('room:join', { roomId: currentRoomId, playerId }, (res: RoomJoinResponse) => {
+      const reconnectId = loadStoredPlayerId(user.id);
+      socket.emit('room:join', { roomId: currentRoomId, playerId: reconnectId ?? undefined }, (res: RoomJoinResponse) => {
         if (res?.error) {
           setError(res.error);
           setCurrentRoomId(null);
           setRoomState(null);
           setPlayerId(null);
-          localStorage.removeItem('mafia_player_id');
+          clearStoredPlayerIds();
           setView('lobby');
           return;
         }
         if (res?.playerId != null) {
           setPlayerId(res.playerId);
-          localStorage.setItem('mafia_player_id', String(res.playerId));
+          saveStoredPlayerId(user.id, res.playerId);
         }
         if (res?.state) setRoomState(res.state);
       });
@@ -242,7 +244,7 @@ export default function App() {
     return () => {
       socket.off('connect', resyncRoom);
     };
-  }, [socket, currentRoomId, playerId]);
+  }, [socket, currentRoomId, user]);
 
   if (authLoading) {
     return (
