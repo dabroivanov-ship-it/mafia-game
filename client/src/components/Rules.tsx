@@ -142,15 +142,6 @@ export default function Rules({ embedded = false }: RulesProps) {
             после победы одной из сторон.
           </p>
         </section>
-
-        <section className="rules-section">
-          <h3>Чат</h3>
-          <ul>
-            <li>В чате отображается <strong>логин</strong> игрока.</li>
-            <li>Нажмите на имя в чате, чтобы открыть профиль.</li>
-            <li>Не оскорбляйте игроков — за нарушения возможен бан.</li>
-          </ul>
-        </section>
       </div>
     </div>
   );
