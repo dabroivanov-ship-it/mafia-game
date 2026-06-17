@@ -487,7 +487,12 @@ io.on('connection', (socket) => {
       if (reconnectId) {
         const reconnected = reconnectPlayer(room, reconnectId, socket.id, playerName, playerUsername);
         player = reconnected.player;
-        joinPrivateNotes = reconnected.privateNotes;
+      }
+      if (!player && socket.userId) {
+        const existing = room.players.find((p) => p.userId === socket.userId);
+        if (existing) {
+          player = reconnectPlayer(room, existing.id, socket.id, playerName, playerUsername).player;
+        }
       }
       if (!player) {
         const joined = addPlayerToRoom(room, {
@@ -521,6 +526,17 @@ io.on('connection', (socket) => {
   socket.on('room:detach', (_data, cb) => {
     const session = sessions.get(socket.id);
     if (!session) return cb?.({ ok: true });
+
+    const room = rooms.get(session.roomId);
+    if (room) {
+      cancelDisconnectTimer(session.roomId, session.playerId);
+      const player = markPlayerDisconnected(room, socket.id);
+      if (player && !isChatRoom(room) && isActiveGamePhase(room.phase) && player.inGame && player.alive) {
+        scheduleDisconnectTimer(room.id, player.id);
+      }
+      broadcastRoom(session.roomId);
+    }
+
     socket.leave(`room:${session.roomId}`);
     sessions.delete(socket.id);
     cb?.({ ok: true });

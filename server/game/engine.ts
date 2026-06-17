@@ -247,9 +247,6 @@ export function addPlayerToRoom(
   // Переподключение того же аккаунта
   const existingUser = room.players.find((p) => p.userId === userId);
   if (existingUser) {
-    if (existingUser.connected && existingUser.socketId && existingUser.socketId !== socketId) {
-      throw new Error('Вы уже в этой комнате');
-    }
     existingUser.socketId = socketId;
     existingUser.name = name;
     if (username) existingUser.username = username;
