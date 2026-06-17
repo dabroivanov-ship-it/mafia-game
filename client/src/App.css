@@ -156,6 +156,21 @@ body {
   cursor: pointer;
 }
 
+.auth-telegram-block {
+  margin-bottom: 14px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-hover);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.auth-telegram-link {
+  align-self: flex-start;
+}
+
 .auth-form select {
   padding: 12px 14px;
   border-radius: var(--radius);

@@ -31,6 +31,7 @@ export interface User {
   banReason: string | null;
   chatLimit: number;
   theme: string | null;
+  telegramUsername?: string | null;
 }
 
 export interface PublicUser extends User {

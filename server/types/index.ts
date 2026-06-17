@@ -32,6 +32,8 @@ export interface User {
   username: string;
   email: string;
   password_hash: string;
+  telegram_id?: string | null;
+  telegram_username?: string | null;
   display_name: string;
   city: string;
   bio: string;
@@ -75,6 +77,7 @@ export interface PublicUser {
   banReason?: string | null;
   chatLimit: number;
   theme: string | null;
+  telegramUsername?: string | null;
 }
 
 export interface ChatMessage {

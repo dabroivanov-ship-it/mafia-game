@@ -85,6 +85,26 @@ export async function login(payload: {
   });
 }
 
+export interface TelegramAuthPayload {
+  id: number | string;
+  first_name?: string;
+  last_name?: string;
+  username?: string;
+  photo_url?: string;
+  auth_date: number | string;
+  hash: string;
+}
+
+export async function telegramLogin(payload: {
+  telegram: TelegramAuthPayload;
+  remember?: boolean;
+}): Promise<{ token: string; user: User }> {
+  return apiRequest('/api/auth/telegram', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function fetchMe(): Promise<{ user: User }> {
   return apiRequest('/api/auth/me');
 }
@@ -94,6 +114,23 @@ export async function fetchThemeSettings(): Promise<{
   themes: { id: ThemeId; name: string }[];
 }> {
   return apiRequest('/api/settings/theme');
+}
+
+export async function fetchTelegramSettings(): Promise<{
+  botUsername: string | null;
+  webAppUrl: string | null;
+}> {
+  return apiRequest('/api/settings/telegram');
+}
+
+export async function adminSetTelegramSettings(payload: {
+  botUsername: string;
+  webAppUrl: string;
+}): Promise<{ botUsername: string; webAppUrl: string }> {
+  return apiRequest('/api/settings/telegram', {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function adminSetDefaultTheme(theme: ThemeId): Promise<{ defaultTheme: ThemeId }> {

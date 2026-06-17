@@ -1,9 +1,24 @@
-import { useState, FormEvent, useEffect } from 'react';
-import { login, register, saveSession, loadRememberedLogin, saveRememberedLogin } from '../api';
+import { useState, FormEvent, useEffect, useRef } from 'react';
+import {
+  login,
+  register,
+  saveSession,
+  loadRememberedLogin,
+  saveRememberedLogin,
+  fetchTelegramSettings,
+  telegramLogin,
+  type TelegramAuthPayload,
+} from '../api';
 import type { User } from '../types';
 
 interface AuthProps {
   onSuccess: (user: User, token: string) => void;
+}
+
+declare global {
+  interface Window {
+    onTelegramAuth?: (payload: TelegramAuthPayload) => void;
+  }
 }
 
 export default function Auth({ onSuccess }: AuthProps) {
@@ -11,6 +26,10 @@ export default function Auth({ onSuccess }: AuthProps) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
+  const [telegramBotUsername, setTelegramBotUsername] = useState<string | null>(null);
+  const [telegramWebAppUrl, setTelegramWebAppUrl] = useState<string | null>(null);
+  const [telegramLoading, setTelegramLoading] = useState(false);
+  const telegramWidgetRef = useRef<HTMLDivElement | null>(null);
 
   const [loginForm, setLoginForm] = useState({ login: '', password: '' });
   const [regForm, setRegForm] = useState({
@@ -28,6 +47,50 @@ export default function Auth({ onSuccess }: AuthProps) {
       setLoginForm((prev) => ({ ...prev, login: saved.login }));
     }
   }, []);
+
+  useEffect(() => {
+    fetchTelegramSettings()
+      .then(({ botUsername, webAppUrl }) => {
+        setTelegramBotUsername(botUsername);
+        setTelegramWebAppUrl(webAppUrl);
+      })
+      .catch(() => {
+        setTelegramBotUsername(null);
+        setTelegramWebAppUrl(null);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!telegramBotUsername || !telegramWidgetRef.current) return;
+    telegramWidgetRef.current.innerHTML = '';
+    window.onTelegramAuth = async (payload: TelegramAuthPayload) => {
+      setError('');
+      setTelegramLoading(true);
+      try {
+        const { token, user } = await telegramLogin({ telegram: payload, remember: true });
+        saveRememberedLogin(payload.username || String(payload.id), true);
+        saveSession(token, user);
+        onSuccess(user, token);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Ошибка Telegram входа');
+      } finally {
+        setTelegramLoading(false);
+      }
+    };
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = 'https://telegram.org/js/telegram-widget.js?22';
+    script.setAttribute('data-telegram-login', telegramBotUsername);
+    script.setAttribute('data-size', 'large');
+    script.setAttribute('data-radius', '8');
+    script.setAttribute('data-userpic', 'false');
+    script.setAttribute('data-request-access', 'write');
+    script.setAttribute('data-onauth', 'onTelegramAuth(user)');
+    telegramWidgetRef.current.appendChild(script);
+    return () => {
+      if (window.onTelegramAuth) delete window.onTelegramAuth;
+    };
+  }, [telegramBotUsername, onSuccess]);
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
@@ -109,6 +172,24 @@ export default function Auth({ onSuccess }: AuthProps) {
         </div>
 
         {error && <div className="auth-error">{error}</div>}
+
+        {telegramBotUsername && mode === 'login' && (
+          <div className="auth-telegram-block">
+            <p className="muted">Быстрый вход через Telegram</p>
+            <div ref={telegramWidgetRef} />
+            {telegramLoading && <p className="muted">Проверяем Telegram...</p>}
+            {telegramWebAppUrl && (
+              <a
+                className="btn btn-ghost btn-sm auth-telegram-link"
+                href={telegramWebAppUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Открыть сайт в Telegram-боте
+              </a>
+            )}
+          </div>
+        )}
 
         {mode === 'login' ? (
           <form className="auth-form" onSubmit={handleLogin}>

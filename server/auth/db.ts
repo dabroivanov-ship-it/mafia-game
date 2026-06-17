@@ -21,6 +21,8 @@ db.exec(`
     username TEXT NOT NULL UNIQUE COLLATE NOCASE,
     email TEXT NOT NULL UNIQUE COLLATE NOCASE,
     password_hash TEXT NOT NULL,
+    telegram_id TEXT UNIQUE,
+    telegram_username TEXT DEFAULT NULL,
     display_name TEXT NOT NULL,
     city TEXT NOT NULL DEFAULT '',
     bio TEXT NOT NULL DEFAULT '',
@@ -54,6 +56,9 @@ function migrateColumns(): void {
   if (!cols.includes('last_ip')) add('ALTER TABLE users ADD COLUMN last_ip TEXT DEFAULT NULL');
   if (!cols.includes('last_user_agent')) add('ALTER TABLE users ADD COLUMN last_user_agent TEXT DEFAULT NULL');
   if (!cols.includes('theme')) add('ALTER TABLE users ADD COLUMN theme TEXT DEFAULT NULL');
+  if (!cols.includes('telegram_id')) add('ALTER TABLE users ADD COLUMN telegram_id TEXT DEFAULT NULL');
+  if (!cols.includes('telegram_username')) add('ALTER TABLE users ADD COLUMN telegram_username TEXT DEFAULT NULL');
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_telegram_id ON users(telegram_id)');
 }
 
 migrateColumns();
@@ -130,6 +135,8 @@ export function publicUser(user: User | null | undefined): PublicUser | null {
     banReason: user.ban_reason || null,
     chatLimit: normalizeChatLimit(user.chat_limit),
     theme: user.theme && user.theme.trim() ? user.theme.trim() : null,
+    telegramUsername:
+      user.telegram_username && user.telegram_username.trim() ? user.telegram_username.trim() : null,
   };
 }
 
@@ -139,6 +146,10 @@ export function findUserByUsername(username: string): User | undefined {
 
 export function findUserByEmail(email: string): User | undefined {
   return db.prepare('SELECT * FROM users WHERE email = ? COLLATE NOCASE').get(email) as User | undefined;
+}
+
+export function findUserByTelegramId(telegramId: string): User | undefined {
+  return db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(telegramId) as User | undefined;
 }
 
 export function findUserById(id: number): User | undefined {
@@ -155,20 +166,26 @@ export function createUser({
   email,
   passwordHash,
   displayName,
+  telegramId,
+  telegramUsername,
 }: {
   username: string;
   email: string;
   passwordHash: string;
   displayName: string;
+  telegramId?: string | null;
+  telegramUsername?: string | null;
 }): User | undefined {
   const adminList = (process.env.ADMIN_USERNAMES || 'admin').split(',').map((s) => s.trim().toLowerCase());
   const role = adminList.includes(username.toLowerCase()) ? 'admin' : 'user';
 
   const result = db
     .prepare(
-      'INSERT INTO users (username, email, password_hash, display_name, role) VALUES (?, ?, ?, ?, ?)'
+      `INSERT INTO users
+      (username, email, password_hash, display_name, role, telegram_id, telegram_username)
+      VALUES (?, ?, ?, ?, ?, ?, ?)`
     )
-    .run(username, email, passwordHash, displayName, role);
+    .run(username, email, passwordHash, displayName, role, telegramId || null, telegramUsername || null);
   return findUserById(Number(result.lastInsertRowid));
 }
 

@@ -19,6 +19,8 @@ import {
   adminDeleteNews,
   fetchThemeSettings,
   adminSetDefaultTheme,
+  fetchTelegramSettings,
+  adminSetTelegramSettings,
   type AdminRoom,
 } from '../api';
 import type { User, NewsPost, ThemeId } from '../types';
@@ -54,6 +56,8 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
   const [editNews, setEditNews] = useState<NewsPost | null>(null);
   const [defaultTheme, setDefaultTheme] = useState<ThemeId>('midnight');
   const [themeSaving, setThemeSaving] = useState(false);
+  const [telegramForm, setTelegramForm] = useState({ botUsername: '', webAppUrl: '' });
+  const [telegramSaving, setTelegramSaving] = useState(false);
 
   const load = async ({ silent = false, syncRoomNames = false } = {}) => {
     if (!silent) setLoading(true);
@@ -90,6 +94,11 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
     fetchThemeSettings()
       .then(({ defaultTheme: dt }) => setDefaultTheme(dt))
       .catch(() => {});
+    fetchTelegramSettings()
+      .then(({ botUsername, webAppUrl }) =>
+        setTelegramForm({ botUsername: botUsername || '', webAppUrl: webAppUrl || '' })
+      )
+      .catch(() => {});
   }, [section]);
 
   const handleDefaultThemeChange = async (themeId: ThemeId) => {
@@ -103,6 +112,24 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
       setError(err instanceof Error ? err.message : 'Ошибка сохранения темы');
     } finally {
       setThemeSaving(false);
+    }
+  };
+
+  const handleSaveTelegramSettings = async (e: FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setTelegramSaving(true);
+    try {
+      const payload = {
+        botUsername: telegramForm.botUsername.trim().replace(/^@/, ''),
+        webAppUrl: telegramForm.webAppUrl.trim(),
+      };
+      const saved = await adminSetTelegramSettings(payload);
+      setTelegramForm(saved);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка сохранения Telegram настроек');
+    } finally {
+      setTelegramSaving(false);
     }
   };
 
@@ -346,6 +373,9 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
 
   const gameRooms = rooms.filter((r) => r.kind !== 'chat');
   const chatRooms = rooms.filter((r) => r.kind === 'chat');
+  const telegramBotLink = telegramForm.botUsername
+    ? `https://t.me/${telegramForm.botUsername.replace(/^@/, '')}`
+    : '';
 
   if (loading && users.length === 0) {
     return <div className="admin-page"><p className="muted">Загрузка...</p></div>;
@@ -669,6 +699,51 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
                   disabled={themeSaving}
                 />
               </div>
+
+              <form className="theme-settings-block admin-theme-block" onSubmit={handleSaveTelegramSettings}>
+                <h3>Telegram бот и сайт</h3>
+                <p className="theme-settings-hint">
+                  Укажите username бота и URL сайта. Это включает Telegram Login Widget и ссылку на Web App.
+                </p>
+                <label>
+                  Username бота (без @)
+                  <input
+                    value={telegramForm.botUsername}
+                    onChange={(e) =>
+                      setTelegramForm((prev) => ({ ...prev, botUsername: e.target.value }))
+                    }
+                    placeholder="my_mafia_bot"
+                    maxLength={64}
+                    required
+                  />
+                </label>
+                <label>
+                  URL сайта для Web App
+                  <input
+                    value={telegramForm.webAppUrl}
+                    onChange={(e) =>
+                      setTelegramForm((prev) => ({ ...prev, webAppUrl: e.target.value }))
+                    }
+                    placeholder="https://example.com"
+                    maxLength={300}
+                    required
+                  />
+                </label>
+                <div className="profile-actions">
+                  <button type="submit" className="btn btn-primary" disabled={telegramSaving}>
+                    {telegramSaving ? 'Сохранение...' : 'Сохранить Telegram'}
+                  </button>
+                </div>
+                {telegramBotLink && (
+                  <p className="theme-settings-hint">
+                    Ссылка на бота: <a href={telegramBotLink} target="_blank" rel="noreferrer">{telegramBotLink}</a>
+                  </p>
+                )}
+                <p className="theme-settings-hint">
+                  В BotFather откройте вашего бота → <code>/setdomain</code> и <code>/setmenubutton</code>,
+                  укажите этот URL сайта для Web App.
+                </p>
+              </form>
             </section>
           )}
         </div>
