@@ -2055,6 +2055,12 @@ html.telegram-webapp .app-body {
   color: var(--accent);
 }
 
+.rules-subtitle {
+  margin: 14px 0 8px;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
 .rules-section p,
 .rules-section ul {
   margin: 0;
