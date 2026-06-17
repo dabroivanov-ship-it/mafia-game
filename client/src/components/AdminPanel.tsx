@@ -740,8 +740,8 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
                   </p>
                 )}
                 <p className="theme-settings-hint">
-                  В BotFather откройте вашего бота → <code>/setdomain</code> и <code>/setmenubutton</code>,
-                  укажите этот URL сайта для Web App.
+                  В BotFather откройте вашего бота → <code>/setdomain</code> и укажите домен сайта.
+                  При нажатии «Старт» в боте пользователь получит сообщение с кнопкой «Играть».
                 </p>
               </form>
             </section>

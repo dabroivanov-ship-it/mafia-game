@@ -895,4 +895,5 @@ httpServer.listen(PORT, () => {
   console.log(`🎭 Mafia server: http://localhost:${PORT}`);
   console.log(`   Комнат: ${CONFIG.ROOM_COUNT}, игроков: ${CONFIG.MIN_PLAYERS}–${CONFIG.MAX_PLAYERS}`);
   console.log(`   Static: ${clientDist}`);
+  void import('./telegram/bot.js').then(({ startTelegramBot }) => startTelegramBot());
 });
