@@ -10,6 +10,7 @@ interface ChatProps {
   messages: ChatMessage[];
   canSend: boolean;
   myPlayerId?: number;
+  currentUserId?: number;
   onSend: (text: string, opts?: ChatSendOptions) => void;
   onDeleteMessage?: ((messageId: string | number, sourceChannel?: ChatChannel) => void) | null;
   onOpenPlayerPage?: (target: ChatReplyTarget) => void;
@@ -28,6 +29,7 @@ export default function Chat({
   messages,
   canSend,
   myPlayerId,
+  currentUserId,
   onSend,
   onDeleteMessage,
   onOpenPlayerPage,
@@ -101,12 +103,21 @@ export default function Chat({
     onLoadMore();
   };
 
+  const isOwnMessage = (msg: ChatMessage): boolean => {
+    if (currentUserId && msg.userId === currentUserId) return true;
+    if (myPlayerId != null && msg.playerId === myPlayerId) return true;
+    return false;
+  };
+
+  const canOpenAuthorProfile = (msg: ChatMessage): boolean =>
+    !!msg.userId && !msg.system && !isOwnMessage(msg) && !!onOpenPlayerPage;
+
   const handleAuthorClick = (msg: ChatMessage) => {
-    if (!msg.userId || !msg.playerId || msg.playerId === myPlayerId) return;
+    if (!canOpenAuthorProfile(msg) || !msg.userId) return;
     onOpenPlayerPage?.({
-      playerId: msg.playerId,
-      playerName: msg.playerName,
       userId: msg.userId,
+      playerId: msg.playerId ?? undefined,
+      playerName: msg.playerName,
     });
   };
 
@@ -155,18 +166,17 @@ export default function Chat({
                 💀
               </span>
             )}
-            {msg.system || !msg.userId ? (
-              <span className="chat-author">{msg.playerName}:</span>
-            ) : (
+            {canOpenAuthorProfile(msg) ? (
               <button
                 type="button"
-                className={`chat-author-btn ${replyTo?.playerId === msg.playerId ? 'selected' : ''}`}
+                className={`chat-author-btn ${replyTo?.userId === msg.userId ? 'selected' : ''}`}
                 onClick={() => handleAuthorClick(msg)}
                 title="Открыть профиль и написать"
-                disabled={!msg.playerId || msg.playerId === myPlayerId}
               >
                 {msg.playerName}:
               </button>
+            ) : (
+              <span className="chat-author">{msg.playerName}:</span>
             )}
             {msg.toPlayerName && (
               <span className="chat-direct-to" title="Адресат">

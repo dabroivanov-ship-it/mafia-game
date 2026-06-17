@@ -66,9 +66,9 @@ export interface ChatMessage {
 }
 
 export interface ChatReplyTarget {
-  playerId: number;
+  playerId?: number;
   playerName: string;
-  userId?: number | null;
+  userId: number;
 }
 
 export type GameRole =

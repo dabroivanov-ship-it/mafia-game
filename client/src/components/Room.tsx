@@ -93,8 +93,13 @@ export default function Room({ socket, state, onLeave, onStateUpdate, currentUse
     });
 
   const openPlayerPage = (target: ChatReplyTarget) => {
-    if (target.playerId === state.myId || !target.userId) return;
-    setProfileTarget(target);
+    if (!target.userId || target.userId === currentUserId) return;
+    const livePlayer = state.players.find((p) => p.userId === target.userId);
+    setProfileTarget({
+      userId: target.userId,
+      playerName: target.playerName,
+      playerId: target.playerId ?? livePlayer?.id,
+    });
   };
 
   const sendRoomChat = async (
@@ -234,6 +239,7 @@ export default function Room({ socket, state, onLeave, onStateUpdate, currentUse
                 messages={state.chat}
                 canSend={state.canChat}
                 myPlayerId={state.myId}
+                currentUserId={currentUserId}
                 replyTo={chatReplyTo}
                 onReplyToChange={setChatReplyTo}
                 privateMode={chatPrivateMode}
@@ -289,6 +295,7 @@ export default function Room({ socket, state, onLeave, onStateUpdate, currentUse
               messages={state.mafiaChat}
               canSend={state.phase === 'night'}
               myPlayerId={state.myId}
+              currentUserId={currentUserId}
               onOpenPlayerPage={openPlayerPage}
               onSend={(text) => {
                 void emit('chat:mafia', { text });
