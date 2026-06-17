@@ -25,7 +25,7 @@ export default function Rules({ embedded = false }: RulesProps) {
               Остальные нажимают <strong>«Присоединиться к игре»</strong>, иначе остаются
               наблюдателями.
             </li>
-            <li>Минимум <strong>3 игрока</strong>, в комнате до 6 мест (можно больше ролей при 7–10).</li>
+            <li>Минимум <strong>3 игрока</strong>, в комнате до <strong>10 мест</strong>.</li>
           </ul>
         </section>
 

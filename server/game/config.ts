@@ -4,7 +4,7 @@ import type { GamePhase, RoleId } from '../types/index.js';
 export const CONFIG = {
   MIN_PLAYERS: 3,
   MAX_PLAYERS: 10,
-  DEFAULT_MAX_PLAYERS: 6,
+  DEFAULT_MAX_PLAYERS: 10,
   REGISTRATION_SEC: 60,
   ROLE_REVEAL_SEC: 20,
   JOIN_GAME_COOLDOWN_SEC: 15,
