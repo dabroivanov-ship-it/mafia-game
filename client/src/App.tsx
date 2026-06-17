@@ -36,7 +36,6 @@ export default function App() {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [rooms, setRooms] = useState<LobbyRoom[]>([]);
   const [roomState, setRoomState] = useState<RoomState | null>(null);
-  const [playerId, setPlayerId] = useState<number | null>(null);
   const [currentRoomId, setCurrentRoomId] = useState<number | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +66,6 @@ export default function App() {
         const { user: me } = await fetchMe();
         setUser(me);
         saveSession(token, me);
-        setPlayerId(loadStoredPlayerId(me.id));
       } catch {
         clearSession();
         setToken(null);
@@ -130,7 +128,6 @@ export default function App() {
     s.on('room:kicked', ({ reason }: { reason?: string }) => {
       setCurrentRoomId(null);
       setRoomState(null);
-      setPlayerId(null);
       setView('lobby');
       clearStoredPlayerIds();
       setError(reason || 'Вы вышли из комнаты');
@@ -160,7 +157,6 @@ export default function App() {
   const handleAuthSuccess = useCallback((authUser: User, authToken: string) => {
     setUser(authUser);
     setToken(authToken);
-    setPlayerId(loadStoredPlayerId(authUser.id));
     setView('lobby');
   }, []);
 
@@ -173,7 +169,6 @@ export default function App() {
     setRooms([]);
     setRoomState(null);
     setCurrentRoomId(null);
-    setPlayerId(null);
     clearStoredPlayerIds();
     setView('lobby');
   }, [socket]);
@@ -200,7 +195,6 @@ export default function App() {
           return;
         }
         if (res.playerId != null) {
-          setPlayerId(res.playerId);
           saveStoredPlayerId(user.id, res.playerId);
         }
         setCurrentRoomId(roomId);
@@ -227,13 +221,11 @@ export default function App() {
           setError(res.error);
           setCurrentRoomId(null);
           setRoomState(null);
-          setPlayerId(null);
           clearStoredPlayerIds();
           setView('lobby');
           return;
         }
         if (res?.playerId != null) {
-          setPlayerId(res.playerId);
           saveStoredPlayerId(user.id, res.playerId);
         }
         if (res?.state) setRoomState(res.state);
