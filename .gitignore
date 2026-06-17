@@ -11,3 +11,9 @@ data/
 uploads/
 .DS_Store
 Thumbs.db
+
+# Legacy JS sources shadowing TypeScript (do not commit)
+server/server.js
+server/game/*.js
+client/vite.config.js
+client/src/**/*.jsx

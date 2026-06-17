@@ -1440,6 +1440,39 @@ function appendPrivateMessages(
   );
 }
 
+function enrichChatMessage(room: GameRoom, msg: ChatMessage): ChatMessage {
+  if (msg.system || msg.userId) return msg;
+
+  let userId = msg.userId ?? null;
+  let playerId = msg.playerId ?? null;
+
+  if (playerId != null) {
+    const author = room.players.find((p) => p.id === playerId);
+    if (author?.userId) userId = author.userId;
+  }
+
+  if (!userId && msg.playerName) {
+    const normalized = msg.playerName.trim().toLowerCase();
+    const author = room.players.find(
+      (p) =>
+        p.userId &&
+        ((p.username || '').toLowerCase() === normalized ||
+          (p.name || '').toLowerCase() === normalized)
+    );
+    if (author) {
+      userId = author.userId;
+      if (playerId == null) playerId = author.id;
+    }
+  }
+
+  if (!userId) return msg;
+  return { ...msg, userId, playerId };
+}
+
+function enrichChatMessages(room: GameRoom, messages: ChatMessage[]): ChatMessage[] {
+  return messages.map((msg) => enrichChatMessage(room, msg));
+}
+
 /** Чат для конкретного игрока */
 function buildChatView(
   room: GameRoom,
@@ -1453,7 +1486,7 @@ function buildChatView(
         (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
       );
     }
-    const sliced = sliceChatMessages(combined, chatLimit);
+    const sliced = sliceChatMessages(enrichChatMessages(room, combined), chatLimit);
     return { messages: sliced.messages, mode: 'alive', hasMoreChat: sliced.hasMoreChat };
   }
 
@@ -1468,7 +1501,7 @@ function buildChatView(
         (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
       );
     }
-    const sliced = sliceChatMessages(combined, chatLimit);
+    const sliced = sliceChatMessages(enrichChatMessages(room, combined), chatLimit);
     return { messages: sliced.messages, mode: 'alive', hasMoreChat: sliced.hasMoreChat };
   }
 
@@ -1487,7 +1520,7 @@ function buildChatView(
         (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
       );
     }
-    const sliced = sliceChatMessages(combined, chatLimit);
+    const sliced = sliceChatMessages(enrichChatMessages(room, combined), chatLimit);
     return { messages: sliced.messages, mode: 'spectator', hasMoreChat: sliced.hasMoreChat };
   }
 
@@ -1505,7 +1538,7 @@ function buildChatView(
         (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
       );
     }
-    const sliced = sliceChatMessages(combined, chatLimit);
+    const sliced = sliceChatMessages(enrichChatMessages(room, combined), chatLimit);
     return {
       messages: sliced.messages,
       mode: me?.inGame && me?.role && !me.alive ? 'dead' : 'alive',
@@ -1529,7 +1562,7 @@ function buildChatView(
       (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
     );
   }
-  const sliced = sliceChatMessages(combined, chatLimit);
+  const sliced = sliceChatMessages(enrichChatMessages(room, combined), chatLimit);
 
   return {
     messages: sliced.messages,
@@ -1693,7 +1726,10 @@ export function serializeRoomForPlayer(
     chat: chatView.messages,
     chatMode: chatView.mode,
     hasMoreChat: chatView.hasMoreChat,
-    mafiaChat: me?.role === 'mafia' && me.alive && me.inGame ? room.mafiaChat.slice(-50) : [],
+    mafiaChat:
+      me?.role === 'mafia' && me.alive && me.inGame
+        ? enrichChatMessages(room, room.mafiaChat.slice(-50))
+        : [],
     canStartGame:
       room.phase === PHASE.WAITING || room.phase === PHASE.REGISTRATION || room.phase === PHASE.ENDED,
     canChat: !!me?.connected && room.phase !== PHASE.ROLES,
