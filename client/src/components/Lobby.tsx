@@ -35,19 +35,26 @@ function RoomCard({
   joinLabel: string;
   showPhase?: boolean;
 }) {
+  const isChat = room.kind === 'chat';
+
   return (
     <div className="room-card">
       <div className="room-card-info">
         <h2>{room.name}</h2>
         <div className="room-card-meta">
-          {showPhase && (
-            <span className="room-status">{PHASE_LABELS[room.phase] || room.phase}</span>
+          {isChat ? (
+            <span className="room-count">{room.playerCount} онлайн</span>
+          ) : (
+            <>
+              {showPhase && (
+                <span className="room-status">{PHASE_LABELS[room.phase] || room.phase}</span>
+              )}
+              <span className="room-count">
+                👥 {room.playerCount}/{room.maxPlayers}
+                {room.spectatorCount > 0 && ` · 👁 ${room.spectatorCount}`}
+              </span>
+            </>
           )}
-          {!showPhase && <span className="room-status">Общение</span>}
-          <span className="room-count">
-            👥 {room.playerCount}/{room.maxPlayers}
-            {room.spectatorCount > 0 && ` · 👁 ${room.spectatorCount}`}
-          </span>
         </div>
       </div>
       <button type="button" className="btn btn-primary" onClick={() => onJoin(room.id)}>
@@ -97,12 +104,6 @@ export default function Lobby({
           <div className="lobby-header-brand">
             <h1>🎭 Мафия</h1>
             <p>Выберите комнату для игры или общения</p>
-            <button type="button" className="lobby-chat-link" onClick={onOpenMessages}>
-              <span>&gt; 💬 Личные сообщения</span>
-              {unreadMailCount > 0 && (
-                <span className="lobby-chat-badge">{unreadMailCount > 99 ? '99+' : unreadMailCount}</span>
-              )}
-            </button>
           </div>
 
           <div className="lobby-header-menu" ref={menuRef}>

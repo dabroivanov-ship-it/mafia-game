@@ -496,7 +496,7 @@ export default function AdminPanel({ onBack }: AdminPanelProps) {
                       maxLength={50}
                     />
                     <span className="muted room-meta">
-                      {r.playerCount}/{r.maxPlayers} · чат
+                      {r.playerCount} онлайн
                     </span>
                     <button type="button" className="btn btn-sm btn-primary" onClick={() => void handleRenameRoom(r.id)}>
                       Сохранить

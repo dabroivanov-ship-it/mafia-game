@@ -138,9 +138,7 @@ export default function Room({ socket, state, onLeave, onStateUpdate, currentUse
               </>
             )}
             {isChatRoom && (
-              <span className="registration-count">
-                👥 {state.registeredCount}/{state.maxPlayers} в чате
-              </span>
+              <span className="registration-count">{state.registeredCount} онлайн</span>
             )}
           </div>
         </div>

@@ -85,12 +85,16 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
   /* --- Чат-комнаты --- */
   router.post('/chat-rooms', (req, res) => {
     try {
-      const room = handlers.addChatRoom(req.body.name);
+      const name = String(req.body?.name ?? '').trim();
+      if (!name) {
+        return res.status(400).json({ error: 'Укажите название комнаты' });
+      }
+      const room = handlers.addChatRoom(name);
       handlers.onRoomsChanged(room.id);
       res.status(201).json({ room: { id: room.id, name: room.name, kind: room.kind } });
     } catch (e) {
       const err = e as Error;
-      res.status(400).json({ error: err.message });
+      res.status(400).json({ error: err.message || 'Не удалось создать комнату' });
     }
   });
 

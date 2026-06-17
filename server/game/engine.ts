@@ -27,7 +27,7 @@ import {
   deleteRoomChatLog,
   hydrateRoomHistory,
 } from '../history/store.js';
-import { loadRoomConfigs, saveRoomConfig, deleteRoomConfig } from '../rooms/store.js';
+import { loadRoomConfigs, saveRoomConfig, deleteRoomConfig, nextRoomId } from '../rooms/store.js';
 import type {
   ChatChannel,
   ChatMessage,
@@ -60,6 +60,9 @@ export function createInitialRooms(): Map<number, GameRoom> {
       room.name = saved.name;
     }
     rooms.set(i, room);
+    if (!saved) {
+      saveRoomConfig(i, room.name, 'game');
+    }
   }
 
   for (const [id, config] of savedConfigs) {
@@ -166,11 +169,12 @@ export function renameRoom(rooms: Map<number, GameRoom>, roomId: number, name: s
 }
 
 export function addChatRoom(rooms: Map<number, GameRoom>, name: string): GameRoom {
-  let maxId = 0;
-  for (const id of rooms.keys()) maxId = Math.max(maxId, id);
-  const id = maxId + 1;
   const trimmed = String(name || '').trim().slice(0, 50);
-  const room = createChatRoom(id, trimmed || `Чат ${id}`);
+  if (!trimmed) {
+    throw new Error('Укажите название комнаты');
+  }
+  const id = nextRoomId(rooms.keys());
+  const room = createChatRoom(id, trimmed);
   rooms.set(id, room);
   saveRoomConfig(id, room.name, 'chat');
   return room;
