@@ -11,6 +11,7 @@ import {
   type TelegramAuthPayload,
 } from '../api';
 import type { User } from '../types';
+import { getTelegramWebApp, isTelegramWebApp } from '../telegramWebApp';
 
 interface AuthProps {
   onSuccess: (user: User, token: string) => void;
@@ -19,16 +20,6 @@ interface AuthProps {
 declare global {
   interface Window {
     onTelegramAuth?: (payload: TelegramAuthPayload) => void;
-    Telegram?: {
-      WebApp: {
-        initData: string;
-        initDataUnsafe: {
-          user?: { id: number; username?: string; first_name?: string };
-        };
-        ready: () => void;
-        expand: () => void;
-      };
-    };
   }
 }
 
@@ -70,11 +61,9 @@ export default function Auth({ onSuccess }: AuthProps) {
   }, []);
 
   useEffect(() => {
-    const webApp = window.Telegram?.WebApp;
-    if (!webApp?.initData) return;
+    const webApp = getTelegramWebApp();
+    if (!isTelegramWebApp() || !webApp) return;
 
-    webApp.ready();
-    webApp.expand();
     setTelegramWebAppMode(true);
     setTelegramLoading(true);
     setError('');

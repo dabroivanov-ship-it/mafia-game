@@ -32,6 +32,19 @@ body {
   overscroll-behavior: none;
 }
 
+html.telegram-webapp,
+html.telegram-webapp body,
+html.telegram-webapp #root,
+html.telegram-webapp .app,
+html.telegram-webapp .app-shell {
+  min-height: var(--tg-viewport-height, 100dvh);
+  height: var(--tg-viewport-height, 100dvh);
+}
+
+html.telegram-webapp .app-body {
+  min-height: 0;
+}
+
 .app {
   min-height: 100vh;
   min-height: 100dvh;
