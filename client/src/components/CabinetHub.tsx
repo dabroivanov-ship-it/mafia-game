@@ -4,7 +4,8 @@ import type { User } from '../types';
 interface CabinetHubProps {
   user: User;
   unreadMailCount?: number;
-  onOpenSettings: () => void;
+  onOpenProfileSettings: () => void;
+  onOpenSiteSettings: () => void;
   onOpenMessages: () => void;
   onBack: () => void;
 }
@@ -12,7 +13,8 @@ interface CabinetHubProps {
 export default function CabinetHub({
   user,
   unreadMailCount = 0,
-  onOpenSettings,
+  onOpenProfileSettings,
+  onOpenSiteSettings,
   onOpenMessages,
   onBack,
 }: CabinetHubProps) {
@@ -60,13 +62,26 @@ export default function CabinetHub({
           </span>
         </button>
 
-        <button type="button" className="info-hub-card" onClick={onOpenSettings}>
+        <button type="button" className="info-hub-card" onClick={onOpenProfileSettings}>
           <span className="info-hub-icon" aria-hidden="true">
-            ⚙️
+            👤
           </span>
           <span className="info-hub-body">
-            <strong>Настройки профиля</strong>
+            <strong>Личные настройки</strong>
             <span className="muted">Имя, город, аватар, лимит чата</span>
+          </span>
+          <span className="info-hub-arrow" aria-hidden="true">
+            →
+          </span>
+        </button>
+
+        <button type="button" className="info-hub-card" onClick={onOpenSiteSettings}>
+          <span className="info-hub-icon" aria-hidden="true">
+            🎨
+          </span>
+          <span className="info-hub-body">
+            <strong>Оформление сайта</strong>
+            <span className="muted">Цветовая тема интерфейса</span>
           </span>
           <span className="info-hub-arrow" aria-hidden="true">
             →

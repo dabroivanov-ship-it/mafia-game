@@ -11,7 +11,12 @@ const PHASE_LABELS: Record<GamePhase, string> = {
   ended: 'Игра окончена',
 };
 
-export type LobbyScreen = 'rooms' | 'cabinet' | 'cabinet-settings' | 'cabinet-messages';
+export type LobbyScreen =
+  | 'rooms'
+  | 'cabinet'
+  | 'cabinet-settings'
+  | 'cabinet-site-settings'
+  | 'cabinet-messages';
 
 interface LobbyProps {
   rooms: LobbyRoom[];

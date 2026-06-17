@@ -5,7 +5,8 @@ import Menu, { type MenuView } from './components/Menu';
 import Lobby, { type LobbyScreen } from './components/Lobby';
 import News from './components/News';
 import CabinetHub from './components/CabinetHub';
-import CabinetSettings from './components/CabinetSettings';
+import CabinetProfileSettings from './components/CabinetProfileSettings';
+import CabinetSiteSettings from './components/CabinetSiteSettings';
 import Messages from './components/Messages';
 import Info from './components/Info';
 import AdminPanel from './components/AdminPanel';
@@ -326,7 +327,14 @@ export default function App() {
         )}
         {view === 'news' && <News onBack={() => setView('lobby')} />}
         {view === 'cabinet' && lobbyScreen === 'cabinet-settings' && (
-          <CabinetSettings
+          <CabinetProfileSettings
+            user={user}
+            onUpdate={handleUserUpdate}
+            onBack={() => setLobbyScreen('cabinet')}
+          />
+        )}
+        {view === 'cabinet' && lobbyScreen === 'cabinet-site-settings' && (
+          <CabinetSiteSettings
             user={user}
             onUpdate={handleUserUpdate}
             onBack={() => setLobbyScreen('cabinet')}
@@ -348,7 +356,8 @@ export default function App() {
           <CabinetHub
             user={user}
             unreadMailCount={unreadMailCount}
-            onOpenSettings={() => setLobbyScreen('cabinet-settings')}
+            onOpenProfileSettings={() => setLobbyScreen('cabinet-settings')}
+            onOpenSiteSettings={() => setLobbyScreen('cabinet-site-settings')}
             onOpenMessages={() => setLobbyScreen('cabinet-messages')}
             onBack={() => setView('lobby')}
           />

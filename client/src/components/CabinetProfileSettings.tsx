@@ -1,45 +1,31 @@
-import { useState, useRef, FormEvent, ChangeEvent, useEffect } from 'react';
-import { avatarUrl, updateProfile, uploadAvatar, fetchThemeSettings } from '../api';
-import type { User, ThemeId } from '../types';
-import ThemePicker from './ThemePicker';
-import { applyTheme, resolveTheme } from '../themes';
+import { useState, useRef, FormEvent, ChangeEvent } from 'react';
+import { avatarUrl, updateProfile, uploadAvatar } from '../api';
+import type { User } from '../types';
 
 const CHAT_LIMIT_OPTIONS = [15, 30, 50, 100];
 
-interface CabinetSettingsProps {
+interface CabinetProfileSettingsProps {
   user: User;
   onUpdate: (user: User) => void;
   onBack: () => void;
 }
 
-export default function CabinetSettings({ user, onUpdate, onBack }: CabinetSettingsProps) {
+export default function CabinetProfileSettings({
+  user,
+  onUpdate,
+  onBack,
+}: CabinetProfileSettingsProps) {
   const [form, setForm] = useState({
     displayName: user.displayName || '',
     city: user.city || '',
     bio: user.bio || '',
     chatLimit: user.chatLimit ?? 15,
   });
-  const [siteDefaultTheme, setSiteDefaultTheme] = useState<ThemeId>('midnight');
-  const [useSiteTheme, setUseSiteTheme] = useState(!user.theme);
-  const [personalTheme, setPersonalTheme] = useState<ThemeId>(
-    resolveTheme(user.theme, 'midnight')
-  );
-  const [themeSaving, setThemeSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [avatarLoading, setAvatarLoading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    fetchThemeSettings()
-      .then(({ defaultTheme }) => {
-        setSiteDefaultTheme(defaultTheme);
-        setPersonalTheme(resolveTheme(user.theme, defaultTheme));
-        setUseSiteTheme(!user.theme);
-      })
-      .catch(() => {});
-  }, [user.theme]);
 
   const handleSave = async (e: FormEvent) => {
     e.preventDefault();
@@ -47,10 +33,7 @@ export default function CabinetSettings({ user, onUpdate, onBack }: CabinetSetti
     setSuccess('');
     setLoading(true);
     try {
-      const { user: updated } = await updateProfile({
-        ...form,
-        theme: useSiteTheme ? null : personalTheme,
-      });
+      const { user: updated } = await updateProfile(form);
       onUpdate(updated);
       setSuccess('Настройки сохранены');
     } catch (err) {
@@ -58,37 +41,6 @@ export default function CabinetSettings({ user, onUpdate, onBack }: CabinetSetti
     } finally {
       setLoading(false);
     }
-  };
-
-  const saveTheme = async (theme: ThemeId | null) => {
-    setThemeSaving(true);
-    setError('');
-    try {
-      const { user: updated } = await updateProfile({
-        ...form,
-        theme,
-      });
-      onUpdate(updated);
-      applyTheme(resolveTheme(updated.theme, siteDefaultTheme));
-      setSuccess('Тема сохранена');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка сохранения темы');
-    } finally {
-      setThemeSaving(false);
-    }
-  };
-
-  const handlePersonalTheme = (themeId: ThemeId) => {
-    setUseSiteTheme(false);
-    setPersonalTheme(themeId);
-    applyTheme(themeId);
-    void saveTheme(themeId);
-  };
-
-  const handleUseSiteTheme = (checked: boolean) => {
-    setUseSiteTheme(checked);
-    applyTheme(checked ? siteDefaultTheme : personalTheme);
-    void saveTheme(checked ? null : personalTheme);
   };
 
   const handleAvatar = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -117,33 +69,11 @@ export default function CabinetSettings({ user, onUpdate, onBack }: CabinetSetti
       </nav>
 
       <header className="page-header">
-        <h1>⚙️ Настройки профиля</h1>
+        <h1>👤 Личные настройки</h1>
+        <p className="muted">Профиль, аватар и параметры чата</p>
       </header>
 
       <div className="profile-card cabinet-card">
-        <div className="theme-settings-block">
-          <h3>🎨 Тема оформления</h3>
-          <p className="theme-settings-hint">
-            Выберите цветовую схему интерфейса. Можно использовать тему сайта или свою личную.
-          </p>
-          <label className="theme-use-default">
-            <input
-              type="checkbox"
-              checked={useSiteTheme}
-              disabled={themeSaving}
-              onChange={(e) => handleUseSiteTheme(e.target.checked)}
-            />
-            <span>Как на сайте (основная тема)</span>
-          </label>
-          {!useSiteTheme && (
-            <ThemePicker
-              value={personalTheme}
-              onChange={handlePersonalTheme}
-              disabled={themeSaving}
-            />
-          )}
-        </div>
-
         <div className="profile-avatar-block">
           <div className="profile-avatar-wrap">
             {user.avatar ? (
