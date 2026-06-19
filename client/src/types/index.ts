@@ -172,6 +172,17 @@ export interface StaffMember {
   role: 'admin' | 'moderator';
 }
 
+export interface UserSearchHit {
+  id: number;
+  username: string;
+  displayName: string;
+  city: string;
+  avatar: string | null;
+  totalScore: number;
+  isAdmin: boolean;
+  isModerator: boolean;
+}
+
 export interface NewsPost {
   id: number;
   title: string;

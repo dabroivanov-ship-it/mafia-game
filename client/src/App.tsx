@@ -8,6 +8,7 @@ import CabinetHub from './components/CabinetHub';
 import CabinetProfileSettings from './components/CabinetProfileSettings';
 import CabinetSiteSettings from './components/CabinetSiteSettings';
 import Messages from './components/Messages';
+import UserSearch from './components/UserSearch';
 import Info from './components/Info';
 import AdminPanel from './components/AdminPanel';
 import Room from './components/Room';
@@ -398,6 +399,9 @@ export default function App() {
             }}
           />
         )}
+        {view === 'cabinet' && lobbyScreen === 'cabinet-search' && (
+          <UserSearch currentUser={user} onBack={() => setLobbyScreen('cabinet')} />
+        )}
         {view === 'cabinet' && lobbyScreen === 'cabinet' && (
           <CabinetHub
             user={user}
@@ -405,6 +409,7 @@ export default function App() {
             onOpenProfileSettings={() => setLobbyScreen('cabinet-settings')}
             onOpenSiteSettings={() => setLobbyScreen('cabinet-site-settings')}
             onOpenMessages={() => setLobbyScreen('cabinet-messages')}
+            onOpenUserSearch={() => setLobbyScreen('cabinet-search')}
             onLogout={handleLogout}
             onBack={() => setView('lobby')}
           />

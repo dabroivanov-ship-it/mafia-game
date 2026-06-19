@@ -551,7 +551,8 @@ html.telegram-webapp .app-body {
 }
 
 .cabinet-hub-page,
-.messages-page {
+.messages-page,
+.user-search-page {
   max-width: 720px;
   margin: 0 auto;
   padding: 20px 16px 24px;
@@ -611,6 +612,73 @@ html.telegram-webapp .app-body {
 .cabinet-hub-logout .btn {
   width: 100%;
   min-height: 44px;
+}
+
+.user-search-field {
+  margin-bottom: 16px;
+}
+
+.user-search-input {
+  width: 100%;
+  font-size: 16px;
+}
+
+.user-search-hint {
+  margin: 0 0 12px;
+}
+
+.user-search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.user-search-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+}
+
+.user-search-card:hover {
+  border-color: rgba(124, 108, 240, 0.45);
+}
+
+.user-search-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.user-search-avatar.placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-hover);
+  font-size: 1.4rem;
+}
+
+.user-search-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.user-search-card-body strong {
+  font-size: 1rem;
 }
 
 .lobby-cabinet-section {

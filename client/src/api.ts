@@ -1,4 +1,4 @@
-import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, MailConversation, RoomKind, ThemeId, ViolationLogEntry } from './types';
+import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, MailConversation, RoomKind, ThemeId, ViolationLogEntry, UserSearchHit } from './types';
 
 const API_BASE =
   import.meta.env.VITE_API_URL ??
@@ -332,6 +332,11 @@ export async function fetchUserProfile(userId: number): Promise<{
   staffMeta?: ProfileStaffMeta;
 }> {
   return apiRequest(`/api/profile/${userId}`);
+}
+
+export async function searchUsers(query: string): Promise<{ users: UserSearchHit[] }> {
+  const q = encodeURIComponent(query.trim());
+  return apiRequest(`/api/profile/search?q=${q}`);
 }
 
 export async function fetchAdminOverview(): Promise<{

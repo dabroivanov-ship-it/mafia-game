@@ -7,6 +7,7 @@ import {
   isStaff,
   canBanTarget,
   listStaffUsers,
+  searchPublicUsers,
   updateUserProfile,
   updateUserAvatar,
   deleteAvatarFile,
@@ -14,6 +15,7 @@ import {
 } from '../auth/db.js';
 import { createAvatarUpload } from '../upload/avatar.js';
 import { validateImageFile } from '../security/validate.js';
+import { createRateLimitMiddleware, searchRateLimiter } from '../security/rateLimit.js';
 import fs from 'fs';
 import { getUserMessageCount } from '../history/store.js';
 import { isValidThemeId } from '../settings/themes.js';
@@ -26,6 +28,9 @@ interface ProfileRouterOptions {
 export function createProfileRouter({ onProfileUpdated }: ProfileRouterOptions = {}) {
   const router = Router();
   const upload = createAvatarUpload((req) => req.userId!);
+  const searchRateLimit = createRateLimitMiddleware(searchRateLimiter, (req) =>
+    String(req.userId || 'anon')
+  );
 
   router.put('/', authMiddleware, (req, res) => {
     const { displayName, city, bio, chatLimit, theme } = req.body;
@@ -72,6 +77,12 @@ export function createProfileRouter({ onProfileUpdated }: ProfileRouterOptions =
 
   router.get('/staff/list', authMiddleware, (_req, res) => {
     res.json({ staff: listStaffUsers() });
+  });
+
+  router.get('/search', authMiddleware, searchRateLimit, (req, res) => {
+    const q = String(req.query.q || '');
+    const users = searchPublicUsers(q);
+    res.json({ users });
   });
 
   router.get('/:userId', authMiddleware, (req, res) => {

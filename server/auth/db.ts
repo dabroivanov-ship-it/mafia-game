@@ -254,6 +254,60 @@ export function updateUserScore(userId: number, delta: number): void {
   db.prepare('UPDATE users SET total_score = total_score + ? WHERE id = ?').run(delta, userId);
 }
 
+export interface UserSearchHit {
+  id: number;
+  username: string;
+  displayName: string;
+  city: string;
+  avatar: string | null;
+  totalScore: number;
+  isAdmin: boolean;
+  isModerator: boolean;
+}
+
+function sanitizeSearchQuery(query: string): string {
+  return query.trim().replace(/[%_]/g, '').slice(0, 50);
+}
+
+export function searchPublicUsers(query: string, limit = 25): UserSearchHit[] {
+  const q = sanitizeSearchQuery(query);
+  if (q.length < 2) return [];
+
+  const term = `%${q}%`;
+  const prefix = `${q}%`;
+  const rows = db
+    .prepare(
+      `SELECT id, username, display_name, city, avatar, role, total_score
+       FROM users
+       WHERE username LIKE ? COLLATE NOCASE
+          OR display_name LIKE ? COLLATE NOCASE
+          OR city LIKE ? COLLATE NOCASE
+       ORDER BY
+         CASE
+           WHEN username LIKE ? COLLATE NOCASE THEN 0
+           WHEN display_name LIKE ? COLLATE NOCASE THEN 1
+           ELSE 2
+         END,
+         display_name COLLATE NOCASE
+       LIMIT ?`
+    )
+    .all(term, term, term, prefix, prefix, limit) as Pick<
+    User,
+    'id' | 'username' | 'display_name' | 'city' | 'avatar' | 'role' | 'total_score'
+  >[];
+
+  return rows.map((row) => ({
+    id: row.id,
+    username: row.username,
+    displayName: row.display_name,
+    city: row.city || '',
+    avatar: row.avatar || null,
+    totalScore: row.total_score,
+    isAdmin: row.role === 'admin',
+    isModerator: row.role === 'moderator',
+  }));
+}
+
 export function listAllUsers(): PublicUser[] {
   const rows = db
     .prepare(
