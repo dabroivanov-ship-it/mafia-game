@@ -116,7 +116,7 @@ export default function Lobby({
               key={room.id}
               room={room}
               onJoin={onJoin}
-              joinLabel="Чат"
+              joinLabel="Войти"
               showPhase={false}
             />
           ))}

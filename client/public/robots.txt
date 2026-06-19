@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Allow: /info
+Allow: /info/roles
+Allow: /info/rules
+Allow: /info/chat
+
+Disallow: /api/
+Disallow: /socket.io/
+
+Sitemap: https://24vpsbro.ru/sitemap.xml

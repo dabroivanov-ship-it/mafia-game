@@ -11,6 +11,9 @@ import Messages from './components/Messages';
 import Info from './components/Info';
 import AdminPanel from './components/AdminPanel';
 import Room from './components/Room';
+import { infoSectionFromPath, isPublicInfoPath, pathForInfoSection } from './infoRouting';
+import { DEFAULT_PAGE_META, updatePageMeta } from './seo';
+import { ROLES_INTRO } from './content/rolesContent';
 import { clearSession, fetchMe, fetchUnreadMailCount, fetchThemeSettings, saveSession, loadStoredPlayerId, saveStoredPlayerId, clearStoredPlayerIds } from './api';
 import type { LobbyRoom, RoomState, User, ThemeId } from './types';
 import { applyTheme, resolveTheme, DEFAULT_THEME } from './themes';
@@ -55,6 +58,40 @@ export default function App() {
   useEffect(() => {
     applyTheme(resolveTheme(user?.theme ?? null, siteDefaultTheme));
   }, [user?.theme, siteDefaultTheme]);
+
+  useEffect(() => {
+    if (!user) return;
+    if (isPublicInfoPath(window.location.pathname)) {
+      setView('info');
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (!user || view === 'info' || view === 'room') return;
+    if (view === 'lobby') {
+      updatePageMeta(DEFAULT_PAGE_META);
+    } else if (view === 'news') {
+      updatePageMeta({
+        title: 'Новости',
+        description: 'Новости и объявления онлайн-игры «Мафия».',
+        path: '/news',
+      });
+    }
+  }, [view, user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const onPopState = () => {
+      const path = window.location.pathname;
+      if (isPublicInfoPath(path)) {
+        setView('info');
+      } else if (path === '/' || path === '') {
+        setView('lobby');
+      }
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [user]);
 
   useEffect(() => {
     async function checkAuth() {
@@ -258,6 +295,17 @@ export default function App() {
     );
   }
 
+  if ((!user || !token) && isPublicInfoPath(window.location.pathname)) {
+    return (
+      <div className="app app-public-info">
+        <Info
+          initialSection={infoSectionFromPath(window.location.pathname)}
+          publicMode
+        />
+      </div>
+    );
+  }
+
   if (!user || !token) {
     return <Auth onSuccess={handleAuthSuccess} />;
   }
@@ -379,11 +427,19 @@ export default function App() {
             setLobbyScreen('rooms');
             setComposeToUserId(null);
             setComposeToUsername(null);
+            window.history.pushState(null, '', '/');
           }
           if (v === 'cabinet') {
             setLobbyScreen('cabinet');
             setComposeToUserId(null);
             setComposeToUsername(null);
+            window.history.pushState(null, '', '/');
+          }
+          if (v === 'info') {
+            window.history.pushState(null, '', pathForInfoSection('hub'));
+          }
+          if (v === 'news') {
+            window.history.pushState(null, '', '/news');
           }
           setView(v);
         }}
