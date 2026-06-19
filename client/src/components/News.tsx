@@ -49,7 +49,10 @@ export default function News({ onBack }: NewsProps) {
           {news.map((item) => (
             <article key={item.id} className="news-card">
               <header className="news-card-header">
-                <h2>{item.title}</h2>
+                <h2>
+                  {item.isFeatured && <span className="news-featured-badge" title="Избранное">★</span>}
+                  {item.title}
+                </h2>
                 <time className="muted" dateTime={item.createdAt}>
                   {new Date(item.createdAt).toLocaleString('ru-RU')}
                 </time>

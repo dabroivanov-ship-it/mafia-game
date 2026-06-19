@@ -29,6 +29,7 @@ import type { User, NewsPost, ThemeId, ViolationLogEntry, ViolationType } from '
 import ThemePicker from './ThemePicker';
 import NewsEditor, { type NewsEditorValue } from './NewsEditor';
 import NewsBody from './NewsBody';
+import { isEmptyNewsBody } from './newsBodyUtils';
 
 const VIOLATION_LABELS: Record<ViolationType, string> = {
   profanity: 'Мат',
@@ -67,7 +68,9 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
     body: '',
     coverImage: null,
     isPublished: true,
+    isFeatured: false,
   });
+  const [showNewsEditor, setShowNewsEditor] = useState(false);
   const [violations, setViolations] = useState<ViolationLogEntry[]>([]);
   const [violationsLoading, setViolationsLoading] = useState(false);
   const [editNews, setEditNews] = useState<NewsPost | null>(null);
@@ -328,15 +331,16 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
   };
 
   const resetNewsForm = () => {
-    setNewsForm({ title: '', body: '', coverImage: null, isPublished: true });
+    setNewsForm({ title: '', body: '', coverImage: null, isPublished: true, isFeatured: false });
     setEditNews(null);
+    setShowNewsEditor(false);
   };
 
   const handleSaveNews = async (e: FormEvent) => {
     e.preventDefault();
     const title = newsForm.title.trim();
     const body = newsForm.body.trim();
-    if (!title || !body) {
+    if (!title || isEmptyNewsBody(body)) {
       setError('Заголовок и текст новости обязательны');
       return;
     }
@@ -346,6 +350,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
         body,
         coverImage: newsForm.coverImage,
         isPublished: newsForm.isPublished,
+        isFeatured: newsForm.isFeatured,
       };
       if (editNews) {
         await adminUpdateNews(editNews.id, payload);
@@ -366,7 +371,9 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
       body: item.body,
       coverImage: item.coverImage ?? null,
       isPublished: item.isPublished,
+      isFeatured: !!item.isFeatured,
     });
+    setShowNewsEditor(true);
   };
 
   const handleClearViolations = async () => {
@@ -636,17 +643,42 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
 
           {section === 'news' && (
             <section className="admin-section">
-              <h3>Новости ({newsPosts.length})</h3>
+              <div className="admin-section-head">
+                <h3>Новости ({newsPosts.length})</h3>
+                {!showNewsEditor && (
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={() => {
+                      setEditNews(null);
+                      setNewsForm({
+                        title: '',
+                        body: '',
+                        coverImage: null,
+                        isPublished: true,
+                        isFeatured: false,
+                      });
+                      setShowNewsEditor(true);
+                    }}
+                  >
+                    + Новая новость
+                  </button>
+                )}
+              </div>
 
-              {editNews && <p className="muted">Редактирование #{editNews.id}</p>}
-
-              <NewsEditor
-                value={newsForm}
-                onChange={setNewsForm}
-                onSubmit={handleSaveNews}
-                submitLabel={editNews ? 'Сохранить' : 'Добавить новость'}
-                onCancel={editNews ? resetNewsForm : undefined}
-              />
+              {showNewsEditor && (
+                <>
+                  {editNews && <p className="muted">Редактирование #{editNews.id}</p>}
+                  <NewsEditor
+                    key={editNews?.id ?? 'new'}
+                    value={newsForm}
+                    onChange={setNewsForm}
+                    onSubmit={handleSaveNews}
+                    submitLabel="Сохранить"
+                    onCancel={resetNewsForm}
+                  />
+                </>
+              )}
 
               {newsLoading && newsPosts.length === 0 && <p className="muted">Загрузка...</p>}
 
@@ -655,13 +687,17 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
                 {newsPosts.map((item) => (
                   <article key={item.id} className="news-card">
                     <header className="news-card-header">
-                      <h2>{item.title}</h2>
+                      <h2>
+                        {item.isFeatured && <span className="news-featured-badge">★</span>}
+                        {item.title}
+                      </h2>
                       <time className="muted" dateTime={item.createdAt}>
                         {new Date(item.createdAt).toLocaleString('ru-RU')}
                       </time>
                     </header>
                     <p className="news-author muted">
                       {item.authorName || '—'} · {item.isPublished ? 'опубликовано' : 'черновик'}
+                      {item.isFeatured ? ' · избранное' : ''}
                     </p>
                     {item.coverImage && (
                       <img

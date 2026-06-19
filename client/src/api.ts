@@ -283,6 +283,7 @@ export async function adminCreateNews(payload: {
   body: string;
   coverImage?: string | null;
   isPublished?: boolean;
+  isFeatured?: boolean;
 }): Promise<{ news: NewsPost }> {
   return apiRequest('/api/admin/news', {
     method: 'POST',
@@ -292,7 +293,13 @@ export async function adminCreateNews(payload: {
 
 export async function adminUpdateNews(
   id: number,
-  payload: { title?: string; body?: string; coverImage?: string | null; isPublished?: boolean }
+  payload: {
+    title?: string;
+    body?: string;
+    coverImage?: string | null;
+    isPublished?: boolean;
+    isFeatured?: boolean;
+  }
 ): Promise<{ news: NewsPost }> {
   return apiRequest(`/api/admin/news/${id}`, {
     method: 'PUT',

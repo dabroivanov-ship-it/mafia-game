@@ -19,6 +19,9 @@ const newsCols = db.prepare('PRAGMA table_info(news_posts)').all() as { name: st
 if (!newsCols.some((c) => c.name === 'cover_image')) {
   db.exec('ALTER TABLE news_posts ADD COLUMN cover_image TEXT DEFAULT NULL');
 }
+if (!newsCols.some((c) => c.name === 'is_featured')) {
+  db.exec('ALTER TABLE news_posts ADD COLUMN is_featured INTEGER NOT NULL DEFAULT 0');
+}
 
 interface NewsRow {
   id: number;
@@ -26,6 +29,7 @@ interface NewsRow {
   body: string;
   cover_image: string | null;
   is_published: number;
+  is_featured: number;
   author_id: number;
   created_at: string;
   updated_at: string;
@@ -37,6 +41,7 @@ export interface NewsPost {
   body: string;
   coverImage: string | null;
   isPublished: boolean;
+  isFeatured: boolean;
   authorId: number;
   authorName?: string;
   createdAt: string;
@@ -51,6 +56,7 @@ function rowToPost(row: NewsRow): NewsPost {
     body: row.body,
     coverImage: row.cover_image?.trim() || null,
     isPublished: !!row.is_published,
+    isFeatured: !!row.is_featured,
     authorId: row.author_id,
     authorName: author?.display_name || author?.username,
     createdAt: row.created_at.includes('T') ? row.created_at : `${row.created_at.replace(' ', 'T')}Z`,
@@ -61,7 +67,7 @@ function rowToPost(row: NewsRow): NewsPost {
 export function listPublishedNews(limit = 50): NewsPost[] {
   const rows = db
     .prepare(
-      `SELECT * FROM news_posts WHERE is_published = 1 ORDER BY created_at DESC LIMIT ?`
+      `SELECT * FROM news_posts WHERE is_published = 1 ORDER BY is_featured DESC, created_at DESC LIMIT ?`
     )
     .all(limit) as NewsRow[];
   return rows.map(rowToPost);
@@ -76,7 +82,13 @@ export function listAllNews(limit = 100): NewsPost[] {
 
 export function createNews(
   authorId: number,
-  data: { title: string; body: string; coverImage?: string | null; isPublished?: boolean }
+  data: {
+    title: string;
+    body: string;
+    coverImage?: string | null;
+    isPublished?: boolean;
+    isFeatured?: boolean;
+  }
 ): NewsPost {
   const title = String(data.title || '').trim().slice(0, 120);
   const body = String(data.body || '').trim().slice(0, MAX_NEWS_BODY_LENGTH);
@@ -85,9 +97,16 @@ export function createNews(
 
   const result = db
     .prepare(
-      `INSERT INTO news_posts (title, body, cover_image, is_published, author_id) VALUES (?, ?, ?, ?, ?)`
+      `INSERT INTO news_posts (title, body, cover_image, is_published, is_featured, author_id) VALUES (?, ?, ?, ?, ?, ?)`
     )
-    .run(title, body, coverImage, data.isPublished === false ? 0 : 1, authorId);
+    .run(
+      title,
+      body,
+      coverImage,
+      data.isPublished === false ? 0 : 1,
+      data.isFeatured ? 1 : 0,
+      authorId
+    );
 
   const row = db
     .prepare('SELECT * FROM news_posts WHERE id = ?')
@@ -97,7 +116,13 @@ export function createNews(
 
 export function updateNews(
   id: number,
-  data: { title?: string; body?: string; coverImage?: string | null; isPublished?: boolean }
+  data: {
+    title?: string;
+    body?: string;
+    coverImage?: string | null;
+    isPublished?: boolean;
+    isFeatured?: boolean;
+  }
 ): NewsPost | null {
   const existing = db.prepare('SELECT * FROM news_posts WHERE id = ?').get(id) as NewsRow | undefined;
   if (!existing) return null;
@@ -111,10 +136,12 @@ export function updateNews(
       : existing.cover_image?.trim() || null;
   const isPublished =
     data.isPublished != null ? (data.isPublished ? 1 : 0) : existing.is_published;
+  const isFeatured =
+    data.isFeatured != null ? (data.isFeatured ? 1 : 0) : existing.is_featured ?? 0;
 
   db.prepare(
-    `UPDATE news_posts SET title = ?, body = ?, cover_image = ?, is_published = ?, updated_at = datetime('now') WHERE id = ?`
-  ).run(title, body, coverImage, isPublished, id);
+    `UPDATE news_posts SET title = ?, body = ?, cover_image = ?, is_published = ?, is_featured = ?, updated_at = datetime('now') WHERE id = ?`
+  ).run(title, body, coverImage, isPublished, isFeatured, id);
 
   const row = db.prepare('SELECT * FROM news_posts WHERE id = ?').get(id) as NewsRow;
   return rowToPost(row);

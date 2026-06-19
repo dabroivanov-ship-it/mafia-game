@@ -251,6 +251,7 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
         body: req.body.body,
         coverImage: req.body.coverImage ?? null,
         isPublished: req.body.isPublished !== false,
+        isFeatured: !!req.body.isFeatured,
       });
       res.status(201).json({ news });
     } catch (err) {
@@ -264,6 +265,7 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
       body: req.body.body,
       coverImage: req.body.coverImage,
       isPublished: req.body.isPublished,
+      isFeatured: req.body.isFeatured,
     });
     if (!news) return res.status(404).json({ error: 'Новость не найдена' });
     res.json({ news });

@@ -178,6 +178,7 @@ export interface NewsPost {
   body: string;
   coverImage?: string | null;
   isPublished: boolean;
+  isFeatured?: boolean;
   authorId?: number;
   authorName?: string;
   createdAt: string;
