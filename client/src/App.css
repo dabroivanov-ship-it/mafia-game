@@ -1234,7 +1234,7 @@ html.telegram-webapp .app-body {
   text-align: center;
 }
 
-.menu-item-desktop-only {
+.menu-item.menu-item-desktop-only {
   display: none;
 }
 
@@ -3575,6 +3575,10 @@ html.telegram-webapp .app-body {
     margin-left: 0;
   }
 
+  .menu-item.menu-item-desktop-only {
+    display: none !important;
+  }
+
   .menu-icon {
     font-size: 1.35rem;
   }
@@ -3872,7 +3876,7 @@ html.telegram-webapp .app-body {
     margin-left: 0;
   }
 
-  .menu-item-desktop-only {
+  .menu-item.menu-item-desktop-only {
     display: inline-flex;
   }
 
