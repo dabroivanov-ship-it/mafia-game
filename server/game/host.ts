@@ -1,5 +1,5 @@
 import { CONFIG, ROLE_LABELS } from './config.js';
-import { isMafiaTeam } from './roles.js';
+import { getRoleLabel, isEvil, isMafia } from './roles.js';
 import type { GamePlayer, GameRoom, PrivateNote, RoleId } from '../types/index.js';
 
 export function playerNick(p: Pick<GamePlayer, 'username' | 'name'>): string {
