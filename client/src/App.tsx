@@ -1,23 +1,28 @@
-import { useEffect, useState, useCallback } from 'react';
+import { lazy, Suspense, useEffect, useState, useCallback, type ReactNode } from 'react';
 import { io, Socket } from 'socket.io-client';
 import Auth from './components/Auth';
 import Menu, { type MenuView } from './components/Menu';
 import Lobby, { type LobbyScreen } from './components/Lobby';
-import News from './components/News';
 import CabinetHub from './components/CabinetHub';
-import CabinetProfileSettings from './components/CabinetProfileSettings';
-import CabinetSiteSettings from './components/CabinetSiteSettings';
-import Messages from './components/Messages';
-import UserSearch from './components/UserSearch';
-import Info from './components/Info';
-import AdminPanel from './components/AdminPanel';
-import Room from './components/Room';
+import PageLoader from './components/PageLoader';
 import { infoSectionFromPath, isPublicInfoPath, pathForInfoSection } from './infoRouting';
 import { DEFAULT_PAGE_META, updatePageMeta } from './seo';
 import { clearSession, fetchMe, fetchUnreadMailCount, fetchThemeSettings, saveSession, loadStoredPlayerId, saveStoredPlayerId, clearStoredPlayerIds } from './api';
 import type { LobbyRoom, RoomState, User, ThemeId } from './types';
 import { applyTheme, resolveTheme, DEFAULT_THEME } from './themes';
 
+const News = lazy(() => import('./components/News'));
+const Info = lazy(() => import('./components/Info'));
+const AdminPanel = lazy(() => import('./components/AdminPanel'));
+const Room = lazy(() => import('./components/Room'));
+const Messages = lazy(() => import('./components/Messages'));
+const UserSearch = lazy(() => import('./components/UserSearch'));
+const CabinetProfileSettings = lazy(() => import('./components/CabinetProfileSettings'));
+const CabinetSiteSettings = lazy(() => import('./components/CabinetSiteSettings'));
+
+function ViewSuspense({ children, label }: { children: ReactNode; label?: string }) {
+  return <Suspense fallback={<PageLoader label={label} compact />}>{children}</Suspense>;
+}
 const SOCKET_URL =
   import.meta.env.VITE_SOCKET_URL ??
   (import.meta.env.DEV ? 'http://localhost:3001' : undefined);
@@ -50,10 +55,31 @@ export default function App() {
   const [siteDefaultTheme, setSiteDefaultTheme] = useState<ThemeId>(DEFAULT_THEME);
 
   useEffect(() => {
-    fetchThemeSettings()
-      .then(({ defaultTheme }) => setSiteDefaultTheme(defaultTheme))
-      .catch(() => {});
-  }, []);
+    async function bootstrap() {
+      const themePromise = fetchThemeSettings()
+        .then(({ defaultTheme }) => setSiteDefaultTheme(defaultTheme))
+        .catch(() => {});
+
+      if (!token) {
+        await themePromise;
+        setAuthLoading(false);
+        return;
+      }
+
+      try {
+        const [{ user: me }] = await Promise.all([fetchMe(), themePromise]);
+        setUser(me);
+        saveSession(token, me);
+      } catch {
+        clearSession();
+        setToken(null);
+        setUser(null);
+      } finally {
+        setAuthLoading(false);
+      }
+    }
+    void bootstrap();
+  }, [token]);
 
   useEffect(() => {
     applyTheme(resolveTheme(user?.theme ?? null, siteDefaultTheme));
@@ -94,25 +120,10 @@ export default function App() {
   }, [user]);
 
   useEffect(() => {
-    async function checkAuth() {
-      if (!token) {
-        setAuthLoading(false);
-        return;
-      }
-      try {
-        const { user: me } = await fetchMe();
-        setUser(me);
-        saveSession(token, me);
-      } catch {
-        clearSession();
-        setToken(null);
-        setUser(null);
-      } finally {
-        setAuthLoading(false);
-      }
-    }
-    checkAuth();
-  }, [token]);
+    if (!user) return;
+    void import('./components/Room');
+    if (user.isAdmin) void import('./components/AdminPanel');
+  }, [user]);
 
   useEffect(() => {
     if (!token || !user) {
@@ -290,7 +301,7 @@ export default function App() {
   if (authLoading) {
     return (
       <div className="app loading-screen">
-        <p>Загрузка...</p>
+        <PageLoader label="Подключаемся…" />
       </div>
     );
   }
@@ -298,10 +309,12 @@ export default function App() {
   if ((!user || !token) && isPublicInfoPath(window.location.pathname)) {
     return (
       <div className="app app-public-info">
-        <Info
-          initialSection={infoSectionFromPath(window.location.pathname)}
-          publicMode
-        />
+        <ViewSuspense label="Загружаем раздел…">
+          <Info
+            initialSection={infoSectionFromPath(window.location.pathname)}
+            publicMode
+          />
+        </ViewSuspense>
       </div>
     );
   }
@@ -334,13 +347,15 @@ export default function App() {
             {error}
           </div>
         )}
-        <Room
-          socket={socket}
-          state={roomState}
-          onLeave={leaveRoom}
-          onStateUpdate={setRoomState}
-          currentUserId={user.id}
-        />
+        <ViewSuspense label="Загружаем комнату…">
+          <Room
+            socket={socket}
+            state={roomState}
+            onLeave={leaveRoom}
+            onStateUpdate={setRoomState}
+            currentUserId={user.id}
+          />
+        </ViewSuspense>
       </div>
     );
   }
@@ -372,39 +387,51 @@ export default function App() {
             onOpenMessages={() => openMessages()}
           />
         )}
-        {view === 'news' && <News onBack={() => setView('lobby')} />}
+        {view === 'news' && (
+          <ViewSuspense label="Новости…">
+            <News onBack={() => setView('lobby')} />
+          </ViewSuspense>
+        )}
         {view === 'cabinet' && lobbyScreen === 'cabinet-settings' && (
-          <CabinetProfileSettings
-            user={user}
-            onUpdate={handleUserUpdate}
-            onBack={() => setLobbyScreen('cabinet')}
-          />
+          <ViewSuspense label="Профиль…">
+            <CabinetProfileSettings
+              user={user}
+              onUpdate={handleUserUpdate}
+              onBack={() => setLobbyScreen('cabinet')}
+            />
+          </ViewSuspense>
         )}
         {view === 'cabinet' && lobbyScreen === 'cabinet-site-settings' && (
-          <CabinetSiteSettings
-            user={user}
-            onUpdate={handleUserUpdate}
-            onBack={() => setLobbyScreen('cabinet')}
-          />
+          <ViewSuspense label="Настройки…">
+            <CabinetSiteSettings
+              user={user}
+              onUpdate={handleUserUpdate}
+              onBack={() => setLobbyScreen('cabinet')}
+            />
+          </ViewSuspense>
         )}
         {view === 'cabinet' && lobbyScreen === 'cabinet-messages' && (
-          <Messages
-            composeToUserId={composeToUserId}
-            composeToUsername={composeToUsername}
-            onUnreadChange={setUnreadMailCount}
-            onBack={() => {
-              setComposeToUserId(null);
-              setComposeToUsername(null);
-              setLobbyScreen('cabinet');
-            }}
-          />
+          <ViewSuspense label="Сообщения…">
+            <Messages
+              composeToUserId={composeToUserId}
+              composeToUsername={composeToUsername}
+              onUnreadChange={setUnreadMailCount}
+              onBack={() => {
+                setComposeToUserId(null);
+                setComposeToUsername(null);
+                setLobbyScreen('cabinet');
+              }}
+            />
+          </ViewSuspense>
         )}
         {view === 'cabinet' && lobbyScreen === 'cabinet-search' && (
-          <UserSearch
-            currentUser={user}
-            onBack={() => setLobbyScreen('cabinet')}
-            onWriteMessage={(userId, username) => openMessages({ userId, username })}
-          />
+          <ViewSuspense label="Поиск…">
+            <UserSearch
+              currentUser={user}
+              onBack={() => setLobbyScreen('cabinet')}
+              onWriteMessage={(userId, username) => openMessages({ userId, username })}
+            />
+          </ViewSuspense>
         )}
         {view === 'cabinet' && lobbyScreen === 'cabinet' && (
           <CabinetHub
@@ -418,12 +445,18 @@ export default function App() {
             onBack={() => setView('lobby')}
           />
         )}
-        {view === 'info' && <Info />}
+        {view === 'info' && (
+          <ViewSuspense label="Информация…">
+            <Info />
+          </ViewSuspense>
+        )}
         {view === 'admin' && user.isAdmin && (
-          <AdminPanel
-            onBack={() => setView('lobby')}
-            onDefaultThemeChange={setSiteDefaultTheme}
-          />
+          <ViewSuspense label="Админка…">
+            <AdminPanel
+              onBack={() => setView('lobby')}
+              onDefaultThemeChange={setSiteDefaultTheme}
+            />
+          </ViewSuspense>
         )}
       </div>
 

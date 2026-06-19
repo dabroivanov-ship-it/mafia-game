@@ -67,7 +67,53 @@ html.telegram-webapp .app-body {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
+  min-height: 100dvh;
   color: var(--text-muted);
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+.page-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 40vh;
+  padding: 24px 16px;
+  text-align: center;
+}
+
+.page-loader-compact {
+  min-height: 220px;
+  padding: 32px 16px;
+}
+
+.page-loader p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+
+.page-loader-spinner {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 3px solid color-mix(in srgb, var(--accent) 18%, transparent);
+  border-top-color: var(--accent);
+  animation: page-loader-spin 0.75s linear infinite;
+}
+
+@keyframes page-loader-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-loader-spinner {
+    animation: none;
+    border-top-color: color-mix(in srgb, var(--accent) 50%, transparent);
+  }
 }
 
 /* Auth */
