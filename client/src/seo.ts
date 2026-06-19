@@ -1,3 +1,5 @@
+import { trackPageView } from './metrika';
+
 export interface PageMeta {
   title: string;
   description: string;
@@ -61,6 +63,7 @@ export function updatePageMeta(meta: PageMeta) {
   upsertMeta('twitter:title', fullTitle);
   upsertMeta('twitter:description', meta.description);
   upsertLink('canonical', url);
+  trackPageView(path);
 }
 
 export const DEFAULT_PAGE_META: PageMeta = {

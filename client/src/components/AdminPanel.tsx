@@ -23,13 +23,16 @@ import {
   adminSetDefaultTheme,
   fetchTelegramSettings,
   adminSetTelegramSettings,
+  fetchMetrikaSettings,
+  adminSetMetrikaSettings,
   type AdminRoom,
 } from '../api';
 import type { User, NewsPost, ThemeId, ViolationLogEntry, ViolationType } from '../types';
-import ThemePicker from './ThemePicker';
 import NewsEditor, { type NewsEditorValue } from './NewsEditor';
 import NewsBody from './NewsBody';
 import { isEmptyNewsBody } from './newsBodyUtils';
+import { initYandexMetrika } from '../metrika';
+import AdminSystemSection from './AdminSystemSection';
 
 const VIOLATION_LABELS: Record<ViolationType, string> = {
   profanity: 'Мат',
@@ -78,6 +81,9 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
   const [themeSaving, setThemeSaving] = useState(false);
   const [telegramForm, setTelegramForm] = useState({ botUsername: '', webAppUrl: '' });
   const [telegramSaving, setTelegramSaving] = useState(false);
+  const [metrikaId, setMetrikaId] = useState('');
+  const [metrikaDisabled, setMetrikaDisabled] = useState(false);
+  const [metrikaSaving, setMetrikaSaving] = useState(false);
 
   const load = async ({ silent = false, syncRoomNames = false } = {}) => {
     if (!silent) setLoading(true);
@@ -119,6 +125,13 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
         setTelegramForm({ botUsername: botUsername || '', webAppUrl: webAppUrl || '' })
       )
       .catch(() => {});
+    fetchMetrikaSettings()
+      .then(({ metrikaId: id }) => {
+        setMetrikaDisabled(id === null);
+        setMetrikaId(id === null ? '' : String(id));
+      })
+      .catch(() => {});
+    void loadViolations();
   }, [section]);
 
   const handleDefaultThemeChange = async (themeId: ThemeId) => {
@@ -150,6 +163,25 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
       setError(err instanceof Error ? err.message : 'Ошибка сохранения Telegram настроек');
     } finally {
       setTelegramSaving(false);
+    }
+  };
+
+  const handleSaveMetrikaSettings = async (e: FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setMetrikaSaving(true);
+    try {
+      const payload = metrikaDisabled
+        ? { metrikaId: null }
+        : { metrikaId: Number(metrikaId.trim()) };
+      const saved = await adminSetMetrikaSettings(payload);
+      setMetrikaDisabled(saved.metrikaId === null);
+      setMetrikaId(saved.metrikaId === null ? '' : String(saved.metrikaId));
+      initYandexMetrika(saved.metrikaId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка сохранения настроек Метрики');
+    } finally {
+      setMetrikaSaving(false);
     }
   };
 
@@ -780,84 +812,28 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
           )}
 
           {section === 'system' && (
-            <section className="admin-section">
-              <h3>Система</h3>
-              <div className="admin-system-grid">
-                <div className="admin-system-card">
-                  <span className="muted">Пользователей</span>
-                  <strong>{users.length}</strong>
-                </div>
-                <div className="admin-system-card">
-                  <span className="muted">Комнат</span>
-                  <strong>{rooms.length}</strong>
-                  <span className="muted admin-system-detail">
-                    {gameRooms.length} игр. · {chatRooms.length} чат
-                  </span>
-                </div>
-              </div>
-              <div className="admin-settings-actions">
-                <button type="button" className="btn btn-primary" onClick={() => void load({ syncRoomNames: true })}>
-                  Синхронизировать данные
-                </button>
-              </div>
-
-              <div className="theme-settings-block admin-theme-block">
-                <h3>Тема оформления сайта</h3>
-                <p className="theme-settings-hint">
-                  Основная тема для всех пользователей. Личная тема в кабинете перекрывает эту настройку.
-                </p>
-                <ThemePicker
-                  value={defaultTheme}
-                  onChange={(id) => void handleDefaultThemeChange(id)}
-                  disabled={themeSaving}
-                />
-              </div>
-
-              <form className="theme-settings-block admin-theme-block" onSubmit={handleSaveTelegramSettings}>
-                <h3>Telegram бот и сайт</h3>
-                <p className="theme-settings-hint">
-                  Укажите username бота и URL сайта. Это включает Telegram Login Widget и ссылку на Web App.
-                </p>
-                <label>
-                  Username бота (без @)
-                  <input
-                    value={telegramForm.botUsername}
-                    onChange={(e) =>
-                      setTelegramForm((prev) => ({ ...prev, botUsername: e.target.value }))
-                    }
-                    placeholder="my_mafia_bot"
-                    maxLength={64}
-                    required
-                  />
-                </label>
-                <label>
-                  URL сайта для Web App
-                  <input
-                    value={telegramForm.webAppUrl}
-                    onChange={(e) =>
-                      setTelegramForm((prev) => ({ ...prev, webAppUrl: e.target.value }))
-                    }
-                    placeholder="https://example.com"
-                    maxLength={300}
-                    required
-                  />
-                </label>
-                <div className="profile-actions">
-                  <button type="submit" className="btn btn-primary" disabled={telegramSaving}>
-                    {telegramSaving ? 'Сохранение...' : 'Сохранить Telegram'}
-                  </button>
-                </div>
-                {telegramBotLink && (
-                  <p className="theme-settings-hint">
-                    Ссылка на бота: <a href={telegramBotLink} target="_blank" rel="noreferrer">{telegramBotLink}</a>
-                  </p>
-                )}
-                <p className="theme-settings-hint">
-                  В BotFather откройте вашего бота → <code>/setdomain</code> и укажите домен сайта.
-                  При нажатии «Старт» в боте пользователь получит сообщение с кнопкой «Играть».
-                </p>
-              </form>
-            </section>
+            <AdminSystemSection
+              usersCount={users.length}
+              roomsCount={rooms.length}
+              gameRoomsCount={gameRooms.length}
+              chatRoomsCount={chatRooms.length}
+              violationsCount={violations.length}
+              onSync={() => void load({ syncRoomNames: true })}
+              defaultTheme={defaultTheme}
+              themeSaving={themeSaving}
+              onThemeChange={(id) => void handleDefaultThemeChange(id)}
+              telegramForm={telegramForm}
+              telegramSaving={telegramSaving}
+              onTelegramFormChange={(patch) => setTelegramForm((prev) => ({ ...prev, ...patch }))}
+              onSaveTelegram={(e) => void handleSaveTelegramSettings(e)}
+              telegramBotLink={telegramBotLink}
+              metrikaId={metrikaId}
+              metrikaDisabled={metrikaDisabled}
+              metrikaSaving={metrikaSaving}
+              onMetrikaIdChange={(value) => setMetrikaId(value.replace(/\D/g, ''))}
+              onMetrikaDisabledChange={setMetrikaDisabled}
+              onSaveMetrika={(e) => void handleSaveMetrikaSettings(e)}
+            />
           )}
         </div>
       </div>

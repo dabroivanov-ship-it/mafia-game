@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authMiddleware, adminMiddleware } from '../auth/jwt.js';
-import { getDefaultTheme, getTelegramSettings, setDefaultTheme, setTelegramSettings } from './store.js';
+import { getDefaultTheme, getTelegramSettings, getYandexMetrikaId, setDefaultTheme, setTelegramSettings, setYandexMetrikaId, isValidYandexMetrikaId } from './store.js';
 import { isValidThemeId, listThemesPublic } from './themes.js';
 import { isValidWebAppUrl } from '../security/validate.js';
 
@@ -40,6 +40,24 @@ router.put('/telegram', authMiddleware, adminMiddleware, (req, res) => {
   }
   setTelegramSettings(botUsername, webAppUrl);
   res.json({ botUsername, webAppUrl });
+});
+
+router.get('/metrika', (_req, res) => {
+  res.json({ metrikaId: getYandexMetrikaId() });
+});
+
+router.put('/metrika', authMiddleware, adminMiddleware, (req, res) => {
+  const raw = req.body?.metrikaId;
+  if (raw === null || raw === undefined || raw === '') {
+    setYandexMetrikaId(null);
+    return res.json({ metrikaId: null });
+  }
+  if (!isValidYandexMetrikaId(raw)) {
+    return res.status(400).json({ error: 'Укажите корректный номер счётчика Яндекс.Метрики' });
+  }
+  const metrikaId = Number(raw);
+  setYandexMetrikaId(metrikaId);
+  res.json({ metrikaId });
 });
 
 export default router;

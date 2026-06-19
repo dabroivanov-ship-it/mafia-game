@@ -173,6 +173,19 @@ export async function fetchTelegramSettings(): Promise<{
   return apiRequest('/api/settings/telegram');
 }
 
+export async function fetchMetrikaSettings(): Promise<{ metrikaId: number | null }> {
+  return apiRequest('/api/settings/metrika');
+}
+
+export async function adminSetMetrikaSettings(payload: {
+  metrikaId: number | null;
+}): Promise<{ metrikaId: number | null }> {
+  return apiRequest('/api/settings/metrika', {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function adminSetTelegramSettings(payload: {
   botUsername: string;
   webAppUrl: string;

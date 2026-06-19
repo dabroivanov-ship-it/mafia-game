@@ -11,6 +11,31 @@ db.exec(`
 const DEFAULT_THEME_KEY = 'default_theme';
 const TELEGRAM_BOT_USERNAME_KEY = 'telegram_bot_username';
 const TELEGRAM_WEBAPP_URL_KEY = 'telegram_webapp_url';
+const YANDEX_METRIKA_ID_KEY = 'yandex_metrika_id';
+const LEGACY_METRIKA_ID = 109982503;
+
+export function isValidYandexMetrikaId(value: unknown): value is number {
+  const id = typeof value === 'number' ? value : Number(value);
+  return Number.isInteger(id) && id >= 10_000 && id <= 999_999_999_999;
+}
+
+export function getYandexMetrikaId(): number | null {
+  const row = db.prepare('SELECT value FROM app_settings WHERE key = ?').get(YANDEX_METRIKA_ID_KEY) as
+    | { value: string }
+    | undefined;
+  if (!row) return LEGACY_METRIKA_ID;
+  const raw = row.value.trim();
+  if (!raw) return null;
+  if (/^\d{5,12}$/.test(raw)) return Number(raw);
+  return LEGACY_METRIKA_ID;
+}
+
+export function setYandexMetrikaId(id: number | null): void {
+  db.prepare(
+    `INSERT INTO app_settings (key, value) VALUES (?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value`
+  ).run(YANDEX_METRIKA_ID_KEY, id === null ? '' : String(id));
+}
 
 export function getDefaultTheme(): ThemeId {
   const row = db.prepare('SELECT value FROM app_settings WHERE key = ?').get(DEFAULT_THEME_KEY) as

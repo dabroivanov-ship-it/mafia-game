@@ -3516,6 +3516,149 @@ html.telegram-webapp .app-body {
   font-size: 1.05rem;
 }
 
+.admin-system-section h3 {
+  margin-bottom: 16px;
+}
+
+.admin-system-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.admin-system-stats-compact {
+  margin-bottom: 24px;
+}
+
+.admin-system-stat-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.admin-system-stat-card strong {
+  display: block;
+  font-size: 1.6rem;
+  line-height: 1.1;
+  margin-top: 2px;
+}
+
+.admin-system-stat-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.admin-system-categories {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.admin-system-category-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 160px;
+}
+
+.admin-system-category-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-system-category-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.admin-system-category-head h4 {
+  flex: 1;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.admin-system-category-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.admin-system-category-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-system-category-links button {
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.admin-system-category-links button:hover {
+  background: var(--bg-hover);
+  color: var(--accent);
+}
+
+.admin-system-detail-head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.admin-system-detail-head h3 {
+  margin: 0;
+}
+
+.admin-system-detail-panel {
+  max-width: 640px;
+}
+
 .admin-system-detail {
   display: block;
   font-size: 0.85rem;
@@ -3835,6 +3978,14 @@ html.telegram-webapp .app-body {
   .admin-nav button {
     white-space: nowrap;
     min-width: max-content;
+  }
+
+  .admin-system-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-system-categories {
+    grid-template-columns: 1fr;
   }
 
   .admin-room-row {
