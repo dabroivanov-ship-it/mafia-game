@@ -114,7 +114,6 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
   }, []);
 
   useEffect(() => {
-    if (section !== 'system') return;
     fetchThemeSettings()
       .then(({ defaultTheme: dt }) => setDefaultTheme(dt))
       .catch(() => {});
@@ -129,8 +128,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
         setMetrikaId(id === null ? '' : String(id));
       })
       .catch(() => {});
-    void loadViolations();
-  }, [section]);
+  }, []);
 
   const handleDefaultThemeChange = async (themeId: ThemeId) => {
     setThemeSaving(true);
