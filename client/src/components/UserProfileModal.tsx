@@ -9,7 +9,8 @@ import {
   adminUpdateUser,
   sendPrivateMessage,
 } from '../api';
-import type { User, ProfileStaffMeta, ChatReplyTarget } from '../types';
+import type { User, ProfileStaffMeta, ChatReplyTarget, UserPresence } from '../types';
+import { formatPresenceLabel } from '../utils/presence';
 
 type ChatVisibility = 'all' | 'direct' | 'private';
 
@@ -20,6 +21,7 @@ interface UserProfileModalProps {
   viewerCanModerate?: boolean;
   onClose: () => void;
   onAdminAction?: () => void;
+  onWriteMessage?: (userId: number, username: string) => void;
   replyTarget?: ChatReplyTarget | null;
   canSendChat?: boolean;
   onSendChat?: (
@@ -40,6 +42,7 @@ interface UserProfileModalProps {
 
 interface ProfileData {
   user: User & { messageCount?: number };
+  presence: UserPresence;
   canAdmin: boolean;
   canModerate: boolean;
   staffMeta?: ProfileStaffMeta;
@@ -52,6 +55,7 @@ export default function UserProfileModal({
   viewerCanModerate = false,
   onClose,
   onAdminAction,
+  onWriteMessage,
   replyTarget = null,
   canSendChat = false,
   onSendChat,
@@ -319,6 +323,16 @@ export default function UserProfileModal({
                     <span>{user.city || '—'}</span>
                   </li>
                   <li>
+                    <span className="player-page-label">Активность</span>
+                    <span
+                      className={`presence-label ${
+                        data?.presence?.isOnline ? 'presence-online' : 'presence-offline'
+                      }`}
+                    >
+                      {formatPresenceLabel(data?.presence)}
+                    </span>
+                  </li>
+                  <li>
                     <span className="player-page-label">Очки</span>
                     <span>{user.totalScore}</span>
                   </li>
@@ -348,13 +362,22 @@ export default function UserProfileModal({
                 {canWriteMail && (
                   <div className="player-page-actions">
                     {!showMailCompose ? (
-                      <button
-                        type="button"
-                        className="player-page-link"
-                        onClick={() => setShowMailCompose(true)}
-                      >
-                        &gt; ✉️ Написать письмо
-                      </button>
+                      <div className="player-page-mail-actions">
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-sm"
+                          onClick={() => {
+                            if (onWriteMessage && user) {
+                              onWriteMessage(user.id, user.username);
+                              onClose();
+                            } else {
+                              setShowMailCompose(true);
+                            }
+                          }}
+                        >
+                          ✉️ Написать письмо
+                        </button>
+                      </div>
                     ) : (
                       <div className="mail-compose-inline">
                         <textarea

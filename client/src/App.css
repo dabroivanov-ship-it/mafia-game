@@ -635,18 +635,55 @@ html.telegram-webapp .app-body {
 
 .user-search-card {
   display: flex;
-  align-items: center;
-  gap: 14px;
+  flex-direction: column;
+  gap: 10px;
   width: 100%;
   padding: 14px 16px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--bg-card);
+  box-shadow: var(--shadow);
+}
+
+.user-search-card-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
   color: var(--text);
   font: inherit;
   text-align: left;
   cursor: pointer;
-  box-shadow: var(--shadow);
+}
+
+.user-search-card-main:hover strong {
+  color: var(--accent);
+}
+
+.user-search-card-actions {
+  display: flex;
+  gap: 8px;
+  padding-left: 66px;
+}
+
+.user-search-card-actions .btn {
+  flex: 1;
+}
+
+.presence-label.presence-online {
+  color: #6ee7a0;
+  font-weight: 600;
+}
+
+.presence-label.presence-offline {
+  color: var(--text-muted, #888);
+}
+
+.player-page-mail-actions {
+  margin-top: 4px;
 }
 
 .user-search-card:hover {

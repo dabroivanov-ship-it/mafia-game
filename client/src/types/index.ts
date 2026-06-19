@@ -181,6 +181,13 @@ export interface UserSearchHit {
   totalScore: number;
   isAdmin: boolean;
   isModerator: boolean;
+  isOnline: boolean;
+  lastSeenAt: string | null;
+}
+
+export interface UserPresence {
+  isOnline: boolean;
+  lastSeenAt: string | null;
 }
 
 export interface NewsPost {

@@ -1,4 +1,4 @@
-import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, MailConversation, RoomKind, ThemeId, ViolationLogEntry, UserSearchHit } from './types';
+import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, MailConversation, RoomKind, ThemeId, ViolationLogEntry, UserSearchHit, UserPresence } from './types';
 
 const API_BASE =
   import.meta.env.VITE_API_URL ??
@@ -327,6 +327,7 @@ export async function adminClearViolationLog(): Promise<{ cleared: number }> {
 
 export async function fetchUserProfile(userId: number): Promise<{
   user: User & { messageCount?: number };
+  presence: UserPresence;
   canAdmin: boolean;
   canModerate: boolean;
   staffMeta?: ProfileStaffMeta;

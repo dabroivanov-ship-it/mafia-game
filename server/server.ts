@@ -59,6 +59,7 @@ import type { ChatChannel, GameRoom, GamePlayer, PrivateNote, PublicUser, RoomSt
 import { assertProductionEnv } from './config/env.js';
 import { securityHeadersMiddleware } from './security/headers.js';
 import { chatSocketRateLimiter } from './security/rateLimit.js';
+import { markUserConnected, markUserDisconnected } from './presence.js';
 import { normalizeChatText, normalizeModerationReason, parseViolationType } from './security/validate.js';
 import { addViolation } from './moderation/violationLog.js';
 import fs from 'fs';
@@ -346,6 +347,7 @@ app.use(
 function attachUserSocket(userId: number, socketId: string): void {
   if (!userSocketIds.has(userId)) userSocketIds.set(userId, new Set());
   userSocketIds.get(userId)!.add(socketId);
+  markUserConnected(userId);
 }
 
 function detachUserSocket(userId: number, socketId: string): void {
@@ -353,6 +355,7 @@ function detachUserSocket(userId: number, socketId: string): void {
   if (!set) return;
   set.delete(socketId);
   if (set.size === 0) userSocketIds.delete(userId);
+  markUserDisconnected(userId);
 }
 
 function disconnectUserSockets(userId: number, reason: string): void {

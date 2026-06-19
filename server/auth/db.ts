@@ -58,6 +58,7 @@ function migrateColumns(): void {
   if (!cols.includes('theme')) add('ALTER TABLE users ADD COLUMN theme TEXT DEFAULT NULL');
   if (!cols.includes('telegram_id')) add('ALTER TABLE users ADD COLUMN telegram_id TEXT DEFAULT NULL');
   if (!cols.includes('telegram_username')) add('ALTER TABLE users ADD COLUMN telegram_username TEXT DEFAULT NULL');
+  if (!cols.includes('last_seen_at')) add('ALTER TABLE users ADD COLUMN last_seen_at TEXT DEFAULT NULL');
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_telegram_id ON users(telegram_id)');
 }
 
@@ -346,6 +347,19 @@ export function updateUserConnectionInfo(
     userAgent ? userAgent.slice(0, 500) : null,
     userId
   );
+}
+
+export function touchUserLastSeen(userId: number): void {
+  db.prepare(`UPDATE users SET last_seen_at = datetime('now') WHERE id = ?`).run(userId);
+}
+
+export function getUserLastSeen(userId: number): string | null {
+  const row = db.prepare('SELECT last_seen_at FROM users WHERE id = ?').get(userId) as
+    | { last_seen_at: string | null }
+    | undefined;
+  const raw = row?.last_seen_at?.trim();
+  if (!raw) return null;
+  return raw.includes('T') ? raw : `${raw.replace(' ', 'T')}Z`;
 }
 
 export function banUser(userId: number, reason: string | undefined, until: string | null = null): PublicUser | null {

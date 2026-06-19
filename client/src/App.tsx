@@ -400,7 +400,11 @@ export default function App() {
           />
         )}
         {view === 'cabinet' && lobbyScreen === 'cabinet-search' && (
-          <UserSearch currentUser={user} onBack={() => setLobbyScreen('cabinet')} />
+          <UserSearch
+            currentUser={user}
+            onBack={() => setLobbyScreen('cabinet')}
+            onWriteMessage={(userId, username) => openMessages({ userId, username })}
+          />
         )}
         {view === 'cabinet' && lobbyScreen === 'cabinet' && (
           <CabinetHub

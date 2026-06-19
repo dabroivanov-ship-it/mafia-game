@@ -19,6 +19,7 @@ import { createRateLimitMiddleware, searchRateLimiter } from '../security/rateLi
 import fs from 'fs';
 import { getUserMessageCount } from '../history/store.js';
 import { isValidThemeId } from '../settings/themes.js';
+import { getUserPresence } from '../presence.js';
 import type { PublicUser } from '../types/index.js';
 
 interface ProfileRouterOptions {
@@ -81,7 +82,10 @@ export function createProfileRouter({ onProfileUpdated }: ProfileRouterOptions =
 
   router.get('/search', authMiddleware, searchRateLimit, (req, res) => {
     const q = String(req.query.q || '');
-    const users = searchPublicUsers(q);
+    const users = searchPublicUsers(q).map((user) => ({
+      ...user,
+      ...getUserPresence(user.id),
+    }));
     res.json({ users });
   });
 
@@ -104,6 +108,7 @@ export function createProfileRouter({ onProfileUpdated }: ProfileRouterOptions =
 
     res.json({
       user: { ...user, messageCount: getUserMessageCount(targetId) },
+      presence: getUserPresence(targetId),
       isSelf,
       canAdmin: viewerIsAdmin && !target.isAdmin && !isSelf,
       canModerate: canBanTarget(viewer, targetUser) && !isSelf,

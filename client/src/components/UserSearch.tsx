@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
 import { avatarUrl, searchUsers } from '../api';
 import type { User, UserSearchHit } from '../types';
+import { formatPresenceLabel } from '../utils/presence';
 import UserProfileModal from './UserProfileModal';
 
 interface UserSearchProps {
   currentUser: User;
   onBack: () => void;
+  onWriteMessage: (userId: number, username: string) => void;
 }
 
-export default function UserSearch({ currentUser, onBack }: UserSearchProps) {
+export default function UserSearch({ currentUser, onBack, onWriteMessage }: UserSearchProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<UserSearchHit[]>([]);
   const [loading, setLoading] = useState(false);
@@ -81,29 +83,49 @@ export default function UserSearch({ currentUser, onBack }: UserSearchProps) {
       )}
 
       <div className="user-search-results">
-        {results.map((hit) => (
-          <button
-            key={hit.id}
-            type="button"
-            className="user-search-card"
-            onClick={() => setProfileUserId(hit.id)}
-          >
-            {hit.avatar ? (
-              <img src={avatarUrl(hit.avatar) ?? undefined} alt="" className="user-search-avatar" />
-            ) : (
-              <div className="user-search-avatar placeholder">👤</div>
-            )}
-            <div className="user-search-card-body">
-              <strong>{hit.displayName}</strong>
-              <span className="muted">@{hit.username}</span>
-              {hit.city && <span className="muted">📍 {hit.city}</span>}
-              <span className="muted">🏆 {hit.totalScore} очков</span>
+        {results.map((hit) => {
+          const isSelf = hit.id === currentUser.id;
+          return (
+            <div key={hit.id} className="user-search-card">
+              <button
+                type="button"
+                className="user-search-card-main"
+                onClick={() => setProfileUserId(hit.id)}
+              >
+                {hit.avatar ? (
+                  <img src={avatarUrl(hit.avatar) ?? undefined} alt="" className="user-search-avatar" />
+                ) : (
+                  <div className="user-search-avatar placeholder">👤</div>
+                )}
+                <div className="user-search-card-body">
+                  <strong>{hit.displayName}</strong>
+                  <span className="muted">@{hit.username}</span>
+                  <span
+                    className={`presence-label ${hit.isOnline ? 'presence-online' : 'presence-offline'}`}
+                  >
+                    {formatPresenceLabel(hit)}
+                  </span>
+                  {hit.city && <span className="muted">📍 {hit.city}</span>}
+                  <span className="muted">🏆 {hit.totalScore} очков</span>
+                </div>
+                <span className="info-hub-arrow" aria-hidden="true">
+                  →
+                </span>
+              </button>
+              {!isSelf && (
+                <div className="user-search-card-actions">
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-primary"
+                    onClick={() => onWriteMessage(hit.id, hit.username)}
+                  >
+                    ✉️ Написать письмо
+                  </button>
+                </div>
+              )}
             </div>
-            <span className="info-hub-arrow" aria-hidden="true">
-              →
-            </span>
-          </button>
-        ))}
+          );
+        })}
       </div>
 
       {profileUserId != null && (
@@ -113,6 +135,7 @@ export default function UserSearch({ currentUser, onBack }: UserSearchProps) {
           viewerIsAdmin={currentUser.isAdmin}
           viewerCanModerate={currentUser.isStaff}
           onClose={() => setProfileUserId(null)}
+          onWriteMessage={onWriteMessage}
         />
       )}
     </div>
