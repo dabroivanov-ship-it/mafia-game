@@ -320,13 +320,6 @@ export default function App() {
           <Lobby
             rooms={rooms}
             onJoin={joinRoom}
-            onOpenNews={() => setView('news')}
-            onOpenInfo={() => setView('info')}
-            onOpenCabinet={() => {
-              setLobbyScreen('cabinet');
-              setView('cabinet');
-            }}
-            onLogout={handleLogout}
             unreadMailCount={unreadMailCount}
             onOpenMessages={() => openMessages()}
           />
@@ -365,6 +358,7 @@ export default function App() {
             onOpenProfileSettings={() => setLobbyScreen('cabinet-settings')}
             onOpenSiteSettings={() => setLobbyScreen('cabinet-site-settings')}
             onOpenMessages={() => setLobbyScreen('cabinet-messages')}
+            onLogout={handleLogout}
             onBack={() => setView('lobby')}
           />
         )}

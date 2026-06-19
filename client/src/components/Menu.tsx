@@ -12,9 +12,9 @@ interface MenuItem {
 
 const ITEMS: MenuItem[] = [
   { id: 'lobby', icon: '🏠', label: 'Комнаты', mobileBottom: true },
-  { id: 'news', icon: '📰', label: 'Новости', desktopOnly: true },
+  { id: 'news', icon: '📰', label: 'Новости', mobileBottom: true },
   { id: 'cabinet', icon: '👤', label: 'Кабинет', mobileBottom: true },
-  { id: 'info', icon: 'ℹ️', label: 'Информация', desktopOnly: true },
+  { id: 'info', icon: 'ℹ️', label: 'Инфо', mobileBottom: true },
 ];
 
 interface MenuProps {

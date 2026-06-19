@@ -7,6 +7,7 @@ interface CabinetHubProps {
   onOpenProfileSettings: () => void;
   onOpenSiteSettings: () => void;
   onOpenMessages: () => void;
+  onLogout: () => void;
   onBack: () => void;
 }
 
@@ -16,6 +17,7 @@ export default function CabinetHub({
   onOpenProfileSettings,
   onOpenSiteSettings,
   onOpenMessages,
+  onLogout,
   onBack,
 }: CabinetHubProps) {
   return (
@@ -86,6 +88,12 @@ export default function CabinetHub({
           <span className="info-hub-arrow" aria-hidden="true">
             →
           </span>
+        </button>
+      </div>
+
+      <div className="cabinet-hub-logout">
+        <button type="button" className="btn btn-ghost danger" onClick={onLogout}>
+          🚪 Выйти
         </button>
       </div>
     </div>

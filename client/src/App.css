@@ -388,6 +388,12 @@ html.telegram-webapp .app-body {
   text-align: left;
 }
 
+@media (max-width: 768px) {
+  .lobby-header-brand {
+    text-align: center;
+  }
+}
+
 .lobby-header h1 {
   font-size: clamp(1.75rem, 6vw, 2.5rem);
   margin-bottom: 6px;
@@ -594,6 +600,17 @@ html.telegram-webapp .app-body {
   font-size: 0.75rem;
   font-weight: 700;
   vertical-align: middle;
+}
+
+.cabinet-hub-logout {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.cabinet-hub-logout .btn {
+  width: 100%;
+  min-height: 44px;
 }
 
 .lobby-cabinet-section {
@@ -1224,14 +1241,6 @@ html.telegram-webapp .app-body {
 @media (min-width: 769px) {
   .lobby-header-brand {
     text-align: center;
-  }
-
-  .lobby-header-row {
-    display: block;
-  }
-
-  .lobby-header-menu {
-    display: none;
   }
 }
 
@@ -3443,10 +3452,6 @@ html.telegram-webapp .app-body {
 
   .menu-item.logout {
     margin-left: 0;
-  }
-
-  .lobby-menu-btn {
-    display: inline-flex;
   }
 
   .menu-icon {

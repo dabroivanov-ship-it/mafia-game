@@ -1,4 +1,3 @@
-import { useEffect, useRef, useState } from 'react';
 import type { GamePhase, LobbyRoom } from '../types';
 
 const PHASE_LABELS: Record<GamePhase, string> = {
@@ -21,10 +20,6 @@ export type LobbyScreen =
 interface LobbyProps {
   rooms: LobbyRoom[];
   onJoin: (roomId: number) => void;
-  onOpenNews?: () => void;
-  onOpenInfo?: () => void;
-  onOpenCabinet?: () => void;
-  onLogout?: () => void;
   unreadMailCount?: number;
   onOpenMessages?: () => void;
 }
@@ -72,109 +67,18 @@ function RoomCard({
 export default function Lobby({
   rooms,
   onJoin,
-  onOpenNews,
-  onOpenInfo,
-  onOpenCabinet,
-  onLogout,
   unreadMailCount = 0,
   onOpenMessages,
 }: LobbyProps) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
   const gameRooms = rooms.filter((r) => r.kind !== 'chat');
   const chatRooms = rooms.filter((r) => r.kind === 'chat');
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    const onPointerDown = (e: MouseEvent | TouchEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', onPointerDown);
-    document.addEventListener('touchstart', onPointerDown);
-    return () => {
-      document.removeEventListener('mousedown', onPointerDown);
-      document.removeEventListener('touchstart', onPointerDown);
-    };
-  }, [menuOpen]);
-
-  const closeMenu = () => setMenuOpen(false);
 
   return (
     <div className="lobby">
       <header className="lobby-header">
-        <div className="lobby-header-row">
-          <div className="lobby-header-brand">
-            <h1>🎭 Мафия</h1>
-            <p>Выберите комнату для игры или общения</p>
-          </div>
-
-          <div className="lobby-header-menu" ref={menuRef}>
-            <button
-              type="button"
-              className={`lobby-menu-btn ${menuOpen ? 'open' : ''}`}
-              onClick={() => setMenuOpen((open) => !open)}
-              aria-expanded={menuOpen}
-              aria-haspopup="true"
-              aria-label="Меню"
-            >
-              ☰
-            </button>
-            {menuOpen && (
-              <div className="lobby-menu-dropdown" role="menu">
-                <button
-                  type="button"
-                  className="lobby-menu-dropdown-item"
-                  role="menuitem"
-                  onClick={() => {
-                    closeMenu();
-                    onOpenNews?.();
-                  }}
-                >
-                  <span aria-hidden="true">📰</span>
-                  <span>Новости</span>
-                </button>
-                <button
-                  type="button"
-                  className="lobby-menu-dropdown-item"
-                  role="menuitem"
-                  onClick={() => {
-                    closeMenu();
-                    onOpenInfo?.();
-                  }}
-                >
-                  <span aria-hidden="true">ℹ️</span>
-                  <span>Информация</span>
-                </button>
-                <button
-                  type="button"
-                  className="lobby-menu-dropdown-item"
-                  role="menuitem"
-                  onClick={() => {
-                    closeMenu();
-                    onOpenCabinet?.();
-                  }}
-                >
-                  <span aria-hidden="true">👤</span>
-                  <span>Кабинет</span>
-                </button>
-                <button
-                  type="button"
-                  className="lobby-menu-dropdown-item logout"
-                  role="menuitem"
-                  onClick={() => {
-                    closeMenu();
-                    onLogout?.();
-                  }}
-                >
-                  <span aria-hidden="true">🚪</span>
-                  <span>Выход</span>
-                </button>
-              </div>
-            )}
-          </div>
+        <div className="lobby-header-brand">
+          <h1>🎭 Мафия</h1>
+          <p>Выберите комнату для игры или общения</p>
         </div>
       </header>
 
