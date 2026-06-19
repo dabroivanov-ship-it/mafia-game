@@ -94,6 +94,8 @@ export function isValidNightActionForRole(
         action.type === 'revenge' &&
         Number.isFinite(action.targetId)
       );
+    case 'advocate':
+      return action.type === 'cover' && Number.isFinite(action.targetId);
     default:
       return false;
   }

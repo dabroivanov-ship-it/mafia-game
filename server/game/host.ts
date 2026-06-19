@@ -1,5 +1,5 @@
 import { CONFIG, ROLE_LABELS } from './config.js';
-import { getRoleLabel, isEvil, isMafia } from './roles.js';
+import { isMafiaTeam } from './roles.js';
 import type { GamePlayer, GameRoom, PrivateNote, RoleId } from '../types/index.js';
 
 export function playerNick(p: Pick<GamePlayer, 'username' | 'name'>): string {
@@ -47,6 +47,8 @@ function nightActionPrompt(player: GamePlayer, room: GameRoom): string {
         : 'Пока комиссар жив — особых действий нет.';
     case 'highlander':
       return 'Вы горец — мафия не может вас убить. Ночных действий нет.';
+    case 'advocate':
+      return `Выберите мафиози, кого укрыть от проверки Катани этой ночью (не себя).${list}`;
     default:
       return 'У вашей роли нет ночных действий. Дождитесь утра.';
   }
@@ -76,6 +78,7 @@ export function buildNightReminderNotes(room: GameRoom): PrivateNote[] {
     if (!player.alive || !player.inGame || !player.role) continue;
     const needsAction =
       player.role === 'mafia' ||
+      player.role === 'advocate' ||
       player.role === 'commissar' ||
       player.role === 'doctor' ||
       player.role === 'homeless' ||
@@ -124,6 +127,7 @@ export interface NightReport {
   commissarChecked?: GamePlayer;
   commissarKilled?: GamePlayer;
   homelessChecked?: GamePlayer;
+  advocateCovered?: GamePlayer;
   doctorHealed?: GamePlayer;
   doctorSelfHeal?: boolean;
   mafiaAttacked?: GamePlayer;
@@ -175,6 +179,10 @@ export function buildMorningReportMessage(
     }
   }
 
+  if (report.advocateCovered) {
+    parts.push(`Адвокат укрыл ${playerNick(report.advocateCovered)} от проверки Катани.`);
+  }
+
   if (report.maniacKilled) {
     parts.push(
       `Маньяк убил ${playerNick(report.maniacKilled)} (${getRoleLabel(report.maniacKilled.role)})!`
@@ -224,9 +232,10 @@ export function buildMorningReportMessages(room: GameRoom, report: NightReport):
   return [buildMorningReportMessage(room, report, true)];
 }
 
-export function getCommissarCheckResultMessage(target: GamePlayer): string {
-  const role = getRoleLabel(target.role);
-  const verdict = isEvil(target.role) ? 'Это мафия (или зло)!' : 'Это не мафия.';
+export function getCommissarCheckResultMessage(target: GamePlayer, coveredFromCheck = false): string {
+  const masked = coveredFromCheck && isMafia(target.role);
+  const role = masked ? 'Мирный житель' : getRoleLabel(target.role);
+  const verdict = masked || !isEvil(target.role) ? 'Это не мафия.' : 'Это мафия (или зло)!';
   return `🔍 Результат проверки: ${playerNick(target)} — ${role}. ${verdict}`;
 }
 
@@ -287,6 +296,10 @@ export function getNightFallMessage(): string {
 }
 
 /** Одно атмосферное сообщение для роли после ночного хода (или null). */
+const ADVOCATE_ATMOSPHERE = [
+  'Адвокат готовит алиби для своих клиентов из тени...',
+];
+
 export function getRoleNightAtmosphereMessage(role: RoleId): string | null {
   switch (role) {
     case 'mafia':
@@ -297,6 +310,8 @@ export function getRoleNightAtmosphereMessage(role: RoleId): string | null {
       return pick(DOCTOR_ATMOSPHERE);
     case 'maniac':
       return pick(MANIAC_ATMOSPHERE);
+    case 'advocate':
+      return pick(ADVOCATE_ATMOSPHERE);
     default:
       return null;
   }
@@ -336,7 +351,7 @@ export function getMorningIntroMessage(killed: GamePlayer[]): string {
     if (p.role === 'commissar') {
       return `Не все дожили до рассвета — среди погибших комиссар ${nick}.`;
     }
-    if (isMafia(p.role)) {
+    if (isMafia(p.role) || p.role === 'advocate') {
       return `${nick} (${role}) не дожил(а) до утра.`;
     }
     return `${nick} (${role}) не дожил(а) до утра.`;

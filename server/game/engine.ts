@@ -1,6 +1,6 @@
 import { CONFIG, PHASE, isLobbyPhase, isActiveGamePhase } from './config.js';
 import { isValidNightActionForRole } from '../security/validate.js';
-import { distributeRoles, isMafia, isTown, isEvil, isMafiaImmune, isSeductionImmune, getRoleLabel } from './roles.js';
+import { distributeRoles, isMafia, isMafiaTeam, isTown, isEvil, isMafiaImmune, isSeductionImmune, getRoleLabel } from './roles.js';
 import {
   buildRoleRevealNotes,
   buildNightReminderNotes,
@@ -727,6 +727,9 @@ function emitNightAtmosphereForAction(room: GameRoom, player: GamePlayer, action
     case 'doctor':
       if (action.type === 'heal') atmosphereKey = 'doctor';
       break;
+    case 'advocate':
+      if (action.type === 'cover') atmosphereKey = 'advocate';
+      break;
     case 'maniac':
       if (action.type === 'kill') atmosphereKey = 'maniac';
       break;
@@ -765,6 +768,10 @@ export function submitNightAction(
     throw new Error('Недопустимое ночное действие для вашей роли');
   }
 
+  if (player.role === 'advocate' && action.type === 'cover' && action.targetId === playerId) {
+    throw new Error('Адвокат не может защищать себя');
+  }
+
   room.nightActions[playerId] = action;
   player.nightActionDone = true;
   emitNightAtmosphereForAction(room, player, action);
@@ -785,6 +792,7 @@ function getPlayersNeedingNightAction(room: GameRoom): GamePlayer[] {
     if (p.role === 'commissar') return true;
     if (p.role === 'maniac') return true;
     if (p.role === 'doctor') return true;
+    if (p.role === 'advocate') return true;
     if (p.role === 'homeless') return true;
     if (p.role === 'clown' && !room.clownUsed) return true;
     if (p.role === 'commissar_wife' && room.wifeRevengeAvailable && !room.wifeRevengeUsed) return true;
@@ -840,17 +848,34 @@ export function resolveNight(room: GameRoom): NightResolveResult {
     }
   }
 
+  const checkCovers = new Set<number>();
+
+  const advocate = room.players.find((p) => p.alive && p.role === 'advocate');
+  if (advocate && !isSeduced(advocate.id)) {
+    const act = actions[advocate.id];
+    if (act?.type === 'cover' && act.targetId !== advocate.id) {
+      const coverTarget = room.players.find((p) => p.id === act.targetId);
+      if (coverTarget?.alive) {
+        checkCovers.add(act.targetId);
+        advocate.score += 5;
+        report.advocateCovered = coverTarget;
+      }
+    }
+  }
+
   const commissar = room.players.find((p) => p.alive && p.role === 'commissar');
   if (commissar && !isSeduced(commissar.id)) {
     const act = actions[commissar.id];
     if (act?.type === 'check') {
       const target = room.players.find((p) => p.id === act.targetId);
       if (target) {
+        const covered = checkCovers.has(target.id) && isMafia(target.role);
         commissar.score += 5;
         report.commissarChecked = target;
+        if (covered) advocate!.score += 15;
         privateNotes.push({
           playerId: commissar.id,
-          message: getCommissarCheckResultMessage(target),
+          message: getCommissarCheckResultMessage(target, covered),
         });
       }
     } else if (act?.type === 'kill') {
@@ -996,15 +1021,15 @@ export function resolveNight(room: GameRoom): NightResolveResult {
 
 export function checkWin(room: GameRoom): boolean {
   const alive = room.players.filter((p) => p.alive && p.inGame && p.role);
-  const mafiaAlive = alive.filter((p) => p.role === 'mafia').length;
+  const mafiaTeamAlive = alive.filter((p) => isMafiaTeam(p.role)).length;
   const maniacAlive = alive.filter((p) => p.role === 'maniac').length;
   const townAlive = alive.filter((p) => isTown(p.role)).length;
 
-  if (mafiaAlive === 0 && maniacAlive === 0) {
+  if (mafiaTeamAlive === 0 && maniacAlive === 0) {
     endGame(room, 'town', 'Мирные победили!');
     return true;
   }
-  if (mafiaAlive > 0 && mafiaAlive >= townAlive) {
+  if (mafiaTeamAlive > 0 && mafiaTeamAlive >= townAlive) {
     endGame(room, 'mafia', 'Мафия победила!');
     return true;
   }
@@ -1032,7 +1057,7 @@ function endGame(room: GameRoom, team: 'town' | 'mafia', message: string): void 
   room.players.forEach((p) => {
     if (team === 'town' && isTown(p.role)) {
       p.score += p.alive ? 100 : 50;
-    } else if (team === 'mafia' && p.role === 'mafia') {
+    } else if (team === 'mafia' && isMafiaTeam(p.role)) {
       p.score += p.alive ? 50 : 0;
     }
   });
@@ -1747,7 +1772,7 @@ export function serializeRoomForPlayer(
     chatMode: chatView.mode,
     hasMoreChat: chatView.hasMoreChat,
     mafiaChat:
-      me?.role === 'mafia' && me.alive && me.inGame
+      me?.role && isMafiaTeam(me.role) && me.alive && me.inGame
         ? enrichChatMessages(room, room.mafiaChat.slice(-50))
         : [],
     canStartGame:

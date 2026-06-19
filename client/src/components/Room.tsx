@@ -79,7 +79,7 @@ export default function Room({ socket, state, onLeave, onStateUpdate, currentUse
 
   const me = state.myPlayer;
   const isChatRoom = state.kind === 'chat';
-  const isMafia = !isChatRoom && state.myRole === 'mafia' && me?.alive;
+  const isMafia = !isChatRoom && (state.myRole === 'mafia' || state.myRole === 'advocate') && me?.alive;
   const showJoin =
     !isChatRoom &&
     state.phase === 'registration' &&

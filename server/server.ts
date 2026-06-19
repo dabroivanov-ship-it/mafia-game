@@ -5,6 +5,7 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { CONFIG, PHASE, isActiveGamePhase } from './game/config.js';
+import { isMafiaTeam } from './game/roles.js';
 import authRoutes from './auth/routes.js';
 import { createProfileRouter } from './profile/routes.js';
 import { createAdminRouter } from './admin/routes.js';
@@ -813,7 +814,7 @@ io.on('connection', (socket) => {
     const ctx = requireRoomPlayer(socket, cb);
     if (!ctx) return;
     const { session, room, me } = ctx;
-    if (me.role !== 'mafia' || !me.alive) return cb?.({ error: 'Нет доступа' });
+    if (!isMafiaTeam(me.role) || !me.alive) return cb?.({ error: 'Нет доступа' });
 
     const trimmed = normalizeChatText(text);
     if (!trimmed) return cb?.({ error: 'Пустое сообщение' });

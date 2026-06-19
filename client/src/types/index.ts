@@ -80,6 +80,7 @@ export type GameRole =
   | 'maniac'
   | 'clown'
   | 'commissar_wife'
+  | 'advocate'
   | 'citizen'
   | 'mountaineer'
   | null;

@@ -172,6 +172,24 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
       );
     }
 
+    if (role === 'advocate') {
+      return (
+        <div className="action-panel">
+          <h3>⚖️ Кого укрыть от проверки Катани?</h3>
+          <p className="muted" style={{ marginBottom: 12, fontSize: '0.9rem' }}>
+            Нельзя защитить себя. Приоритет — дон и активные мафиози.
+          </p>
+          <div className="target-grid">
+            {aliveOthers.map((p) =>
+              targetBtn(p, (id) => {
+                void emit('game:nightAction', { type: 'cover', targetId: id });
+              })
+            )}
+          </div>
+        </div>
+      );
+    }
+
     if (role === 'homeless') {
       return (
         <div className="action-panel">

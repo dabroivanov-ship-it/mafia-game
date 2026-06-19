@@ -24,7 +24,7 @@ export function distributeRoles(playerCount: number): RoleId[] {
     pool[pool.length - 2] = 'homeless'; // вместо лишнего мирного — бомж
   }
   if (playerCount >= 7) {
-    pool.push('civilian');
+    pool.push('advocate');
   }
   if (playerCount >= 8) {
     pool.push('maniac');
@@ -67,8 +67,12 @@ export function isMafia(role: RoleId | null | undefined): boolean {
   return role === 'mafia';
 }
 
+export function isMafiaTeam(role: RoleId | null | undefined): boolean {
+  return role === 'mafia' || role === 'advocate';
+}
+
 export function isTown(role: RoleId | null | undefined): boolean {
-  return role !== 'mafia' && role !== 'maniac';
+  return role !== 'mafia' && role !== 'maniac' && role !== 'advocate';
 }
 
 export function isEvil(role: RoleId | null | undefined): boolean {

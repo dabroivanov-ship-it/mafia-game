@@ -36,10 +36,11 @@ export const ROLE_LABELS: Record<RoleId, string> = {
   commissar_wife: 'Жена комиссара',
   highlander: 'Горец',
   civilian: 'Мирный гражданин',
+  advocate: 'Адвокат',
 };
 
 // Категории для проверок победы и очков
-export const MAFIA_ROLES: RoleId[] = ['mafia'];
+export const MAFIA_ROLES: RoleId[] = ['mafia', 'advocate'];
 export const EVIL_ROLES: RoleId[] = ['mafia', 'maniac'];
 export const TOWN_ROLES: RoleId[] = [
   'commissar',
