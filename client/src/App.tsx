@@ -13,7 +13,6 @@ import AdminPanel from './components/AdminPanel';
 import Room from './components/Room';
 import { infoSectionFromPath, isPublicInfoPath, pathForInfoSection } from './infoRouting';
 import { DEFAULT_PAGE_META, updatePageMeta } from './seo';
-import { ROLES_INTRO } from './content/rolesContent';
 import { clearSession, fetchMe, fetchUnreadMailCount, fetchThemeSettings, saveSession, loadStoredPlayerId, saveStoredPlayerId, clearStoredPlayerIds } from './api';
 import type { LobbyRoom, RoomState, User, ThemeId } from './types';
 import { applyTheme, resolveTheme, DEFAULT_THEME } from './themes';
