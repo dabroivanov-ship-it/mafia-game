@@ -21,7 +21,6 @@ interface AdminSystemSectionProps {
   onViewChange?: (view: SystemView) => void;
   usersCount: number;
   banListCount?: number;
-  roomsCount: number;
   gameRoomsCount?: number;
   chatRoomsCount?: number;
   violationsCount: number;
@@ -129,7 +128,6 @@ export default function AdminSystemSection({
   onViewChange,
   usersCount,
   banListCount = 0,
-  roomsCount,
   gameRoomsCount = 0,
   chatRoomsCount = 0,
   violationsCount,
@@ -163,7 +161,6 @@ export default function AdminSystemSection({
     if (categoryId === 'banlist') return banListCount;
     if (categoryId === 'rooms-game') return gameRoomsCount;
     if (categoryId === 'rooms-chat') return chatRoomsCount;
-    if (categoryId === 'rooms') return roomsCount;
     if (categoryId === 'news') return newsCount;
     if (categoryId === 'violations') return violationsCount;
     if (categoryId === 'game') return THEMES.length + 1;

@@ -527,7 +527,6 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
         onViewChange={setSystemView}
         usersCount={users.length}
         banListCount={banListCount}
-        roomsCount={rooms.length}
         gameRoomsCount={gameRooms.length}
         chatRoomsCount={chatRooms.length}
         violationsCount={violations.length}
