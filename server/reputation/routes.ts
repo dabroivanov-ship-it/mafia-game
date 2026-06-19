@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authMiddleware } from '../auth/jwt.js';
-import { findUserById } from '../auth/db.js';
+import { findUserById, isAdmin } from '../auth/db.js';
 import { castReputationVote } from '../social/store.js';
 
 const router = Router();
@@ -17,7 +17,10 @@ router.post('/:userId', authMiddleware, (req, res) => {
   }
 
   try {
-    const { reputation } = castReputationVote(req.userId!, targetId, value);
+    const voter = findUserById(req.userId!);
+    const { reputation } = castReputationVote(req.userId!, targetId, value, {
+      adminBypass: isAdmin(voter),
+    });
     res.json({ reputation });
   } catch (err) {
     res.status(400).json({ error: err instanceof Error ? err.message : 'Ошибка' });

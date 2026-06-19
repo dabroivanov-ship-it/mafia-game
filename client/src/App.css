@@ -3766,6 +3766,28 @@ html.telegram-webapp .app-body {
   max-width: 640px;
 }
 
+.admin-system-detail-panel.admin-system-wide {
+  max-width: none;
+}
+
+.admin-section-embedded {
+  padding: 0;
+  margin: 0;
+  background: none;
+  border: none;
+  box-shadow: none;
+}
+
+.admin-section-embedded h3 {
+  margin-top: 0;
+}
+
+.admin-game-phrases-title {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
 .admin-bot-phrases {
   display: flex;
   flex-direction: column;

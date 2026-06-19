@@ -698,7 +698,6 @@ export function startNightPhase(room: GameRoom): PrivateNote[] {
   room.nightActions = {};
   room.seducedPlayerId = null;
   room.nightAtmosphereSent = {};
-  room.nightCheckDelivered = {};
   room.players.forEach((p) => {
     p.nightActionDone = false;
   });
@@ -749,53 +748,6 @@ function emitNightAtmosphereForAction(room: GameRoom, player: GamePlayer, action
   room.nightAtmosphereSent[atmosphereKey] = true;
 }
 
-function getAdvocateCoverTargetId(room: GameRoom): number | null {
-  const advocate = room.players.find((p) => p.alive && p.role === 'advocate');
-  if (!advocate) return null;
-  const act = room.nightActions[advocate.id];
-  if (act?.type !== 'cover') return null;
-  return act.targetId;
-}
-
-function isCheckMaskedByAdvocate(room: GameRoom, target: GamePlayer): boolean {
-  const coverId = getAdvocateCoverTargetId(room);
-  return coverId === target.id && isMafia(target.role);
-}
-
-function buildImmediateCheckNotes(
-  room: GameRoom,
-  player: GamePlayer,
-  action: NightAction
-): PrivateNote[] {
-  if (action.type !== 'check') return [];
-  const target = room.players.find((p) => p.id === action.targetId);
-  if (!target) return [];
-
-  room.nightCheckDelivered = room.nightCheckDelivered || {};
-
-  if (player.role === 'commissar') {
-    room.nightCheckDelivered[player.id] = true;
-    return [
-      {
-        playerId: player.id,
-        message: getCommissarCheckResultMessage(target, isCheckMaskedByAdvocate(room, target)),
-      },
-    ];
-  }
-
-  if (player.role === 'homeless') {
-    room.nightCheckDelivered[player.id] = true;
-    return [
-      {
-        playerId: player.id,
-        message: getHomelessCheckResultMessage(target),
-      },
-    ];
-  }
-
-  return [];
-}
-
 export function submitNightAction(
   room: GameRoom,
   playerId: number,
@@ -824,17 +776,10 @@ export function submitNightAction(
   player.nightActionDone = true;
   emitNightAtmosphereForAction(room, player, action);
 
-  const immediateNotes = buildImmediateCheckNotes(room, player, action);
-
   const needAction = getPlayersNeedingNightAction(room);
   if (needAction.every((p) => p.nightActionDone)) {
     clearTimer(room);
-    const resolved = resolveNight(room);
-    return { privateNotes: [...immediateNotes, ...resolved.privateNotes] };
-  }
-
-  if (immediateNotes.length > 0) {
-    return { privateNotes: immediateNotes };
+    return resolveNight(room);
   }
   return null;
 }
@@ -923,7 +868,7 @@ export function resolveNight(room: GameRoom): NightResolveResult {
     const act = actions[commissar.id];
     if (act?.type === 'check') {
       const target = room.players.find((p) => p.id === act.targetId);
-      if (target && !room.nightCheckDelivered?.[commissar.id]) {
+      if (target) {
         const covered = checkCovers.has(target.id) && isMafia(target.role);
         commissar.score += 5;
         report.commissarChecked = target;
@@ -932,11 +877,6 @@ export function resolveNight(room: GameRoom): NightResolveResult {
           playerId: commissar.id,
           message: getCommissarCheckResultMessage(target, covered),
         });
-      } else if (target) {
-        const covered = checkCovers.has(target.id) && isMafia(target.role);
-        commissar.score += 5;
-        report.commissarChecked = target;
-        if (covered) advocate!.score += 15;
       }
     } else if (act?.type === 'kill') {
       const target = room.players.find((p) => p.id === act.targetId);
@@ -989,12 +929,10 @@ export function resolveNight(room: GameRoom): NightResolveResult {
       if (target) {
         homeless.score += 5;
         report.homelessChecked = target;
-        if (!room.nightCheckDelivered?.[homeless.id]) {
-          privateNotes.push({
-            playerId: homeless.id,
-            message: getHomelessCheckResultMessage(target),
-          });
-        }
+        privateNotes.push({
+          playerId: homeless.id,
+          message: getHomelessCheckResultMessage(target),
+        });
       }
     }
   }

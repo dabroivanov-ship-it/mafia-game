@@ -89,7 +89,8 @@ export function getReputationVote(voterId: number, targetId: number): -1 | 1 | n
 export function castReputationVote(
   voterId: number,
   targetId: number,
-  value: -1 | 1
+  value: -1 | 1,
+  opts?: { adminBypass?: boolean }
 ): { reputation: number } {
   if (voterId === targetId) {
     throw new Error('Нельзя оценить самого себя');
@@ -97,7 +98,7 @@ export function castReputationVote(
   if (!findUserById(targetId)) {
     throw new Error('Пользователь не найден');
   }
-  if (getGamesPlayed(voterId) < REPUTATION_MIN_GAMES) {
+  if (!opts?.adminBypass && getGamesPlayed(voterId) < REPUTATION_MIN_GAMES) {
     throw new Error(`Репутацию можно ставить после ${REPUTATION_MIN_GAMES} сыгранных игр`);
   }
   if (getReputationVote(voterId, targetId) !== null) {
@@ -134,8 +135,9 @@ export function canViewerVoteReputation(
   targetId: number,
   viewerIsAdmin: boolean
 ): boolean {
-  if (viewerIsAdmin) return false;
   if (viewerId === targetId) return false;
+  if (getReputationVote(viewerId, targetId) !== null) return false;
+  if (viewerIsAdmin) return true;
   if (getGamesPlayed(viewerId) < REPUTATION_MIN_GAMES) return false;
-  return getReputationVote(viewerId, targetId) === null;
+  return true;
 }

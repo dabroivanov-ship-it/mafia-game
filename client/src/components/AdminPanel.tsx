@@ -10,7 +10,6 @@ import {
   adminCreateChatRoom,
   adminDeleteChatRoom,
   adminUpdateUser,
-  adminSetUserReputation,
   adminSetUserRole,
   adminUploadUserAvatar,
   adminRemoveUserAvatar,
@@ -33,7 +32,7 @@ import NewsEditor, { type NewsEditorValue } from './NewsEditor';
 import NewsBody from './NewsBody';
 import { isEmptyNewsBody } from './newsBodyUtils';
 import { initYandexMetrika } from '../metrika';
-import AdminSystemSection from './AdminSystemSection';
+import AdminSystemSection, { type SystemView } from './AdminSystemSection';
 
 const VIOLATION_LABELS: Record<ViolationType, string> = {
   profanity: 'Мат',
@@ -46,10 +45,8 @@ interface AdminPanelProps {
   onDefaultThemeChange?: (theme: ThemeId) => void;
 }
 
-type AdminSection = 'users' | 'rooms' | 'news' | 'violations' | 'system';
-
 export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelProps) {
-  const [section, setSection] = useState<AdminSection>('users');
+  const [systemView, setSystemView] = useState<SystemView>('hub');
   const [users, setUsers] = useState<User[]>([]);
   const [rooms, setRooms] = useState<AdminRoom[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,7 +57,6 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
   const [userSearch, setUserSearch] = useState('');
   const [editUser, setEditUser] = useState<User | null>(null);
   const [editForm, setEditForm] = useState({ displayName: '', city: '', bio: '' });
-  const [editReputation, setEditReputation] = useState('0');
   const [newRoomName, setNewRoomName] = useState('');
   const [roomEdits, setRoomEdits] = useState<Record<number, string>>({});
   const dirtyRoomsRef = useRef(new Set<number>());
@@ -212,9 +208,9 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
   };
 
   useEffect(() => {
-    if (section === 'news') void loadNews();
-    if (section === 'violations') void loadViolations();
-  }, [section]);
+    if (systemView === 'news') void loadNews();
+    if (systemView === 'violations') void loadViolations();
+  }, [systemView]);
 
   const openEditUser = (u: User) => {
     setEditUser(u);
@@ -223,17 +219,12 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
       city: u.city || '',
       bio: u.bio || '',
     });
-    setEditReputation(String(u.reputation ?? 0));
   };
 
   const handleSaveUser = async () => {
     if (!editUser) return;
     try {
       await adminUpdateUser(editUser.id, editForm);
-      const reputation = Number(editReputation);
-      if (Number.isFinite(reputation)) {
-        await adminSetUserReputation(editUser.id, reputation);
-      }
       setEditUser(null);
       await load();
     } catch (err) {
@@ -478,32 +469,30 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
 
       {error && <div className="auth-error">{error}</div>}
 
-      <div className="admin-layout">
-        <aside className="admin-nav" aria-label="Разделы админки">
-          <button type="button" className={section === 'users' ? 'active' : ''} onClick={() => setSection('users')}>
-            Пользователи
-          </button>
-          <button type="button" className={section === 'rooms' ? 'active' : ''} onClick={() => setSection('rooms')}>
-            Комнаты
-          </button>
-          <button type="button" className={section === 'news' ? 'active' : ''} onClick={() => setSection('news')}>
-            Новости
-          </button>
-          <button
-            type="button"
-            className={section === 'violations' ? 'active' : ''}
-            onClick={() => setSection('violations')}
-          >
-            Лог нарушений
-          </button>
-          <button type="button" className={section === 'system' ? 'active' : ''} onClick={() => setSection('system')}>
-            Система
-          </button>
-        </aside>
-
-        <div className="admin-content">
-          {section === 'users' && (
-            <section className="admin-section">
+      <AdminSystemSection
+        view={systemView}
+        onViewChange={setSystemView}
+        usersCount={users.length}
+        roomsCount={rooms.length}
+        violationsCount={violations.length}
+        newsCount={newsPosts.length}
+        defaultTheme={defaultTheme}
+        themeSaving={themeSaving}
+        onThemeChange={(id) => void handleDefaultThemeChange(id)}
+        telegramForm={telegramForm}
+        telegramSaving={telegramSaving}
+        onTelegramFormChange={(patch) => setTelegramForm((prev) => ({ ...prev, ...patch }))}
+        onSaveTelegram={(e) => void handleSaveTelegramSettings(e)}
+        telegramBotLink={telegramBotLink}
+        metrikaId={metrikaId}
+        metrikaDisabled={metrikaDisabled}
+        metrikaSaving={metrikaSaving}
+        onMetrikaIdChange={(value) => setMetrikaId(value.replace(/\D/g, ''))}
+        onMetrikaDisabledChange={setMetrikaDisabled}
+        onSaveMetrika={(e) => void handleSaveMetrikaSettings(e)}
+        panels={{
+          users: (
+            <section className="admin-section admin-section-embedded">
               <h3>Управление пользователями ({filteredUsers.length}{userSearch ? ` из ${users.length}` : ''})</h3>
               <div className="admin-search-row">
                 <input
@@ -600,10 +589,9 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
                 </table>
               </div>
             </section>
-          )}
-
-          {section === 'rooms' && (
-            <section className="admin-section">
+          ),
+          rooms: (
+            <section className="admin-section admin-section-embedded">
               <h3>Игровая комната (Мафия)</h3>
               <div className="admin-room-list">
                 {gameRooms.map((r) => (
@@ -678,10 +666,9 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
                 <button type="submit" className="btn btn-primary">+ Создать чат-комнату</button>
               </form>
             </section>
-          )}
-
-          {section === 'news' && (
-            <section className="admin-section">
+          ),
+          news: (
+            <section className="admin-section admin-section-embedded">
               <div className="admin-section-head">
                 <h3>Новости ({newsPosts.length})</h3>
                 {!showNewsEditor && (
@@ -761,10 +748,9 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
                 ))}
               </div>
             </section>
-          )}
-
-          {section === 'violations' && (
-            <section className="admin-section">
+          ),
+          violations: (
+            <section className="admin-section admin-section-embedded">
               <div className="admin-section-head">
                 <h3>Лог нарушений ({violations.length})</h3>
                 <button
@@ -816,34 +802,9 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
                 </table>
               </div>
             </section>
-          )}
-
-          {section === 'system' && (
-            <AdminSystemSection
-              usersCount={users.length}
-              roomsCount={rooms.length}
-              gameRoomsCount={gameRooms.length}
-              chatRoomsCount={chatRooms.length}
-              violationsCount={violations.length}
-              onSync={() => void load({ syncRoomNames: true })}
-              defaultTheme={defaultTheme}
-              themeSaving={themeSaving}
-              onThemeChange={(id) => void handleDefaultThemeChange(id)}
-              telegramForm={telegramForm}
-              telegramSaving={telegramSaving}
-              onTelegramFormChange={(patch) => setTelegramForm((prev) => ({ ...prev, ...patch }))}
-              onSaveTelegram={(e) => void handleSaveTelegramSettings(e)}
-              telegramBotLink={telegramBotLink}
-              metrikaId={metrikaId}
-              metrikaDisabled={metrikaDisabled}
-              metrikaSaving={metrikaSaving}
-              onMetrikaIdChange={(value) => setMetrikaId(value.replace(/\D/g, ''))}
-              onMetrikaDisabledChange={setMetrikaDisabled}
-              onSaveMetrika={(e) => void handleSaveMetrikaSettings(e)}
-            />
-          )}
-        </div>
-      </div>
+          ),
+        }}
+      />
 
       {editUser && (
         <div className="modal-overlay" onClick={() => setEditUser(null)}>
@@ -892,15 +853,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
                 rows={3}
               />
             </label>
-            <label>
-              Репутация
-              <input
-                type="number"
-                value={editReputation}
-                onChange={(e) => setEditReputation(e.target.value)}
-              />
-            </label>
-            <p className="muted">Игр: {editUser.gamesPlayed ?? 0}</p>
+            <p className="muted">Игр: {editUser.gamesPlayed ?? 0} · Репутация: {editUser.reputation ?? 0}</p>
             <div className="profile-actions">
               <button type="button" className="btn btn-ghost" onClick={() => setEditUser(null)}>Отмена</button>
               <button type="button" className="btn btn-primary" onClick={() => void handleSaveUser()}>Сохранить</button>

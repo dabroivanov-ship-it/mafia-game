@@ -11,7 +11,6 @@ import {
   addFriend,
   removeFriend,
   voteReputation,
-  adminSetUserReputation,
 } from '../api';
 import type { User, ProfileStaffMeta, ChatReplyTarget, UserPresence } from '../types';
 import { formatPresenceLabel } from '../utils/presence';
@@ -95,7 +94,6 @@ export default function UserProfileModal({
   const [chatSuccess, setChatSuccess] = useState('');
   const [friendBusy, setFriendBusy] = useState(false);
   const [reputationBusy, setReputationBusy] = useState(false);
-  const [adminReputation, setAdminReputation] = useState('');
   const chatInputRef = useRef<HTMLTextAreaElement>(null);
 
   const showChatCompose =
@@ -112,7 +110,6 @@ export default function UserProfileModal({
         city: res.user.city || '',
         bio: res.user.bio || '',
       });
-      setAdminReputation(String(res.user.reputation ?? 0));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка загрузки');
     } finally {
@@ -217,6 +214,10 @@ export default function UserProfileModal({
   };
 
   const handleReputationVote = async (value: -1 | 1) => {
+    const targetName = user?.displayName || user?.username || 'этого игрока';
+    const voteLabel = value > 0 ? 'положительный' : 'отрицательный';
+    if (!confirm(`Вы хотите отдать ${voteLabel} голос пользователю ${targetName}?`)) return;
+
     setReputationBusy(true);
     setError('');
     try {
@@ -224,22 +225,6 @@ export default function UserProfileModal({
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка репутации');
-    } finally {
-      setReputationBusy(false);
-    }
-  };
-
-  const handleAdminReputationSave = async () => {
-    const reputation = Number(adminReputation);
-    if (!Number.isFinite(reputation)) return;
-    setReputationBusy(true);
-    setError('');
-    try {
-      await adminSetUserReputation(userId, reputation);
-      await load();
-      onAdminAction?.();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка сохранения репутации');
     } finally {
       setReputationBusy(false);
     }
@@ -510,6 +495,7 @@ export default function UserProfileModal({
                           className="btn btn-sm"
                           disabled={reputationBusy}
                           onClick={() => void handleReputationVote(1)}
+                          title="Положительный голос"
                         >
                           👍
                         </button>
@@ -518,42 +504,20 @@ export default function UserProfileModal({
                           className="btn btn-sm"
                           disabled={reputationBusy}
                           onClick={() => void handleReputationVote(-1)}
+                          title="Отрицательный голос"
                         >
                           👎
                         </button>
                       </div>
                     ) : (
-                      !viewerIsAdmin && (
-                        <p className="muted">
-                          Репутацию можно ставить после {data?.reputationMinGames ?? 100} игр
-                          {data?.viewerGamesPlayed != null
-                            ? ` (у вас: ${data.viewerGamesPlayed})`
-                            : ''}
-                          .
-                        </p>
-                      )
+                      <p className="muted">
+                        Репутацию можно ставить после {data?.reputationMinGames ?? 100} игр
+                        {data?.viewerGamesPlayed != null
+                          ? ` (у вас: ${data.viewerGamesPlayed})`
+                          : ''}
+                        .
+                      </p>
                     )}
-                  </div>
-                )}
-
-                {canAdmin && !editMode && (
-                  <div className="profile-admin-reputation">
-                    <label>
-                      Репутация (админ)
-                      <input
-                        type="number"
-                        value={adminReputation}
-                        onChange={(e) => setAdminReputation(e.target.value)}
-                      />
-                    </label>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-primary"
-                      disabled={reputationBusy}
-                      onClick={() => void handleAdminReputationSave()}
-                    >
-                      Сохранить репутацию
-                    </button>
                   </div>
                 )}
 

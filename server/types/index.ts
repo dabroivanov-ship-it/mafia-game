@@ -155,7 +155,6 @@ export interface GameRoom {
   sessionId: number | null;
   historyLoaded: boolean;
   nightAtmosphereSent?: Record<string, boolean>;
-  nightCheckDelivered?: Record<number, true>;
 }
 
 export interface RoomStatePlayer {

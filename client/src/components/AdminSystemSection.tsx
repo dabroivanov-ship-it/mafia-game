@@ -1,18 +1,26 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, ReactNode, useState } from 'react';
 import ThemePicker from './ThemePicker';
 import AdminBotPhrasesEditor from './AdminBotPhrasesEditor';
 import type { ThemeId } from '../types';
 import { THEMES } from '../themes';
 
-type SystemView = 'hub' | 'overview' | 'theme' | 'telegram' | 'metrika' | 'game';
+export type SystemView =
+  | 'hub'
+  | 'users'
+  | 'rooms'
+  | 'news'
+  | 'violations'
+  | 'telegram'
+  | 'metrika'
+  | 'game';
 
 interface AdminSystemSectionProps {
+  view?: SystemView;
+  onViewChange?: (view: SystemView) => void;
   usersCount: number;
   roomsCount: number;
-  gameRoomsCount: number;
-  chatRoomsCount: number;
   violationsCount: number;
-  onSync: () => void;
+  newsCount?: number;
   defaultTheme: ThemeId;
   themeSaving: boolean;
   onThemeChange: (id: ThemeId) => void;
@@ -27,6 +35,12 @@ interface AdminSystemSectionProps {
   onMetrikaIdChange: (value: string) => void;
   onMetrikaDisabledChange: (disabled: boolean) => void;
   onSaveMetrika: (e: FormEvent) => void;
+  panels: {
+    users: ReactNode;
+    rooms: ReactNode;
+    news: ReactNode;
+    violations: ReactNode;
+  };
 }
 
 const SYSTEM_CATEGORIES: {
@@ -36,28 +50,37 @@ const SYSTEM_CATEGORIES: {
   links: { view: SystemView; label: string }[];
 }[] = [
   {
-    id: 'overview',
-    icon: '📊',
-    title: 'Обзор',
+    id: 'users',
+    icon: '👥',
+    title: 'Пользователи',
+    links: [{ view: 'users', label: 'Управление аккаунтами' }],
+  },
+  {
+    id: 'rooms',
+    icon: '🏠',
+    title: 'Комнаты',
     links: [
-      { view: 'overview', label: 'Статистика проекта' },
-      { view: 'overview', label: 'Синхронизация данных' },
+      { view: 'rooms', label: 'Игровые комнаты' },
+      { view: 'rooms', label: 'Чат-комнаты' },
     ],
   },
   {
-    id: 'theme',
-    icon: '🎨',
-    title: 'Оформление',
-    links: [{ view: 'theme', label: 'Тема сайта' }],
+    id: 'news',
+    icon: '📰',
+    title: 'Новости',
+    links: [{ view: 'news', label: 'Публикации и черновики' }],
+  },
+  {
+    id: 'violations',
+    icon: '⚠️',
+    title: 'Лог нарушений',
+    links: [{ view: 'violations', label: 'Журнал модерации' }],
   },
   {
     id: 'telegram',
     icon: '📱',
     title: 'Интеграции',
-    links: [
-      { view: 'telegram', label: 'Telegram-бот' },
-      { view: 'telegram', label: 'Web App и вход' },
-    ],
+    links: [{ view: 'telegram', label: 'Telegram-бот' }],
   },
   {
     id: 'metrika',
@@ -69,25 +92,30 @@ const SYSTEM_CATEGORIES: {
     id: 'game',
     icon: '🎮',
     title: 'Настройки игры',
-    links: [{ view: 'game', label: 'Фразы ведущего' }],
+    links: [
+      { view: 'game', label: 'Тема сайта' },
+      { view: 'game', label: 'Фразы ведущего' },
+    ],
   },
 ];
 
 const VIEW_TITLES: Record<Exclude<SystemView, 'hub'>, string> = {
-  overview: 'Обзор',
-  theme: 'Оформление',
+  users: 'Пользователи',
+  rooms: 'Комнаты',
+  news: 'Новости',
+  violations: 'Лог нарушений',
   telegram: 'Интеграции',
   metrika: 'Аналитика',
   game: 'Настройки игры',
 };
 
 export default function AdminSystemSection({
+  view: controlledView,
+  onViewChange,
   usersCount,
   roomsCount,
-  gameRoomsCount,
-  chatRoomsCount,
   violationsCount,
-  onSync,
+  newsCount = 0,
   defaultTheme,
   themeSaving,
   onThemeChange,
@@ -102,14 +130,22 @@ export default function AdminSystemSection({
   onMetrikaIdChange,
   onMetrikaDisabledChange,
   onSaveMetrika,
+  panels,
 }: AdminSystemSectionProps) {
-  const [view, setView] = useState<SystemView>('hub');
+  const [internalView, setInternalView] = useState<SystemView>('hub');
+  const view = controlledView ?? internalView;
+
+  const setView = (next: SystemView) => {
+    if (onViewChange) onViewChange(next);
+    else setInternalView(next);
+  };
 
   const badgeFor = (categoryId: SystemView) => {
-    if (categoryId === 'overview') return 2;
-    if (categoryId === 'theme') return THEMES.length;
-    if (categoryId === 'telegram') return 2;
-    if (categoryId === 'game') return 1;
+    if (categoryId === 'users') return usersCount;
+    if (categoryId === 'rooms') return roomsCount;
+    if (categoryId === 'news') return newsCount;
+    if (categoryId === 'violations') return violationsCount;
+    if (categoryId === 'game') return THEMES.length + 1;
     return 1;
   };
 
@@ -118,65 +154,19 @@ export default function AdminSystemSection({
       <section className="admin-section admin-system-section">
         <div className="admin-system-detail-head">
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => setView('hub')}>
-            ← К разделам системы
+            ← К разделам
           </button>
           <h3>{VIEW_TITLES[view]}</h3>
         </div>
 
-        {view === 'overview' && (
-          <div className="admin-system-detail-panel">
-            <div className="admin-system-stats">
-              <div className="admin-system-stat-card">
-                <span className="admin-system-stat-icon" aria-hidden>
-                  👥
-                </span>
-                <div>
-                  <span className="muted">Пользователей</span>
-                  <strong>{usersCount}</strong>
-                </div>
-              </div>
-              <div className="admin-system-stat-card">
-                <span className="admin-system-stat-icon" aria-hidden>
-                  🏠
-                </span>
-                <div>
-                  <span className="muted">Комнат</span>
-                  <strong>{roomsCount}</strong>
-                  <span className="muted admin-system-detail">
-                    {gameRoomsCount} игр. · {chatRoomsCount} чат
-                  </span>
-                </div>
-              </div>
-              <div className="admin-system-stat-card">
-                <span className="admin-system-stat-icon" aria-hidden>
-                  ⚠️
-                </span>
-                <div>
-                  <span className="muted">Нарушений в логе</span>
-                  <strong>{violationsCount}</strong>
-                </div>
-              </div>
-            </div>
-            <div className="theme-settings-block admin-theme-block">
-              <h4>Синхронизация</h4>
-              <p className="theme-settings-hint">
-                Обновить список пользователей и комнат с сервера, подтянуть актуальные названия комнат.
-              </p>
-              <button type="button" className="btn btn-primary" onClick={onSync}>
-                Синхронизировать данные
-              </button>
-            </div>
-          </div>
-        )}
+        {view === 'users' && <div className="admin-system-detail-panel admin-system-wide">{panels.users}</div>}
 
-        {view === 'theme' && (
-          <div className="admin-system-detail-panel theme-settings-block admin-theme-block">
-            <h4>Тема оформления сайта</h4>
-            <p className="theme-settings-hint">
-              Основная тема для всех пользователей. Личная тема в кабинете перекрывает эту настройку.
-            </p>
-            <ThemePicker value={defaultTheme} onChange={onThemeChange} disabled={themeSaving} />
-          </div>
+        {view === 'rooms' && <div className="admin-system-detail-panel admin-system-wide">{panels.rooms}</div>}
+
+        {view === 'news' && <div className="admin-system-detail-panel admin-system-wide">{panels.news}</div>}
+
+        {view === 'violations' && (
+          <div className="admin-system-detail-panel admin-system-wide">{panels.violations}</div>
         )}
 
         {view === 'telegram' && (
@@ -219,8 +209,7 @@ export default function AdminSystemSection({
               </p>
             )}
             <p className="theme-settings-hint">
-              В BotFather откройте вашего бота → <code>/setdomain</code> и укажите домен сайта. При нажатии
-              «Старт» в боте пользователь получит сообщение с кнопкой «Играть».
+              В BotFather откройте вашего бота → <code>/setdomain</code> и укажите домен сайта.
             </p>
           </form>
         )}
@@ -265,7 +254,13 @@ export default function AdminSystemSection({
 
         {view === 'game' && (
           <div className="admin-system-detail-panel theme-settings-block admin-theme-block">
-            <h4>Фразы ведущего</h4>
+            <h4>Тема оформления сайта</h4>
+            <p className="theme-settings-hint">
+              Основная тема для всех пользователей. Личная тема в кабинете перекрывает эту настройку.
+            </p>
+            <ThemePicker value={defaultTheme} onChange={onThemeChange} disabled={themeSaving} />
+
+            <h4 className="admin-game-phrases-title">Фразы ведущего</h4>
             <AdminBotPhrasesEditor />
           </div>
         )}
@@ -275,38 +270,6 @@ export default function AdminSystemSection({
 
   return (
     <section className="admin-section admin-system-section">
-      <h3>Система</h3>
-
-      <div className="admin-system-stats admin-system-stats-compact">
-        <div className="admin-system-stat-card">
-          <span className="admin-system-stat-icon" aria-hidden>
-            👥
-          </span>
-          <div>
-            <span className="muted">Пользователей</span>
-            <strong>{usersCount}</strong>
-          </div>
-        </div>
-        <div className="admin-system-stat-card">
-          <span className="admin-system-stat-icon" aria-hidden>
-            🏠
-          </span>
-          <div>
-            <span className="muted">Комнат</span>
-            <strong>{roomsCount}</strong>
-          </div>
-        </div>
-        <div className="admin-system-stat-card">
-          <span className="admin-system-stat-icon" aria-hidden>
-            ⚠️
-          </span>
-          <div>
-            <span className="muted">Нарушений</span>
-            <strong>{violationsCount}</strong>
-          </div>
-        </div>
-      </div>
-
       <div className="admin-system-categories">
         {SYSTEM_CATEGORIES.map((category) => (
           <article key={category.id} className="admin-system-category-card">
