@@ -40,7 +40,10 @@ export interface AdminRouterHandlers {
   clearRoomMessages: (roomId: number) => number;
   renameRoom: (id: number, name: string) => GameRoom;
   addChatRoom: (name: string) => GameRoom;
+  addGameRoom: (name: string) => GameRoom;
   deleteChatRoom: (id: number) => void;
+  listSilencedPlayers: () => import('../game/engine.js').SilencedPlayerEntry[];
+  clearUserSilence: (userId: number) => number;
   onRoomsChanged: (changedRoomId?: number | null) => void;
   syncUserInRooms?: (userId: number, displayName: string) => void;
   onUserBanned?: (userId: number, reason: string, until: string | null) => void;
@@ -58,6 +61,28 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
 
   router.get('/users', (_req, res) => {
     res.json({ users: listAllUsers() });
+  });
+
+  router.get('/ban-list', (_req, res) => {
+    const banned = listAllUsers().filter((u) => u.isBanned);
+    const silenced = handlers.listSilencedPlayers().map((entry) => {
+      const user = findUserPublic(entry.userId);
+      return {
+        ...entry,
+        displayName: user?.displayName || entry.username,
+      };
+    });
+    res.json({ banned, silenced });
+  });
+
+  router.post('/users/:userId/unsilence', (req, res) => {
+    const userId = Number(req.params.userId);
+    if (!findUserPublic(userId)) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+    const cleared = handlers.clearUserSilence(userId);
+    handlers.onRoomsChanged();
+    res.json({ cleared });
   });
 
   router.get('/overview', (_req, res) => {
@@ -86,6 +111,21 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     } catch (e) {
       const err = e as Error;
       res.status(400).json({ error: err.message });
+    }
+  });
+
+  router.post('/game-rooms', (req, res) => {
+    try {
+      const name = String(req.body?.name ?? '').trim();
+      if (!name) {
+        return res.status(400).json({ error: 'Укажите название комнаты' });
+      }
+      const room = handlers.addGameRoom(name);
+      handlers.onRoomsChanged(room.id);
+      res.status(201).json({ room: { id: room.id, name: room.name, kind: room.kind } });
+    } catch (e) {
+      const err = e as Error;
+      res.status(400).json({ error: err.message || 'Не удалось создать комнату' });
     }
   });
 

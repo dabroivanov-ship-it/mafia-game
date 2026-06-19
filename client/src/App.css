@@ -3854,6 +3854,14 @@ html.telegram-webapp .app-body {
   white-space: nowrap;
 }
 
+.admin-banlist-section .admin-subsection-title:first-of-type {
+  margin-top: 0;
+}
+
+.admin-banlist-section h4.admin-subsection-title {
+  font-size: 1rem;
+}
+
 .admin-add-room {
   display: flex;
   flex-wrap: wrap;

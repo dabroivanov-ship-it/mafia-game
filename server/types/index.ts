@@ -80,6 +80,7 @@ export interface PublicUser {
   createdAt: string;
   isBanned: boolean;
   banReason?: string | null;
+  bannedUntil?: string | null;
   chatLimit: number;
   theme: string | null;
   telegramUsername?: string | null;

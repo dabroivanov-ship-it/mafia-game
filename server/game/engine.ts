@@ -75,26 +75,35 @@ export function createInitialRooms(): Map<number, GameRoom> {
   const rooms = new Map<number, GameRoom>();
   const savedConfigs = loadRoomConfigs();
 
-  for (let i = 1; i <= CONFIG.ROOM_COUNT; i++) {
-    const room = createRoom(i, 'game');
-    const saved = savedConfigs.get(i);
-    if (saved?.name) {
-      room.name = saved.name;
+  for (const [id, config] of savedConfigs) {
+    if (config.kind === 'game') {
+      const room = createRoom(id, 'game');
+      room.name = config.name;
+      rooms.set(id, room);
     }
-    rooms.set(i, room);
-    if (!saved) {
+  }
+
+  for (let i = 1; i <= CONFIG.ROOM_COUNT; i++) {
+    if (!rooms.has(i)) {
+      const room = createRoom(i, 'game');
+      rooms.set(i, room);
       saveRoomConfig(i, room.name, 'game');
     }
   }
 
   for (const [id, config] of savedConfigs) {
     if (config.kind === 'chat') {
-      rooms.set(id, createChatRoom(id, config.name));
+      const room = createChatRoom(id, config.name);
+      freshChatRoomState(room);
+      if (!room.chat.some((m) => m.system)) {
+        addSystemMessage(room, `💬 Добро пожаловать в «${room.name}».`);
+      }
+      rooms.set(id, room);
     }
   }
 
   if (!Array.from(rooms.values()).some((r) => r.kind === 'chat')) {
-    const id = CONFIG.ROOM_COUNT + 1;
+    const id = nextRoomId(rooms.keys());
     const room = createChatRoom(id, 'Общий чат');
     freshChatRoomState(room);
     addSystemMessage(room, `💬 Добро пожаловать в «${room.name}».`);
@@ -189,6 +198,20 @@ export function renameRoom(rooms: Map<number, GameRoom>, roomId: number, name: s
   if (!trimmed) throw new Error('Название не может быть пустым');
   room.name = trimmed;
   saveRoomConfig(room.id, trimmed, room.kind);
+  return room;
+}
+
+export function addGameRoom(rooms: Map<number, GameRoom>, name: string): GameRoom {
+  const trimmed = String(name || '').trim().slice(0, 50);
+  if (!trimmed) {
+    throw new Error('Укажите название комнаты');
+  }
+  const id = nextRoomId(rooms.keys());
+  const room = createRoom(id, 'game');
+  room.name = trimmed;
+  addSystemMessage(room, `💬 Добро пожаловать в «${room.name}».`);
+  rooms.set(id, room);
+  saveRoomConfig(id, room.name, 'game');
   return room;
 }
 
@@ -1139,6 +1162,53 @@ export function addChatMessage(
 }
 
 const SILENCE_PERMANENT = -1;
+
+export function clearUserSilenceInAllRooms(rooms: Map<number, GameRoom>, userId: number): number {
+  let cleared = 0;
+  for (const room of rooms.values()) {
+    for (const player of room.players) {
+      if (player.userId === userId && isPlayerSilenced(player)) {
+        clearPlayerSilence(room, player.id);
+        cleared++;
+      }
+    }
+  }
+  return cleared;
+}
+
+export type SilencedPlayerEntry = {
+  userId: number;
+  username: string;
+  displayName: string;
+  roomId: number;
+  roomName: string;
+  roomKind: RoomKind;
+  silencedUntil: number | null;
+  silenceReason: string | null;
+  permanent: boolean;
+};
+
+export function listSilencedPlayers(rooms: Map<number, GameRoom>): SilencedPlayerEntry[] {
+  const entries: SilencedPlayerEntry[] = [];
+  for (const room of rooms.values()) {
+    for (const player of room.players) {
+      if (!player.userId || !isPlayerSilenced(player)) continue;
+      const until = player.silencedUntil ?? null;
+      entries.push({
+        userId: player.userId,
+        username: player.username || player.name,
+        displayName: player.username || player.name,
+        roomId: room.id,
+        roomName: room.name,
+        roomKind: room.kind,
+        silencedUntil: until === SILENCE_PERMANENT ? null : until,
+        silenceReason: player.silenceReason ?? null,
+        permanent: until === SILENCE_PERMANENT,
+      });
+    }
+  }
+  return entries.sort((a, b) => a.username.localeCompare(b.username, 'ru'));
+}
 
 export function isPlayerSilenced(player: GamePlayer | undefined): boolean {
   if (!player) return false;

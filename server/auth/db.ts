@@ -146,6 +146,7 @@ export function publicUser(user: User | null | undefined): PublicUser | null {
     createdAt: user.created_at,
     isBanned: isUserBanned(user),
     banReason: user.ban_reason || null,
+    bannedUntil: user.banned_until || null,
     chatLimit: normalizeChatLimit(user.chat_limit),
     theme: user.theme && user.theme.trim() ? user.theme.trim() : null,
     telegramUsername:

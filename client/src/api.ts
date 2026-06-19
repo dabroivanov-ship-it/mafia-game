@@ -549,6 +549,36 @@ export async function adminCreateChatRoom(name: string): Promise<void> {
   });
 }
 
+export async function adminCreateGameRoom(name: string): Promise<void> {
+  return apiRequest('/api/admin/game-rooms', {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  });
+}
+
+export interface SilencedPlayerEntry {
+  userId: number;
+  username: string;
+  displayName: string;
+  roomId: number;
+  roomName: string;
+  roomKind: RoomKind;
+  silencedUntil: number | null;
+  silenceReason: string | null;
+  permanent: boolean;
+}
+
+export async function fetchAdminBanList(): Promise<{
+  banned: User[];
+  silenced: SilencedPlayerEntry[];
+}> {
+  return apiRequest('/api/admin/ban-list');
+}
+
+export async function adminUnsilenceUser(userId: number): Promise<{ cleared: number }> {
+  return apiRequest(`/api/admin/users/${userId}/unsilence`, { method: 'POST' });
+}
+
 export async function adminDeleteChatRoom(roomId: number): Promise<void> {
   return apiRequest(`/api/admin/chat-rooms/${roomId}`, { method: 'DELETE' });
 }

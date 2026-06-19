@@ -8,7 +8,10 @@ import {
   adminClearRoomMessages,
   adminRenameRoom,
   adminCreateChatRoom,
+  adminCreateGameRoom,
   adminDeleteChatRoom,
+  fetchAdminBanList,
+  adminUnsilenceUser,
   adminUpdateUser,
   adminSetUserRole,
   adminUploadUserAvatar,
@@ -26,6 +29,7 @@ import {
   fetchMetrikaSettings,
   adminSetMetrikaSettings,
   type AdminRoom,
+  type SilencedPlayerEntry,
 } from '../api';
 import type { User, NewsPost, ThemeId, ViolationLogEntry, ViolationType } from '../types';
 import NewsEditor, { type NewsEditorValue } from './NewsEditor';
@@ -57,7 +61,11 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
   const [userSearch, setUserSearch] = useState('');
   const [editUser, setEditUser] = useState<User | null>(null);
   const [editForm, setEditForm] = useState({ displayName: '', city: '', bio: '' });
-  const [newRoomName, setNewRoomName] = useState('');
+  const [newChatRoomName, setNewChatRoomName] = useState('');
+  const [newGameRoomName, setNewGameRoomName] = useState('');
+  const [bannedUsers, setBannedUsers] = useState<User[]>([]);
+  const [silencedPlayers, setSilencedPlayers] = useState<SilencedPlayerEntry[]>([]);
+  const [banListLoading, setBanListLoading] = useState(false);
   const [roomEdits, setRoomEdits] = useState<Record<number, string>>({});
   const dirtyRoomsRef = useRef(new Set<number>());
   const roomEditsInitializedRef = useRef(false);
@@ -193,6 +201,19 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
     }
   };
 
+  const loadBanList = async () => {
+    setBanListLoading(true);
+    try {
+      const { banned, silenced } = await fetchAdminBanList();
+      setBannedUsers(banned);
+      setSilencedPlayers(silenced);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка загрузки бан-листа');
+    } finally {
+      setBanListLoading(false);
+    }
+  };
+
   const loadViolations = async () => {
     setViolationsLoading(true);
     try {
@@ -208,6 +229,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
   useEffect(() => {
     if (systemView === 'news') void loadNews();
     if (systemView === 'violations') void loadViolations();
+    if (systemView === 'banlist') void loadBanList();
   }, [systemView]);
 
   const openEditUser = (u: User) => {
@@ -298,10 +320,22 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
 
   const handleCreateChatRoom = async (e: FormEvent) => {
     e.preventDefault();
-    if (!newRoomName.trim()) return;
+    if (!newChatRoomName.trim()) return;
     try {
-      await adminCreateChatRoom(newRoomName.trim());
-      setNewRoomName('');
+      await adminCreateChatRoom(newChatRoomName.trim());
+      setNewChatRoomName('');
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка создания');
+    }
+  };
+
+  const handleCreateGameRoom = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!newGameRoomName.trim()) return;
+    try {
+      await adminCreateGameRoom(newGameRoomName.trim());
+      setNewGameRoomName('');
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка создания');
@@ -333,8 +367,18 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
     try {
       await adminUnban(userId);
       await load();
+      if (systemView === 'banlist') await loadBanList();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка разбана');
+    }
+  };
+
+  const handleUnsilence = async (userId: number) => {
+    try {
+      await adminUnsilenceUser(userId);
+      await loadBanList();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка снятия заглушки');
     }
   };
 
@@ -447,6 +491,17 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
 
   const gameRooms = rooms.filter((r) => r.kind !== 'chat');
   const chatRooms = rooms.filter((r) => r.kind === 'chat');
+  const banListCount = users.filter((u) => u.isBanned).length + silencedPlayers.length;
+
+  const formatUntil = (value?: string | null) => {
+    if (!value) return 'навсегда';
+    return new Date(value).toLocaleString('ru-RU');
+  };
+
+  const formatSilenceUntil = (until: number | null, permanent: boolean) => {
+    if (permanent || !until) return 'навсегда';
+    return new Date(until).toLocaleString('ru-RU');
+  };
   const telegramBotLink = telegramForm.botUsername
     ? `https://t.me/${telegramForm.botUsername.replace(/^@/, '')}`
     : '';
@@ -471,7 +526,10 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
         view={systemView}
         onViewChange={setSystemView}
         usersCount={users.length}
+        banListCount={banListCount}
         roomsCount={rooms.length}
+        gameRoomsCount={gameRooms.length}
+        chatRoomsCount={chatRooms.length}
         violationsCount={violations.length}
         newsCount={newsPosts.length}
         defaultTheme={defaultTheme}
@@ -588,10 +646,113 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
               </div>
             </section>
           ),
-          rooms: (
+          banlist: (
+            <section className="admin-section admin-section-embedded admin-banlist-section">
+              <div className="admin-section-head">
+                <h3>Бан-лист</h3>
+                <button type="button" className="btn btn-sm btn-ghost" onClick={() => void loadBanList()}>
+                  Обновить
+                </button>
+              </div>
+
+              {banListLoading && bannedUsers.length === 0 && silencedPlayers.length === 0 && (
+                <p className="muted">Загрузка...</p>
+              )}
+
+              <h4 className="admin-subsection-title">Забаненные ({bannedUsers.length})</h4>
+              {bannedUsers.length === 0 ? (
+                <p className="muted">Забаненных пользователей нет</p>
+              ) : (
+                <div className="admin-table-wrap">
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Игрок</th>
+                        <th>Причина</th>
+                        <th>До</th>
+                        <th>Действия</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {bannedUsers.map((u) => (
+                        <tr key={u.id}>
+                          <td>
+                            <div className="admin-user-cell">
+                              {u.avatar ? (
+                                <img src={avatarUrl(u.avatar) ?? undefined} alt="" className="admin-avatar" />
+                              ) : (
+                                <span className="admin-avatar placeholder">👤</span>
+                              )}
+                              <div>
+                                <strong>{u.displayName}</strong>
+                                <span className="muted">@{u.username}</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td>{u.banReason || '—'}</td>
+                          <td>{formatUntil(u.bannedUntil)}</td>
+                          <td className="admin-actions">
+                            <button type="button" className="btn btn-sm" onClick={() => void handleUnban(u.id)}>
+                              Разбан
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              <h4 className="admin-subsection-title">Заглушённые ({silencedPlayers.length})</h4>
+              {silencedPlayers.length === 0 ? (
+                <p className="muted">Заглушённых игроков нет</p>
+              ) : (
+                <div className="admin-table-wrap">
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Игрок</th>
+                        <th>Комната</th>
+                        <th>Причина</th>
+                        <th>До</th>
+                        <th>Действия</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {silencedPlayers.map((entry) => (
+                        <tr key={`${entry.userId}-${entry.roomId}`}>
+                          <td>
+                            <strong>{entry.displayName}</strong>
+                            <span className="muted"> @{entry.username}</span>
+                          </td>
+                          <td>
+                            {entry.roomName}
+                            <span className="muted"> · {entry.roomKind === 'chat' ? 'чат' : 'мафия'}</span>
+                          </td>
+                          <td>{entry.silenceReason || '—'}</td>
+                          <td>{formatSilenceUntil(entry.silencedUntil, entry.permanent)}</td>
+                          <td className="admin-actions">
+                            <button
+                              type="button"
+                              className="btn btn-sm"
+                              onClick={() => void handleUnsilence(entry.userId)}
+                            >
+                              Снять заглушку
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          ),
+          roomsGame: (
             <section className="admin-section admin-section-embedded">
-              <h3>Игровая комната (Мафия)</h3>
+              <h3>Комнаты мафии ({gameRooms.length})</h3>
               <div className="admin-room-list">
+                {gameRooms.length === 0 && <p className="muted">Игровых комнат пока нет</p>}
                 {gameRooms.map((r) => (
                   <div key={r.id} className="admin-room-row">
                     <input
@@ -617,8 +778,21 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
                   </div>
                 ))}
               </div>
-
-              <h3 className="admin-subsection-title">Чат-комнаты</h3>
+              <form className="admin-add-room" onSubmit={handleCreateGameRoom}>
+                <input
+                  type="text"
+                  placeholder="Название новой комнаты мафии"
+                  value={newGameRoomName}
+                  onChange={(e) => setNewGameRoomName(e.target.value)}
+                  maxLength={50}
+                />
+                <button type="submit" className="btn btn-primary">+ Создать комнату мафии</button>
+              </form>
+            </section>
+          ),
+          roomsChat: (
+            <section className="admin-section admin-section-embedded">
+              <h3>Чат-комнаты ({chatRooms.length})</h3>
               <div className="admin-room-list">
                 {chatRooms.length === 0 && <p className="muted">Чат-комнат пока нет</p>}
                 {chatRooms.map((r) => (
@@ -657,8 +831,8 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
                 <input
                   type="text"
                   placeholder="Название новой чат-комнаты"
-                  value={newRoomName}
-                  onChange={(e) => setNewRoomName(e.target.value)}
+                  value={newChatRoomName}
+                  onChange={(e) => setNewChatRoomName(e.target.value)}
                   maxLength={50}
                 />
                 <button type="submit" className="btn btn-primary">+ Создать чат-комнату</button>

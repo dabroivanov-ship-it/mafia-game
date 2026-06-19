@@ -7,7 +7,9 @@ import { THEMES } from '../themes';
 export type SystemView =
   | 'hub'
   | 'users'
-  | 'rooms'
+  | 'banlist'
+  | 'rooms-game'
+  | 'rooms-chat'
   | 'news'
   | 'violations'
   | 'telegram'
@@ -18,7 +20,10 @@ interface AdminSystemSectionProps {
   view?: SystemView;
   onViewChange?: (view: SystemView) => void;
   usersCount: number;
+  banListCount?: number;
   roomsCount: number;
+  gameRoomsCount?: number;
+  chatRoomsCount?: number;
   violationsCount: number;
   newsCount?: number;
   defaultTheme: ThemeId;
@@ -37,7 +42,9 @@ interface AdminSystemSectionProps {
   onSaveMetrika: (e: FormEvent) => void;
   panels: {
     users: ReactNode;
-    rooms: ReactNode;
+    banlist: ReactNode;
+    roomsGame: ReactNode;
+    roomsChat: ReactNode;
     news: ReactNode;
     violations: ReactNode;
   };
@@ -53,16 +60,22 @@ const SYSTEM_CATEGORIES: {
     id: 'users',
     icon: '👥',
     title: 'Пользователи',
-    links: [{ view: 'users', label: 'Управление аккаунтами' }],
+    links: [
+      { view: 'users', label: 'Управление аккаунтами' },
+      { view: 'banlist', label: 'Бан-лист' },
+    ],
   },
   {
-    id: 'rooms',
-    icon: '🏠',
-    title: 'Комнаты',
-    links: [
-      { view: 'rooms', label: 'Игровые комнаты' },
-      { view: 'rooms', label: 'Чат-комнаты' },
-    ],
+    id: 'rooms-game',
+    icon: '🎭',
+    title: 'Комнаты мафии',
+    links: [{ view: 'rooms-game', label: 'Игровые комнаты' }],
+  },
+  {
+    id: 'rooms-chat',
+    icon: '💬',
+    title: 'Чат-комнаты',
+    links: [{ view: 'rooms-chat', label: 'Чат-комнаты' }],
   },
   {
     id: 'news',
@@ -101,7 +114,9 @@ const SYSTEM_CATEGORIES: {
 
 const VIEW_TITLES: Record<Exclude<SystemView, 'hub'>, string> = {
   users: 'Пользователи',
-  rooms: 'Комнаты',
+  banlist: 'Бан-лист',
+  'rooms-game': 'Комнаты мафии',
+  'rooms-chat': 'Чат-комнаты',
   news: 'Новости',
   violations: 'Лог нарушений',
   telegram: 'Интеграции',
@@ -113,7 +128,10 @@ export default function AdminSystemSection({
   view: controlledView,
   onViewChange,
   usersCount,
+  banListCount = 0,
   roomsCount,
+  gameRoomsCount = 0,
+  chatRoomsCount = 0,
   violationsCount,
   newsCount = 0,
   defaultTheme,
@@ -142,6 +160,9 @@ export default function AdminSystemSection({
 
   const badgeFor = (categoryId: SystemView) => {
     if (categoryId === 'users') return usersCount;
+    if (categoryId === 'banlist') return banListCount;
+    if (categoryId === 'rooms-game') return gameRoomsCount;
+    if (categoryId === 'rooms-chat') return chatRoomsCount;
     if (categoryId === 'rooms') return roomsCount;
     if (categoryId === 'news') return newsCount;
     if (categoryId === 'violations') return violationsCount;
@@ -161,7 +182,15 @@ export default function AdminSystemSection({
 
         {view === 'users' && <div className="admin-system-detail-panel admin-system-wide">{panels.users}</div>}
 
-        {view === 'rooms' && <div className="admin-system-detail-panel admin-system-wide">{panels.rooms}</div>}
+        {view === 'banlist' && <div className="admin-system-detail-panel admin-system-wide">{panels.banlist}</div>}
+
+        {view === 'rooms-game' && (
+          <div className="admin-system-detail-panel admin-system-wide">{panels.roomsGame}</div>
+        )}
+
+        {view === 'rooms-chat' && (
+          <div className="admin-system-detail-panel admin-system-wide">{panels.roomsChat}</div>
+        )}
 
         {view === 'news' && <div className="admin-system-detail-panel admin-system-wide">{panels.news}</div>}
 
