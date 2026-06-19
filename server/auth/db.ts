@@ -59,6 +59,8 @@ function migrateColumns(): void {
   if (!cols.includes('telegram_id')) add('ALTER TABLE users ADD COLUMN telegram_id TEXT DEFAULT NULL');
   if (!cols.includes('telegram_username')) add('ALTER TABLE users ADD COLUMN telegram_username TEXT DEFAULT NULL');
   if (!cols.includes('last_seen_at')) add('ALTER TABLE users ADD COLUMN last_seen_at TEXT DEFAULT NULL');
+  if (!cols.includes('games_played')) add('ALTER TABLE users ADD COLUMN games_played INTEGER NOT NULL DEFAULT 0');
+  if (!cols.includes('reputation')) add('ALTER TABLE users ADD COLUMN reputation INTEGER NOT NULL DEFAULT 0');
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_telegram_id ON users(telegram_id)');
 }
 
@@ -139,6 +141,8 @@ export function publicUser(user: User | null | undefined): PublicUser | null {
     isModerator: user.role === 'moderator',
     isStaff: isStaff(user),
     totalScore: user.total_score,
+    gamesPlayed: user.games_played ?? 0,
+    reputation: user.reputation ?? 0,
     createdAt: user.created_at,
     isBanned: isUserBanned(user),
     banReason: user.ban_reason || null,

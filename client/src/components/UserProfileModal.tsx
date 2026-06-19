@@ -8,6 +8,10 @@ import {
   modUnban,
   adminUpdateUser,
   sendPrivateMessage,
+  addFriend,
+  removeFriend,
+  voteReputation,
+  adminSetUserReputation,
 } from '../api';
 import type { User, ProfileStaffMeta, ChatReplyTarget, UserPresence } from '../types';
 import { formatPresenceLabel } from '../utils/presence';
@@ -41,8 +45,13 @@ interface UserProfileModalProps {
 }
 
 interface ProfileData {
-  user: User & { messageCount?: number };
+  user: User & { messageCount?: number; gamesPlayed?: number; reputation?: number };
   presence: UserPresence;
+  isFriend?: boolean;
+  reputationVote?: -1 | 1 | null;
+  canVoteReputation?: boolean;
+  reputationMinGames?: number;
+  viewerGamesPlayed?: number;
   canAdmin: boolean;
   canModerate: boolean;
   staffMeta?: ProfileStaffMeta;
@@ -84,6 +93,9 @@ export default function UserProfileModal({
   const [chatVisibility, setChatVisibility] = useState<ChatVisibility>('direct');
   const [chatSending, setChatSending] = useState(false);
   const [chatSuccess, setChatSuccess] = useState('');
+  const [friendBusy, setFriendBusy] = useState(false);
+  const [reputationBusy, setReputationBusy] = useState(false);
+  const [adminReputation, setAdminReputation] = useState('');
   const chatInputRef = useRef<HTMLTextAreaElement>(null);
 
   const showChatCompose =
@@ -100,6 +112,7 @@ export default function UserProfileModal({
         city: res.user.city || '',
         bio: res.user.bio || '',
       });
+      setAdminReputation(String(res.user.reputation ?? 0));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка загрузки');
     } finally {
@@ -182,6 +195,53 @@ export default function UserProfileModal({
       onAdminAction?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка снятия молчания');
+    }
+  };
+
+  const handleToggleFriend = async () => {
+    if (!user) return;
+    setFriendBusy(true);
+    setError('');
+    try {
+      if (data?.isFriend) {
+        await removeFriend(userId);
+      } else {
+        await addFriend(userId);
+      }
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка друзей');
+    } finally {
+      setFriendBusy(false);
+    }
+  };
+
+  const handleReputationVote = async (value: -1 | 1) => {
+    setReputationBusy(true);
+    setError('');
+    try {
+      await voteReputation(userId, value);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка репутации');
+    } finally {
+      setReputationBusy(false);
+    }
+  };
+
+  const handleAdminReputationSave = async () => {
+    const reputation = Number(adminReputation);
+    if (!Number.isFinite(reputation)) return;
+    setReputationBusy(true);
+    setError('');
+    try {
+      await adminSetUserReputation(userId, reputation);
+      await load();
+      onAdminAction?.();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка сохранения репутации');
+    } finally {
+      setReputationBusy(false);
     }
   };
 
@@ -333,6 +393,25 @@ export default function UserProfileModal({
                     </span>
                   </li>
                   <li>
+                    <span className="player-page-label">Игр сыграно</span>
+                    <span>{user.gamesPlayed ?? 0}</span>
+                  </li>
+                  <li>
+                    <span className="player-page-label">Репутация</span>
+                    <span
+                      className={
+                        (user.reputation ?? 0) > 0
+                          ? 'reputation-positive'
+                          : (user.reputation ?? 0) < 0
+                            ? 'reputation-negative'
+                            : ''
+                      }
+                    >
+                      {(user.reputation ?? 0) > 0 ? '+' : ''}
+                      {user.reputation ?? 0}
+                    </span>
+                  </li>
+                  <li>
                     <span className="player-page-label">Очки</span>
                     <span>{user.totalScore}</span>
                   </li>
@@ -363,6 +442,14 @@ export default function UserProfileModal({
                   <div className="player-page-actions">
                     {!showMailCompose ? (
                       <div className="player-page-mail-actions">
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          disabled={friendBusy}
+                          onClick={() => void handleToggleFriend()}
+                        >
+                          {data?.isFriend ? '💔 Удалить из друзей' : '👥 В друзья'}
+                        </button>
                         <button
                           type="button"
                           className="btn btn-primary btn-sm"
@@ -406,6 +493,67 @@ export default function UserProfileModal({
                         </div>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {canWriteMail && !editMode && (
+                  <div className="profile-reputation-block">
+                    {data?.reputationVote != null ? (
+                      <p className="muted">
+                        Ваша оценка: {data.reputationVote > 0 ? '👍 Положительная' : '👎 Отрицательная'}
+                      </p>
+                    ) : data?.canVoteReputation ? (
+                      <div className="profile-reputation-actions">
+                        <span className="muted">Оценить репутацию (один раз):</span>
+                        <button
+                          type="button"
+                          className="btn btn-sm"
+                          disabled={reputationBusy}
+                          onClick={() => void handleReputationVote(1)}
+                        >
+                          👍
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-sm"
+                          disabled={reputationBusy}
+                          onClick={() => void handleReputationVote(-1)}
+                        >
+                          👎
+                        </button>
+                      </div>
+                    ) : (
+                      !viewerIsAdmin && (
+                        <p className="muted">
+                          Репутацию можно ставить после {data?.reputationMinGames ?? 100} игр
+                          {data?.viewerGamesPlayed != null
+                            ? ` (у вас: ${data.viewerGamesPlayed})`
+                            : ''}
+                          .
+                        </p>
+                      )
+                    )}
+                  </div>
+                )}
+
+                {canAdmin && !editMode && (
+                  <div className="profile-admin-reputation">
+                    <label>
+                      Репутация (админ)
+                      <input
+                        type="number"
+                        value={adminReputation}
+                        onChange={(e) => setAdminReputation(e.target.value)}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-primary"
+                      disabled={reputationBusy}
+                      onClick={() => void handleAdminReputationSave()}
+                    >
+                      Сохранить репутацию
+                    </button>
                   </div>
                 )}
 

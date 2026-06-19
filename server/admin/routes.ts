@@ -28,6 +28,8 @@ import {
 } from '../news/store.js';
 import { listViolations, clearViolations } from '../moderation/violationLog.js';
 import { newsImageUpload, newsImagePublicPath } from '../upload/newsImage.js';
+import { adminSetReputation } from '../social/store.js';
+import { listBotPhrasesForAdmin, updateBotPhrasesFromAdmin } from '../game/botPhrases.js';
 
 export interface AdminRouterHandlers {
   getModerationData: () => {
@@ -136,6 +138,21 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     });
     handlers.syncUserInRooms?.(id, user!.displayName);
     res.json({ user });
+  });
+
+  router.put('/users/:userId/reputation', (req, res) => {
+    const id = Number(req.params.userId);
+    if (!findUserPublic(id)) return res.status(404).json({ error: 'Пользователь не найден' });
+    const reputation = Number(req.body?.reputation);
+    if (!Number.isFinite(reputation)) {
+      return res.status(400).json({ error: 'Укажите reputation (число)' });
+    }
+    try {
+      const saved = adminSetReputation(id, reputation);
+      res.json({ reputation: saved });
+    } catch (err) {
+      res.status(400).json({ error: err instanceof Error ? err.message : 'Ошибка' });
+    }
   });
 
   router.post('/users/:userId/avatar', (req, res) => {
@@ -275,6 +292,19 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     const ok = deleteNews(Number(req.params.id));
     if (!ok) return res.status(404).json({ error: 'Новость не найдена' });
     res.json({ ok: true });
+  });
+
+  router.get('/bot-phrases', (_req, res) => {
+    res.json(listBotPhrasesForAdmin());
+  });
+
+  router.put('/bot-phrases', (req, res) => {
+    const phrases = req.body?.phrases;
+    if (!phrases || typeof phrases !== 'object' || Array.isArray(phrases)) {
+      return res.status(400).json({ error: 'Укажите объект phrases' });
+    }
+    const { updated } = updateBotPhrasesFromAdmin(phrases as Record<string, string>);
+    res.json({ ...listBotPhrasesForAdmin(), updated });
   });
 
   return router;

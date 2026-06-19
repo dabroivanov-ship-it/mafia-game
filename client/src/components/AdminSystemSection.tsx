@@ -1,9 +1,10 @@
 import { FormEvent, useState } from 'react';
 import ThemePicker from './ThemePicker';
+import AdminBotPhrasesEditor from './AdminBotPhrasesEditor';
 import type { ThemeId } from '../types';
 import { THEMES } from '../themes';
 
-type SystemView = 'hub' | 'overview' | 'theme' | 'telegram' | 'metrika';
+type SystemView = 'hub' | 'overview' | 'theme' | 'telegram' | 'metrika' | 'game';
 
 interface AdminSystemSectionProps {
   usersCount: number;
@@ -64,6 +65,12 @@ const SYSTEM_CATEGORIES: {
     title: 'Аналитика',
     links: [{ view: 'metrika', label: 'Яндекс.Метрика' }],
   },
+  {
+    id: 'game',
+    icon: '🎮',
+    title: 'Настройки игры',
+    links: [{ view: 'game', label: 'Фразы ведущего' }],
+  },
 ];
 
 const VIEW_TITLES: Record<Exclude<SystemView, 'hub'>, string> = {
@@ -71,6 +78,7 @@ const VIEW_TITLES: Record<Exclude<SystemView, 'hub'>, string> = {
   theme: 'Оформление',
   telegram: 'Интеграции',
   metrika: 'Аналитика',
+  game: 'Настройки игры',
 };
 
 export default function AdminSystemSection({
@@ -101,6 +109,7 @@ export default function AdminSystemSection({
     if (categoryId === 'overview') return 2;
     if (categoryId === 'theme') return THEMES.length;
     if (categoryId === 'telegram') return 2;
+    if (categoryId === 'game') return 1;
     return 1;
   };
 
@@ -252,6 +261,13 @@ export default function AdminSystemSection({
               </button>
             </div>
           </form>
+        )}
+
+        {view === 'game' && (
+          <div className="admin-system-detail-panel theme-settings-block admin-theme-block">
+            <h4>Фразы ведущего</h4>
+            <AdminBotPhrasesEditor />
+          </div>
         )}
       </section>
     );

@@ -5,12 +5,14 @@ import {
   fetchMailThread,
   fetchUnreadMailCount,
   sendPrivateMessage,
+  fetchFriends,
 } from '../api';
-import type { MailConversation, PrivateMessage } from '../types';
+import type { MailConversation, PrivateMessage, FriendUser } from '../types';
 
 const THREAD_PAGE_SIZE = 10;
 
 type MailView = 'list' | 'thread' | 'compose';
+type ListTab = 'dialogs' | 'friends';
 
 interface MessagesProps {
   composeToUserId?: number | null;
@@ -26,7 +28,9 @@ export default function Messages({
   onBack,
 }: MessagesProps) {
   const [view, setView] = useState<MailView>(composeToUserId || composeToUsername ? 'compose' : 'list');
+  const [listTab, setListTab] = useState<ListTab>('dialogs');
   const [conversations, setConversations] = useState<MailConversation[]>([]);
+  const [friends, setFriends] = useState<FriendUser[]>([]);
   const [thread, setThread] = useState<PrivateMessage[]>([]);
   const [threadUser, setThreadUser] = useState<PrivateMessage['otherUser'] | null>(null);
   const [threadHasMore, setThreadHasMore] = useState(false);
@@ -42,6 +46,19 @@ export default function Messages({
   const [sending, setSending] = useState(false);
   const threadRef = useRef<HTMLDivElement>(null);
   const prependingRef = useRef(false);
+
+  const loadFriends = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetchFriends();
+      setFriends(res.friends);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка загрузки друзей');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadConversations = async () => {
     setLoading(true);
@@ -97,8 +114,9 @@ export default function Messages({
   };
 
   useEffect(() => {
-    void loadConversations();
-  }, []);
+    if (listTab === 'dialogs') void loadConversations();
+    else void loadFriends();
+  }, [listTab]);
 
   useEffect(() => {
     if (composeToUserId) {
@@ -156,6 +174,11 @@ export default function Messages({
     void loadThread(conv.otherUser);
   };
 
+  const openComposeToFriend = (friend: FriendUser) => {
+    setComposeTo(`@${friend.username}`);
+    setView('compose');
+  };
+
   const replyInThread = () => {
     if (!threadUser) return;
     setComposeTo(`@${threadUser.username}`);
@@ -200,8 +223,27 @@ export default function Messages({
             {threadTotal > 0 && ` · ${threadTotal} сообщ.`}
           </p>
         )}
-        {view === 'list' && <p className="muted">Диалоги по именам</p>}
+        {view === 'list' && <p className="muted">Диалоги и друзья</p>}
       </header>
+
+      {view === 'list' && (
+        <div className="messages-tabs">
+          <button
+            type="button"
+            className={`btn btn-sm ${listTab === 'dialogs' ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setListTab('dialogs')}
+          >
+            💬 Диалоги
+          </button>
+          <button
+            type="button"
+            className={`btn btn-sm ${listTab === 'friends' ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setListTab('friends')}
+          >
+            👥 Друзья
+          </button>
+        </div>
+      )}
 
       {error && <div className="auth-error">{error}</div>}
       {success && <div className="auth-success">{success}</div>}
@@ -256,7 +298,7 @@ export default function Messages({
       {view === 'list' && (
         <>
           {loading && <p className="muted">Загрузка...</p>}
-          {!loading && (
+          {!loading && listTab === 'dialogs' && (
             <div className="mail-list mail-conversation-list">
               {conversations.length === 0 && <p className="muted">Диалогов пока нет</p>}
               {conversations.map((conv) => (
@@ -264,6 +306,20 @@ export default function Messages({
                   key={conv.otherUser.id}
                   conv={conv}
                   onOpen={() => openConversation(conv)}
+                />
+              ))}
+            </div>
+          )}
+          {!loading && listTab === 'friends' && (
+            <div className="mail-list friends-list">
+              {friends.length === 0 && (
+                <p className="muted">Друзей пока нет. Добавляйте игроков из профиля.</p>
+              )}
+              {friends.map((friend) => (
+                <FriendItem
+                  key={friend.id}
+                  friend={friend}
+                  onWrite={() => openComposeToFriend(friend)}
                 />
               ))}
             </div>
@@ -301,6 +357,38 @@ export default function Messages({
           )}
         </>
       )}
+    </div>
+  );
+}
+
+function FriendItem({
+  friend,
+  onWrite,
+}: {
+  friend: FriendUser;
+  onWrite: () => void;
+}) {
+  return (
+    <div className="mail-item friend-item">
+      <div className="mail-item-header">
+        {friend.avatar ? (
+          <img src={avatarUrl(friend.avatar) ?? undefined} alt="" className="mail-avatar" />
+        ) : (
+          <span className="mail-avatar placeholder">👤</span>
+        )}
+        <div className="mail-conversation-body">
+          <div className="mail-conversation-top">
+            <strong>{friend.displayName}</strong>
+            <span className={`presence-label ${friend.isOnline ? 'presence-online' : 'presence-offline'}`}>
+              {friend.isOnline ? 'в сети' : 'не в сети'}
+            </span>
+          </div>
+          <span className="muted mail-conversation-login">@{friend.username}</span>
+        </div>
+        <button type="button" className="btn btn-primary btn-sm" onClick={onWrite}>
+          ✉️ Написать
+        </button>
+      </div>
     </div>
   );
 }

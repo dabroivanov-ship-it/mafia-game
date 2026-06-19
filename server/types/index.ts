@@ -44,6 +44,8 @@ export interface User {
   ban_reason: string | null;
   banned_until: string | null;
   total_score: number;
+  games_played?: number;
+  reputation?: number;
   created_at: string;
   chat_limit?: number;
   last_ip?: string | null;
@@ -73,6 +75,8 @@ export interface PublicUser {
   isModerator: boolean;
   isStaff: boolean;
   totalScore: number;
+  gamesPlayed: number;
+  reputation: number;
   createdAt: string;
   isBanned: boolean;
   banReason?: string | null;
@@ -151,6 +155,7 @@ export interface GameRoom {
   sessionId: number | null;
   historyLoaded: boolean;
   nightAtmosphereSent?: Record<string, boolean>;
+  nightCheckDelivered?: Record<number, true>;
 }
 
 export interface RoomStatePlayer {

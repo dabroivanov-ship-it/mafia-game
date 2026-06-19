@@ -7,6 +7,12 @@ import { fileURLToPath } from 'url';
 import { CONFIG, PHASE, isActiveGamePhase } from './game/config.js';
 import { isMafiaTeam } from './game/roles.js';
 import authRoutes from './auth/routes.js';
+import { getOnlineUserCount } from './presence.js';
+import { incrementGamesPlayed } from './social/store.js';
+import friendsRoutes from './social/routes.js';
+import reputationRoutes from './reputation/routes.js';
+import './social/store.js';
+import './settings/botPhrasesStore.js';
 import { createProfileRouter } from './profile/routes.js';
 import { createAdminRouter } from './admin/routes.js';
 import { createModerationRouter } from './moderation/routes.js';
@@ -160,6 +166,8 @@ app.use(
   '/api/profile',
   createProfileRouter({ onProfileUpdated: syncUserProfileInRooms })
 );
+app.use('/api/friends', friendsRoutes);
+app.use('/api/reputation', reputationRoutes);
 app.use('/api/news', createNewsRouter());
 app.use(
   '/uploads/avatars',
@@ -349,6 +357,7 @@ function attachUserSocket(userId: number, socketId: string): void {
   if (!userSocketIds.has(userId)) userSocketIds.set(userId, new Set());
   userSocketIds.get(userId)!.add(socketId);
   markUserConnected(userId);
+  broadcastLobby();
 }
 
 function detachUserSocket(userId: number, socketId: string): void {
@@ -357,6 +366,7 @@ function detachUserSocket(userId: number, socketId: string): void {
   set.delete(socketId);
   if (set.size === 0) userSocketIds.delete(userId);
   markUserDisconnected(userId);
+  broadcastLobby();
 }
 
 function disconnectUserSockets(userId: number, reason: string): void {
@@ -455,6 +465,9 @@ function serializeForSocketUser(
 function syncRoomScores(room: GameRoom): void {
   if (room.phase !== 'ended' || room.scoresSynced) return;
   for (const p of room.players) {
+    if (p.userId && p.inGame) {
+      incrementGamesPlayed(p.userId);
+    }
     if (p.userId && p.score !== 0) {
       updateUserScore(p.userId, p.score);
     }
@@ -462,8 +475,15 @@ function syncRoomScores(room: GameRoom): void {
   room.scoresSynced = true;
 }
 
+function getLobbyPayload() {
+  return {
+    rooms: getLobbySnapshot(rooms),
+    onlineCount: getOnlineUserCount(),
+  };
+}
+
 function broadcastLobby(): void {
-  io.emit('lobby:update', getLobbySnapshot(rooms));
+  io.emit('lobby:update', getLobbyPayload());
 }
 
 function broadcastRoom(roomId: number): void {
@@ -533,8 +553,8 @@ setInterval(() => {
       if (result?.privateNotes) privateNotes = result.privateNotes;
     }
 
-    broadcastRoom(room.id);
     deliverHostNotes(room, privateNotes);
+    broadcastRoom(room.id);
   }
 }, 1000);
 
@@ -572,11 +592,11 @@ io.on('connection', (socket) => {
   attachUserSocket(socket.userId!, socket.id);
   socket.emit('pm:unread', { count: getUnreadCount(socket.userId!) });
 
-  socket.emit('lobby:update', getLobbySnapshot(rooms));
+  socket.emit('lobby:update', getLobbyPayload());
 
   socket.on('lobby:get', () => {
     if (!requireSocketUser(socket)) return;
-    socket.emit('lobby:update', getLobbySnapshot(rooms));
+    socket.emit('lobby:update', getLobbyPayload());
   });
 
   socket.on('room:join', ({ roomId, playerId: reconnectId }, cb) => {
@@ -686,8 +706,8 @@ io.on('connection', (socket) => {
     if (isChatRoom(room)) return cb?.({ error: 'В чат-комнате нет игры' });
     try {
       const { privateNotes } = joinGame(room, session.playerId);
-      broadcastRoom(room.id);
       deliverHostNotes(room, privateNotes);
+      broadcastRoom(room.id);
       cb?.({
         ok: true,
         state: serializeForSocketUser(room, session.playerId, socket.userId, socket.id),
@@ -837,8 +857,8 @@ io.on('connection', (socket) => {
     if (room.phase !== PHASE.DAY) return cb?.({ error: 'Голосование можно начать только днём' });
     if (room.votingStarted) return cb?.({ error: 'Голосование уже началось' });
     const notes = startVoting(room);
-    broadcastRoom(room.id);
     deliverHostNotes(room, notes);
+    broadcastRoom(room.id);
     cb?.({ ok: true });
   });
 
@@ -848,8 +868,8 @@ io.on('connection', (socket) => {
     const { session, room } = ctx;
     try {
       const notes = castDayVote(room, session.playerId, targetId);
-      broadcastRoom(room.id);
       deliverHostNotes(room, notes);
+      broadcastRoom(room.id);
       cb?.({ ok: true });
     } catch (e) {
       const err = e as Error;
@@ -863,8 +883,8 @@ io.on('connection', (socket) => {
     const { session, room } = ctx;
     try {
       const result = submitNightAction(room, session.playerId, action);
-      broadcastRoom(room.id);
       deliverHostNotes(room, result?.privateNotes || []);
+      broadcastRoom(room.id);
       cb?.({ ok: true });
     } catch (e) {
       const err = e as Error;

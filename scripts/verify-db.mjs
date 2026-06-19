@@ -17,6 +17,7 @@ const dbModule = await load(path.join(dist, 'auth', 'db.js'));
 await load(path.join(dist, 'history', 'store.js'));
 await load(path.join(dist, 'news', 'store.js'));
 await load(path.join(dist, 'messages', 'store.js'));
+await load(path.join(dist, 'social', 'store.js'));
 await load(path.join(dist, 'rooms', 'store.js'));
 await load(path.join(dist, 'settings', 'store.js'));
 
@@ -35,6 +36,8 @@ const requiredTables = [
   'room_game_log',
   'news_posts',
   'private_messages',
+  'user_friends',
+  'reputation_votes',
 ];
 
 const missingTables = requiredTables.filter((name) => !tables.includes(name));
@@ -61,6 +64,8 @@ const requiredUserCols = [
   'last_ip',
   'last_user_agent',
   'theme',
+  'games_played',
+  'reputation',
 ];
 
 const missingUserCols = requiredUserCols.filter((name) => !userCols.includes(name));

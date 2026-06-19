@@ -21,6 +21,10 @@ export function isUserOnline(userId: number): boolean {
   return (activeConnections.get(userId) || 0) > 0;
 }
 
+export function getOnlineUserCount(): number {
+  return activeConnections.size;
+}
+
 export function getUserPresence(userId: number): { isOnline: boolean; lastSeenAt: string | null } {
   return {
     isOnline: isUserOnline(userId),

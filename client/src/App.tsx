@@ -8,7 +8,7 @@ import PageLoader from './components/PageLoader';
 import { infoSectionFromPath, isPublicInfoPath, pathForInfoSection } from './infoRouting';
 import { DEFAULT_PAGE_META, updatePageMeta } from './seo';
 import { clearSession, fetchMe, fetchUnreadMailCount, fetchThemeSettings, saveSession, loadStoredPlayerId, saveStoredPlayerId, clearStoredPlayerIds } from './api';
-import type { LobbyRoom, RoomState, User, ThemeId } from './types';
+import type { LobbyRoom, RoomState, User, ThemeId, LobbyUpdate } from './types';
 import { applyTheme, resolveTheme, DEFAULT_THEME } from './themes';
 
 const News = lazy(() => import('./components/News'));
@@ -43,6 +43,7 @@ export default function App() {
 
   const [socket, setSocket] = useState<Socket | null>(null);
   const [rooms, setRooms] = useState<LobbyRoom[]>([]);
+  const [siteOnlineCount, setSiteOnlineCount] = useState(0);
   const [roomState, setRoomState] = useState<RoomState | null>(null);
   const [currentRoomId, setCurrentRoomId] = useState<number | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
@@ -146,7 +147,14 @@ export default function App() {
       }
     });
 
-    s.on('lobby:update', setRooms);
+    s.on('lobby:update', (payload: LobbyRoom[] | LobbyUpdate) => {
+      if (Array.isArray(payload)) {
+        setRooms(payload);
+      } else {
+        setRooms(payload.rooms);
+        setSiteOnlineCount(payload.onlineCount);
+      }
+    });
     s.on('room:state', setRoomState);
     s.on('notification:private', ({ message }: { message: string }) => {
       setNotification(message);
@@ -354,6 +362,7 @@ export default function App() {
             onLeave={leaveRoom}
             onStateUpdate={setRoomState}
             currentUserId={user.id}
+            onWriteMessage={(userId, username) => openMessages({ userId, username })}
           />
         </ViewSuspense>
       </div>
@@ -382,6 +391,7 @@ export default function App() {
         {view === 'lobby' && (
           <Lobby
             rooms={rooms}
+            siteOnlineCount={siteOnlineCount}
             onJoin={joinRoom}
             unreadMailCount={unreadMailCount}
             onOpenMessages={() => openMessages()}

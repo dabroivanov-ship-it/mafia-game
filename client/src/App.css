@@ -729,7 +729,67 @@ html.telegram-webapp .app-body {
 }
 
 .player-page-mail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-top: 4px;
+}
+
+.messages-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.friend-item .mail-item-header {
+  align-items: center;
+}
+
+.friend-item .btn {
+  flex-shrink: 0;
+}
+
+.reputation-positive {
+  color: #4caf50;
+  font-weight: 600;
+}
+
+.reputation-negative {
+  color: #f44336;
+  font-weight: 600;
+}
+
+.profile-reputation-block {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.profile-reputation-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.profile-admin-reputation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.profile-admin-reputation label {
+  flex: 1;
+  min-width: 120px;
+}
+
+.lobby-online-count {
+  margin: 0;
+  font-size: 0.9rem;
 }
 
 .user-search-card:hover {
@@ -3702,7 +3762,46 @@ html.telegram-webapp .app-body {
 }
 
 .admin-system-detail-panel {
+  margin-top: 4px;
   max-width: 640px;
+}
+
+.admin-bot-phrases {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.admin-bot-phrases-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.admin-bot-phrases-group h4 {
+  margin: 0;
+}
+
+.admin-bot-phrase-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-bot-phrase-label {
+  font-weight: 600;
+}
+
+.admin-bot-phrase-placeholders,
+.admin-bot-phrase-hint {
+  font-size: 0.85rem;
+}
+
+.admin-bot-phrase-field input,
+.admin-bot-phrase-field textarea {
+  width: 100%;
 }
 
 .admin-system-detail {

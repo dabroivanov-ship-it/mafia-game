@@ -57,9 +57,17 @@ interface RoomProps {
   onLeave: () => void;
   onStateUpdate?: (state: RoomState) => void;
   currentUserId: number;
+  onWriteMessage?: (userId: number, username: string) => void;
 }
 
-export default function Room({ socket, state, onLeave, onStateUpdate, currentUserId }: RoomProps) {
+export default function Room({
+  socket,
+  state,
+  onLeave,
+  onStateUpdate,
+  currentUserId,
+  onWriteMessage,
+}: RoomProps) {
   const [mafiaTab, setMafiaTab] = useState(false);
   const [profileTarget, setProfileTarget] = useState<ChatReplyTarget | null>(null);
   const [loadingMoreChat, setLoadingMoreChat] = useState(false);
@@ -389,6 +397,7 @@ export default function Room({ socket, state, onLeave, onStateUpdate, currentUse
             });
             if (res?.error) throw new Error(res.error);
           }}
+          onWriteMessage={onWriteMessage}
         />
       )}
     </div>

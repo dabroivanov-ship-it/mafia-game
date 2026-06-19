@@ -20,6 +20,7 @@ export type LobbyScreen =
 
 interface LobbyProps {
   rooms: LobbyRoom[];
+  siteOnlineCount?: number;
   onJoin: (roomId: number) => void;
   unreadMailCount?: number;
   onOpenMessages?: () => void;
@@ -67,6 +68,7 @@ function RoomCard({
 
 export default function Lobby({
   rooms,
+  siteOnlineCount = 0,
   onJoin,
   unreadMailCount = 0,
   onOpenMessages,
@@ -80,6 +82,9 @@ export default function Lobby({
         <div className="lobby-header-brand">
           <h1>🎭 Мафия</h1>
           <p>Выберите комнату для игры или общения</p>
+          {siteOnlineCount > 0 && (
+            <p className="lobby-online-count muted">На сайте: {siteOnlineCount} в сети</p>
+          )}
         </div>
       </header>
 

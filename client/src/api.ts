@@ -1,4 +1,4 @@
-import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, MailConversation, RoomKind, ThemeId, ViolationLogEntry, UserSearchHit, UserPresence } from './types';
+import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, MailConversation, RoomKind, ThemeId, ViolationLogEntry, UserSearchHit, UserPresence, FriendUser } from './types';
 
 const API_BASE =
   import.meta.env.VITE_API_URL ??
@@ -196,6 +196,30 @@ export async function adminSetTelegramSettings(payload: {
   });
 }
 
+export interface BotPhraseEntry {
+  key: string;
+  group: string;
+  label: string;
+  hint?: string;
+  type: 'text' | 'lines';
+  placeholders?: string[];
+  value: string;
+  defaultValue: string;
+}
+
+export async function fetchAdminBotPhrases(): Promise<{ phrases: BotPhraseEntry[] }> {
+  return apiRequest('/api/admin/bot-phrases');
+}
+
+export async function adminSaveBotPhrases(
+  phrases: Record<string, string>
+): Promise<{ phrases: BotPhraseEntry[]; updated: number }> {
+  return apiRequest('/api/admin/bot-phrases', {
+    method: 'PUT',
+    body: JSON.stringify({ phrases }),
+  });
+}
+
 export async function adminSetDefaultTheme(theme: ThemeId): Promise<{ defaultTheme: ThemeId }> {
   return apiRequest('/api/settings/theme', {
     method: 'PUT',
@@ -339,13 +363,59 @@ export async function adminClearViolationLog(): Promise<{ cleared: number }> {
 }
 
 export async function fetchUserProfile(userId: number): Promise<{
-  user: User & { messageCount?: number };
+  user: User & { messageCount?: number; gamesPlayed?: number; reputation?: number };
   presence: UserPresence;
+  isSelf?: boolean;
+  isFriend?: boolean;
+  reputationVote?: -1 | 1 | null;
+  canVoteReputation?: boolean;
+  reputationMinGames?: number;
+  viewerGamesPlayed?: number;
   canAdmin: boolean;
   canModerate: boolean;
   staffMeta?: ProfileStaffMeta;
 }> {
   return apiRequest(`/api/profile/${userId}`);
+}
+
+export async function fetchFriends(): Promise<{ friends: FriendUser[] }> {
+  return apiRequest('/api/friends');
+}
+
+export async function fetchFriendStatus(userId: number): Promise<{ isFriend: boolean; isSelf: boolean }> {
+  return apiRequest(`/api/friends/status/${userId}`);
+}
+
+export async function addFriend(userId: number): Promise<{ isFriend: boolean }> {
+  return apiRequest(`/api/friends/${userId}`, { method: 'POST' });
+}
+
+export async function removeFriend(userId: number): Promise<{ isFriend: boolean }> {
+  return apiRequest(`/api/friends/${userId}`, { method: 'DELETE' });
+}
+
+export async function voteReputation(
+  userId: number,
+  value: -1 | 1
+): Promise<{ reputation: number }> {
+  return apiRequest(`/api/reputation/${userId}`, {
+    method: 'POST',
+    body: JSON.stringify({ value }),
+  });
+}
+
+export async function adminSetUserReputation(
+  userId: number,
+  reputation: number
+): Promise<{ reputation: number }> {
+  return apiRequest(`/api/admin/users/${userId}/reputation`, {
+    method: 'PUT',
+    body: JSON.stringify({ reputation }),
+  });
+}
+
+export async function fetchOnlineCount(): Promise<{ onlineCount: number }> {
+  return apiRequest('/api/profile/online-count');
 }
 
 export async function searchUsers(query: string): Promise<{ users: UserSearchHit[] }> {

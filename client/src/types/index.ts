@@ -26,6 +26,8 @@ export interface User {
   isModerator: boolean;
   isStaff: boolean;
   totalScore: number;
+  gamesPlayed?: number;
+  reputation?: number;
   createdAt: string;
   isBanned: boolean;
   banReason: string | null;
@@ -219,6 +221,16 @@ export interface ViolationLogEntry {
   moderatorId: number;
   moderatorName: string;
   createdAt: string;
+}
+
+export interface LobbyUpdate {
+  rooms: LobbyRoom[];
+  onlineCount: number;
+}
+
+export interface FriendUser extends PublicUser {
+  isOnline: boolean;
+  lastSeenAt: string | null;
 }
 
 export interface ProfileStaffMeta {

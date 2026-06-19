@@ -19,7 +19,15 @@ import { createRateLimitMiddleware, searchRateLimiter } from '../security/rateLi
 import fs from 'fs';
 import { getUserMessageCount } from '../history/store.js';
 import { isValidThemeId } from '../settings/themes.js';
-import { getUserPresence } from '../presence.js';
+import { getUserPresence, getOnlineUserCount } from '../presence.js';
+import {
+  areFriends,
+  canViewerVoteReputation,
+  getGamesPlayed,
+  getReputation,
+  getReputationVote,
+  REPUTATION_MIN_GAMES,
+} from '../social/store.js';
 import type { PublicUser } from '../types/index.js';
 
 interface ProfileRouterOptions {
@@ -76,6 +84,10 @@ export function createProfileRouter({ onProfileUpdated }: ProfileRouterOptions =
     });
   });
 
+  router.get('/online-count', (_req, res) => {
+    res.json({ onlineCount: getOnlineUserCount() });
+  });
+
   router.get('/staff/list', authMiddleware, (_req, res) => {
     res.json({ staff: listStaffUsers() });
   });
@@ -107,9 +119,19 @@ export function createProfileRouter({ onProfileUpdated }: ProfileRouterOptions =
     }
 
     res.json({
-      user: { ...user, messageCount: getUserMessageCount(targetId) },
+      user: {
+        ...user,
+        messageCount: getUserMessageCount(targetId),
+        gamesPlayed: getGamesPlayed(targetId),
+        reputation: getReputation(targetId),
+      },
       presence: getUserPresence(targetId),
       isSelf,
+      isFriend: !isSelf && areFriends(req.userId!, targetId),
+      reputationVote: isSelf ? null : getReputationVote(req.userId!, targetId),
+      canVoteReputation: canViewerVoteReputation(req.userId!, targetId, viewerIsAdmin),
+      reputationMinGames: REPUTATION_MIN_GAMES,
+      viewerGamesPlayed: getGamesPlayed(req.userId!),
       canAdmin: viewerIsAdmin && !target.isAdmin && !isSelf,
       canModerate: canBanTarget(viewer, targetUser) && !isSelf,
       staffMeta:

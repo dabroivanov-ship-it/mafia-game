@@ -10,6 +10,7 @@ import {
   adminCreateChatRoom,
   adminDeleteChatRoom,
   adminUpdateUser,
+  adminSetUserReputation,
   adminSetUserRole,
   adminUploadUserAvatar,
   adminRemoveUserAvatar,
@@ -59,6 +60,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
   const [userSearch, setUserSearch] = useState('');
   const [editUser, setEditUser] = useState<User | null>(null);
   const [editForm, setEditForm] = useState({ displayName: '', city: '', bio: '' });
+  const [editReputation, setEditReputation] = useState('0');
   const [newRoomName, setNewRoomName] = useState('');
   const [roomEdits, setRoomEdits] = useState<Record<number, string>>({});
   const dirtyRoomsRef = useRef(new Set<number>());
@@ -221,12 +223,17 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
       city: u.city || '',
       bio: u.bio || '',
     });
+    setEditReputation(String(u.reputation ?? 0));
   };
 
   const handleSaveUser = async () => {
     if (!editUser) return;
     try {
       await adminUpdateUser(editUser.id, editForm);
+      const reputation = Number(editReputation);
+      if (Number.isFinite(reputation)) {
+        await adminSetUserReputation(editUser.id, reputation);
+      }
       setEditUser(null);
       await load();
     } catch (err) {
@@ -885,6 +892,15 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
                 rows={3}
               />
             </label>
+            <label>
+              Репутация
+              <input
+                type="number"
+                value={editReputation}
+                onChange={(e) => setEditReputation(e.target.value)}
+              />
+            </label>
+            <p className="muted">Игр: {editUser.gamesPlayed ?? 0}</p>
             <div className="profile-actions">
               <button type="button" className="btn btn-ghost" onClick={() => setEditUser(null)}>Отмена</button>
               <button type="button" className="btn btn-primary" onClick={() => void handleSaveUser()}>Сохранить</button>
