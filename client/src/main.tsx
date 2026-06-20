@@ -15,11 +15,7 @@ function scheduleMetrika() {
     .catch(() => {});
 }
 
-if (typeof globalThis.requestIdleCallback === 'function') {
-  globalThis.requestIdleCallback(() => scheduleMetrika(), { timeout: 3000 });
-} else {
-  globalThis.setTimeout(scheduleMetrika, 1500);
-}
+scheduleMetrika();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

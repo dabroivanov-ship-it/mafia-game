@@ -2,7 +2,10 @@ const METRIKA_SCRIPT = 'https://mc.yandex.ru/metrika/tag.js';
 
 declare global {
   interface Window {
-    ym?: (id: number, method: string, ...args: unknown[]) => void;
+    ym?: ((id: number, method: string, ...args: unknown[]) => void) & {
+      a?: unknown[];
+      l?: number;
+    };
   }
 }
 
@@ -12,15 +15,13 @@ let lastTrackedPath: string | null =
 
 function ensureMetrikaLoader() {
   if (typeof window === 'undefined') return;
-  const win = window as Window & { ym?: { a?: unknown[]; l?: number } };
-  if (typeof win.ym === 'function') return;
 
-  win.ym =
-    win.ym ||
-    function (...args: unknown[]) {
-      (win.ym!.a = win.ym!.a || []).push(args);
+  if (typeof window.ym !== 'function') {
+    window.ym = function (...args: unknown[]) {
+      (window.ym!.a = window.ym!.a || []).push(args);
     };
-  win.ym!.l = Date.now();
+    window.ym.l = Date.now();
+  }
 
   for (let j = 0; j < document.scripts.length; j++) {
     if (document.scripts[j].src.startsWith(METRIKA_SCRIPT)) return;
@@ -54,22 +55,20 @@ export function initYandexMetrika(id: number | null) {
 
   activeMetrikaId = id;
   ensureMetrikaLoader();
+  updateNoscriptPixel(id);
 
   window.ym?.(id, 'init', {
-    ssr: true,
-    webvisor: true,
     clickmap: true,
-    ecommerce: 'dataLayer',
-    referrer: document.referrer,
-    url: location.href,
-    accurateTrackBounce: true,
     trackLinks: true,
+    accurateTrackBounce: true,
+    webvisor: true,
   });
 
-  updateNoscriptPixel(id);
+  lastTrackedPath = null;
+  trackPageView(undefined, true);
 }
 
-export function trackPageView(path?: string) {
+export function trackPageView(path?: string, force = false) {
   if (import.meta.env.DEV || !activeMetrikaId || typeof window === 'undefined' || typeof window.ym !== 'function') {
     return;
   }
@@ -80,7 +79,7 @@ export function trackPageView(path?: string) {
       : `/${path}`
     : `${window.location.pathname}${window.location.search}`;
 
-  if (normalized === lastTrackedPath) return;
+  if (!force && normalized === lastTrackedPath) return;
   lastTrackedPath = normalized;
 
   window.ym(activeMetrikaId, 'hit', normalized, { title: document.title });
