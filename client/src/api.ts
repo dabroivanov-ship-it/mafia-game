@@ -330,6 +330,13 @@ export async function sendPrivateMessage(
   });
 }
 
+export async function sendSupportMessage(text: string, photo?: File): Promise<{ ok: true }> {
+  const fd = new FormData();
+  fd.append('text', text);
+  if (photo) fd.append('photo', photo);
+  return apiRequest('/api/support', { method: 'POST', body: fd });
+}
+
 export async function markMessageRead(messageId: number): Promise<{ unreadCount: number }> {
   return apiRequest(`/api/messages/${messageId}/read`, { method: 'POST' });
 }

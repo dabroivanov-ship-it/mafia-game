@@ -47,5 +47,6 @@ export function createRateLimitMiddleware(limiter: RateLimiter, keyFn?: (req: Re
 
 export const authRateLimiter = new RateLimiter(20, 15 * 60 * 1000);
 export const pmRateLimiter = new RateLimiter(30, 60 * 1000);
+export const supportRateLimiter = new RateLimiter(5, 60 * 60 * 1000);
 export const searchRateLimiter = new RateLimiter(40, 60 * 1000);
 export const chatSocketRateLimiter = new RateLimiter(25, 10 * 1000);

@@ -13,6 +13,12 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_pm_sender ON private_messages(sender_id, created_at DESC);
 `);
 
+try {
+  db.exec(`ALTER TABLE private_messages ADD COLUMN attachment_url TEXT`);
+} catch {
+  /* column exists */
+}
+
 interface MessageRow {
   id: number;
   sender_id: number;
@@ -20,6 +26,7 @@ interface MessageRow {
   text: string;
   is_read: number;
   created_at: string;
+  attachment_url?: string | null;
 }
 
 export interface PrivateMessageView {
@@ -27,6 +34,7 @@ export interface PrivateMessageView {
   text: string;
   createdAt: string;
   isRead: boolean;
+  attachmentUrl?: string | null;
   direction?: 'in' | 'out';
   otherUser: {
     id: number;
@@ -70,6 +78,7 @@ function rowToView(row: MessageRow, perspective: 'inbox' | 'outbox'): PrivateMes
     text: row.text,
     createdAt: row.created_at.includes('T') ? row.created_at : `${row.created_at.replace(' ', 'T')}Z`,
     isRead: !!row.is_read,
+    attachmentUrl: row.attachment_url || null,
     otherUser: mapOtherUser(otherId),
   };
 }
@@ -77,14 +86,17 @@ function rowToView(row: MessageRow, perspective: 'inbox' | 'outbox'): PrivateMes
 export function sendPrivateMessage(
   senderId: number,
   recipientId: number,
-  text: string
+  text: string,
+  attachmentUrl?: string | null
 ): PrivateMessageView | null {
   if (senderId === recipientId) return null;
   if (!findUserById(recipientId)) return null;
 
   const result = db
-    .prepare('INSERT INTO private_messages (sender_id, recipient_id, text) VALUES (?, ?, ?)')
-    .run(senderId, recipientId, text);
+    .prepare(
+      'INSERT INTO private_messages (sender_id, recipient_id, text, attachment_url) VALUES (?, ?, ?, ?)'
+    )
+    .run(senderId, recipientId, text, attachmentUrl || null);
 
   const row = db
     .prepare('SELECT * FROM private_messages WHERE id = ?')
@@ -111,6 +123,7 @@ function rowToHistoryView(row: MessageRow, userId: number): PrivateMessageView {
     text: row.text,
     createdAt: row.created_at.includes('T') ? row.created_at : `${row.created_at.replace(' ', 'T')}Z`,
     isRead: incoming ? !!row.is_read : true,
+    attachmentUrl: row.attachment_url || null,
     direction: incoming ? 'in' : 'out',
     otherUser: mapOtherUser(otherId),
   };

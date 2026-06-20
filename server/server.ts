@@ -17,6 +17,7 @@ import { createProfileRouter } from './profile/routes.js';
 import { createAdminRouter } from './admin/routes.js';
 import { createModerationRouter } from './moderation/routes.js';
 import { createMessagesRouter } from './messages/routes.js';
+import { createSupportRouter } from './support/routes.js';
 import { createNewsRouter } from './news/routes.js';
 import './news/comments.js';
 import settingsRoutes from './settings/routes.js';
@@ -76,6 +77,7 @@ import { addViolation } from './moderation/violationLog.js';
 import fs from 'fs';
 import { ensureNewsUploadsDir } from './upload/newsImage.js';
 import { ensureSiteBrandingUploadsDir } from './upload/siteLogo.js';
+import { ensureSupportUploadsDir } from './upload/supportImage.js';
 
 assertProductionEnv();
 
@@ -204,6 +206,17 @@ app.use(
     next();
   },
   express.static(siteBrandingUploadsDir)
+);
+
+const supportUploadsDir = ensureSupportUploadsDir();
+if (!fs.existsSync(supportUploadsDir)) fs.mkdirSync(supportUploadsDir, { recursive: true });
+app.use(
+  '/uploads/support',
+  (_req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    next();
+  },
+  express.static(supportUploadsDir)
 );
 
 function adminDeleteMessage(roomId: number, messageId: string, channel: string): boolean {
@@ -368,6 +381,14 @@ app.use(
     },
     onMessageRead: (userId, unreadCount) => {
       notifyUser(userId, 'pm:unread', { count: unreadCount });
+    },
+  })
+);
+app.use(
+  '/api/support',
+  createSupportRouter({
+    onMessageSent: (recipientId, payload) => {
+      notifyUser(recipientId, 'pm:received', payload);
     },
   })
 );

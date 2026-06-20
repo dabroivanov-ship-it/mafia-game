@@ -1928,6 +1928,61 @@ html.telegram-webapp .app-body {
   word-break: break-word;
 }
 
+.mail-thread-attachment {
+  display: block;
+  margin-top: 8px;
+}
+
+.mail-thread-attachment img {
+  max-width: 100%;
+  max-height: 280px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.support-form-card {
+  max-width: 560px;
+}
+
+.support-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.support-label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.support-label textarea {
+  width: 100%;
+  min-height: 140px;
+  resize: vertical;
+}
+
+.support-char-count {
+  font-size: 0.8rem;
+  text-align: right;
+}
+
+.support-photo-block {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.support-photo-preview {
+  width: 100%;
+  max-width: 320px;
+  max-height: 240px;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
 .mail-thread-actions {
   margin-top: 8px;
 }

@@ -420,6 +420,13 @@ export function listAllUsers(): PublicUser[] {
   return rows.map((row) => publicUser(row)!);
 }
 
+export function findPrimaryAdminId(): number | null {
+  const row = db
+    .prepare(`SELECT id FROM users WHERE role = 'admin' ORDER BY id ASC LIMIT 1`)
+    .get() as { id: number } | undefined;
+  return row?.id ?? null;
+}
+
 export function listStaffUsers(): StaffMember[] {
   const rows = db
     .prepare(

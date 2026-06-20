@@ -17,6 +17,7 @@ export type LobbyScreen =
   | 'cabinet-settings'
   | 'cabinet-site-settings'
   | 'cabinet-messages'
+  | 'cabinet-support'
   | 'cabinet-search';
 
 interface LobbyProps {

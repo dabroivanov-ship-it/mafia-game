@@ -278,6 +278,7 @@ export interface PrivateMessage {
   text: string;
   createdAt: string;
   isRead: boolean;
+  attachmentUrl?: string | null;
   direction?: 'in' | 'out';
   otherUser: {
     id: number;

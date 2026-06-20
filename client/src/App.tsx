@@ -22,6 +22,7 @@ const Messages = lazy(() => import('./components/Messages'));
 const UserSearch = lazy(() => import('./components/UserSearch'));
 const CabinetProfileSettings = lazy(() => import('./components/CabinetProfileSettings'));
 const CabinetSiteSettings = lazy(() => import('./components/CabinetSiteSettings'));
+const CabinetSupport = lazy(() => import('./components/CabinetSupport'));
 
 function ViewSuspense({ children, label }: { children: ReactNode; label?: string }) {
   return <Suspense fallback={<PageLoader label={label} compact />}>{children}</Suspense>;
@@ -461,6 +462,11 @@ export default function App() {
             />
           </ViewSuspense>
         )}
+        {view === 'cabinet' && lobbyScreen === 'cabinet-support' && (
+          <ViewSuspense label="Поддержка…">
+            <CabinetSupport onBack={() => setLobbyScreen('cabinet')} />
+          </ViewSuspense>
+        )}
         {view === 'cabinet' && lobbyScreen === 'cabinet' && (
           <CabinetHub
             user={user}
@@ -468,6 +474,7 @@ export default function App() {
             onOpenProfileSettings={() => setLobbyScreen('cabinet-settings')}
             onOpenSiteSettings={() => setLobbyScreen('cabinet-site-settings')}
             onOpenMessages={() => setLobbyScreen('cabinet-messages')}
+            onOpenSupport={() => setLobbyScreen('cabinet-support')}
             onOpenUserSearch={() => setLobbyScreen('cabinet-search')}
             onLogout={handleLogout}
             onBack={() => setView('lobby')}

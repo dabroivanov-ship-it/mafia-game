@@ -7,6 +7,7 @@ interface CabinetHubProps {
   onOpenProfileSettings: () => void;
   onOpenSiteSettings: () => void;
   onOpenMessages: () => void;
+  onOpenSupport: () => void;
   onOpenUserSearch: () => void;
   onLogout: () => void;
   onBack: () => void;
@@ -18,6 +19,7 @@ export default function CabinetHub({
   onOpenProfileSettings,
   onOpenSiteSettings,
   onOpenMessages,
+  onOpenSupport,
   onOpenUserSearch,
   onLogout,
   onBack,
@@ -59,6 +61,19 @@ export default function CabinetHub({
               )}
             </strong>
             <span className="muted">История переписки и новые сообщения</span>
+          </span>
+          <span className="info-hub-arrow" aria-hidden="true">
+            →
+          </span>
+        </button>
+
+        <button type="button" className="info-hub-card" onClick={onOpenSupport}>
+          <span className="info-hub-icon" aria-hidden="true">
+            🆘
+          </span>
+          <span className="info-hub-body">
+            <strong>Поддержка</strong>
+            <span className="muted">Сообщить о проблеме администратору</span>
           </span>
           <span className="info-hub-arrow" aria-hidden="true">
             →

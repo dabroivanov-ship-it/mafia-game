@@ -440,6 +440,7 @@ function ConversationItem({
 function ThreadBubble({ msg }: { msg: PrivateMessage }) {
   const isOut = msg.direction === 'out';
   const authorName = isOut ? 'Вы' : msg.otherUser.username;
+  const attachmentSrc = msg.attachmentUrl ? avatarUrl(msg.attachmentUrl) : null;
 
   return (
     <div className={`mail-thread-bubble ${isOut ? 'out' : 'in'}`}>
@@ -455,6 +456,11 @@ function ThreadBubble({ msg }: { msg: PrivateMessage }) {
         </span>
       </div>
       <p>{msg.text}</p>
+      {attachmentSrc && (
+        <a href={attachmentSrc} target="_blank" rel="noopener noreferrer" className="mail-thread-attachment">
+          <img src={attachmentSrc} alt="Вложение" />
+        </a>
+      )}
     </div>
   );
 }
