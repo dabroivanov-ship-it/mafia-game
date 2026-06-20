@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { avatarUrl, fetchOnlineUsers } from '../api';
+import { fetchOnlineUsers } from '../api';
 import type { User, UserSearchHit } from '../types';
 import UserProfileModal from './UserProfileModal';
 
@@ -44,7 +44,7 @@ export default function OnlineUsers({ currentUser, onBack, onWriteMessage }: Onl
       </nav>
 
       <header className="page-header">
-        <h1>🟢 В сети</h1>
+        <h1>В сети</h1>
         <p className="muted">
           {loading
             ? 'Загрузка...'
@@ -58,48 +58,20 @@ export default function OnlineUsers({ currentUser, onBack, onWriteMessage }: Onl
         <p className="muted">Сейчас никого нет в сети</p>
       )}
 
-      <div className="user-search-results">
-        {users.map((hit) => {
-          const isCurrentUser = hit.id === currentUser.id;
-          return (
-            <div key={hit.id} className="user-search-card">
-              <button
-                type="button"
-                className="user-search-card-main"
-                onClick={() => setProfileUserId(hit.id)}
-              >
-                {hit.avatar ? (
-                  <img src={avatarUrl(hit.avatar) ?? undefined} alt="" className="user-search-avatar" />
-                ) : (
-                  <div className="user-search-avatar placeholder">👤</div>
-                )}
-                <div className="user-search-card-body">
-                  <strong>{hit.displayName}</strong>
-                  <span className="muted">@{hit.username}</span>
-                  <span className="presence-label presence-online">в сети</span>
-                  {hit.city && <span className="muted">📍 {hit.city}</span>}
-                  <span className="muted">🏆 {hit.totalScore} очков</span>
-                  {isCurrentUser && <span className="rating-you-badge">вы</span>}
-                </div>
-                <span className="info-hub-arrow" aria-hidden="true">
-                  →
-                </span>
-              </button>
-              {!isCurrentUser && (
-                <div className="user-search-card-actions">
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-primary"
-                    onClick={() => onWriteMessage(hit.id, hit.username)}
-                  >
-                    ✉️ Написать письмо
-                  </button>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+      <ul className="online-users-list">
+        {users.map((hit) => (
+          <li key={hit.id} className="online-user-item">
+            <span className="online-user-dot" aria-hidden="true" title="В сети" />
+            <button
+              type="button"
+              className="online-user-name"
+              onClick={() => setProfileUserId(hit.id)}
+            >
+              {hit.displayName}
+            </button>
+          </li>
+        ))}
+      </ul>
 
       {profileUserId != null && (
         <UserProfileModal
