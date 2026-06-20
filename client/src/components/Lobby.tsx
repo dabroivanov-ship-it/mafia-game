@@ -24,7 +24,6 @@ interface LobbyProps {
   onJoin: (roomId: number) => void;
   unreadMailCount?: number;
   onOpenMessages?: () => void;
-  onOpenInfo?: () => void;
 }
 
 function RoomCard({
@@ -73,7 +72,6 @@ export default function Lobby({
   onJoin,
   unreadMailCount = 0,
   onOpenMessages,
-  onOpenInfo,
 }: LobbyProps) {
   const gameRooms = rooms.filter((r) => r.kind !== 'chat');
   const chatRooms = rooms.filter((r) => r.kind === 'chat');
@@ -86,11 +84,6 @@ export default function Lobby({
           <p>Выберите комнату для игры или общения</p>
           {siteOnlineCount > 0 && (
             <p className="lobby-online-count muted">На сайте: {siteOnlineCount} в сети</p>
-          )}
-          {onOpenInfo && (
-            <button type="button" className="lobby-chat-link" onClick={onOpenInfo}>
-              ℹ️ Правила, роли и рейтинг — информация об игре →
-            </button>
           )}
         </div>
       </header>

@@ -84,6 +84,7 @@ export interface PublicUser {
   chatLimit: number;
   theme: string | null;
   telegramUsername?: string | null;
+  needsEmailLink?: boolean;
 }
 
 export interface ChatMessage {

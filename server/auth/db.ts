@@ -126,12 +126,21 @@ export function normalizeChatLimit(value: unknown): number {
   return n;
 }
 
+export function isTelegramPlaceholderEmail(email: string | null | undefined): boolean {
+  return !!email && /@telegram\.local$/i.test(email.trim());
+}
+
+export function userNeedsEmailLink(user: User | null | undefined): boolean {
+  return !!(user?.telegram_id && isTelegramPlaceholderEmail(user.email));
+}
+
 export function publicUser(user: User | null | undefined): PublicUser | null {
   if (!user) return null;
+  const placeholderEmail = isTelegramPlaceholderEmail(user.email);
   return {
     id: user.id,
     username: user.username,
-    email: user.email,
+    email: placeholderEmail ? undefined : user.email,
     displayName: user.display_name,
     city: user.city || '',
     bio: user.bio || '',
@@ -151,6 +160,7 @@ export function publicUser(user: User | null | undefined): PublicUser | null {
     theme: user.theme && user.theme.trim() ? user.theme.trim() : null,
     telegramUsername:
       user.telegram_username && user.telegram_username.trim() ? user.telegram_username.trim() : null,
+    needsEmailLink: userNeedsEmailLink(user),
   };
 }
 
@@ -230,6 +240,38 @@ export function updateUserProfile(
   }
   values.push(userId);
   db.prepare(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+  return findUserPublic(userId);
+}
+
+export function linkTelegramUserEmail(
+  userId: number,
+  email: string,
+  passwordHash: string
+): PublicUser | null {
+  const user = findUserById(userId);
+  if (!user) return null;
+  if (!user.telegram_id) {
+    throw new Error('Привязка email доступна только для входа через Telegram');
+  }
+  if (!userNeedsEmailLink(user)) {
+    throw new Error('Email уже привязан');
+  }
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    throw new Error('Некорректный email');
+  }
+  if (isTelegramPlaceholderEmail(normalizedEmail)) {
+    throw new Error('Некорректный email');
+  }
+  const existing = findUserByEmail(normalizedEmail);
+  if (existing && existing.id !== userId) {
+    throw new Error('Email уже зарегистрирован');
+  }
+  db.prepare('UPDATE users SET email = ?, password_hash = ? WHERE id = ?').run(
+    normalizedEmail,
+    passwordHash,
+    userId
+  );
   return findUserPublic(userId);
 }
 

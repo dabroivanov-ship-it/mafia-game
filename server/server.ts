@@ -18,6 +18,7 @@ import { createAdminRouter } from './admin/routes.js';
 import { createModerationRouter } from './moderation/routes.js';
 import { createMessagesRouter } from './messages/routes.js';
 import { createNewsRouter } from './news/routes.js';
+import './news/comments.js';
 import settingsRoutes from './settings/routes.js';
 import { getUnreadCount } from './messages/store.js';
 import { socketAuthMiddleware, refreshSocketUser } from './auth/jwt.js';

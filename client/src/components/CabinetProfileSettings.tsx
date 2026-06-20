@@ -1,5 +1,5 @@
 import { useState, useRef, FormEvent, ChangeEvent } from 'react';
-import { avatarUrl, updateProfile, uploadAvatar } from '../api';
+import { avatarUrl, updateProfile, uploadAvatar, linkTelegramEmail } from '../api';
 import type { User } from '../types';
 
 const CHAT_LIMIT_OPTIONS = [15, 30, 50, 100];
@@ -25,6 +25,8 @@ export default function CabinetProfileSettings({
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [avatarLoading, setAvatarLoading] = useState(false);
+  const [linkForm, setLinkForm] = useState({ email: '', password: '', confirm: '' });
+  const [linkLoading, setLinkLoading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleSave = async (e: FormEvent) => {
@@ -57,6 +59,31 @@ export default function CabinetProfileSettings({
     } finally {
       setAvatarLoading(false);
       if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  const handleLinkEmail = async (e: FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    if (linkForm.password.length < 8) {
+      setError('Пароль: минимум 8 символов');
+      return;
+    }
+    if (linkForm.password !== linkForm.confirm) {
+      setError('Пароли не совпадают');
+      return;
+    }
+    setLinkLoading(true);
+    try {
+      const { user: updated } = await linkTelegramEmail(linkForm);
+      onUpdate(updated);
+      setLinkForm({ email: '', password: '', confirm: '' });
+      setSuccess('Email и пароль привязаны — теперь можно входить по почте');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка привязки');
+    } finally {
+      setLinkLoading(false);
     }
   };
 
@@ -100,9 +127,62 @@ export default function CabinetProfileSettings({
 
         <div className="profile-stats">
           <span>@{user.username}</span>
+          {user.telegramUsername && <span>📱 Telegram @{user.telegramUsername}</span>}
+          {user.email && !user.needsEmailLink && <span>✉️ {user.email}</span>}
           <span>🏆 {user.totalScore} очков</span>
           <span>📅 с {new Date(user.createdAt).toLocaleDateString('ru-RU')}</span>
         </div>
+
+        {user.needsEmailLink && (
+          <section className="cabinet-link-email-block">
+            <h3>Привязка email и пароля</h3>
+            <p className="muted">
+              Вы вошли через Telegram. Привяжите почту и пароль, чтобы входить на сайт без Telegram.
+            </p>
+            <form className="auth-form" onSubmit={handleLinkEmail}>
+              <label>
+                Email
+                <input
+                  type="email"
+                  value={linkForm.email}
+                  onChange={(e) => setLinkForm({ ...linkForm, email: e.target.value })}
+                  placeholder="you@mail.ru"
+                  required
+                  autoComplete="email"
+                />
+              </label>
+              <label>
+                Пароль
+                <input
+                  type="password"
+                  value={linkForm.password}
+                  onChange={(e) => setLinkForm({ ...linkForm, password: e.target.value })}
+                  placeholder="минимум 8 символов"
+                  required
+                  minLength={8}
+                  autoComplete="new-password"
+                />
+              </label>
+              <label>
+                Повтор пароля
+                <input
+                  type="password"
+                  value={linkForm.confirm}
+                  onChange={(e) => setLinkForm({ ...linkForm, confirm: e.target.value })}
+                  placeholder="••••••••"
+                  required
+                  minLength={8}
+                  autoComplete="new-password"
+                />
+              </label>
+              <div className="profile-actions">
+                <button type="submit" className="btn btn-primary" disabled={linkLoading}>
+                  {linkLoading ? 'Сохранение...' : 'Привязать email'}
+                </button>
+              </div>
+            </form>
+          </section>
+        )}
 
         {error && <div className="auth-error">{error}</div>}
         {success && <div className="auth-success">{success}</div>}

@@ -395,15 +395,11 @@ export default function App() {
             onJoin={joinRoom}
             unreadMailCount={unreadMailCount}
             onOpenMessages={() => openMessages()}
-            onOpenInfo={() => {
-              window.history.pushState(null, '', pathForInfoSection('hub'));
-              setView('info');
-            }}
           />
         )}
         {view === 'news' && (
           <ViewSuspense label="Новости…">
-            <News onBack={() => setView('lobby')} />
+            <News user={user} onBack={() => setView('lobby')} />
           </ViewSuspense>
         )}
         {view === 'cabinet' && lobbyScreen === 'cabinet-settings' && (

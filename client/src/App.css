@@ -149,6 +149,18 @@ html.telegram-webapp .app-body {
   font-size: 0.95rem;
 }
 
+.auth-info-link {
+  display: inline-block;
+  margin-top: 12px;
+  color: var(--accent);
+  font-size: 0.95rem;
+  text-decoration: none;
+}
+
+.auth-info-link:hover {
+  text-decoration: underline;
+}
+
 .auth-tabs {
   display: flex;
   gap: 8px;
@@ -1303,6 +1315,129 @@ html.telegram-webapp .app-body {
 
 .news-body p:last-child {
   margin-bottom: 0;
+}
+
+.news-comments {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.news-comments-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.news-comments-toggle-arrow {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.news-comments-panel {
+  margin-top: 14px;
+}
+
+.news-comments-list {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.news-comment {
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+}
+
+.news-comment-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.news-comment-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.news-comment-avatar.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+.news-comment-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.news-comment-meta strong {
+  display: block;
+}
+
+.news-comment-meta .muted {
+  font-size: 0.8rem;
+}
+
+.news-comment-delete {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.news-comment-body {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.news-comment-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.news-comment-form textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  resize: vertical;
+}
+
+.cabinet-link-email-block {
+  margin: 20px 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
+.cabinet-link-email-block h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
 }
 
 .delete-message-modal {

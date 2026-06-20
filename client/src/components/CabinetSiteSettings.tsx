@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { updateProfile, fetchThemeSettings } from '../api';
 import type { User, ThemeId } from '../types';
-import ThemePicker from './ThemePicker';
 import { applyTheme, resolveTheme, THEMES } from '../themes';
 
 function themeName(id: ThemeId): string {
@@ -61,11 +60,13 @@ export default function CabinetSiteSettings({ user, onUpdate, onBack }: CabinetS
     void saveTheme(themeId);
   };
 
-  const handleUseSiteTheme = (checked: boolean) => {
-    setUseSiteTheme(checked);
-    applyTheme(checked ? siteDefaultTheme : personalTheme);
-    void saveTheme(checked ? null : personalTheme);
+  const handleUseSiteTheme = () => {
+    setUseSiteTheme(true);
+    applyTheme(siteDefaultTheme);
+    void saveTheme(null);
   };
+
+  const siteTheme = THEMES.find((t) => t.id === siteDefaultTheme) ?? THEMES[0];
 
   return (
     <div className="cabinet-page">
@@ -77,7 +78,7 @@ export default function CabinetSiteSettings({ user, onUpdate, onBack }: CabinetS
 
       <header className="page-header">
         <h1>🎨 Оформление сайта</h1>
-        <p className="muted">Цветовая тема интерфейса</p>
+        <p className="muted">Выберите тему — изменения применяются сразу</p>
       </header>
 
       <div className="profile-card cabinet-card">
@@ -85,33 +86,53 @@ export default function CabinetSiteSettings({ user, onUpdate, onBack }: CabinetS
         {success && <div className="auth-success">{success}</div>}
 
         <div className="theme-settings-block">
-          <h3>Тема сайта</h3>
           <p className="theme-settings-hint">
-            Сейчас на сайте установлена тема «{themeName(siteDefaultTheme)}». Вы можете
-            использовать её или выбрать свою личную.
+            «Как на сайте» — общая тема проекта ({themeName(siteDefaultTheme)}). Личная тема
+            сохраняется только для вашего аккаунта.
           </p>
-          <label className="theme-use-default">
-            <input
-              type="checkbox"
-              checked={useSiteTheme}
-              disabled={themeSaving}
-              onChange={(e) => handleUseSiteTheme(e.target.checked)}
-            />
-            <span>Как на сайте — {themeName(siteDefaultTheme)}</span>
-          </label>
-        </div>
 
-        {!useSiteTheme && (
-          <div className="theme-settings-block">
-            <h3>Личная тема</h3>
-            <p className="theme-settings-hint">Будет применяться только для вас, независимо от настроек сайта.</p>
-            <ThemePicker
-              value={personalTheme}
-              onChange={handlePersonalTheme}
+          <div className="theme-picker" role="radiogroup" aria-label="Выбор темы">
+            <button
+              type="button"
+              role="radio"
+              aria-checked={useSiteTheme}
+              className={`theme-picker-card ${useSiteTheme ? 'active' : ''}`}
               disabled={themeSaving}
-            />
+              onClick={handleUseSiteTheme}
+            >
+              <span className="theme-picker-swatches" aria-hidden>
+                {siteTheme.preview.map((color) => (
+                  <span key={color} style={{ background: color }} />
+                ))}
+              </span>
+              <span className="theme-picker-name">Как на сайте</span>
+              <span className="theme-picker-desc">{siteTheme.name} — общая тема</span>
+            </button>
+
+            {THEMES.map((theme) => {
+              const active = !useSiteTheme && personalTheme === theme.id;
+              return (
+                <button
+                  key={theme.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  className={`theme-picker-card ${active ? 'active' : ''}`}
+                  disabled={themeSaving}
+                  onClick={() => handlePersonalTheme(theme.id)}
+                >
+                  <span className="theme-picker-swatches" aria-hidden>
+                    {theme.preview.map((color) => (
+                      <span key={color} style={{ background: color }} />
+                    ))}
+                  </span>
+                  <span className="theme-picker-name">{theme.name}</span>
+                  <span className="theme-picker-desc">{theme.description}</span>
+                </button>
+              );
+            })}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

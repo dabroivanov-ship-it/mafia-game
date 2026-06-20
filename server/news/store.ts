@@ -1,5 +1,6 @@
 import db, { findUserById } from '../auth/db.js';
 import { MAX_NEWS_BODY_LENGTH } from '../security/constants.js';
+import { countNewsComments } from './comments.js';
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS news_posts (
@@ -46,6 +47,7 @@ export interface NewsPost {
   authorName?: string;
   createdAt: string;
   updatedAt: string;
+  commentCount?: number;
 }
 
 function rowToPost(row: NewsRow): NewsPost {
@@ -61,6 +63,7 @@ function rowToPost(row: NewsRow): NewsPost {
     authorName: author?.display_name || author?.username,
     createdAt: row.created_at.includes('T') ? row.created_at : `${row.created_at.replace(' ', 'T')}Z`,
     updatedAt: row.updated_at.includes('T') ? row.updated_at : `${row.updated_at.replace(' ', 'T')}Z`,
+    commentCount: countNewsComments(row.id),
   };
 }
 

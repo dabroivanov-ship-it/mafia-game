@@ -1,4 +1,4 @@
-import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, MailConversation, RoomKind, ThemeId, ViolationLogEntry, UserSearchHit, UserPresence, FriendUser, LeaderboardEntry } from './types';
+import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, NewsComment, MailConversation, RoomKind, ThemeId, ViolationLogEntry, UserSearchHit, UserPresence, FriendUser, LeaderboardEntry } from './types';
 
 const API_BASE =
   import.meta.env.VITE_API_URL ??
@@ -320,6 +320,35 @@ export async function fetchLeaderboard(
 
 export async function fetchNews(): Promise<{ news: NewsPost[] }> {
   return apiRequest('/api/news');
+}
+
+export async function fetchNewsComments(newsId: number): Promise<{ comments: NewsComment[] }> {
+  return apiRequest(`/api/news/${newsId}/comments`);
+}
+
+export async function postNewsComment(
+  newsId: number,
+  body: string
+): Promise<{ comment: NewsComment }> {
+  return apiRequest(`/api/news/${newsId}/comments`, {
+    method: 'POST',
+    body: JSON.stringify({ body }),
+  });
+}
+
+export async function deleteNewsComment(commentId: number): Promise<void> {
+  await apiRequest(`/api/news/comments/${commentId}`, { method: 'DELETE' });
+}
+
+export async function linkTelegramEmail(payload: {
+  email: string;
+  password: string;
+  confirm: string;
+}): Promise<{ user: User }> {
+  return apiRequest('/api/profile/link-email', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function fetchAdminNews(): Promise<{ news: NewsPost[] }> {

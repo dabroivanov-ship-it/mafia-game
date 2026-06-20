@@ -169,6 +169,9 @@ export default function Auth({ onSuccess }: AuthProps) {
         <header className="auth-header">
           <h1>🎭 Мафия</h1>
           <p>Войдите или зарегистрируйтесь, чтобы играть</p>
+          <a href="/info" className="auth-info-link">
+            ℹ️ Правила, роли и рейтинг — информация об игре →
+          </a>
         </header>
 
         <div className="auth-tabs">

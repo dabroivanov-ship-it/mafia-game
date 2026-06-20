@@ -35,6 +35,7 @@ export interface User {
   chatLimit: number;
   theme: string | null;
   telegramUsername?: string | null;
+  needsEmailLink?: boolean;
 }
 
 export interface PublicUser extends User {
@@ -219,6 +220,18 @@ export interface NewsPost {
   authorName?: string;
   createdAt: string;
   updatedAt: string;
+  commentCount?: number;
+}
+
+export interface NewsComment {
+  id: number;
+  newsId: number;
+  userId: number;
+  body: string;
+  createdAt: string;
+  authorName: string;
+  authorUsername: string;
+  authorAvatar: string | null;
 }
 
 export type ViolationType = 'profanity' | 'advertising' | 'other';

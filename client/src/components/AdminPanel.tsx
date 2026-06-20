@@ -527,8 +527,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
         onViewChange={setSystemView}
         usersCount={users.length}
         banListCount={banListCount}
-        gameRoomsCount={gameRooms.length}
-        chatRoomsCount={chatRooms.length}
+        roomsCount={rooms.length}
         violationsCount={violations.length}
         newsCount={newsPosts.length}
         defaultTheme={defaultTheme}
@@ -747,7 +746,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
               )}
             </section>
           ),
-          roomsGame: (
+          rooms: (
             <section className="admin-section admin-section-embedded">
               <h3>Комнаты мафии ({gameRooms.length})</h3>
               <div className="admin-room-list">
@@ -787,11 +786,8 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
                 />
                 <button type="submit" className="btn btn-primary">+ Создать комнату мафии</button>
               </form>
-            </section>
-          ),
-          roomsChat: (
-            <section className="admin-section admin-section-embedded">
-              <h3>Чат-комнаты ({chatRooms.length})</h3>
+
+              <h3 className="admin-subsection-title">Чат-комнаты ({chatRooms.length})</h3>
               <div className="admin-room-list">
                 {chatRooms.length === 0 && <p className="muted">Чат-комнат пока нет</p>}
                 {chatRooms.map((r) => (

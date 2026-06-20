@@ -8,6 +8,7 @@ import {
   canBanTarget,
   listStaffUsers,
   listLeaderboard,
+  linkTelegramUserEmail,
   searchPublicUsers,
   updateUserProfile,
   updateUserAvatar,
@@ -17,6 +18,8 @@ import {
 import { createAvatarUpload } from '../upload/avatar.js';
 import { validateImageFile } from '../security/validate.js';
 import { createRateLimitMiddleware, searchRateLimiter } from '../security/rateLimit.js';
+import { MAX_PASSWORD_LENGTH } from '../security/constants.js';
+import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import { getUserMessageCount } from '../history/store.js';
 import { isValidThemeId } from '../settings/themes.js';
@@ -83,6 +86,36 @@ export function createProfileRouter({ onProfileUpdated }: ProfileRouterOptions =
       if (oldAvatar) deleteAvatarFile(oldAvatar);
       res.json({ user, avatar: avatarUrl });
     });
+  });
+
+  router.post('/link-email', authMiddleware, async (req, res) => {
+    try {
+      const email = String(req.body?.email ?? '').trim();
+      const password = String(req.body?.password ?? '');
+      const confirm = String(req.body?.confirm ?? '');
+
+      if (!email || !password) {
+        return res.status(400).json({ error: 'Укажите email и пароль' });
+      }
+      if (password !== confirm) {
+        return res.status(400).json({ error: 'Пароли не совпадают' });
+      }
+      if (password.length < 8) {
+        return res.status(400).json({ error: 'Пароль: минимум 8 символов' });
+      }
+      if (password.length > MAX_PASSWORD_LENGTH) {
+        return res.status(400).json({ error: 'Пароль слишком длинный' });
+      }
+
+      const passwordHash = await bcrypt.hash(password, 10);
+      const user = linkTelegramUserEmail(req.userId!, email, passwordHash);
+      if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
+      onProfileUpdated?.(req.userId!, user);
+      res.json({ user });
+    } catch (e) {
+      const err = e as Error;
+      res.status(400).json({ error: err.message || 'Не удалось привязать email' });
+    }
   });
 
   router.get('/online-count', (_req, res) => {
