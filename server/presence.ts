@@ -39,8 +39,6 @@ export function listOnlineUsers(): UserSearchHit[] {
       totalScore: user.total_score,
       isAdmin: user.role === 'admin',
       isModerator: user.role === 'moderator',
-      isOnline: true,
-      lastSeenAt: getUserLastSeen(userId),
     });
   }
   return users.sort((a, b) => a.displayName.localeCompare(b.displayName, 'ru'));

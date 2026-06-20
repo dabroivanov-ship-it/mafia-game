@@ -123,7 +123,11 @@ export function createProfileRouter({ onProfileUpdated }: ProfileRouterOptions =
   });
 
   router.get('/online-users', authMiddleware, (_req, res) => {
-    res.json({ users: listOnlineUsers(), onlineCount: getOnlineUserCount() });
+    const users = listOnlineUsers().map((user) => ({
+      ...user,
+      ...getUserPresence(user.id),
+    }));
+    res.json({ users, onlineCount: getOnlineUserCount() });
   });
 
   router.get('/leaderboard', (req, res) => {
