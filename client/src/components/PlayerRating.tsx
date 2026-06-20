@@ -1,23 +1,23 @@
 import { useEffect, useState } from 'react';
-import { avatarUrl, fetchLeaderboard } from '../api';
-import type { LeaderboardEntry } from '../types';
+import { fetchLeaderboard } from '../api';
+import type { LeaderboardEntry, User } from '../types';
+import UserProfileModal from './UserProfileModal';
 
 interface PlayerRatingProps {
   embedded?: boolean;
-  currentUserId?: number | null;
+  currentUser?: User | null;
+  onWriteMessage?: (userId: number, username: string) => void;
 }
 
-function rankLabel(rank: number): string {
-  if (rank === 1) return '🥇';
-  if (rank === 2) return '🥈';
-  if (rank === 3) return '🥉';
-  return String(rank);
-}
-
-export default function PlayerRating({ embedded = false, currentUserId = null }: PlayerRatingProps) {
+export default function PlayerRating({
+  embedded = false,
+  currentUser = null,
+  onWriteMessage,
+}: PlayerRatingProps) {
   const [players, setPlayers] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [profileUserId, setProfileUserId] = useState<number | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -36,13 +36,6 @@ export default function PlayerRating({ embedded = false, currentUserId = null }:
 
   return (
     <div className={embedded ? 'rating-embedded' : 'rating-page'}>
-      {!embedded && (
-        <header className="page-header">
-          <h1>🏆 Рейтинг игроков</h1>
-          <p className="muted">Топ игроков по очкам за сыгранные партии</p>
-        </header>
-      )}
-
       {loading && <p className="muted">Загрузка...</p>}
       {error && <div className="auth-error">{error}</div>}
 
@@ -52,12 +45,10 @@ export default function PlayerRating({ embedded = false, currentUserId = null }:
 
       {!loading && !error && players.length > 0 && (
         <div className="rating-table-wrap">
-          <table className="rating-table">
+          <table className="rating-table rating-table-compact">
             <thead>
               <tr>
-                <th>#</th>
-                <th>Игрок</th>
-                <th>Город</th>
+                <th>Ник</th>
                 <th>Игр</th>
                 <th>Очки</th>
                 <th>Репутация</th>
@@ -65,39 +56,24 @@ export default function PlayerRating({ embedded = false, currentUserId = null }:
             </thead>
             <tbody>
               {players.map((player) => {
-                const isSelf = currentUserId != null && player.id === currentUserId;
+                const isSelf = currentUser?.id === player.id;
+                const canOpenProfile = currentUser != null;
+
                 return (
-                  <tr
-                    key={player.id}
-                    className={[
-                      player.rank <= 3 ? 'rating-row-top' : '',
-                      isSelf ? 'rating-row-self' : '',
-                    ]
-                      .filter(Boolean)
-                      .join(' ')}
-                  >
-                    <td className="rating-rank">{rankLabel(player.rank)}</td>
+                  <tr key={player.id} className={isSelf ? 'rating-row-self' : ''}>
                     <td>
-                      <div className="rating-player-cell">
-                        {player.avatar ? (
-                          <img
-                            src={avatarUrl(player.avatar) ?? undefined}
-                            alt=""
-                            className="rating-avatar"
-                          />
-                        ) : (
-                          <span className="rating-avatar placeholder">👤</span>
-                        )}
-                        <div>
-                          <strong>{player.displayName}</strong>
-                          <span className="muted">@{player.username}</span>
-                          {player.isAdmin && <span className="admin-badge">admin</span>}
-                          {player.isModerator && <span className="mod-badge">mod</span>}
-                          {isSelf && <span className="rating-you-badge">вы</span>}
-                        </div>
-                      </div>
+                      {canOpenProfile ? (
+                        <button
+                          type="button"
+                          className="rating-name-link"
+                          onClick={() => setProfileUserId(player.id)}
+                        >
+                          {player.username}
+                        </button>
+                      ) : (
+                        player.username
+                      )}
                     </td>
-                    <td className="muted">{player.city || '—'}</td>
                     <td>{player.gamesPlayed}</td>
                     <td className="rating-score">{player.totalScore}</td>
                     <td
@@ -118,6 +94,17 @@ export default function PlayerRating({ embedded = false, currentUserId = null }:
             </tbody>
           </table>
         </div>
+      )}
+
+      {profileUserId != null && currentUser && (
+        <UserProfileModal
+          userId={profileUserId}
+          currentUserId={currentUser.id}
+          viewerIsAdmin={currentUser.isAdmin}
+          viewerCanModerate={currentUser.isStaff}
+          onClose={() => setProfileUserId(null)}
+          onWriteMessage={onWriteMessage}
+        />
       )}
     </div>
   );

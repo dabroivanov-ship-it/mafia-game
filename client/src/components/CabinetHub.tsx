@@ -32,7 +32,6 @@ export default function CabinetHub({
 
       <header className="page-header">
         <h1>👤 Кабинет</h1>
-        <p className="muted">@{user.username}</p>
       </header>
 
       <div className="cabinet-hub-user">
@@ -42,7 +41,7 @@ export default function CabinetHub({
           <div className="cabinet-hub-avatar placeholder">👤</div>
         )}
         <div>
-          <strong>{user.displayName}</strong>
+          <strong>{user.username}</strong>
           <span className="muted">🏆 {user.totalScore} очков</span>
         </div>
       </div>

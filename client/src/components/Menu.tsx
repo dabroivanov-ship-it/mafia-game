@@ -1,4 +1,6 @@
-import type { User } from '../types';
+import type { User, SiteBranding } from '../types';
+import SiteLogo from './SiteLogo';
+import { DEFAULT_SITE_BRANDING } from '../siteBranding';
 
 export type MenuView = 'lobby' | 'news' | 'cabinet' | 'info' | 'admin';
 
@@ -19,19 +21,24 @@ const ITEMS: MenuItem[] = [
 
 interface MenuProps {
   user: User;
+  branding?: SiteBranding;
   view: MenuView;
   onNavigate: (view: MenuView) => void;
   onLogout: () => void;
   unreadMailCount?: number;
 }
 
-export default function Menu({ user, view, onNavigate, onLogout, unreadMailCount = 0 }: MenuProps) {
+export default function Menu({
+  user,
+  branding = DEFAULT_SITE_BRANDING,
+  view,
+  onNavigate,
+  onLogout,
+  unreadMailCount = 0,
+}: MenuProps) {
   return (
     <nav className="main-menu" aria-label="Главное меню">
-      <div className="menu-logo" aria-hidden="true">
-        <span className="menu-logo-mark">♠</span>
-        <span className="menu-logo-text">Mafia</span>
-      </div>
+      <SiteLogo branding={branding} className="menu-logo" />
       <div className="menu-items">
         {ITEMS.map((item) => (
           <button

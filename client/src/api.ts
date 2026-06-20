@@ -1,4 +1,4 @@
-import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, NewsComment, MailConversation, RoomKind, ThemeId, ViolationLogEntry, UserSearchHit, UserPresence, FriendUser, LeaderboardEntry } from './types';
+import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, NewsComment, MailConversation, RoomKind, ThemeId, ViolationLogEntry, UserSearchHit, UserPresence, FriendUser, LeaderboardEntry, SiteBranding } from './types';
 
 const API_BASE =
   import.meta.env.VITE_API_URL ??
@@ -162,8 +162,14 @@ export async function fetchMe(): Promise<{ user: User }> {
 export async function fetchThemeSettings(): Promise<{
   defaultTheme: ThemeId;
   themes: { id: ThemeId; name: string }[];
+  branding: SiteBranding;
 }> {
   return apiRequest('/api/settings/theme');
+}
+
+export async function fetchSiteBranding(): Promise<SiteBranding> {
+  const { branding } = await fetchThemeSettings();
+  return branding;
 }
 
 export async function fetchTelegramSettings(): Promise<{
@@ -226,6 +232,30 @@ export async function adminSetDefaultTheme(theme: ThemeId): Promise<{ defaultThe
     method: 'PUT',
     body: JSON.stringify({ theme }),
   });
+}
+
+export async function adminSetSiteBranding(payload: {
+  logoText: string;
+  logoMark: string;
+  footerText: string;
+}): Promise<{ branding: SiteBranding }> {
+  return apiRequest('/api/settings/branding', {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function adminUploadSiteLogo(file: File): Promise<{ branding: SiteBranding }> {
+  const form = new FormData();
+  form.append('logo', file);
+  return apiRequest('/api/settings/branding/logo', {
+    method: 'POST',
+    body: form,
+  });
+}
+
+export async function adminRemoveSiteLogo(): Promise<{ branding: SiteBranding }> {
+  return apiRequest('/api/settings/branding/logo', { method: 'DELETE' });
 }
 
 export async function updateProfile(payload: {

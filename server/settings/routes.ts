@@ -1,8 +1,20 @@
 import { Router } from 'express';
 import { authMiddleware, adminMiddleware } from '../auth/jwt.js';
-import { getDefaultTheme, getTelegramSettings, getYandexMetrikaId, setDefaultTheme, setTelegramSettings, setYandexMetrikaId, isValidYandexMetrikaId } from './store.js';
+import {
+  getDefaultTheme,
+  getSiteBranding,
+  getTelegramSettings,
+  getYandexMetrikaId,
+  setDefaultTheme,
+  setSiteBrandingFields,
+  setSiteLogoUrl,
+  setTelegramSettings,
+  setYandexMetrikaId,
+  isValidYandexMetrikaId,
+} from './store.js';
 import { isValidThemeId, listThemesPublic } from './themes.js';
 import { isValidWebAppUrl } from '../security/validate.js';
+import { siteLogoPublicPath, siteLogoUpload } from '../upload/siteLogo.js';
 
 const router = Router();
 
@@ -10,6 +22,7 @@ router.get('/theme', (_req, res) => {
   res.json({
     defaultTheme: getDefaultTheme(),
     themes: listThemesPublic(),
+    branding: getSiteBranding(),
   });
 });
 
@@ -58,6 +71,34 @@ router.put('/metrika', authMiddleware, adminMiddleware, (req, res) => {
   const metrikaId = Number(raw);
   setYandexMetrikaId(metrikaId);
   res.json({ metrikaId });
+});
+
+router.put('/branding', authMiddleware, adminMiddleware, (req, res) => {
+  const logoText = String(req.body?.logoText ?? '').trim().slice(0, 40);
+  const logoMark = String(req.body?.logoMark ?? '').trim().slice(0, 8);
+  const footerText = String(req.body?.footerText ?? '').trim().slice(0, 500);
+  if (!logoText) {
+    return res.status(400).json({ error: 'Укажите текст логотипа' });
+  }
+  const branding = setSiteBrandingFields({ logoText, logoMark, footerText });
+  res.json({ branding });
+});
+
+router.post('/branding/logo', authMiddleware, adminMiddleware, (req, res) => {
+  siteLogoUpload.single('logo')(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({ error: err instanceof Error ? err.message : 'Ошибка загрузки' });
+    }
+    if (!req.file) {
+      return res.status(400).json({ error: 'Выберите файл логотипа' });
+    }
+    const branding = setSiteLogoUrl(siteLogoPublicPath(req.file.filename));
+    res.json({ branding });
+  });
+});
+
+router.delete('/branding/logo', authMiddleware, adminMiddleware, (_req, res) => {
+  res.json({ branding: setSiteLogoUrl(null) });
 });
 
 export default router;

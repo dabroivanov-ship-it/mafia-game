@@ -139,6 +139,11 @@ html.telegram-webapp .app-body {
   margin-bottom: 24px;
 }
 
+.auth-header-logo {
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
 .auth-header h1 {
   font-size: 2rem;
   margin-bottom: 8px;
@@ -2577,6 +2582,13 @@ html.telegram-webapp .app-body {
   display: none;
 }
 
+.site-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.site-logo-mark,
 .menu-logo-mark {
   position: relative;
   display: inline-flex;
@@ -2594,6 +2606,7 @@ html.telegram-webapp .app-body {
   animation: mafiaLogoFloat 3.4s ease-in-out infinite;
 }
 
+.site-logo-mark::after,
 .menu-logo-mark::after {
   content: '';
   position: absolute;
@@ -2603,10 +2616,36 @@ html.telegram-webapp .app-body {
   animation: mafiaLogoPulse 2.2s ease-in-out infinite;
 }
 
+.site-logo-text,
 .menu-logo-text {
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.site-logo-image {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  border-radius: 12px;
+}
+
+.site-footer {
+  flex-shrink: 0;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 16px 20px calc(16px + var(--safe-bottom));
+  border-top: 1px solid var(--border);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.site-footer p {
+  margin: 0;
+  white-space: pre-wrap;
 }
 
 .menu-items {
@@ -2876,6 +2915,27 @@ html.telegram-webapp .app-body {
 .rating-score {
   font-weight: 700;
   white-space: nowrap;
+}
+
+.rating-name-link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+.rating-name-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.rating-table-compact th:first-child,
+.rating-table-compact td:first-child {
+  min-width: 140px;
 }
 
 .rating-you-badge {
@@ -4163,6 +4223,81 @@ html.telegram-webapp .app-body {
   margin-top: 28px;
   padding-top: 20px;
   border-top: 1px solid var(--border);
+}
+
+.admin-site-branding {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.admin-branding-section-title {
+  margin: 8px 0 0;
+}
+
+.admin-branding-logo-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+
+.admin-branding-logo-image {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  border-radius: 10px;
+}
+
+.admin-branding-logo-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: var(--bg-hover);
+  font-size: 1.8rem;
+}
+
+.admin-branding-logo-text {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.admin-branding-logo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-branding-file-label {
+  cursor: pointer;
+}
+
+.admin-site-branding label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.admin-site-branding input,
+.admin-site-branding textarea {
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 16px;
+  font-family: inherit;
 }
 
 .admin-bot-phrases {

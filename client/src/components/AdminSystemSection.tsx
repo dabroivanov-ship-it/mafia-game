@@ -1,19 +1,20 @@
 import { FormEvent, ReactNode, useState } from 'react';
 import ThemePicker from './ThemePicker';
 import AdminBotPhrasesEditor from './AdminBotPhrasesEditor';
-import type { ThemeId } from '../types';
-import { THEMES } from '../themes';
-
+import AdminSiteBrandingEditor from './AdminSiteBrandingEditor';
+import type { ThemeId, SiteBranding } from '../types';
 export type SystemView =
   | 'hub'
   | 'users'
   | 'banlist'
-  | 'rooms'
+  | 'game-rooms'
+  | 'chat-rooms'
   | 'news'
   | 'violations'
   | 'telegram'
   | 'metrika'
-  | 'game';
+  | 'theme'
+  | 'phrases';
 
 interface AdminSystemSectionProps {
   view?: SystemView;
@@ -21,11 +22,14 @@ interface AdminSystemSectionProps {
   usersCount: number;
   banListCount?: number;
   roomsCount?: number;
+  gameRoomsCount?: number;
+  chatRoomsCount?: number;
   violationsCount: number;
   newsCount?: number;
   defaultTheme: ThemeId;
   themeSaving: boolean;
   onThemeChange: (id: ThemeId) => void;
+  onBrandingChange?: (branding: SiteBranding) => void;
   telegramForm: { botUsername: string; webAppUrl: string };
   telegramSaving: boolean;
   onTelegramFormChange: (patch: Partial<{ botUsername: string; webAppUrl: string }>) => void;
@@ -40,14 +44,15 @@ interface AdminSystemSectionProps {
   panels: {
     users: ReactNode;
     banlist: ReactNode;
-    rooms: ReactNode;
+    gameRooms: ReactNode;
+    chatRooms: ReactNode;
     news: ReactNode;
     violations: ReactNode;
   };
 }
 
 const SYSTEM_CATEGORIES: {
-  id: SystemView;
+  id: string;
   icon: string;
   title: string;
   links: { view: SystemView; label: string }[];
@@ -59,13 +64,8 @@ const SYSTEM_CATEGORIES: {
     links: [
       { view: 'users', label: 'Управление аккаунтами' },
       { view: 'banlist', label: 'Бан-лист' },
+      { view: 'violations', label: 'Журнал модерации' },
     ],
-  },
-  {
-    id: 'rooms',
-    icon: '🏠',
-    title: 'Комнаты',
-    links: [{ view: 'rooms', label: 'Мафия и чат-комнаты' }],
   },
   {
     id: 'news',
@@ -74,30 +74,23 @@ const SYSTEM_CATEGORIES: {
     links: [{ view: 'news', label: 'Публикации и черновики' }],
   },
   {
-    id: 'violations',
-    icon: '⚠️',
-    title: 'Лог нарушений',
-    links: [{ view: 'violations', label: 'Журнал модерации' }],
-  },
-  {
-    id: 'telegram',
+    id: 'integrations',
     icon: '📱',
     title: 'Интеграции',
-    links: [{ view: 'telegram', label: 'Telegram-бот' }],
+    links: [
+      { view: 'telegram', label: 'Telegram-бот' },
+      { view: 'metrika', label: 'Яндекс.Метрика' },
+    ],
   },
   {
-    id: 'metrika',
-    icon: '📈',
-    title: 'Аналитика',
-    links: [{ view: 'metrika', label: 'Яндекс.Метрика' }],
-  },
-  {
-    id: 'game',
+    id: 'game-settings',
     icon: '🎮',
     title: 'Настройки игры',
     links: [
-      { view: 'game', label: 'Тема сайта' },
-      { view: 'game', label: 'Фразы ведущего' },
+      { view: 'theme', label: 'Тема сайта' },
+      { view: 'phrases', label: 'Фразы ведущего' },
+      { view: 'game-rooms', label: 'Комнаты мафии' },
+      { view: 'chat-rooms', label: 'Комнаты чата' },
     ],
   },
 ];
@@ -105,12 +98,14 @@ const SYSTEM_CATEGORIES: {
 const VIEW_TITLES: Record<Exclude<SystemView, 'hub'>, string> = {
   users: 'Пользователи',
   banlist: 'Бан-лист',
-  rooms: 'Комнаты',
+  'game-rooms': 'Комнаты мафии',
+  'chat-rooms': 'Комнаты чата',
   news: 'Новости',
-  violations: 'Лог нарушений',
-  telegram: 'Интеграции',
-  metrika: 'Аналитика',
-  game: 'Настройки игры',
+  violations: 'Журнал модерации',
+  telegram: 'Telegram-бот',
+  metrika: 'Яндекс.Метрика',
+  theme: 'Тема сайта',
+  phrases: 'Фразы ведущего',
 };
 
 export default function AdminSystemSection({
@@ -119,11 +114,14 @@ export default function AdminSystemSection({
   usersCount,
   banListCount = 0,
   roomsCount = 0,
+  gameRoomsCount = 0,
+  chatRoomsCount = 0,
   violationsCount,
   newsCount = 0,
   defaultTheme,
   themeSaving,
   onThemeChange,
+  onBrandingChange,
   telegramForm,
   telegramSaving,
   onTelegramFormChange,
@@ -145,14 +143,12 @@ export default function AdminSystemSection({
     else setInternalView(next);
   };
 
-  const badgeFor = (categoryId: SystemView) => {
-    if (categoryId === 'users') return usersCount;
-    if (categoryId === 'banlist') return banListCount;
-    if (categoryId === 'rooms') return roomsCount;
+  const badgeFor = (categoryId: string) => {
+    if (categoryId === 'users') return usersCount + banListCount + violationsCount;
     if (categoryId === 'news') return newsCount;
-    if (categoryId === 'violations') return violationsCount;
-    if (categoryId === 'game') return THEMES.length + 1;
-    return 1;
+    if (categoryId === 'integrations') return 2;
+    if (categoryId === 'game-settings') return gameRoomsCount + chatRoomsCount + 2;
+    return roomsCount || 1;
   };
 
   if (view !== 'hub') {
@@ -169,8 +165,12 @@ export default function AdminSystemSection({
 
         {view === 'banlist' && <div className="admin-system-detail-panel admin-system-wide">{panels.banlist}</div>}
 
-        {view === 'rooms' && (
-          <div className="admin-system-detail-panel admin-system-wide">{panels.rooms}</div>
+        {view === 'game-rooms' && (
+          <div className="admin-system-detail-panel admin-system-wide">{panels.gameRooms}</div>
+        )}
+
+        {view === 'chat-rooms' && (
+          <div className="admin-system-detail-panel admin-system-wide">{panels.chatRooms}</div>
         )}
 
         {view === 'news' && <div className="admin-system-detail-panel admin-system-wide">{panels.news}</div>}
@@ -262,7 +262,7 @@ export default function AdminSystemSection({
           </form>
         )}
 
-        {view === 'game' && (
+        {view === 'theme' && (
           <div className="admin-system-detail-panel theme-settings-block admin-theme-block">
             <h4>Тема оформления сайта</h4>
             <p className="theme-settings-hint">
@@ -270,7 +270,12 @@ export default function AdminSystemSection({
             </p>
             <ThemePicker value={defaultTheme} onChange={onThemeChange} disabled={themeSaving} />
 
-            <h4 className="admin-game-phrases-title">Фразы ведущего</h4>
+            <AdminSiteBrandingEditor onBrandingChange={onBrandingChange} />
+          </div>
+        )}
+
+        {view === 'phrases' && (
+          <div className="admin-system-detail-panel theme-settings-block admin-theme-block">
             <AdminBotPhrasesEditor />
           </div>
         )}

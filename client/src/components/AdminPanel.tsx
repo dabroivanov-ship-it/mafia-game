@@ -31,7 +31,7 @@ import {
   type AdminRoom,
   type SilencedPlayerEntry,
 } from '../api';
-import type { User, NewsPost, ThemeId, ViolationLogEntry, ViolationType } from '../types';
+import type { User, NewsPost, ThemeId, ViolationLogEntry, ViolationType, SiteBranding } from '../types';
 import NewsEditor, { type NewsEditorValue } from './NewsEditor';
 import NewsBody from './NewsBody';
 import { isEmptyNewsBody } from './newsBodyUtils';
@@ -47,9 +47,10 @@ const VIOLATION_LABELS: Record<ViolationType, string> = {
 interface AdminPanelProps {
   onBack: () => void;
   onDefaultThemeChange?: (theme: ThemeId) => void;
+  onBrandingChange?: (branding: SiteBranding) => void;
 }
 
-export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelProps) {
+export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingChange }: AdminPanelProps) {
   const [systemView, setSystemView] = useState<SystemView>('hub');
   const [users, setUsers] = useState<User[]>([]);
   const [rooms, setRooms] = useState<AdminRoom[]>([]);
@@ -528,11 +529,14 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
         usersCount={users.length}
         banListCount={banListCount}
         roomsCount={rooms.length}
+        gameRoomsCount={gameRooms.length}
+        chatRoomsCount={chatRooms.length}
         violationsCount={violations.length}
         newsCount={newsPosts.length}
         defaultTheme={defaultTheme}
         themeSaving={themeSaving}
         onThemeChange={(id) => void handleDefaultThemeChange(id)}
+        onBrandingChange={onBrandingChange}
         telegramForm={telegramForm}
         telegramSaving={telegramSaving}
         onTelegramFormChange={(patch) => setTelegramForm((prev) => ({ ...prev, ...patch }))}
@@ -746,7 +750,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
               )}
             </section>
           ),
-          rooms: (
+          gameRooms: (
             <section className="admin-section admin-section-embedded">
               <h3>Комнаты мафии ({gameRooms.length})</h3>
               <div className="admin-room-list">
@@ -786,8 +790,11 @@ export default function AdminPanel({ onBack, onDefaultThemeChange }: AdminPanelP
                 />
                 <button type="submit" className="btn btn-primary">+ Создать комнату мафии</button>
               </form>
-
-              <h3 className="admin-subsection-title">Чат-комнаты ({chatRooms.length})</h3>
+            </section>
+          ),
+          chatRooms: (
+            <section className="admin-section admin-section-embedded">
+              <h3>Комнаты чата ({chatRooms.length})</h3>
               <div className="admin-room-list">
                 {chatRooms.length === 0 && <p className="muted">Чат-комнат пока нет</p>}
                 {chatRooms.map((r) => (

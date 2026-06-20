@@ -67,7 +67,7 @@ export default function OnlineUsers({ currentUser, onBack, onWriteMessage }: Onl
               className="online-user-name"
               onClick={() => setProfileUserId(hit.id)}
             >
-              {hit.displayName}
+              {hit.username}
             </button>
           </li>
         ))}

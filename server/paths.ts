@@ -41,3 +41,7 @@ export function getUploadsDir(): string {
 export function getNewsUploadsDir(): string {
   return process.env.NEWS_UPLOADS_DIR || path.join(getServerRoot(), 'uploads', 'news');
 }
+
+export function getSiteBrandingUploadsDir(): string {
+  return process.env.SITE_BRANDING_UPLOADS_DIR || path.join(getServerRoot(), 'uploads', 'branding');
+}

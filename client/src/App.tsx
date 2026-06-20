@@ -8,8 +8,10 @@ import PageLoader from './components/PageLoader';
 import { infoSectionFromPath, isPublicInfoPath, pathForInfoSection } from './infoRouting';
 import { DEFAULT_PAGE_META, updatePageMeta } from './seo';
 import { clearSession, fetchMe, fetchUnreadMailCount, fetchThemeSettings, saveSession, loadStoredPlayerId, saveStoredPlayerId, clearStoredPlayerIds } from './api';
-import type { LobbyRoom, RoomState, User, ThemeId, LobbyUpdate } from './types';
+import type { LobbyRoom, RoomState, User, ThemeId, LobbyUpdate, SiteBranding } from './types';
 import { applyTheme, resolveTheme, DEFAULT_THEME } from './themes';
+import { DEFAULT_SITE_BRANDING } from './siteBranding';
+import SiteFooter from './components/SiteFooter';
 
 const OnlineUsers = lazy(() => import('./components/OnlineUsers'));
 const News = lazy(() => import('./components/News'));
@@ -55,11 +57,15 @@ export default function App() {
   const [composeToUserId, setComposeToUserId] = useState<number | null>(null);
   const [composeToUsername, setComposeToUsername] = useState<string | null>(null);
   const [siteDefaultTheme, setSiteDefaultTheme] = useState<ThemeId>(DEFAULT_THEME);
+  const [siteBranding, setSiteBranding] = useState<SiteBranding>(DEFAULT_SITE_BRANDING);
 
   useEffect(() => {
     async function bootstrap() {
       const themePromise = fetchThemeSettings()
-        .then(({ defaultTheme }) => setSiteDefaultTheme(defaultTheme))
+        .then(({ defaultTheme, branding }) => {
+          setSiteDefaultTheme(defaultTheme);
+          setSiteBranding(branding);
+        })
         .catch(() => {});
 
       if (!token) {
@@ -329,7 +335,7 @@ export default function App() {
   }
 
   if (!user || !token) {
-    return <Auth onSuccess={handleAuthSuccess} />;
+    return <Auth onSuccess={handleAuthSuccess} branding={siteBranding} />;
   }
 
   if (currentRoomId) {
@@ -468,7 +474,10 @@ export default function App() {
         )}
         {view === 'info' && (
           <ViewSuspense label="Информация…">
-            <Info currentUserId={user.id} />
+            <Info
+              currentUser={user}
+              onWriteMessage={(userId, username) => openMessages({ userId, username })}
+            />
           </ViewSuspense>
         )}
         {view === 'admin' && user.isAdmin && (
@@ -476,13 +485,17 @@ export default function App() {
             <AdminPanel
               onBack={() => setView('lobby')}
               onDefaultThemeChange={setSiteDefaultTheme}
+              onBrandingChange={setSiteBranding}
             />
           </ViewSuspense>
         )}
       </div>
 
+      <SiteFooter text={siteBranding.footerText} />
+
       <Menu
         user={user}
+        branding={siteBranding}
         view={view === 'room' ? 'lobby' : view}
         onNavigate={(v) => {
           if (v === 'lobby') {

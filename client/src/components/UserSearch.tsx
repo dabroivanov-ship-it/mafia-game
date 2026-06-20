@@ -98,8 +98,7 @@ export default function UserSearch({ currentUser, onBack, onWriteMessage }: User
                   <div className="user-search-avatar placeholder">👤</div>
                 )}
                 <div className="user-search-card-body">
-                  <strong>{hit.displayName}</strong>
-                  <span className="muted">@{hit.username}</span>
+                  <strong>{hit.username}</strong>
                   <span
                     className={`presence-label ${hit.isOnline ? 'presence-online' : 'presence-offline'}`}
                   >

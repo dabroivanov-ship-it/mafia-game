@@ -11,13 +11,18 @@ import {
 import type { User } from '../types';
 import { getTelegramWebApp, isTelegramWebApp } from '../telegramWebApp';
 import TelegramLoginWidget from './TelegramLoginWidget';
+import SiteLogo from './SiteLogo';
+import SiteFooter from './SiteFooter';
 import { DEFAULT_PAGE_META, updatePageMeta } from '../seo';
+import type { SiteBranding } from '../types';
+import { DEFAULT_SITE_BRANDING } from '../siteBranding';
 
 interface AuthProps {
   onSuccess: (user: User, token: string) => void;
+  branding?: SiteBranding;
 }
 
-export default function Auth({ onSuccess }: AuthProps) {
+export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: AuthProps) {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -178,7 +183,7 @@ export default function Auth({ onSuccess }: AuthProps) {
     <div className="auth-page">
       <div className="auth-card">
         <header className="auth-header">
-          <h1>🎭 Мафия</h1>
+          <SiteLogo branding={branding} className="auth-header-logo" />
           <p>Войдите или зарегистрируйтесь, чтобы играть</p>
         </header>
 
@@ -381,9 +386,8 @@ export default function Auth({ onSuccess }: AuthProps) {
 
       </div>
 
+      <SiteFooter text={branding.footerText} />
     </div>
-
   );
-
 }
 

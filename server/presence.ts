@@ -41,7 +41,7 @@ export function listOnlineUsers(): UserSearchHit[] {
       isModerator: user.role === 'moderator',
     });
   }
-  return users.sort((a, b) => a.displayName.localeCompare(b.displayName, 'ru'));
+  return users.sort((a, b) => a.username.localeCompare(b.username, 'ru'));
 }
 
 export function getUserPresence(userId: number): { isOnline: boolean; lastSeenAt: string | null } {

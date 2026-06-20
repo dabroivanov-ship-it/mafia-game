@@ -13,6 +13,13 @@ export type RoomKind = 'game' | 'chat';
 
 export type ThemeId = 'midnight' | 'emerald' | 'crimson' | 'aurora' | 'sunset' | 'ocean';
 
+export interface SiteBranding {
+  logoUrl: string | null;
+  logoText: string;
+  logoMark: string;
+  footerText: string;
+}
+
 export interface User {
   id: number;
   username: string;

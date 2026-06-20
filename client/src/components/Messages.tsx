@@ -212,7 +212,7 @@ export default function Messages({
       <header className="page-header">
         <h1>
           {view === 'thread' && threadUser
-            ? `💬 ${threadUser.displayName}`
+            ? `💬 ${threadUser.username}`
             : view === 'compose'
               ? '✏️ Новое письмо'
               : '✉️ Письма'}
@@ -378,7 +378,7 @@ function FriendItem({
         )}
         <div className="mail-conversation-body">
           <div className="mail-conversation-top">
-            <strong>{friend.displayName}</strong>
+            <strong>{friend.username}</strong>
             <span className={`presence-label ${friend.isOnline ? 'presence-online' : 'presence-offline'}`}>
               {friend.isOnline ? 'в сети' : 'не в сети'}
             </span>
@@ -418,7 +418,7 @@ function ConversationItem({
         )}
         <div className="mail-conversation-body">
           <div className="mail-conversation-top">
-            <strong>{otherUser.displayName}</strong>
+            <strong>{otherUser.username}</strong>
             <span className="muted mail-time">
               {new Date(lastMessage.createdAt).toLocaleString('ru-RU', {
                 day: 'numeric',
@@ -439,7 +439,7 @@ function ConversationItem({
 
 function ThreadBubble({ msg }: { msg: PrivateMessage }) {
   const isOut = msg.direction === 'out';
-  const authorName = isOut ? 'Вы' : msg.otherUser.displayName;
+  const authorName = isOut ? 'Вы' : msg.otherUser.username;
 
   return (
     <div className={`mail-thread-bubble ${isOut ? 'out' : 'in'}`}>

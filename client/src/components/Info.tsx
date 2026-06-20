@@ -12,13 +12,21 @@ import {
 import { INFO_PAGE_META, updatePageMeta } from '../seo';
 import { ROLES_INTRO } from '../content/rolesContent';
 
+import type { User } from '../types';
+
 interface InfoProps {
   initialSection?: InfoSection;
   publicMode?: boolean;
-  currentUserId?: number | null;
+  currentUser?: User | null;
+  onWriteMessage?: (userId: number, username: string) => void;
 }
 
-export default function Info({ initialSection, publicMode = false, currentUserId = null }: InfoProps) {
+export default function Info({
+  initialSection,
+  publicMode = false,
+  currentUser = null,
+  onWriteMessage,
+}: InfoProps) {
   const [section, setSection] = useState<InfoSection>(
     initialSection ?? infoSectionFromPath(window.location.pathname)
   );
@@ -110,7 +118,7 @@ export default function Info({ initialSection, publicMode = false, currentUserId
           <h1>🏆 Рейтинг игроков</h1>
           <p className="muted">Топ-100 по очкам за сыгранные партии</p>
         </header>
-        <PlayerRating embedded currentUserId={currentUserId} />
+        <PlayerRating embedded currentUser={currentUser} onWriteMessage={onWriteMessage} />
       </div>
     );
   }

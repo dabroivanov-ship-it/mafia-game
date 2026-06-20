@@ -75,6 +75,7 @@ import { normalizeChatText, normalizeModerationReason, parseViolationType } from
 import { addViolation } from './moderation/violationLog.js';
 import fs from 'fs';
 import { ensureNewsUploadsDir } from './upload/newsImage.js';
+import { ensureSiteBrandingUploadsDir } from './upload/siteLogo.js';
 
 assertProductionEnv();
 
@@ -192,6 +193,17 @@ app.use(
     next();
   },
   express.static(newsUploadsDir)
+);
+
+const siteBrandingUploadsDir = ensureSiteBrandingUploadsDir();
+if (!fs.existsSync(siteBrandingUploadsDir)) fs.mkdirSync(siteBrandingUploadsDir, { recursive: true });
+app.use(
+  '/uploads/branding',
+  (_req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    next();
+  },
+  express.static(siteBrandingUploadsDir)
 );
 
 function adminDeleteMessage(roomId: number, messageId: string, channel: string): boolean {

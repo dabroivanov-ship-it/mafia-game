@@ -288,7 +288,7 @@ export default function UserProfileModal({
   const canRoomSilence =
     inRoom && viewerCanModerate && userId !== currentUserId && !!onSilence;
   const canWriteMail = userId !== currentUserId;
-  const displayTitle = user?.displayName || replyTarget?.playerName || 'Игрок';
+  const displayTitle = user?.username || replyTarget?.playerName || 'Игрок';
 
   return (
     <div className="modal-overlay player-page-overlay" onClick={onClose}>
