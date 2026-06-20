@@ -161,6 +161,58 @@ html.telegram-webapp .app-body {
   text-decoration: underline;
 }
 
+.auth-info-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 20px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-hover));
+  color: inherit;
+  text-decoration: none;
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.auth-info-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.auth-info-card-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.auth-info-card-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.auth-info-card-body strong {
+  font-size: 1rem;
+}
+
+.auth-info-card-body .muted {
+  font-size: 0.85rem;
+  margin-top: 4px;
+}
+
+.auth-info-card-arrow {
+  color: var(--accent);
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
 .auth-tabs {
   display: flex;
   gap: 8px;
@@ -228,6 +280,7 @@ html.telegram-webapp .app-body {
 }
 
 .auth-telegram-block {
+  margin-top: 16px;
   margin-bottom: 14px;
   padding: 12px;
   border: 1px solid var(--border);
@@ -236,6 +289,20 @@ html.telegram-webapp .app-body {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.auth-telegram-label {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.auth-telegram-widget {
+  min-height: 40px;
+}
+
+.auth-telegram-hint code {
+  font-size: 0.85em;
 }
 
 .auth-form select {
@@ -802,6 +869,35 @@ html.telegram-webapp .app-body {
 .lobby-online-count {
   margin: 0;
   font-size: 0.9rem;
+}
+
+.lobby-online-footer {
+  margin-top: 28px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+
+.lobby-online-link {
+  padding: 0 2px;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.lobby-online-link:hover {
+  opacity: 0.85;
+}
+
+.online-users-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 16px 24px;
 }
 
 .user-search-card:hover {

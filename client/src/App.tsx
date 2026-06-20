@@ -11,6 +11,7 @@ import { clearSession, fetchMe, fetchUnreadMailCount, fetchThemeSettings, saveSe
 import type { LobbyRoom, RoomState, User, ThemeId, LobbyUpdate } from './types';
 import { applyTheme, resolveTheme, DEFAULT_THEME } from './themes';
 
+const OnlineUsers = lazy(() => import('./components/OnlineUsers'));
 const News = lazy(() => import('./components/News'));
 const Info = lazy(() => import('./components/Info'));
 const AdminPanel = lazy(() => import('./components/AdminPanel'));
@@ -388,14 +389,24 @@ export default function App() {
       )}
 
       <div className="app-body">
-        {view === 'lobby' && (
+        {view === 'lobby' && lobbyScreen === 'rooms' && (
           <Lobby
             rooms={rooms}
             siteOnlineCount={siteOnlineCount}
             onJoin={joinRoom}
             unreadMailCount={unreadMailCount}
             onOpenMessages={() => openMessages()}
+            onOpenOnlineUsers={() => setLobbyScreen('online-users')}
           />
+        )}
+        {view === 'lobby' && lobbyScreen === 'online-users' && (
+          <ViewSuspense label="Игроки онлайн…">
+            <OnlineUsers
+              currentUser={user}
+              onBack={() => setLobbyScreen('rooms')}
+              onWriteMessage={(userId, username) => openMessages({ userId, username })}
+            />
+          </ViewSuspense>
         )}
         {view === 'news' && (
           <ViewSuspense label="Новости…">

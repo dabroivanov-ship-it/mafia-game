@@ -169,6 +169,7 @@ export async function fetchThemeSettings(): Promise<{
 export async function fetchTelegramSettings(): Promise<{
   botUsername: string | null;
   webAppUrl: string | null;
+  loginReady: boolean;
 }> {
   return apiRequest('/api/settings/telegram');
 }
@@ -456,6 +457,10 @@ export async function adminSetUserReputation(
 
 export async function fetchOnlineCount(): Promise<{ onlineCount: number }> {
   return apiRequest('/api/profile/online-count');
+}
+
+export async function fetchOnlineUsers(): Promise<{ users: UserSearchHit[]; onlineCount: number }> {
+  return apiRequest('/api/profile/online-users');
 }
 
 export async function searchUsers(query: string): Promise<{ users: UserSearchHit[] }> {

@@ -1,4 +1,4 @@
-import { useState, FormEvent, useEffect, useRef } from 'react';
+import { useState, FormEvent, useEffect, useCallback } from 'react';
 import {
   login,
   register,
@@ -6,21 +6,15 @@ import {
   loadRememberedLogin,
   saveRememberedLogin,
   fetchTelegramSettings,
-  telegramLogin,
   telegramWebAppLogin,
-  type TelegramAuthPayload,
 } from '../api';
 import type { User } from '../types';
 import { getTelegramWebApp, isTelegramWebApp } from '../telegramWebApp';
+import TelegramLoginWidget from './TelegramLoginWidget';
+import { DEFAULT_PAGE_META, updatePageMeta } from '../seo';
 
 interface AuthProps {
   onSuccess: (user: User, token: string) => void;
-}
-
-declare global {
-  interface Window {
-    onTelegramAuth?: (payload: TelegramAuthPayload) => void;
-  }
 }
 
 export default function Auth({ onSuccess }: AuthProps) {
@@ -29,9 +23,9 @@ export default function Auth({ onSuccess }: AuthProps) {
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [telegramBotUsername, setTelegramBotUsername] = useState<string | null>(null);
+  const [telegramLoginReady, setTelegramLoginReady] = useState(false);
   const [telegramLoading, setTelegramLoading] = useState(false);
   const [telegramWebAppMode, setTelegramWebAppMode] = useState(false);
-  const telegramWidgetRef = useRef<HTMLDivElement | null>(null);
 
   const [loginForm, setLoginForm] = useState({ login: '', password: '' });
   const [regForm, setRegForm] = useState({
@@ -43,6 +37,10 @@ export default function Auth({ onSuccess }: AuthProps) {
   });
 
   useEffect(() => {
+    updatePageMeta(DEFAULT_PAGE_META);
+  }, []);
+
+  useEffect(() => {
     const saved = loadRememberedLogin();
     setRememberMe(saved.remember);
     if (saved.login) {
@@ -52,68 +50,81 @@ export default function Auth({ onSuccess }: AuthProps) {
 
   useEffect(() => {
     fetchTelegramSettings()
-      .then(({ botUsername }) => {
+      .then(({ botUsername, loginReady }: { botUsername: string | null; loginReady: boolean; webAppUrl: string | null;}) => {
         setTelegramBotUsername(botUsername);
+        setTelegramLoginReady(loginReady);
       })
       .catch(() => {
         setTelegramBotUsername(null);
+        setTelegramLoginReady(false);
       });
   }, []);
 
-  useEffect(() => {
-    const webApp = getTelegramWebApp();
-    if (!isTelegramWebApp() || !webApp) return;
-
-    setTelegramWebAppMode(true);
-    setTelegramLoading(true);
-    setError('');
-
-    telegramWebAppLogin(webApp.initData, true)
-      .then(({ token, user }) => {
-        const username =
-          webApp.initDataUnsafe.user?.username || String(webApp.initDataUnsafe.user?.id || '');
-        saveRememberedLogin(username, true);
-        saveSession(token, user);
-        onSuccess(user, token);
-      })
-      .catch((err) => {
-        setError(err instanceof Error ? err.message : 'Ошибка Telegram входа');
-      })
-      .finally(() => {
-        setTelegramLoading(false);
-      });
-  }, [onSuccess]);
+  const completeAuth = useCallback(
+    (user: User, token: string, rememberLogin: string) => {
+      saveRememberedLogin(rememberLogin, true);
+      saveSession(token, user);
+      onSuccess(user, token);
+    },
+    [onSuccess]
+  );
 
   useEffect(() => {
-    if (!telegramBotUsername || !telegramWidgetRef.current || telegramWebAppMode) return;
-    telegramWidgetRef.current.innerHTML = '';
-    window.onTelegramAuth = async (payload: TelegramAuthPayload) => {
-      setError('');
+    let cancelled = false;
+
+    const tryWebAppLogin = () => {
+      const webApp = getTelegramWebApp();
+      if (!isTelegramWebApp() || !webApp) return false;
+
+      setTelegramWebAppMode(true);
       setTelegramLoading(true);
-      try {
-        const { token, user } = await telegramLogin({ telegram: payload, remember: true });
-        saveRememberedLogin(payload.username || String(payload.id), true);
-        saveSession(token, user);
-        onSuccess(user, token);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Ошибка Telegram входа');
-      } finally {
-        setTelegramLoading(false);
-      }
+      setError('');
+
+      void telegramWebAppLogin(webApp.initData, true)
+        .then(({ token, user }: { token: string; user: User;}) => {
+          if (cancelled) return;
+          const username =
+            webApp.initDataUnsafe.user?.username || String(webApp.initDataUnsafe.user?.id || '');
+          completeAuth(user, token, username);
+        })
+        .catch((err: unknown) => {
+          if (cancelled) return;
+          setError(err instanceof Error ? err.message : 'Ошибка Telegram входа');
+        })
+        .finally(() => {
+          if (!cancelled) setTelegramLoading(false);
+        });
+
+      return true;
     };
-    const script = document.createElement('script');
-    script.async = true;
-    script.src = 'https://telegram.org/js/telegram-widget.js?22';
-    script.setAttribute('data-telegram-login', telegramBotUsername);
-    script.setAttribute('data-size', 'large');
-    script.setAttribute('data-radius', '8');
-    script.setAttribute('data-userpic', 'false');
-    script.setAttribute('data-onauth', 'onTelegramAuth(user)');
-    telegramWidgetRef.current.appendChild(script);
+
+    if (tryWebAppLogin()) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const intervalId = window.setInterval(() => {
+      if (cancelled) return;
+      if (tryWebAppLogin()) window.clearInterval(intervalId);
+    }, 150);
+
+    const timeoutId = window.setTimeout(() => window.clearInterval(intervalId), 5000);
+
     return () => {
-      if (window.onTelegramAuth) delete window.onTelegramAuth;
+      cancelled = true;
+      window.clearInterval(intervalId);
+      window.clearTimeout(timeoutId);
     };
-  }, [telegramBotUsername, onSuccess, telegramWebAppMode]);
+  }, [completeAuth]);
+
+  const handleTelegramAuthenticated = useCallback(
+    (token: string, user: User) => {
+      const loginName = user.telegramUsername || user.username || String(user.id);
+      completeAuth(user, token, loginName);
+    },
+    [completeAuth]
+  );
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
@@ -169,9 +180,6 @@ export default function Auth({ onSuccess }: AuthProps) {
         <header className="auth-header">
           <h1>🎭 Мафия</h1>
           <p>Войдите или зарегистрируйтесь, чтобы играть</p>
-          <a href="/info" className="auth-info-link">
-            ℹ️ Правила, роли и рейтинг — информация об игре →
-          </a>
         </header>
 
         <div className="auth-tabs">
@@ -238,81 +246,144 @@ export default function Auth({ onSuccess }: AuthProps) {
               </label>
               <button type="submit" className="btn btn-primary btn-lg" disabled={loading}>
                 {loading ? 'Вход...' : 'Войти'}
+
               </button>
-              {telegramBotUsername && !telegramWebAppMode && (
-                <div className="auth-telegram-block">
-                  <p className="muted">Быстрый вход через Telegram</p>
-                  <div ref={telegramWidgetRef} />
-                  {telegramLoading && <p className="muted">Проверяем Telegram...</p>}
-                </div>
-              )}
+
             </form>
+
           ) : (
+
             <form className="auth-form" onSubmit={handleRegister}>
-            <label>
-              Логин
-              <input
-                type="text"
-                value={regForm.username}
-                onChange={(e) => setRegForm({ ...regForm, username: e.target.value })}
-                placeholder="player123"
-                required
-                minLength={3}
-                maxLength={20}
-                autoComplete="username"
-              />
-            </label>
-            <label>
-              Email
-              <input
-                type="email"
-                value={regForm.email}
-                onChange={(e) => setRegForm({ ...regForm, email: e.target.value })}
-                placeholder="you@mail.ru"
-                required
-                autoComplete="email"
-              />
-            </label>
-            <label>
-              Имя
-              <input
-                type="text"
-                value={regForm.displayName}
-                onChange={(e) => setRegForm({ ...regForm, displayName: e.target.value })}
-                placeholder="Как вас видят другие"
-                maxLength={20}
-              />
-            </label>
-            <label>
-              Пароль
-              <input
-                type="password"
-                value={regForm.password}
-                onChange={(e) => setRegForm({ ...regForm, password: e.target.value })}
-                placeholder="минимум 8 символов"
-                required
-                minLength={8}
-                autoComplete="new-password"
-              />
-            </label>
-            <label>
-              Повтор пароля
-              <input
-                type="password"
-                value={regForm.confirm}
-                onChange={(e) => setRegForm({ ...regForm, confirm: e.target.value })}
-                placeholder="••••••••"
-                required
-                minLength={8}
-                autoComplete="new-password"
-              />
-            </label>
-            <button type="submit" className="btn btn-primary btn-lg" disabled={loading}>
-              {loading ? 'Регистрация...' : 'Зарегистрироваться'}
-            </button>
+
+              <label>
+
+                Логин
+
+                <input
+
+                  type="text"
+
+                  value={regForm.username}
+
+                  onChange={(e) => setRegForm({ ...regForm, username: e.target.value })}
+                  placeholder="player123"
+                  required
+                  minLength={3}
+                  maxLength={20}
+                  autoComplete="username"
+                />
+              </label>
+              <label>
+                Email
+                <input
+                  type="email"
+                  value={regForm.email}
+                  onChange={(e) => setRegForm({ ...regForm, email: e.target.value })}
+                  placeholder="you@mail.ru"
+                  required
+                  autoComplete="email"
+                />
+              </label>
+              <label>
+                Имя
+                <input
+                  type="text"
+                  value={regForm.displayName}
+                  onChange={(e) => setRegForm({ ...regForm, displayName: e.target.value })}
+                  placeholder="Как вас видят другие"
+                  maxLength={20}
+                />
+              </label>
+              <label>
+                Пароль
+                <input
+                  type="password"
+                  value={regForm.password}
+                  onChange={(e) => setRegForm({ ...regForm, password: e.target.value })}
+                  placeholder="минимум 8 символов"
+                  required
+                  minLength={8}
+                  autoComplete="new-password"
+                />
+              </label>
+              <label>
+                Повтор пароля
+                <input
+                  type="password"
+                  value={regForm.confirm}
+                  onChange={(e) => setRegForm({ ...regForm, confirm: e.target.value })}
+                  placeholder="••••••••"
+                  required
+                  minLength={8}
+                  autoComplete="new-password"
+                />
+              </label>
+              <button type="submit" className="btn btn-primary btn-lg" disabled={loading}>
+                {loading ? 'Регистрация...' : 'Зарегистрироваться'}
+
+              </button>
+
             </form>
+
           ))}
+
+
+
+        {mode === 'login' && !telegramWebAppMode && telegramBotUsername && (
+
+          <TelegramLoginWidget
+
+            botUsername={telegramBotUsername}
+
+            loginReady={telegramLoginReady}
+
+            loading={telegramLoading}
+
+            onLoadingChange={setTelegramLoading}
+
+            onError={setError}
+
+            onAuthenticated={handleTelegramAuthenticated}
+
+          />
+
+        )}
+
+
+
+        {!telegramWebAppMode && (
+
+          <a href="/info" className="auth-info-card">
+
+            <span className="auth-info-card-icon" aria-hidden="true">
+
+              ℹ️
+
+            </span>
+
+            <span className="auth-info-card-body">
+
+              <strong>Правила, роли и рейтинг</strong>
+
+              <span className="muted">Информация об игре для новичков и опытных игроков</span>
+
+            </span>
+
+            <span className="auth-info-card-arrow" aria-hidden="true">
+
+              →
+
+            </span>
+
+          </a>
+
+        )}
+
       </div>
+
     </div>
+
   );
+
 }
+

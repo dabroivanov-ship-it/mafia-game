@@ -9,6 +9,7 @@ export interface PageMeta {
 }
 
 const SITE_NAME = 'Мафия онлайн';
+export const SITE_TAB_TITLE = 'Мафия онлайн — Браузерная игра';
 
 export function getSiteOrigin(): string {
   if (import.meta.env.VITE_SITE_URL) {
@@ -48,7 +49,12 @@ export function updatePageMeta(meta: PageMeta) {
   const origin = getSiteOrigin();
   const path = meta.path ?? '/';
   const url = `${origin}${path.startsWith('/') ? path : `/${path}`}`;
-  const fullTitle = meta.title.includes(SITE_NAME) ? meta.title : `${meta.title} | ${SITE_NAME}`;
+  const fullTitle =
+    meta.path === '/' && !meta.title.includes('|')
+      ? meta.title
+      : meta.title.includes(SITE_NAME)
+        ? meta.title
+        : `${meta.title} | ${SITE_NAME}`;
 
   document.title = fullTitle;
   upsertMeta('description', meta.description);
@@ -67,9 +73,9 @@ export function updatePageMeta(meta: PageMeta) {
 }
 
 export const DEFAULT_PAGE_META: PageMeta = {
-  title: 'Мафия онлайн — играть бесплатно',
+  title: SITE_TAB_TITLE,
   description:
-    'Бесплатная онлайн-игра «Мафия» с чатом, ролями и комнатами. Играйте в браузере или через Telegram: мафия, комиссар, доктор, маньяк и другие роли.',
+    'Браузерная онлайн-игра «Мафия» с чатом, ролями и комнатами. Играйте в браузере или через Telegram: мафия, комиссар, доктор, маньяк и другие роли.',
   path: '/',
 };
 

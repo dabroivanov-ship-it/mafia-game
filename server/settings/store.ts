@@ -52,7 +52,11 @@ export function setDefaultTheme(themeId: ThemeId): void {
   ).run(DEFAULT_THEME_KEY, themeId);
 }
 
-export function getTelegramSettings(): { botUsername: string | null; webAppUrl: string | null } {
+export function getTelegramSettings(): {
+  botUsername: string | null;
+  webAppUrl: string | null;
+  loginReady: boolean;
+} {
   const rows = db
     .prepare('SELECT key, value FROM app_settings WHERE key IN (?, ?)')
     .all(TELEGRAM_BOT_USERNAME_KEY, TELEGRAM_WEBAPP_URL_KEY) as { key: string; value: string }[];
@@ -62,7 +66,8 @@ export function getTelegramSettings(): { botUsername: string | null; webAppUrl: 
     if (row.key === TELEGRAM_BOT_USERNAME_KEY) botUsername = row.value || null;
     if (row.key === TELEGRAM_WEBAPP_URL_KEY) webAppUrl = row.value || null;
   }
-  return { botUsername, webAppUrl };
+  const loginReady = !!(botUsername?.trim() && process.env.TELEGRAM_BOT_TOKEN?.trim());
+  return { botUsername, webAppUrl, loginReady };
 }
 
 export function setTelegramSettings(botUsername: string, webAppUrl: string): void {

@@ -1,4 +1,4 @@
-import { getUserLastSeen, touchUserLastSeen } from './auth/db.js';
+import { findUserById, getUserLastSeen, isUserBanned, touchUserLastSeen, type UserSearchHit } from './auth/db.js';
 
 const activeConnections = new Map<number, number>();
 
@@ -23,6 +23,27 @@ export function isUserOnline(userId: number): boolean {
 
 export function getOnlineUserCount(): number {
   return activeConnections.size;
+}
+
+export function listOnlineUsers(): UserSearchHit[] {
+  const users: UserSearchHit[] = [];
+  for (const userId of activeConnections.keys()) {
+    const user = findUserById(userId);
+    if (!user || isUserBanned(user)) continue;
+    users.push({
+      id: user.id,
+      username: user.username,
+      displayName: user.display_name,
+      city: user.city || '',
+      avatar: user.avatar || null,
+      totalScore: user.total_score,
+      isAdmin: user.role === 'admin',
+      isModerator: user.role === 'moderator',
+      isOnline: true,
+      lastSeenAt: getUserLastSeen(userId),
+    });
+  }
+  return users.sort((a, b) => a.displayName.localeCompare(b.displayName, 'ru'));
 }
 
 export function getUserPresence(userId: number): { isOnline: boolean; lastSeenAt: string | null } {

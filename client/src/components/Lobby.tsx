@@ -12,6 +12,7 @@ const PHASE_LABELS: Record<GamePhase, string> = {
 
 export type LobbyScreen =
   | 'rooms'
+  | 'online-users'
   | 'cabinet'
   | 'cabinet-settings'
   | 'cabinet-site-settings'
@@ -24,6 +25,7 @@ interface LobbyProps {
   onJoin: (roomId: number) => void;
   unreadMailCount?: number;
   onOpenMessages?: () => void;
+  onOpenOnlineUsers?: () => void;
 }
 
 function RoomCard({
@@ -72,6 +74,7 @@ export default function Lobby({
   onJoin,
   unreadMailCount = 0,
   onOpenMessages,
+  onOpenOnlineUsers,
 }: LobbyProps) {
   const gameRooms = rooms.filter((r) => r.kind !== 'chat');
   const chatRooms = rooms.filter((r) => r.kind === 'chat');
@@ -82,9 +85,6 @@ export default function Lobby({
         <div className="lobby-header-brand">
           <h1>🎭 Мафия</h1>
           <p>Выберите комнату для игры или общения</p>
-          {siteOnlineCount > 0 && (
-            <p className="lobby-online-count muted">На сайте: {siteOnlineCount} в сети</p>
-          )}
         </div>
       </header>
 
@@ -128,6 +128,16 @@ export default function Lobby({
           ))}
         </div>
       </section>
+
+      <footer className="lobby-online-footer">
+        <p className="lobby-online-count muted">
+          На сайте:{' '}
+          <button type="button" className="lobby-online-link" onClick={onOpenOnlineUsers}>
+            {siteOnlineCount}
+          </button>{' '}
+          в сети
+        </p>
+      </footer>
     </div>
   );
 }

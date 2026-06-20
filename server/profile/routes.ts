@@ -23,7 +23,7 @@ import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import { getUserMessageCount } from '../history/store.js';
 import { isValidThemeId } from '../settings/themes.js';
-import { getUserPresence, getOnlineUserCount } from '../presence.js';
+import { getUserPresence, getOnlineUserCount, listOnlineUsers } from '../presence.js';
 import {
   areFriends,
   canViewerVoteReputation,
@@ -120,6 +120,10 @@ export function createProfileRouter({ onProfileUpdated }: ProfileRouterOptions =
 
   router.get('/online-count', (_req, res) => {
     res.json({ onlineCount: getOnlineUserCount() });
+  });
+
+  router.get('/online-users', authMiddleware, (_req, res) => {
+    res.json({ users: listOnlineUsers(), onlineCount: getOnlineUserCount() });
   });
 
   router.get('/leaderboard', (req, res) => {
