@@ -43,28 +43,30 @@ function RoomCard({
   const isChat = room.kind === 'chat';
 
   return (
-    <div className="room-card">
-      <div className="room-card-info">
-        <h2>{room.name}</h2>
-        <div className="room-card-meta">
-          {isChat ? (
-            <span className="room-count">{room.playerCount} онлайн</span>
-          ) : (
-            <>
-              {showPhase && (
-                <span className="room-status">{PHASE_LABELS[room.phase] || room.phase}</span>
-              )}
-              <span className="room-count">
-                👥 {room.playerCount}/{room.maxPlayers}
-                {room.spectatorCount > 0 && ` · 👁 ${room.spectatorCount}`}
-              </span>
-            </>
-          )}
+    <div className={`room-card-wrap${isChat ? ' room-card-wrap--chat' : ''}`}>
+      <div className="room-card">
+        <div className="room-card-info">
+          <h2>{room.name}</h2>
+          <div className="room-card-meta">
+            {isChat ? (
+              <span className="room-count">{room.playerCount} онлайн</span>
+            ) : (
+              <>
+                {showPhase && (
+                  <span className="room-status">{PHASE_LABELS[room.phase] || room.phase}</span>
+                )}
+                <span className="room-count">
+                  👥 {room.playerCount}/{room.maxPlayers}
+                  {room.spectatorCount > 0 && ` · 👁 ${room.spectatorCount}`}
+                </span>
+              </>
+            )}
+          </div>
         </div>
+        <button type="button" className="btn btn-primary" onClick={() => onJoin(room.id)}>
+          {joinLabel}
+        </button>
       </div>
-      <button type="button" className="btn btn-primary" onClick={() => onJoin(room.id)}>
-        {joinLabel}
-      </button>
     </div>
   );
 }

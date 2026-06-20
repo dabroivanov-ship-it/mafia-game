@@ -126,6 +126,16 @@ html.telegram-webapp .app-body {
     animation: none;
     border-top-color: color-mix(in srgb, var(--accent) 50%, transparent);
   }
+
+  .room-card-wrap::before {
+    animation: none;
+    inset: 0;
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--room-glow) 55%, transparent),
+      color-mix(in srgb, var(--room-glow) 20%, transparent)
+    );
+  }
 }
 
 /* Auth */
@@ -2061,17 +2071,70 @@ html.telegram-webapp .app-body {
   gap: 12px;
 }
 
+.room-card-wrap {
+  --room-glow: var(--accent);
+  position: relative;
+  border-radius: calc(var(--radius) + 2px);
+  padding: 2px;
+  overflow: hidden;
+  box-shadow: 0 6px 28px color-mix(in srgb, var(--room-glow) 14%, transparent);
+}
+
+.room-card-wrap::before {
+  content: '';
+  position: absolute;
+  inset: -60%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    color-mix(in srgb, var(--room-glow) 35%, transparent) 30deg,
+    var(--room-glow) 80deg,
+    color-mix(in srgb, var(--room-glow) 35%, transparent) 130deg,
+    transparent 180deg
+  );
+  animation: roomCardBorderRotate 4s linear infinite;
+  z-index: 0;
+}
+
+.room-card-wrap--chat {
+  --room-glow: #5ec4d4;
+}
+
+.rooms-list .room-card-wrap:nth-child(5n + 2)::before {
+  animation-delay: -0.8s;
+}
+
+.rooms-list .room-card-wrap:nth-child(5n + 3)::before {
+  animation-delay: -1.6s;
+}
+
+.rooms-list .room-card-wrap:nth-child(5n + 4)::before {
+  animation-delay: -2.4s;
+}
+
+.rooms-list .room-card-wrap:nth-child(5n)::before {
+  animation-delay: -3.2s;
+}
+
+@keyframes roomCardBorderRotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .room-card {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: stretch;
   justify-content: space-between;
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: none;
   border-radius: var(--radius);
   padding: 16px;
   gap: 12px;
-  box-shadow: var(--shadow);
-  transition: border-color 0.2s, transform 0.15s;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--room-glow) 18%, transparent);
+  transition: transform 0.15s;
 }
 
 .room-card:active {
