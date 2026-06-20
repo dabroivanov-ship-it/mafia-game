@@ -31,7 +31,7 @@ export default function TelegramLoginWidget({
       onError('');
       onLoadingChange(true);
       void telegramLogin({ telegram: payload, remember: true })
-        .then(({ token, user }: { token: string; user: User) => {
+        .then(({ token, user }: { token: string; user: User }) => {
           onAuthenticated(token, user);
         })
         .catch((err) => {
