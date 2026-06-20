@@ -56,6 +56,18 @@ html.telegram-webapp .app-body {
   min-height: 100dvh;
 }
 
+.app-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.app-main .site-footer {
+  margin-top: auto;
+}
+
 .app-body {
   flex: 1;
   overflow-y: auto;
@@ -118,11 +130,18 @@ html.telegram-webapp .app-body {
 
 /* Auth */
 .auth-page {
-  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 24px 16px;
+}
+
+.auth-page .site-footer {
+  width: 100%;
+  max-width: 900px;
+  margin-top: 24px;
 }
 
 .auth-card {
@@ -4456,6 +4475,10 @@ html.telegram-webapp .app-body {
     padding-bottom: calc(var(--nav-height) + var(--safe-bottom));
   }
 
+  .app-shell .site-footer {
+    padding-bottom: calc(16px + var(--nav-height) + var(--safe-bottom));
+  }
+
   .main-menu {
     position: fixed;
     bottom: 0;
@@ -4777,6 +4800,11 @@ html.telegram-webapp .app-body {
     flex-direction: row;
   }
 
+  .app-main {
+    flex: 1;
+    min-height: 100dvh;
+  }
+
   .main-menu {
     order: -1;
     position: sticky;
@@ -4827,5 +4855,9 @@ html.telegram-webapp .app-body {
     flex: 1;
     min-width: 0;
     padding-bottom: 0;
+  }
+
+  .app-shell .site-footer {
+    padding-bottom: calc(16px + var(--safe-bottom));
   }
 }

@@ -394,7 +394,8 @@ export default function App() {
         </div>
       )}
 
-      <div className="app-body">
+      <div className="app-main">
+        <div className="app-body">
         {view === 'lobby' && lobbyScreen === 'rooms' && (
           <Lobby
             rooms={rooms}
@@ -489,9 +490,10 @@ export default function App() {
             />
           </ViewSuspense>
         )}
-      </div>
+        </div>
 
-      <SiteFooter text={siteBranding.footerText} />
+        <SiteFooter text={siteBranding.footerText} />
+      </div>
 
       <Menu
         user={user}
