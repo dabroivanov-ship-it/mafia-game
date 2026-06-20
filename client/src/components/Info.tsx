@@ -3,6 +3,7 @@ import Rules from './Rules';
 import Roles from './Roles';
 import ChatRules from './ChatRules';
 import Staff from './Staff';
+import PlayerRating from './PlayerRating';
 import {
   type InfoSection,
   infoSectionFromPath,
@@ -14,9 +15,10 @@ import { ROLES_INTRO } from '../content/rolesContent';
 interface InfoProps {
   initialSection?: InfoSection;
   publicMode?: boolean;
+  currentUserId?: number | null;
 }
 
-export default function Info({ initialSection, publicMode = false }: InfoProps) {
+export default function Info({ initialSection, publicMode = false, currentUserId = null }: InfoProps) {
   const [section, setSection] = useState<InfoSection>(
     initialSection ?? infoSectionFromPath(window.location.pathname)
   );
@@ -100,6 +102,19 @@ export default function Info({ initialSection, publicMode = false }: InfoProps) 
     );
   }
 
+  if (section === 'rating') {
+    return (
+      <div className="info-page">
+        {backNav('hub', 'Информация')}
+        <header className="page-header">
+          <h1>🏆 Рейтинг игроков</h1>
+          <p className="muted">Топ-100 по очкам за сыгранные партии</p>
+        </header>
+        <PlayerRating embedded currentUserId={currentUserId} />
+      </div>
+    );
+  }
+
   return (
     <div className="info-page">
       {publicMode && (
@@ -113,7 +128,7 @@ export default function Info({ initialSection, publicMode = false }: InfoProps) 
 
       <header className="page-header">
         <h1>ℹ️ Информация</h1>
-        <p className="muted">Правила, роли, чат и команда проекта</p>
+        <p className="muted">Правила, роли, чат, рейтинг и команда проекта</p>
       </header>
 
       <div className="info-hub">
@@ -150,6 +165,19 @@ export default function Info({ initialSection, publicMode = false }: InfoProps) 
           <span className="info-hub-body">
             <strong>Правила чата</strong>
             <span className="muted">Общение, профили и модерация</span>
+          </span>
+          <span className="info-hub-arrow" aria-hidden="true">
+            →
+          </span>
+        </button>
+
+        <button type="button" className="info-hub-card" onClick={() => navigate('rating')}>
+          <span className="info-hub-icon" aria-hidden="true">
+            🏆
+          </span>
+          <span className="info-hub-body">
+            <strong>Рейтинг игроков</strong>
+            <span className="muted">Топ по очкам, играм и репутации</span>
           </span>
           <span className="info-hub-arrow" aria-hidden="true">
             →

@@ -102,4 +102,10 @@ export const INFO_PAGE_META: Record<string, PageMeta> = {
     description: 'Администраторы и модераторы онлайн-игры «Мафия».',
     path: '/info/team',
   },
+  rating: {
+    title: 'Рейтинг игроков',
+    description:
+      'Топ игроков онлайн-игры «Мафия»: очки за партии, число игр и репутация.',
+    path: '/info/rating',
+  },
 };

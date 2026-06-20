@@ -7,6 +7,7 @@ import {
   isStaff,
   canBanTarget,
   listStaffUsers,
+  listLeaderboard,
   searchPublicUsers,
   updateUserProfile,
   updateUserAvatar,
@@ -86,6 +87,16 @@ export function createProfileRouter({ onProfileUpdated }: ProfileRouterOptions =
 
   router.get('/online-count', (_req, res) => {
     res.json({ onlineCount: getOnlineUserCount() });
+  });
+
+  router.get('/leaderboard', (req, res) => {
+    const limit = Number(req.query.limit);
+    const offset = Number(req.query.offset);
+    const players = listLeaderboard(
+      Number.isFinite(limit) ? limit : 100,
+      Number.isFinite(offset) ? offset : 0
+    );
+    res.json({ players });
   });
 
   router.get('/staff/list', authMiddleware, (_req, res) => {

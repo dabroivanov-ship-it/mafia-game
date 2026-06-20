@@ -2511,6 +2511,103 @@ html.telegram-webapp .app-body {
   font-size: 0.85rem;
 }
 
+.rating-page,
+.rating-embedded {
+  width: 100%;
+}
+
+.rating-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+}
+
+.rating-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.rating-table th,
+.rating-table td {
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.rating-table th {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.rating-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.rating-row-top {
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
+.rating-row-self {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.rating-rank {
+  width: 48px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.rating-player-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 180px;
+}
+
+.rating-player-cell strong {
+  display: block;
+}
+
+.rating-player-cell .muted {
+  display: block;
+  font-size: 0.85rem;
+}
+
+.rating-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.rating-avatar.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  font-size: 1rem;
+}
+
+.rating-score {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.rating-you-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: var(--accent);
+}
+
 .profile-staff-meta {
   margin-top: 16px;
   padding: 12px;

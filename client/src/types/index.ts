@@ -189,6 +189,20 @@ export interface UserSearchHit {
   lastSeenAt: string | null;
 }
 
+export interface LeaderboardEntry {
+  rank: number;
+  id: number;
+  username: string;
+  displayName: string;
+  city: string;
+  avatar: string | null;
+  totalScore: number;
+  gamesPlayed: number;
+  reputation: number;
+  isAdmin: boolean;
+  isModerator: boolean;
+}
+
 export interface UserPresence {
   isOnline: boolean;
   lastSeenAt: string | null;

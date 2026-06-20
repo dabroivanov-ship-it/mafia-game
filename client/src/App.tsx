@@ -395,6 +395,10 @@ export default function App() {
             onJoin={joinRoom}
             unreadMailCount={unreadMailCount}
             onOpenMessages={() => openMessages()}
+            onOpenInfo={() => {
+              window.history.pushState(null, '', pathForInfoSection('hub'));
+              setView('info');
+            }}
           />
         )}
         {view === 'news' && (
@@ -457,7 +461,7 @@ export default function App() {
         )}
         {view === 'info' && (
           <ViewSuspense label="Информация…">
-            <Info />
+            <Info currentUserId={user.id} />
           </ViewSuspense>
         )}
         {view === 'admin' && user.isAdmin && (

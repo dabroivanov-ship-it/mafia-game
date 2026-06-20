@@ -1,4 +1,4 @@
-import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, MailConversation, RoomKind, ThemeId, ViolationLogEntry, UserSearchHit, UserPresence, FriendUser } from './types';
+import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, MailConversation, RoomKind, ThemeId, ViolationLogEntry, UserSearchHit, UserPresence, FriendUser, LeaderboardEntry } from './types';
 
 const API_BASE =
   import.meta.env.VITE_API_URL ??
@@ -305,6 +305,17 @@ export async function markMessageRead(messageId: number): Promise<{ unreadCount:
 
 export async function fetchStaffList(): Promise<{ staff: StaffMember[] }> {
   return apiRequest('/api/profile/staff/list');
+}
+
+export async function fetchLeaderboard(
+  limit = 100,
+  offset = 0
+): Promise<{ players: LeaderboardEntry[] }> {
+  const params = new URLSearchParams({
+    limit: String(limit),
+    offset: String(offset),
+  });
+  return apiRequest(`/api/profile/leaderboard?${params}`);
 }
 
 export async function fetchNews(): Promise<{ news: NewsPost[] }> {

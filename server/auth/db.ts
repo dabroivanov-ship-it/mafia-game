@@ -314,6 +314,60 @@ export function searchPublicUsers(query: string, limit = 25): UserSearchHit[] {
   }));
 }
 
+export interface LeaderboardEntry {
+  rank: number;
+  id: number;
+  username: string;
+  displayName: string;
+  city: string;
+  avatar: string | null;
+  totalScore: number;
+  gamesPlayed: number;
+  reputation: number;
+  isAdmin: boolean;
+  isModerator: boolean;
+}
+
+export function listLeaderboard(limit = 100, offset = 0): LeaderboardEntry[] {
+  const safeLimit = Math.min(Math.max(Math.trunc(limit) || 100, 1), 200);
+  const safeOffset = Math.max(Math.trunc(offset) || 0, 0);
+
+  const rows = db
+    .prepare(
+      `SELECT id, username, display_name, city, avatar, role, total_score, games_played, reputation
+       FROM users
+       WHERE is_banned = 0
+       ORDER BY total_score DESC, games_played DESC, id ASC
+       LIMIT ? OFFSET ?`
+    )
+    .all(safeLimit, safeOffset) as Pick<
+    User,
+    | 'id'
+    | 'username'
+    | 'display_name'
+    | 'city'
+    | 'avatar'
+    | 'role'
+    | 'total_score'
+    | 'games_played'
+    | 'reputation'
+  >[];
+
+  return rows.map((row, index) => ({
+    rank: safeOffset + index + 1,
+    id: row.id,
+    username: row.username,
+    displayName: row.display_name,
+    city: row.city || '',
+    avatar: row.avatar || null,
+    totalScore: row.total_score,
+    gamesPlayed: row.games_played ?? 0,
+    reputation: row.reputation ?? 0,
+    isAdmin: row.role === 'admin',
+    isModerator: row.role === 'moderator',
+  }));
+}
+
 export function listAllUsers(): PublicUser[] {
   const rows = db
     .prepare(
