@@ -1,6 +1,6 @@
 interface SiteFooterProps {
   text?: string;
-  variant?: 'auth' | 'compact';
+  variant?: 'auth' | 'minimal';
 }
 
 const TELEGRAM_BOT = 'realmaf_bot';
@@ -17,32 +17,33 @@ function TelegramIcon() {
   );
 }
 
-export default function SiteFooter({ text = '', variant = 'compact' }: SiteFooterProps) {
+export default function SiteFooter({ text = '', variant = 'minimal' }: SiteFooterProps) {
+  const hasExtra = text.trim().length > 0;
+  const showSocial = variant === 'auth';
+
+  if (!showSocial && !hasExtra) return null;
+
   return (
     <footer className={`site-footer site-footer--${variant}`}>
-      {variant === 'auth' ? (
-        <section className="site-footer-social" aria-label="Соцсети">
-          <h2 className="site-footer-title">Соцсети</h2>
+      {showSocial && (
+        <section className="site-footer-social" aria-label="Наши соцсети">
+          <h2 className="site-footer-title">Наши соцсети</h2>
           <p className="site-footer-lead">
             Подписывайтесь на нас в соцсетях, чтобы быть в курсе обновлений игры.
           </p>
-          <a className="site-footer-link" href={TELEGRAM_URL} target="_blank" rel="noreferrer">
-            Telegram @{TELEGRAM_BOT}
+          <a
+            className="site-footer-telegram-icon"
+            href={TELEGRAM_URL}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Telegram"
+            title="Telegram"
+          >
+            <TelegramIcon />
           </a>
         </section>
-      ) : (
-        <a
-          className="site-footer-telegram-icon"
-          href={TELEGRAM_URL}
-          target="_blank"
-          rel="noreferrer"
-          aria-label="Telegram"
-          title="Telegram"
-        >
-          <TelegramIcon />
-        </a>
       )}
-      {text.trim() && <p className="site-footer-extra">{text}</p>}
+      {hasExtra && <p className="site-footer-extra">{text}</p>}
     </footer>
   );
 }

@@ -2829,8 +2829,12 @@ html.telegram-webapp .app-body {
   line-height: 1.5;
 }
 
-.site-footer--compact {
+.site-footer--minimal {
   padding: 14px 20px calc(14px + var(--safe-bottom));
+}
+
+.site-footer--auth .site-footer-telegram-icon {
+  margin-top: 4px;
 }
 
 .site-footer-telegram-icon {
