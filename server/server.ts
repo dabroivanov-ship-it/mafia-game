@@ -531,11 +531,14 @@ function serializeForSocketUser(
   const session = socketId ? sessions.get(socketId) : undefined;
   const chatLimit = resolveSessionChatLimit(session, userId);
   const acc = userId ? findUserById(userId) : undefined;
-  return serializeRoomForPlayer(room, gamePlayerId, {
+  const state = serializeRoomForPlayer(room, gamePlayerId, {
     isAdmin: isAdmin(acc),
     canModerate: isStaff(acc),
     chatLimit,
   });
+
+  if (!isQuizRoom(room)) return state;
+  return { ...state, isQuizRoom: true };
 }
 
 function syncRoomScores(room: GameRoom): void {

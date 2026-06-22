@@ -48,6 +48,7 @@ export interface User {
 
 export interface PublicUser extends User {
   messageCount?: number;
+  quizCorrectAnswers?: number;
 }
 
 export interface LobbyRoom {
@@ -170,6 +171,7 @@ export interface RoomState {
   nightActionDone: boolean;
   isAdmin: boolean;
   canModerate: boolean;
+  isQuizRoom?: boolean;
 }
 
 export interface ApiError {

@@ -225,6 +225,7 @@ export interface RoomState {
   nightActionDone: boolean;
   isAdmin: boolean;
   canModerate: boolean;
+  isQuizRoom?: boolean;
 }
 
 export interface Session {

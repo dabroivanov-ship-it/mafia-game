@@ -2,6 +2,7 @@ import fs from 'fs';
 import type { GameRoom } from '../types/index.js';
 import { addSystemMessage } from '../game/engine.js';
 import { getQuizQuestionsPath } from '../paths.js';
+import { incrementQuizCorrectAnswers } from './store.js';
 
 export interface QuizQuestion {
   question: string;
@@ -11,7 +12,6 @@ export interface QuizQuestion {
 interface QuizRoomState {
   questionIndex: number;
   answeredUserIds: Set<number>;
-  scores: Map<number, number>;
 }
 
 const roomStates = new Map<number, QuizRoomState>();
@@ -19,6 +19,32 @@ let questionsCache: QuizQuestion[] | null = null;
 
 export function isQuizRoom(room: GameRoom): boolean {
   return room.kind === 'chat' && /викторин/i.test(room.name);
+}
+
+function countCyrillic(text: string): number {
+  const matches = text.match(/[\u0400-\u04FF]/g);
+  return matches ? matches.length : 0;
+}
+
+function readQuestionsText(filePath: string): string {
+  const buf = fs.readFileSync(filePath);
+  const encoding = (process.env.QUIZ_QUESTIONS_ENCODING || '').trim().toLowerCase();
+
+  if (encoding === 'utf8' || encoding === 'utf-8') {
+    return buf.toString('utf8');
+  }
+  if (encoding === 'win1251' || encoding === 'windows-1251' || encoding === 'cp1251') {
+    return new TextDecoder('windows-1251').decode(buf);
+  }
+
+  const utf8 = buf.toString('utf8');
+  const win1251 = new TextDecoder('windows-1251').decode(buf);
+  const sampleUtf8 = utf8.slice(0, 4000);
+  const sampleWin = win1251.slice(0, 4000);
+
+  if (utf8.includes('\uFFFD')) return win1251;
+  if (countCyrillic(sampleWin) > countCyrillic(sampleUtf8)) return win1251;
+  return utf8;
 }
 
 function parseQuestionsFile(raw: string): QuizQuestion[] {
@@ -52,7 +78,7 @@ export function loadQuizQuestions(): QuizQuestion[] {
   }
 
   try {
-    const raw = fs.readFileSync(filePath, 'utf8');
+    const raw = readQuestionsText(filePath);
     questionsCache = parseQuestionsFile(raw);
     console.log(`[quiz] Загружено вопросов: ${questionsCache.length}`);
     return questionsCache;
@@ -79,7 +105,6 @@ function getState(roomId: number): QuizRoomState {
     state = {
       questionIndex: 0,
       answeredUserIds: new Set(),
-      scores: new Map(),
     };
     roomStates.set(roomId, state);
   }
@@ -93,8 +118,8 @@ function getCurrentQuestion(state: QuizRoomState): QuizQuestion | null {
   return questions[index];
 }
 
-function formatQuestionMessage(question: QuizQuestion, index: number, total: number): string {
-  return `❓ Вопрос ${index + 1}/${total}: ${question.question}`;
+function formatQuestionMessage(question: QuizQuestion): string {
+  return `❓ ${question.question}`;
 }
 
 function postQuestion(room: GameRoom, state: QuizRoomState): void {
@@ -111,8 +136,7 @@ function postQuestion(room: GameRoom, state: QuizRoomState): void {
   const question = getCurrentQuestion(state);
   if (!question) return;
 
-  const number = (state.questionIndex % questions.length) + 1;
-  addSystemMessage(room, formatQuestionMessage(question, number - 1, questions.length));
+  addSystemMessage(room, formatQuestionMessage(question));
 }
 
 export function initQuizRoom(room: GameRoom): void {
@@ -133,7 +157,7 @@ export function initQuizRoom(room: GameRoom): void {
   }
 
   const hasOpenQuestion = room.chat.some(
-    (msg) => msg.system && msg.text.startsWith('❓ Вопрос')
+    (msg) => msg.system && msg.text.startsWith('❓ ')
   );
   if (!hasOpenQuestion) {
     postQuestion(room, state);
@@ -171,19 +195,10 @@ export function handleQuizAnswer(
   if (!accepted.has(normalized)) return true;
 
   state.answeredUserIds.add(userId);
-  const score = (state.scores.get(userId) || 0) + 1;
-  state.scores.set(userId, score);
+  const total = incrementQuizCorrectAnswers(userId);
 
-  addSystemMessage(room, `✅ ${playerName} ответил(а) верно! Счёт: ${score}.`);
+  addSystemMessage(room, `✅ ${playerName} ответил(а) верно! Верных ответов: ${total}.`);
   state.questionIndex += 1;
   postQuestion(room, state);
   return true;
-}
-
-export function getQuizLeaderboard(roomId: number): { userId: number; score: number }[] {
-  const state = roomStates.get(roomId);
-  if (!state) return [];
-  return Array.from(state.scores.entries())
-    .map(([userId, score]) => ({ userId, score }))
-    .sort((a, b) => b.score - a.score);
 }

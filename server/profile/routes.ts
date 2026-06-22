@@ -24,6 +24,7 @@ import { MAX_PASSWORD_LENGTH } from '../security/constants.js';
 import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import { getUserMessageCount } from '../history/store.js';
+import { getQuizCorrectAnswers } from '../quiz/store.js';
 import { getUserStatistics } from '../stats/store.js';
 import { isValidThemeId } from '../settings/themes.js';
 import { getUserPresence, getOnlineUserCount, listOnlineUsers } from '../presence.js';
@@ -231,6 +232,7 @@ export function createProfileRouter({ onProfileUpdated }: ProfileRouterOptions =
         messageCount: getUserMessageCount(targetId),
         gamesPlayed: getGamesPlayed(targetId),
         reputation: getReputation(targetId),
+        quizCorrectAnswers: getQuizCorrectAnswers(targetId),
       },
       presence: getUserPresence(targetId),
       isSelf,

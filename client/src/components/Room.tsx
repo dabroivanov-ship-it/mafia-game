@@ -374,7 +374,7 @@ export default function Room({
           canSendChat={state.canChat}
           onSendChat={sendRoomChat}
           onClose={() => setProfileTarget(null)}
-          inRoom
+          inRoom={state.isQuizRoom}
           targetPlayerId={profileTarget.playerId}
           targetSilenced={
             state.players.find(

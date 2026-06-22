@@ -61,6 +61,9 @@ function migrateColumns(): void {
   if (!cols.includes('last_seen_at')) add('ALTER TABLE users ADD COLUMN last_seen_at TEXT DEFAULT NULL');
   if (!cols.includes('games_played')) add('ALTER TABLE users ADD COLUMN games_played INTEGER NOT NULL DEFAULT 0');
   if (!cols.includes('reputation')) add('ALTER TABLE users ADD COLUMN reputation INTEGER NOT NULL DEFAULT 0');
+  if (!cols.includes('quiz_correct_answers')) {
+    add('ALTER TABLE users ADD COLUMN quiz_correct_answers INTEGER NOT NULL DEFAULT 0');
+  }
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_telegram_id ON users(telegram_id)');
 }
 
