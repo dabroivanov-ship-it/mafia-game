@@ -186,22 +186,32 @@ html.telegram-webapp .app-body {
 .home-quick-links {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 10px;
+  width: 100%;
+  margin-top: 16px;
+}
+
+.auth-header .home-quick-links {
+  margin-top: 18px;
+}
+
+.lobby-header .home-quick-links {
+  margin-top: 14px;
 }
 
 .home-quick-link {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  padding: 14px 16px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 14px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--accent) 8%, var(--bg-hover));
   color: inherit;
   font: inherit;
-  text-align: left;
+  text-align: center;
   text-decoration: none;
   cursor: pointer;
   transition:
@@ -217,17 +227,14 @@ html.telegram-webapp .app-body {
 }
 
 .home-quick-link-icon {
-  font-size: 1.35rem;
+  font-size: 1.15rem;
   line-height: 1;
+  flex-shrink: 0;
 }
 
 .home-quick-link strong {
-  font-size: 0.98rem;
-}
-
-.home-quick-link .muted {
-  font-size: 0.8rem;
-  line-height: 1.3;
+  font-size: 0.95rem;
+  font-weight: 600;
 }
 
 .auth-info-link {
@@ -367,19 +374,10 @@ html.telegram-webapp .app-body {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--bg-hover);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
 }
 
-.auth-telegram-label {
-  margin: 0;
-  font-size: 0.9rem;
-  color: var(--text-muted);
-}
-
-.auth-telegram-widget {
-  min-height: 40px;
+.auth-telegram-btn {
+  width: 100%;
 }
 
 .auth-telegram-hint code {
@@ -2819,7 +2817,7 @@ html.telegram-webapp .app-body {
   max-width: 900px;
   margin: 0 auto;
   width: 100%;
-  padding: 16px 20px calc(16px + var(--safe-bottom));
+  padding: 20px 20px calc(20px + var(--safe-bottom));
   border-top: 1px solid var(--border);
   text-align: center;
   color: var(--text-muted);
@@ -2827,9 +2825,48 @@ html.telegram-webapp .app-body {
   line-height: 1.5;
 }
 
+.site-footer-social {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.site-footer-title {
+  margin: 0;
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.site-footer-lead {
+  margin: 0;
+  max-width: 36rem;
+}
+
+.site-footer-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.site-footer-link:hover {
+  text-decoration: underline;
+}
+
+.site-footer-extra,
 .site-footer p {
   margin: 0;
   white-space: pre-wrap;
+}
+
+.site-footer-extra {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
 }
 
 .menu-items {

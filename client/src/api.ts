@@ -172,9 +172,20 @@ export async function fetchSiteBranding(): Promise<SiteBranding> {
   return branding;
 }
 
+export async function telegramOidcLogin(
+  idToken: string,
+  remember = true
+): Promise<{ token: string; user: User }> {
+  return apiRequest('/api/auth/telegram', {
+    method: 'POST',
+    body: JSON.stringify({ id_token: idToken, remember }),
+  });
+}
+
 export async function fetchTelegramSettings(): Promise<{
   botUsername: string | null;
   webAppUrl: string | null;
+  oidcClientId: string | null;
   loginReady: boolean;
 }> {
   return apiRequest('/api/settings/telegram');

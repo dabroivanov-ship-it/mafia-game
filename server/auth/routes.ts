@@ -10,13 +10,12 @@ import {
 } from './db.js';
 import { signToken, authMiddleware } from './jwt.js';
 import {
-  type TelegramAuthPayload,
-  verifyTelegramWidgetAuth,
   verifyTelegramWebAppInitData,
   parseTelegramWebAppUser,
   getTelegramAuthDate,
   getOrCreateUserFromTelegram,
 } from './telegram.js';
+import { isTelegramOidcConfigured, verifyTelegramOidcIdToken } from './telegramOidc.js';
 import { createRateLimitMiddleware, authRateLimiter } from '../security/rateLimit.js';
 import { MAX_PASSWORD_LENGTH } from '../security/constants.js';
 
@@ -99,15 +98,15 @@ router.post('/login', authRateLimit, async (req, res) => {
 router.post('/telegram', authRateLimit, async (req, res) => {
   try {
     const remember = req.body?.remember !== false;
-    const botToken = process.env.TELEGRAM_BOT_TOKEN;
-    if (!botToken) {
-      return res.status(400).json({ error: 'Telegram вход не настроен на сервере' });
-    }
-
     const initData = String(req.body?.initData || '').trim();
+    const idToken = String(req.body?.id_token || req.body?.idToken || '').trim();
     let user;
 
     if (initData) {
+      const botToken = process.env.TELEGRAM_BOT_TOKEN;
+      if (!botToken) {
+        return res.status(400).json({ error: 'Telegram Web App не настроен на сервере' });
+      }
       if (!verifyTelegramWebAppInitData(initData, botToken)) {
         return res.status(401).json({ error: 'Ошибка проверки Telegram Web App' });
       }
@@ -125,26 +124,19 @@ router.post('/telegram', authRateLimit, async (req, res) => {
         firstName: tgUser.first_name,
         lastName: tgUser.last_name,
       });
-    } else {
-      const payload = (req.body?.telegram || req.body) as TelegramAuthPayload;
-      if (!payload?.id || !payload?.auth_date || !payload?.hash) {
-        return res.status(400).json({ error: 'Некорректные данные Telegram' });
+    } else if (idToken) {
+      if (!isTelegramOidcConfigured()) {
+        return res.status(400).json({ error: 'Telegram OIDC не настроен на сервере' });
       }
-      if (!verifyTelegramWidgetAuth(payload, botToken)) {
-        return res.status(401).json({ error: 'Ошибка проверки Telegram авторизации' });
-      }
-
-      const authDate = Number(payload.auth_date) * 1000;
-      if (!Number.isFinite(authDate) || Date.now() - authDate > 60 * 60 * 1000) {
-        return res.status(401).json({ error: 'Данные Telegram устарели, попробуйте снова' });
-      }
-
+      const claims = await verifyTelegramOidcIdToken(idToken);
       user = await getOrCreateUserFromTelegram({
-        telegramId: String(payload.id),
-        username: payload.username ? String(payload.username) : null,
-        firstName: payload.first_name,
-        lastName: payload.last_name,
+        telegramId: claims.telegramId,
+        username: claims.username,
+        firstName: claims.firstName,
+        lastName: claims.lastName,
       });
+    } else {
+      return res.status(400).json({ error: 'Некорректные данные Telegram' });
     }
 
     if (!user) {

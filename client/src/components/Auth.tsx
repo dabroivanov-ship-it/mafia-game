@@ -27,7 +27,7 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
-  const [telegramBotUsername, setTelegramBotUsername] = useState<string | null>(null);
+  const [telegramOidcClientId, setTelegramOidcClientId] = useState<string | null>(null);
   const [telegramLoginReady, setTelegramLoginReady] = useState(false);
   const [telegramLoading, setTelegramLoading] = useState(false);
   const [telegramWebAppMode, setTelegramWebAppMode] = useState(false);
@@ -55,12 +55,12 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
 
   useEffect(() => {
     fetchTelegramSettings()
-      .then(({ botUsername, loginReady }: { botUsername: string | null; loginReady: boolean; webAppUrl: string | null;}) => {
-        setTelegramBotUsername(botUsername);
+      .then(({ oidcClientId, loginReady }) => {
+        setTelegramOidcClientId(oidcClientId);
         setTelegramLoginReady(loginReady);
       })
       .catch(() => {
-        setTelegramBotUsername(null);
+        setTelegramOidcClientId(null);
         setTelegramLoginReady(false);
       });
   }, []);
@@ -185,24 +185,21 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
         <header className="auth-header">
           <SiteLogo branding={branding} className="auth-header-logo" />
           <p>Войдите или зарегистрируйтесь, чтобы играть</p>
+          <div className="home-quick-links">
+            <a href="/info/rules" className="home-quick-link">
+              <span className="home-quick-link-icon" aria-hidden="true">
+                📜
+              </span>
+              <strong>Правила</strong>
+            </a>
+            <a href="/info/rating" className="home-quick-link">
+              <span className="home-quick-link-icon" aria-hidden="true">
+                🏆
+              </span>
+              <strong>Лидеры</strong>
+            </a>
+          </div>
         </header>
-
-        <div className="home-quick-links">
-          <a href="/info/rules" className="home-quick-link">
-            <span className="home-quick-link-icon" aria-hidden="true">
-              📜
-            </span>
-            <strong>Правила</strong>
-            <span className="muted">Как играть</span>
-          </a>
-          <a href="/info/rating" className="home-quick-link">
-            <span className="home-quick-link-icon" aria-hidden="true">
-              🏆
-            </span>
-            <strong>Лидеры</strong>
-            <span className="muted">Топ игроков</span>
-          </a>
-        </div>
 
         <div className="auth-tabs">
           <button
@@ -351,24 +348,15 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
 
 
 
-        {mode === 'login' && !telegramWebAppMode && telegramBotUsername && (
-
+        {mode === 'login' && !telegramWebAppMode && telegramLoginReady && (
           <TelegramLoginWidget
-
-            botUsername={telegramBotUsername}
-
+            oidcClientId={telegramOidcClientId || ''}
             loginReady={telegramLoginReady}
-
             loading={telegramLoading}
-
             onLoadingChange={setTelegramLoading}
-
             onError={setError}
-
             onAuthenticated={handleTelegramAuthenticated}
-
           />
-
         )}
 
 

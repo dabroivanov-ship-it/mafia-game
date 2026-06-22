@@ -92,24 +92,21 @@ export default function Lobby({
           <h1>🎭 Мафия</h1>
           <p>Выберите комнату для игры или общения</p>
         </div>
+        <div className="home-quick-links">
+          <button type="button" className="home-quick-link" onClick={() => onOpenInfo?.('rules')}>
+            <span className="home-quick-link-icon" aria-hidden="true">
+              📜
+            </span>
+            <strong>Правила</strong>
+          </button>
+          <button type="button" className="home-quick-link" onClick={() => onOpenInfo?.('rating')}>
+            <span className="home-quick-link-icon" aria-hidden="true">
+              🏆
+            </span>
+            <strong>Лидеры</strong>
+          </button>
+        </div>
       </header>
-
-      <div className="home-quick-links">
-        <button type="button" className="home-quick-link" onClick={() => onOpenInfo?.('rules')}>
-          <span className="home-quick-link-icon" aria-hidden="true">
-            📜
-          </span>
-          <strong>Правила</strong>
-          <span className="muted">Как играть</span>
-        </button>
-        <button type="button" className="home-quick-link" onClick={() => onOpenInfo?.('rating')}>
-          <span className="home-quick-link-icon" aria-hidden="true">
-            🏆
-          </span>
-          <strong>Лидеры</strong>
-          <span className="muted">Топ игроков</span>
-        </button>
-      </div>
 
       {unreadMailCount > 0 && (
         <button type="button" className="lobby-mail-notice" onClick={onOpenMessages}>

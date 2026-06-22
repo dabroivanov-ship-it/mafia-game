@@ -52,7 +52,7 @@ router.put('/telegram', authMiddleware, adminMiddleware, (req, res) => {
     return res.status(400).json({ error: 'В production URL сайта должен быть https://' });
   }
   setTelegramSettings(botUsername, webAppUrl);
-  res.json({ botUsername, webAppUrl, loginReady: getTelegramSettings().loginReady });
+  res.json({ ...getTelegramSettings() });
 });
 
 router.get('/metrika', (_req, res) => {

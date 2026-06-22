@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { getSiteBrandingUploadsDir } from '../paths.js';
 import { DEFAULT_THEME, isValidThemeId, type ThemeId } from './themes.js';
+import { isTelegramOidcConfigured } from '../auth/telegramOidc.js';
 db.exec(`
   CREATE TABLE IF NOT EXISTS app_settings (
     key TEXT PRIMARY KEY,
@@ -70,6 +71,7 @@ export function setDefaultTheme(themeId: ThemeId): void {
 export function getTelegramSettings(): {
   botUsername: string | null;
   webAppUrl: string | null;
+  oidcClientId: string | null;
   loginReady: boolean;
 } {
   const rows = db
@@ -81,8 +83,9 @@ export function getTelegramSettings(): {
     if (row.key === TELEGRAM_BOT_USERNAME_KEY) botUsername = row.value || null;
     if (row.key === TELEGRAM_WEBAPP_URL_KEY) webAppUrl = row.value || null;
   }
-  const loginReady = !!(botUsername?.trim() && process.env.TELEGRAM_BOT_TOKEN?.trim());
-  return { botUsername, webAppUrl, loginReady };
+  const oidcClientId = process.env.TELEGRAM_OIDC_CLIENT_ID?.trim() || null;
+  const loginReady = isTelegramOidcConfigured();
+  return { botUsername, webAppUrl, oidcClientId, loginReady };
 }
 
 export function setTelegramSettings(botUsername: string, webAppUrl: string): void {
