@@ -7,12 +7,14 @@ const CHAT_LIMIT_OPTIONS = [15, 30, 50, 100];
 interface CabinetProfileSettingsProps {
   user: User;
   onUpdate: (user: User) => void;
+  onOpenStatistics?: () => void;
   onBack: () => void;
 }
 
 export default function CabinetProfileSettings({
   user,
   onUpdate,
+  onOpenStatistics,
   onBack,
 }: CabinetProfileSettingsProps) {
   const [form, setForm] = useState({
@@ -129,7 +131,13 @@ export default function CabinetProfileSettings({
           <span>@{user.username}</span>
           {user.telegramUsername && <span>📱 Telegram @{user.telegramUsername}</span>}
           {user.email && !user.needsEmailLink && <span>✉️ {user.email}</span>}
-          <span>🏆 MMR {user.mmr ?? user.totalScore}</span>
+          {onOpenStatistics ? (
+            <button type="button" className="cabinet-hub-mmr-link" onClick={onOpenStatistics}>
+              🏆 MMR {user.mmr ?? user.totalScore}
+            </button>
+          ) : (
+            <span>🏆 MMR {user.mmr ?? user.totalScore}</span>
+          )}
           <span>📅 с {new Date(user.createdAt).toLocaleDateString('ru-RU')}</span>
         </div>
 

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState, useCallback, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useState, useCallback, useRef, type ReactNode } from 'react';
 import { io, Socket } from 'socket.io-client';
 import Auth from './components/Auth';
 import Menu, { type MenuView } from './components/Menu';
@@ -67,6 +67,11 @@ export default function App() {
   const [profileStatsUserId, setProfileStatsUserId] = useState<number | null>(() =>
     readInitialProfileUserId()
   );
+  const statsReturnRef = useRef<{
+    path: string;
+    view: AppView;
+    lobbyScreen: LobbyScreen;
+  } | null>(null);
   const [siteDefaultTheme, setSiteDefaultTheme] = useState<ThemeId>(DEFAULT_THEME);
   const [siteBranding, setSiteBranding] = useState<SiteBranding>(DEFAULT_SITE_BRANDING);
 
@@ -139,6 +144,7 @@ export default function App() {
       } else if (path === '/' || path === '') {
         setView('lobby');
         setProfileStatsUserId(null);
+        statsReturnRef.current = null;
       }
     };
     window.addEventListener('popstate', onPopState);
@@ -247,19 +253,33 @@ export default function App() {
     setPmNotice(null);
   }, []);
 
-  const openProfileStatistics = useCallback((userId: number) => {
-    window.history.pushState(null, '', profileStatsPath(userId));
-    setProfileStatsUserId(userId);
-    setView('lobby');
-    setLobbyScreen('rooms');
-  }, []);
+  const openProfileStatistics = useCallback(
+    (userId: number) => {
+      if (profileStatsUserId == null) {
+        statsReturnRef.current = {
+          path: `${window.location.pathname}${window.location.hash}`,
+          view,
+          lobbyScreen,
+        };
+      }
+      window.history.pushState(null, '', profileStatsPath(userId));
+      setProfileStatsUserId(userId);
+    },
+    [view, lobbyScreen, profileStatsUserId]
+  );
 
   const closeProfileStatistics = useCallback(() => {
     setProfileStatsUserId(null);
-    if (window.location.pathname.startsWith('/profile/')) {
+    const ctx = statsReturnRef.current;
+    statsReturnRef.current = null;
+    if (ctx && !currentRoomId) {
+      setView(ctx.view);
+      setLobbyScreen(ctx.lobbyScreen);
+      window.history.pushState(null, '', ctx.path || '/');
+    } else if (window.location.pathname.startsWith('/profile/')) {
       window.history.pushState(null, '', '/');
     }
-  }, []);
+  }, [currentRoomId]);
 
   const handleAuthSuccess = useCallback((authUser: User, authToken: string) => {
     setUser(authUser);
@@ -414,17 +434,28 @@ export default function App() {
             {error}
           </div>
         )}
-        <ViewSuspense label="Загружаем комнату…">
-          <Room
-            socket={socket}
-            state={roomState}
-            onLeave={leaveRoom}
-            onStateUpdate={setRoomState}
-            currentUserId={user.id}
-            onWriteMessage={(userId, username) => openMessages({ userId, username })}
-            onOpenStatistics={openProfileStatistics}
-          />
-        </ViewSuspense>
+        {profileStatsUserId != null ? (
+          <ViewSuspense label="Статистика…">
+            <UserStatisticsPage
+              userId={profileStatsUserId}
+              currentUser={user}
+              onBack={closeProfileStatistics}
+              onWriteMessage={(userId, username) => openMessages({ userId, username })}
+            />
+          </ViewSuspense>
+        ) : (
+          <ViewSuspense label="Загружаем комнату…">
+            <Room
+              socket={socket}
+              state={roomState}
+              onLeave={leaveRoom}
+              onStateUpdate={setRoomState}
+              currentUserId={user.id}
+              onWriteMessage={(userId, username) => openMessages({ userId, username })}
+              onOpenStatistics={openProfileStatistics}
+            />
+          </ViewSuspense>
+        )}
       </div>
     );
   }
@@ -468,10 +499,6 @@ export default function App() {
             unreadMailCount={unreadMailCount}
             onOpenMessages={() => openMessages()}
             onOpenOnlineUsers={() => setLobbyScreen('online-users')}
-            onOpenInfo={(section) => {
-              window.history.pushState(null, '', pathForInfoSection(section));
-              setView('info');
-            }}
           />
         )}
         {view === 'lobby' && lobbyScreen === 'online-users' && (
@@ -494,6 +521,7 @@ export default function App() {
             <CabinetProfileSettings
               user={user}
               onUpdate={handleUserUpdate}
+              onOpenStatistics={() => openProfileStatistics(user.id)}
               onBack={() => setLobbyScreen('cabinet')}
             />
           </ViewSuspense>

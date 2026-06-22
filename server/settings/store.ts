@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { getSiteBrandingUploadsDir } from '../paths.js';
 import { DEFAULT_THEME, isValidThemeId, type ThemeId } from './themes.js';
-import { isTelegramOidcConfigured } from '../auth/telegramOidc.js';
+import { isTelegramOidcConfigured, getTelegramOidcRedirectUri } from '../auth/telegramOidc.js';
 db.exec(`
   CREATE TABLE IF NOT EXISTS app_settings (
     key TEXT PRIMARY KEY,
@@ -72,6 +72,7 @@ export function getTelegramSettings(): {
   botUsername: string | null;
   webAppUrl: string | null;
   oidcClientId: string | null;
+  oidcRedirectUri: string | null;
   loginReady: boolean;
 } {
   const rows = db
@@ -85,7 +86,8 @@ export function getTelegramSettings(): {
   }
   const oidcClientId = process.env.TELEGRAM_OIDC_CLIENT_ID?.trim() || null;
   const loginReady = isTelegramOidcConfigured();
-  return { botUsername, webAppUrl, oidcClientId, loginReady };
+  const oidcRedirectUri = oidcClientId ? getTelegramOidcRedirectUri() : null;
+  return { botUsername, webAppUrl, oidcClientId, oidcRedirectUri, loginReady };
 }
 
 export function setTelegramSettings(botUsername: string, webAppUrl: string): void {

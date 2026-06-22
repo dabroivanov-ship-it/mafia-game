@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { fetchLeaderboard } from '../api';
 import type { LeaderboardEntry, User } from '../types';
+import { profileStatsPath } from '../profileRouting';
 import UserProfileModal from './UserProfileModal';
 
 interface PlayerRatingProps {
@@ -77,7 +78,21 @@ export default function PlayerRating({
                       )}
                     </td>
                     <td>{player.gamesPlayed}</td>
-                    <td className="rating-score">{player.mmr ?? player.totalScore}</td>
+                    <td className="rating-score">
+                      {onOpenStatistics && currentUser ? (
+                        <button
+                          type="button"
+                          className="rating-mmr-link"
+                          onClick={() => onOpenStatistics(player.id)}
+                        >
+                          {player.mmr ?? player.totalScore}
+                        </button>
+                      ) : (
+                        <a href={profileStatsPath(player.id)} className="rating-mmr-link">
+                          {player.mmr ?? player.totalScore}
+                        </a>
+                      )}
+                    </td>
                     <td
                       className={
                         player.reputation > 0

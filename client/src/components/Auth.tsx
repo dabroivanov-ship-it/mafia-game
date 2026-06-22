@@ -7,6 +7,7 @@ import {
   saveRememberedLogin,
   fetchTelegramSettings,
   telegramWebAppLogin,
+  fetchMe,
 } from '../api';
 import type { User } from '../types';
 import { getTelegramWebApp, isTelegramWebApp } from '../telegramWebApp';
@@ -27,7 +28,7 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
-  const [telegramOidcClientId, setTelegramOidcClientId] = useState<string | null>(null);
+  const [telegramOidcRedirectUri, setTelegramOidcRedirectUri] = useState<string | null>(null);
   const [telegramLoginReady, setTelegramLoginReady] = useState(false);
   const [telegramLoading, setTelegramLoading] = useState(false);
   const [telegramWebAppMode, setTelegramWebAppMode] = useState(false);
@@ -53,18 +54,6 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
     }
   }, []);
 
-  useEffect(() => {
-    fetchTelegramSettings()
-      .then(({ oidcClientId, loginReady }) => {
-        setTelegramOidcClientId(oidcClientId);
-        setTelegramLoginReady(loginReady);
-      })
-      .catch(() => {
-        setTelegramOidcClientId(null);
-        setTelegramLoginReady(false);
-      });
-  }, []);
-
   const completeAuth = useCallback(
     (user: User, token: string, rememberLogin: string) => {
       saveRememberedLogin(rememberLogin, true);
@@ -73,6 +62,57 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
     },
     [onSuccess]
   );
+
+  useEffect(() => {
+    fetchTelegramSettings()
+      .then(({ oidcRedirectUri, loginReady }) => {
+        setTelegramOidcRedirectUri(oidcRedirectUri);
+        setTelegramLoginReady(loginReady);
+      })
+      .catch(() => {
+        setTelegramOidcRedirectUri(null);
+        setTelegramLoginReady(false);
+      });
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tgError = params.get('tg_error');
+    const tgToken = params.get('tg_token');
+
+    if (tgError) {
+      setError(tgError);
+      window.history.replaceState(null, '', window.location.pathname);
+      return;
+    }
+
+    if (!tgToken) return;
+
+    let cancelled = false;
+    setTelegramLoading(true);
+    setError('');
+    localStorage.setItem('mafia_token', tgToken);
+    window.history.replaceState(null, '', window.location.pathname);
+
+    void fetchMe()
+      .then(({ user }) => {
+        if (cancelled) return;
+        const loginName = user.telegramUsername || user.username || String(user.id);
+        completeAuth(user, tgToken, loginName);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        localStorage.removeItem('mafia_token');
+        setError(err instanceof Error ? err.message : 'Ошибка Telegram входа');
+      })
+      .finally(() => {
+        if (!cancelled) setTelegramLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [completeAuth]);
 
   useEffect(() => {
     let cancelled = false;
@@ -122,14 +162,6 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
       window.clearTimeout(timeoutId);
     };
   }, [completeAuth]);
-
-  const handleTelegramAuthenticated = useCallback(
-    (token: string, user: User) => {
-      const loginName = user.telegramUsername || user.username || String(user.id);
-      completeAuth(user, token, loginName);
-    },
-    [completeAuth]
-  );
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
@@ -181,24 +213,25 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
 
   return (
     <div className="auth-page">
+      <div className="auth-top-links home-quick-links">
+        <a href="/info/rules" className="home-quick-link">
+          <span className="home-quick-link-icon" aria-hidden="true">
+            📜
+          </span>
+          <strong>Правила</strong>
+        </a>
+        <a href="/info/rating" className="home-quick-link">
+          <span className="home-quick-link-icon" aria-hidden="true">
+            🏆
+          </span>
+          <strong>Лидеры</strong>
+        </a>
+      </div>
+
       <div className="auth-card">
         <header className="auth-header">
           <SiteLogo branding={branding} className="auth-header-logo" />
           <p>Войдите или зарегистрируйтесь, чтобы играть</p>
-          <div className="home-quick-links">
-            <a href="/info/rules" className="home-quick-link">
-              <span className="home-quick-link-icon" aria-hidden="true">
-                📜
-              </span>
-              <strong>Правила</strong>
-            </a>
-            <a href="/info/rating" className="home-quick-link">
-              <span className="home-quick-link-icon" aria-hidden="true">
-                🏆
-              </span>
-              <strong>Лидеры</strong>
-            </a>
-          </div>
         </header>
 
         <div className="auth-tabs">
@@ -348,14 +381,13 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
 
 
 
-        {mode === 'login' && !telegramWebAppMode && telegramLoginReady && (
+        {mode === 'login' && !telegramWebAppMode && (
           <TelegramLoginWidget
-            oidcClientId={telegramOidcClientId || ''}
             loginReady={telegramLoginReady}
+            oidcRedirectUri={telegramOidcRedirectUri}
+            remember={rememberMe}
             loading={telegramLoading}
-            onLoadingChange={setTelegramLoading}
             onError={setError}
-            onAuthenticated={handleTelegramAuthenticated}
           />
         )}
 

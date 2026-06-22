@@ -15,7 +15,7 @@ import {
   getTelegramAuthDate,
   getOrCreateUserFromTelegram,
 } from './telegram.js';
-import { isTelegramOidcConfigured, verifyTelegramOidcIdToken } from './telegramOidc.js';
+import { isTelegramOidcConfigured, verifyTelegramOidcIdToken, createTelegramOidcAuthorizationUrl, completeTelegramOidcAuthorization, buildTelegramOidcSuccessRedirect, buildTelegramOidcErrorRedirect } from './telegramOidc.js';
 import { createRateLimitMiddleware, authRateLimiter } from '../security/rateLimit.js';
 import { MAX_PASSWORD_LENGTH } from '../security/constants.js';
 
@@ -92,6 +92,38 @@ router.post('/login', authRateLimit, async (req, res) => {
   } catch (err) {
     console.error('login error:', err);
     res.status(500).json({ error: 'Ошибка входа' });
+  }
+});
+
+router.get('/telegram/oidc/start', (req, res) => {
+  if (!isTelegramOidcConfigured()) {
+    return res.redirect(buildTelegramOidcErrorRedirect('Telegram OIDC не настроен на сервере', req));
+  }
+  const remember = req.query.remember !== '0';
+  const url = createTelegramOidcAuthorizationUrl(remember, req);
+  res.redirect(url);
+});
+
+router.get('/telegram/oidc/callback', async (req, res) => {
+  try {
+    const oauthError = String(req.query.error_description || req.query.error || '').trim();
+    if (oauthError) {
+      return res.redirect(buildTelegramOidcErrorRedirect(oauthError, req));
+    }
+
+    const code = String(req.query.code || '').trim();
+    const state = String(req.query.state || '').trim();
+    if (!code || !state) {
+      return res.redirect(buildTelegramOidcErrorRedirect('Некорректный ответ Telegram OIDC', req));
+    }
+
+    const { user, remember } = await completeTelegramOidcAuthorization(code, state, req);
+    const token = signToken(user, remember);
+    void publicUser(user);
+    res.redirect(buildTelegramOidcSuccessRedirect(token, req));
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Ошибка Telegram входа';
+    res.redirect(buildTelegramOidcErrorRedirect(message, req));
   }
 });
 

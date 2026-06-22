@@ -186,6 +186,7 @@ export async function fetchTelegramSettings(): Promise<{
   botUsername: string | null;
   webAppUrl: string | null;
   oidcClientId: string | null;
+  oidcRedirectUri: string | null;
   loginReady: boolean;
 }> {
   return apiRequest('/api/settings/telegram');

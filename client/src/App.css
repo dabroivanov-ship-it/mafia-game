@@ -144,14 +144,22 @@ html.telegram-webapp .app-body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 24px 16px;
+  justify-content: flex-start;
+  padding: 16px 16px 24px;
+  padding-top: max(16px, var(--safe-top));
+}
+
+.auth-top-links {
+  width: 100%;
+  max-width: 420px;
+  margin-bottom: 16px;
 }
 
 .auth-page .site-footer {
   width: 100%;
   max-width: 900px;
-  margin-top: 24px;
+  margin-top: auto;
+  padding-top: 24px;
 }
 
 .auth-card {
@@ -191,12 +199,8 @@ html.telegram-webapp .app-body {
   margin-top: 16px;
 }
 
-.auth-header .home-quick-links {
-  margin-top: 18px;
-}
-
-.lobby-header .home-quick-links {
-  margin-top: 14px;
+.auth-top-links.home-quick-links {
+  margin-top: 0;
 }
 
 .home-quick-link {
@@ -3150,6 +3154,22 @@ html.telegram-webapp .app-body {
 }
 
 .rating-name-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.rating-mmr-link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.rating-mmr-link:hover {
   text-decoration: underline;
   text-underline-offset: 3px;
 }

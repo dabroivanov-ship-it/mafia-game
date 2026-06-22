@@ -1,4 +1,3 @@
-import type { InfoSection } from '../infoRouting';
 import type { GamePhase, LobbyRoom } from '../types';
 
 const PHASE_LABELS: Record<GamePhase, string> = {
@@ -28,7 +27,6 @@ interface LobbyProps {
   unreadMailCount?: number;
   onOpenMessages?: () => void;
   onOpenOnlineUsers?: () => void;
-  onOpenInfo?: (section: InfoSection) => void;
 }
 
 function RoomCard({
@@ -80,7 +78,6 @@ export default function Lobby({
   unreadMailCount = 0,
   onOpenMessages,
   onOpenOnlineUsers,
-  onOpenInfo,
 }: LobbyProps) {
   const gameRooms = rooms.filter((r) => r.kind !== 'chat');
   const chatRooms = rooms.filter((r) => r.kind === 'chat');
@@ -91,20 +88,6 @@ export default function Lobby({
         <div className="lobby-header-brand">
           <h1>🎭 Мафия</h1>
           <p>Выберите комнату для игры или общения</p>
-        </div>
-        <div className="home-quick-links">
-          <button type="button" className="home-quick-link" onClick={() => onOpenInfo?.('rules')}>
-            <span className="home-quick-link-icon" aria-hidden="true">
-              📜
-            </span>
-            <strong>Правила</strong>
-          </button>
-          <button type="button" className="home-quick-link" onClick={() => onOpenInfo?.('rating')}>
-            <span className="home-quick-link-icon" aria-hidden="true">
-              🏆
-            </span>
-            <strong>Лидеры</strong>
-          </button>
         </div>
       </header>
 

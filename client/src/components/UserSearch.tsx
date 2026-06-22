@@ -111,21 +111,31 @@ export default function UserSearch({
                     {formatPresenceLabel(hit)}
                   </span>
                   {hit.city && <span className="muted">📍 {hit.city}</span>}
-                  <span className="muted">🏆 MMR {hit.mmr ?? hit.totalScore}</span>
                 </div>
                 <span className="info-hub-arrow" aria-hidden="true">
                   →
                 </span>
               </button>
-              {!isSelf && (
+              {(onOpenStatistics || !isSelf) && (
                 <div className="user-search-card-actions">
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-primary"
-                    onClick={() => onWriteMessage(hit.id, hit.username)}
-                  >
-                    ✉️ Написать письмо
-                  </button>
+                  {onOpenStatistics && (
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-ghost"
+                      onClick={() => onOpenStatistics(hit.id)}
+                    >
+                      🏆 MMR {hit.mmr ?? hit.totalScore}
+                    </button>
+                  )}
+                  {!isSelf && (
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-primary"
+                      onClick={() => onWriteMessage(hit.id, hit.username)}
+                    >
+                      ✉️ Написать письмо
+                    </button>
+                  )}
                 </div>
               )}
             </div>
