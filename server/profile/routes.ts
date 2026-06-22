@@ -22,6 +22,7 @@ import { MAX_PASSWORD_LENGTH } from '../security/constants.js';
 import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import { getUserMessageCount } from '../history/store.js';
+import { getUserStatistics } from '../stats/store.js';
 import { isValidThemeId } from '../settings/themes.js';
 import { getUserPresence, getOnlineUserCount, listOnlineUsers } from '../presence.js';
 import {
@@ -151,6 +152,18 @@ export function createProfileRouter({ onProfileUpdated }: ProfileRouterOptions =
       ...getUserPresence(user.id),
     }));
     res.json({ users });
+  });
+
+  router.get('/:userId/statistics', (req, res) => {
+    const targetId = Number(req.params.userId);
+    if (!Number.isFinite(targetId) || targetId <= 0) {
+      return res.status(400).json({ error: 'Некорректный id пользователя' });
+    }
+    const target = findUserPublic(targetId);
+    if (!target) return res.status(404).json({ error: 'Пользователь не найден' });
+    const statistics = getUserStatistics(targetId);
+    if (!statistics) return res.status(404).json({ error: 'Пользователь не найден' });
+    res.json({ user: target, statistics });
   });
 
   router.get('/:userId', authMiddleware, (req, res) => {

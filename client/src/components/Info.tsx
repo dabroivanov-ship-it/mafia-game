@@ -19,6 +19,7 @@ interface InfoProps {
   publicMode?: boolean;
   currentUser?: User | null;
   onWriteMessage?: (userId: number, username: string) => void;
+  onOpenStatistics?: (userId: number) => void;
 }
 
 export default function Info({
@@ -26,6 +27,7 @@ export default function Info({
   publicMode = false,
   currentUser = null,
   onWriteMessage,
+  onOpenStatistics,
 }: InfoProps) {
   const [section, setSection] = useState<InfoSection>(
     initialSection ?? infoSectionFromPath(window.location.pathname)
@@ -118,7 +120,12 @@ export default function Info({
           <h1>🏆 Рейтинг игроков</h1>
           <p className="muted">Топ-100 по очкам за сыгранные партии</p>
         </header>
-        <PlayerRating embedded currentUser={currentUser} onWriteMessage={onWriteMessage} />
+        <PlayerRating
+          embedded
+          currentUser={currentUser}
+          onWriteMessage={onWriteMessage}
+          onOpenStatistics={onOpenStatistics}
+        />
       </div>
     );
   }

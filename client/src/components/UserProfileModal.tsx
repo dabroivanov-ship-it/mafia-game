@@ -25,6 +25,7 @@ interface UserProfileModalProps {
   onClose: () => void;
   onAdminAction?: () => void;
   onWriteMessage?: (userId: number, username: string) => void;
+  onOpenStatistics?: (userId: number) => void;
   replyTarget?: ChatReplyTarget | null;
   canSendChat?: boolean;
   onSendChat?: (
@@ -64,6 +65,7 @@ export default function UserProfileModal({
   onClose,
   onAdminAction,
   onWriteMessage,
+  onOpenStatistics,
   replyTarget = null,
   canSendChat = false,
   onSendChat,
@@ -397,8 +399,21 @@ export default function UserProfileModal({
                     </span>
                   </li>
                   <li>
-                    <span className="player-page-label">Очки</span>
-                    <span>{user.totalScore}</span>
+                    <span className="player-page-label">MMR</span>
+                    {onOpenStatistics ? (
+                      <button
+                        type="button"
+                        className="player-page-mmr-link"
+                        onClick={() => {
+                          onOpenStatistics(userId);
+                          onClose();
+                        }}
+                      >
+                        {user.mmr ?? user.totalScore}
+                      </button>
+                    ) : (
+                      <span>{user.mmr ?? user.totalScore}</span>
+                    )}
                   </li>
                   <li>
                     <span className="player-page-label">Сообщений в чате</span>

@@ -7,9 +7,15 @@ interface OnlineUsersProps {
   currentUser: User;
   onBack: () => void;
   onWriteMessage: (userId: number, username: string) => void;
+  onOpenStatistics?: (userId: number) => void;
 }
 
-export default function OnlineUsers({ currentUser, onBack, onWriteMessage }: OnlineUsersProps) {
+export default function OnlineUsers({
+  currentUser,
+  onBack,
+  onWriteMessage,
+  onOpenStatistics,
+}: OnlineUsersProps) {
   const [users, setUsers] = useState<UserSearchHit[]>([]);
   const [onlineCount, setOnlineCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -81,6 +87,7 @@ export default function OnlineUsers({ currentUser, onBack, onWriteMessage }: Onl
           viewerCanModerate={currentUser.isStaff}
           onClose={() => setProfileUserId(null)}
           onWriteMessage={onWriteMessage}
+          onOpenStatistics={onOpenStatistics}
         />
       )}
     </div>

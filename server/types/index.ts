@@ -44,6 +44,7 @@ export interface User {
   ban_reason: string | null;
   banned_until: string | null;
   total_score: number;
+  mmr?: number;
   games_played?: number;
   reputation?: number;
   created_at: string;
@@ -75,6 +76,7 @@ export interface PublicUser {
   isModerator: boolean;
   isStaff: boolean;
   totalScore: number;
+  mmr: number;
   gamesPlayed: number;
   reputation: number;
   createdAt: string;
@@ -154,6 +156,7 @@ export interface GameRoom {
   winnerTeam: WinnerTeam;
   systemMessages: { text: string; time: string }[];
   scoresSynced: boolean;
+  statsSynced: boolean;
   sessionId: number | null;
   historyLoaded: boolean;
   nightAtmosphereSent?: Record<string, boolean>;

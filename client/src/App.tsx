@@ -6,6 +6,12 @@ import Lobby, { type LobbyScreen } from './components/Lobby';
 import CabinetHub from './components/CabinetHub';
 import PageLoader from './components/PageLoader';
 import { infoSectionFromPath, isPublicInfoPath, pathForInfoSection } from './infoRouting';
+import {
+  isPublicProfilePath,
+  profileStatsPath,
+  profileUserIdFromPath,
+  readInitialProfileUserId,
+} from './profileRouting';
 import { DEFAULT_PAGE_META, updatePageMeta } from './seo';
 import { clearSession, fetchMe, fetchUnreadMailCount, fetchThemeSettings, saveSession, loadStoredPlayerId, saveStoredPlayerId, clearStoredPlayerIds } from './api';
 import type { LobbyRoom, RoomState, User, ThemeId, LobbyUpdate, SiteBranding } from './types';
@@ -23,6 +29,7 @@ const UserSearch = lazy(() => import('./components/UserSearch'));
 const CabinetProfileSettings = lazy(() => import('./components/CabinetProfileSettings'));
 const CabinetSiteSettings = lazy(() => import('./components/CabinetSiteSettings'));
 const CabinetSupport = lazy(() => import('./components/CabinetSupport'));
+const UserStatisticsPage = lazy(() => import('./components/UserStatisticsPage'));
 
 function ViewSuspense({ children, label }: { children: ReactNode; label?: string }) {
   return <Suspense fallback={<PageLoader label={label} compact />}>{children}</Suspense>;
@@ -57,6 +64,9 @@ export default function App() {
   const [lobbyScreen, setLobbyScreen] = useState<LobbyScreen>('rooms');
   const [composeToUserId, setComposeToUserId] = useState<number | null>(null);
   const [composeToUsername, setComposeToUsername] = useState<string | null>(null);
+  const [profileStatsUserId, setProfileStatsUserId] = useState<number | null>(() =>
+    readInitialProfileUserId()
+  );
   const [siteDefaultTheme, setSiteDefaultTheme] = useState<ThemeId>(DEFAULT_THEME);
   const [siteBranding, setSiteBranding] = useState<SiteBranding>(DEFAULT_SITE_BRANDING);
 
@@ -99,6 +109,8 @@ export default function App() {
     if (isPublicInfoPath(window.location.pathname)) {
       setView('info');
     }
+    const profileId = profileUserIdFromPath(window.location.pathname);
+    if (profileId) setProfileStatsUserId(profileId);
   }, [user]);
 
   useEffect(() => {
@@ -120,8 +132,13 @@ export default function App() {
       const path = window.location.pathname;
       if (isPublicInfoPath(path)) {
         setView('info');
+        setProfileStatsUserId(null);
+      } else if (isPublicProfilePath(path)) {
+        setProfileStatsUserId(profileUserIdFromPath(path));
+        setView('lobby');
       } else if (path === '/' || path === '') {
         setView('lobby');
+        setProfileStatsUserId(null);
       }
     };
     window.addEventListener('popstate', onPopState);
@@ -230,6 +247,20 @@ export default function App() {
     setPmNotice(null);
   }, []);
 
+  const openProfileStatistics = useCallback((userId: number) => {
+    window.history.pushState(null, '', profileStatsPath(userId));
+    setProfileStatsUserId(userId);
+    setView('lobby');
+    setLobbyScreen('rooms');
+  }, []);
+
+  const closeProfileStatistics = useCallback(() => {
+    setProfileStatsUserId(null);
+    if (window.location.pathname.startsWith('/profile/')) {
+      window.history.pushState(null, '', '/');
+    }
+  }, []);
+
   const handleAuthSuccess = useCallback((authUser: User, authToken: string) => {
     setUser(authUser);
     setToken(authToken);
@@ -322,6 +353,26 @@ export default function App() {
     );
   }
 
+  if ((!user || !token) && isPublicProfilePath(window.location.pathname)) {
+    const profileId = profileUserIdFromPath(window.location.pathname);
+    if (profileId) {
+      return (
+        <div className="app app-public-info">
+          <ViewSuspense label="Загружаем статистику…">
+            <UserStatisticsPage
+              userId={profileId}
+              onBack={() => {
+                window.history.pushState(null, '', '/');
+                window.location.href = '/';
+              }}
+            />
+          </ViewSuspense>
+          <SiteFooter text={siteBranding.footerText} />
+        </div>
+      );
+    }
+  }
+
   if ((!user || !token) && isPublicInfoPath(window.location.pathname)) {
     return (
       <div className="app app-public-info">
@@ -371,6 +422,7 @@ export default function App() {
             onStateUpdate={setRoomState}
             currentUserId={user.id}
             onWriteMessage={(userId, username) => openMessages({ userId, username })}
+            onOpenStatistics={openProfileStatistics}
           />
         </ViewSuspense>
       </div>
@@ -397,6 +449,17 @@ export default function App() {
 
       <div className="app-main">
         <div className="app-body">
+        {profileStatsUserId != null ? (
+          <ViewSuspense label="Статистика…">
+            <UserStatisticsPage
+              userId={profileStatsUserId}
+              currentUser={user}
+              onBack={closeProfileStatistics}
+              onWriteMessage={(userId, username) => openMessages({ userId, username })}
+            />
+          </ViewSuspense>
+        ) : (
+          <>
         {view === 'lobby' && lobbyScreen === 'rooms' && (
           <Lobby
             rooms={rooms}
@@ -417,6 +480,7 @@ export default function App() {
               currentUser={user}
               onBack={() => setLobbyScreen('rooms')}
               onWriteMessage={(userId, username) => openMessages({ userId, username })}
+              onOpenStatistics={openProfileStatistics}
             />
           </ViewSuspense>
         )}
@@ -463,6 +527,7 @@ export default function App() {
               currentUser={user}
               onBack={() => setLobbyScreen('cabinet')}
               onWriteMessage={(userId, username) => openMessages({ userId, username })}
+              onOpenStatistics={openProfileStatistics}
             />
           </ViewSuspense>
         )}
@@ -480,6 +545,7 @@ export default function App() {
             onOpenMessages={() => setLobbyScreen('cabinet-messages')}
             onOpenSupport={() => setLobbyScreen('cabinet-support')}
             onOpenUserSearch={() => setLobbyScreen('cabinet-search')}
+            onOpenStatistics={() => openProfileStatistics(user.id)}
             onLogout={handleLogout}
             onBack={() => setView('lobby')}
           />
@@ -490,6 +556,7 @@ export default function App() {
               initialSection={infoSectionFromPath(window.location.pathname)}
               currentUser={user}
               onWriteMessage={(userId, username) => openMessages({ userId, username })}
+              onOpenStatistics={openProfileStatistics}
             />
           </ViewSuspense>
         )}
@@ -501,6 +568,8 @@ export default function App() {
               onBrandingChange={setSiteBranding}
             />
           </ViewSuspense>
+        )}
+          </>
         )}
         </div>
 
@@ -516,6 +585,7 @@ export default function App() {
             setLobbyScreen('rooms');
             setComposeToUserId(null);
             setComposeToUsername(null);
+            setProfileStatsUserId(null);
             window.history.pushState(null, '', '/');
           }
           if (v === 'cabinet') {

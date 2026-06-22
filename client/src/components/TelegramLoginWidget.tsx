@@ -129,16 +129,3 @@ export default function TelegramLoginWidget({
     </div>
   );
 }
-
-declare global {
-  interface Window {
-    Telegram?: {
-      Login?: {
-        auth: (
-          options: { client_id: number; request_access?: Array<'phone' | 'write'>; lang?: string },
-          callback: (data: { id_token?: string; error?: string }) => void
-        ) => void;
-      };
-    };
-  }
-}

@@ -150,6 +150,7 @@ export function publicUser(user: User | null | undefined): PublicUser | null {
     isModerator: user.role === 'moderator',
     isStaff: isStaff(user),
     totalScore: user.total_score,
+    mmr: user.mmr ?? 1000,
     gamesPlayed: user.games_played ?? 0,
     reputation: user.reputation ?? 0,
     createdAt: user.created_at,
@@ -309,6 +310,7 @@ export interface UserSearchHit {
   city: string;
   avatar: string | null;
   totalScore: number;
+  mmr: number;
   isAdmin: boolean;
   isModerator: boolean;
 }
@@ -325,7 +327,7 @@ export function searchPublicUsers(query: string, limit = 25): UserSearchHit[] {
   const prefix = `${q}%`;
   const rows = db
     .prepare(
-      `SELECT id, username, display_name, city, avatar, role, total_score
+      `SELECT id, username, display_name, city, avatar, role, total_score, mmr
        FROM users
        WHERE username LIKE ? COLLATE NOCASE
           OR display_name LIKE ? COLLATE NOCASE
@@ -341,7 +343,7 @@ export function searchPublicUsers(query: string, limit = 25): UserSearchHit[] {
     )
     .all(term, term, term, prefix, prefix, limit) as Pick<
     User,
-    'id' | 'username' | 'display_name' | 'city' | 'avatar' | 'role' | 'total_score'
+    'id' | 'username' | 'display_name' | 'city' | 'avatar' | 'role' | 'total_score' | 'mmr'
   >[];
 
   return rows.map((row) => ({
@@ -351,6 +353,7 @@ export function searchPublicUsers(query: string, limit = 25): UserSearchHit[] {
     city: row.city || '',
     avatar: row.avatar || null,
     totalScore: row.total_score,
+    mmr: row.mmr ?? 1000,
     isAdmin: row.role === 'admin',
     isModerator: row.role === 'moderator',
   }));
@@ -364,6 +367,7 @@ export interface LeaderboardEntry {
   city: string;
   avatar: string | null;
   totalScore: number;
+  mmr: number;
   gamesPlayed: number;
   reputation: number;
   isAdmin: boolean;
@@ -376,10 +380,10 @@ export function listLeaderboard(limit = 100, offset = 0): LeaderboardEntry[] {
 
   const rows = db
     .prepare(
-      `SELECT id, username, display_name, city, avatar, role, total_score, games_played, reputation
+      `SELECT id, username, display_name, city, avatar, role, total_score, mmr, games_played, reputation
        FROM users
        WHERE is_banned = 0
-       ORDER BY total_score DESC, games_played DESC, id ASC
+       ORDER BY mmr DESC, games_played DESC, id ASC
        LIMIT ? OFFSET ?`
     )
     .all(safeLimit, safeOffset) as Pick<
@@ -391,6 +395,7 @@ export function listLeaderboard(limit = 100, offset = 0): LeaderboardEntry[] {
     | 'avatar'
     | 'role'
     | 'total_score'
+    | 'mmr'
     | 'games_played'
     | 'reputation'
   >[];
@@ -403,6 +408,7 @@ export function listLeaderboard(limit = 100, offset = 0): LeaderboardEntry[] {
     city: row.city || '',
     avatar: row.avatar || null,
     totalScore: row.total_score,
+    mmr: row.mmr ?? 1000,
     gamesPlayed: row.games_played ?? 0,
     reputation: row.reputation ?? 0,
     isAdmin: row.role === 'admin',

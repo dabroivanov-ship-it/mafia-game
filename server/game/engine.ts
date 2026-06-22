@@ -143,6 +143,7 @@ function createRoom(id: number, kind: RoomKind = 'game'): GameRoom {
     winnerTeam: null,
     systemMessages: [],
     scoresSynced: false,
+    statsSynced: false,
     sessionId: null,
     historyLoaded: false,
   };

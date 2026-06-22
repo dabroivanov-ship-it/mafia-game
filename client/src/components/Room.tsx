@@ -58,6 +58,7 @@ interface RoomProps {
   onStateUpdate?: (state: RoomState) => void;
   currentUserId: number;
   onWriteMessage?: (userId: number, username: string) => void;
+  onOpenStatistics?: (userId: number) => void;
 }
 
 export default function Room({
@@ -67,6 +68,7 @@ export default function Room({
   onStateUpdate,
   currentUserId,
   onWriteMessage,
+  onOpenStatistics,
 }: RoomProps) {
   const [mafiaTab, setMafiaTab] = useState(false);
   const [profileTarget, setProfileTarget] = useState<ChatReplyTarget | null>(null);
@@ -398,6 +400,7 @@ export default function Room({
             if (res?.error) throw new Error(res.error);
           }}
           onWriteMessage={onWriteMessage}
+          onOpenStatistics={onOpenStatistics}
         />
       )}
     </div>

@@ -25,6 +25,7 @@ import { getUnreadCount } from './messages/store.js';
 import { socketAuthMiddleware, refreshSocketUser } from './auth/jwt.js';
 import { findUserById, updateUserScore, isAdmin, isStaff, isModerator, updateUserConnectionInfo, uploadsDir, normalizeChatLimit, canBanTarget } from './auth/db.js';
 import { hydrateRoomHistory, loadGameEvents, getRecentGameEvents, getAdminChatHistory, getRecentChatForAdmin } from './history/store.js';
+import { recordRoomGameResults } from './stats/store.js';
 import {
   createInitialRooms,
   getLobbySnapshot,
@@ -504,6 +505,7 @@ function serializeForSocketUser(
 
 function syncRoomScores(room: GameRoom): void {
   if (room.phase !== 'ended' || room.scoresSynced) return;
+  recordRoomGameResults(room);
   for (const p of room.players) {
     if (p.userId && p.inGame) {
       incrementGamesPlayed(p.userId);

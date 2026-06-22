@@ -7,12 +7,14 @@ interface PlayerRatingProps {
   embedded?: boolean;
   currentUser?: User | null;
   onWriteMessage?: (userId: number, username: string) => void;
+  onOpenStatistics?: (userId: number) => void;
 }
 
 export default function PlayerRating({
   embedded = false,
   currentUser = null,
   onWriteMessage,
+  onOpenStatistics,
 }: PlayerRatingProps) {
   const [players, setPlayers] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,7 +52,7 @@ export default function PlayerRating({
               <tr>
                 <th>Ник</th>
                 <th>Игр</th>
-                <th>Очки</th>
+                <th>MMR</th>
                 <th>Репутация</th>
               </tr>
             </thead>
@@ -75,7 +77,7 @@ export default function PlayerRating({
                       )}
                     </td>
                     <td>{player.gamesPlayed}</td>
-                    <td className="rating-score">{player.totalScore}</td>
+                    <td className="rating-score">{player.mmr ?? player.totalScore}</td>
                     <td
                       className={
                         player.reputation > 0
@@ -104,6 +106,7 @@ export default function PlayerRating({
           viewerCanModerate={currentUser.isStaff}
           onClose={() => setProfileUserId(null)}
           onWriteMessage={onWriteMessage}
+          onOpenStatistics={onOpenStatistics}
         />
       )}
     </div>

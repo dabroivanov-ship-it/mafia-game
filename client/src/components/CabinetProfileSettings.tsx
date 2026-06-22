@@ -129,7 +129,7 @@ export default function CabinetProfileSettings({
           <span>@{user.username}</span>
           {user.telegramUsername && <span>📱 Telegram @{user.telegramUsername}</span>}
           {user.email && !user.needsEmailLink && <span>✉️ {user.email}</span>}
-          <span>🏆 {user.totalScore} очков</span>
+          <span>🏆 MMR {user.mmr ?? user.totalScore}</span>
           <span>📅 с {new Date(user.createdAt).toLocaleDateString('ru-RU')}</span>
         </div>
 

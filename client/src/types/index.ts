@@ -33,6 +33,7 @@ export interface User {
   isModerator: boolean;
   isStaff: boolean;
   totalScore: number;
+  mmr: number;
   gamesPlayed?: number;
   reputation?: number;
   createdAt: string;
@@ -191,6 +192,7 @@ export interface UserSearchHit {
   city: string;
   avatar: string | null;
   totalScore: number;
+  mmr?: number;
   isAdmin: boolean;
   isModerator: boolean;
   isOnline: boolean;
@@ -205,6 +207,7 @@ export interface LeaderboardEntry {
   city: string;
   avatar: string | null;
   totalScore: number;
+  mmr: number;
   gamesPlayed: number;
   reputation: number;
   isAdmin: boolean;
@@ -214,6 +217,52 @@ export interface LeaderboardEntry {
 export interface UserPresence {
   isOnline: boolean;
   lastSeenAt: string | null;
+}
+
+export interface TeamStatBucket {
+  games: number;
+  wins: number;
+  winRate: number;
+}
+
+export interface RoleStatBucket {
+  role: string;
+  roleLabel: string;
+  games: number;
+  wins: number;
+  winRate: number;
+}
+
+export interface RecentGameStat {
+  id: number;
+  roomId: number;
+  role: string;
+  roleLabel: string;
+  won: boolean;
+  score: number;
+  mmrDelta: number;
+  mmrAfter: number;
+  createdAt: string;
+}
+
+export interface UserStatistics {
+  userId: number;
+  mmr: number;
+  rank: number | null;
+  gamesPlayed: number;
+  wins: number;
+  losses: number;
+  winRate: number;
+  averageScore: number;
+  town: TeamStatBucket;
+  mafia: TeamStatBucket;
+  roles: RoleStatBucket[];
+  recentGames: RecentGameStat[];
+}
+
+export interface UserStatisticsResponse {
+  user: User;
+  statistics: UserStatistics;
 }
 
 export interface NewsPost {

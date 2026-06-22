@@ -9,6 +9,7 @@ interface CabinetHubProps {
   onOpenMessages: () => void;
   onOpenSupport: () => void;
   onOpenUserSearch: () => void;
+  onOpenStatistics?: () => void;
   onLogout: () => void;
   onBack: () => void;
 }
@@ -21,6 +22,7 @@ export default function CabinetHub({
   onOpenMessages,
   onOpenSupport,
   onOpenUserSearch,
+  onOpenStatistics,
   onLogout,
   onBack,
 }: CabinetHubProps) {
@@ -44,7 +46,13 @@ export default function CabinetHub({
         )}
         <div>
           <strong>{user.username}</strong>
-          <span className="muted">🏆 {user.totalScore} очков</span>
+          {onOpenStatistics ? (
+            <button type="button" className="cabinet-hub-mmr-link" onClick={onOpenStatistics}>
+              🏆 MMR {user.mmr ?? user.totalScore}
+            </button>
+          ) : (
+            <span className="muted">🏆 MMR {user.mmr ?? user.totalScore}</span>
+          )}
         </div>
       </div>
 

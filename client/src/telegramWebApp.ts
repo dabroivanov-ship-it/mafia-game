@@ -13,10 +13,21 @@ interface TelegramWebApp {
   viewportStableHeight: number;
 }
 
+export interface TelegramOidcAuthResult {
+  id_token?: string;
+  error?: string;
+}
+
 declare global {
   interface Window {
     Telegram?: {
-      WebApp: TelegramWebApp;
+      WebApp?: TelegramWebApp;
+      Login?: {
+        auth: (
+          options: { client_id: number; request_access?: Array<'phone' | 'write'>; lang?: string },
+          callback: (data: TelegramOidcAuthResult) => void
+        ) => void;
+      };
     };
   }
 }

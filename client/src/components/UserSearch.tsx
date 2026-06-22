@@ -8,9 +8,15 @@ interface UserSearchProps {
   currentUser: User;
   onBack: () => void;
   onWriteMessage: (userId: number, username: string) => void;
+  onOpenStatistics?: (userId: number) => void;
 }
 
-export default function UserSearch({ currentUser, onBack, onWriteMessage }: UserSearchProps) {
+export default function UserSearch({
+  currentUser,
+  onBack,
+  onWriteMessage,
+  onOpenStatistics,
+}: UserSearchProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<UserSearchHit[]>([]);
   const [loading, setLoading] = useState(false);
@@ -105,7 +111,7 @@ export default function UserSearch({ currentUser, onBack, onWriteMessage }: User
                     {formatPresenceLabel(hit)}
                   </span>
                   {hit.city && <span className="muted">📍 {hit.city}</span>}
-                  <span className="muted">🏆 {hit.totalScore} очков</span>
+                  <span className="muted">🏆 MMR {hit.mmr ?? hit.totalScore}</span>
                 </div>
                 <span className="info-hub-arrow" aria-hidden="true">
                   →
@@ -135,6 +141,7 @@ export default function UserSearch({ currentUser, onBack, onWriteMessage }: User
           viewerCanModerate={currentUser.isStaff}
           onClose={() => setProfileUserId(null)}
           onWriteMessage={onWriteMessage}
+          onOpenStatistics={onOpenStatistics}
         />
       )}
     </div>
