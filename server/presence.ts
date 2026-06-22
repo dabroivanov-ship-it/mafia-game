@@ -37,6 +37,7 @@ export function listOnlineUsers(): UserSearchHit[] {
       city: user.city || '',
       avatar: user.avatar || null,
       totalScore: user.total_score,
+      mmr: user.mmr ?? 1000,
       isAdmin: user.role === 'admin',
       isModerator: user.role === 'moderator',
     });
