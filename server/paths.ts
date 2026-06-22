@@ -49,3 +49,11 @@ export function getSiteBrandingUploadsDir(): string {
 export function getSupportUploadsDir(): string {
   return process.env.SUPPORT_UPLOADS_DIR || path.join(getServerRoot(), 'uploads', 'support');
 }
+
+export function getProjectRoot(): string {
+  return path.resolve(getServerRoot(), '..');
+}
+
+export function getQuizQuestionsPath(): string {
+  return process.env.QUIZ_QUESTIONS_PATH || path.join(getProjectRoot(), 'questions.txt');
+}

@@ -80,6 +80,7 @@ import fs from 'fs';
 import { ensureNewsUploadsDir } from './upload/newsImage.js';
 import { ensureSiteBrandingUploadsDir } from './upload/siteLogo.js';
 import { ensureSupportUploadsDir } from './upload/supportImage.js';
+import { initAllQuizRooms, initQuizRoom, handleQuizAnswer, isQuizRoom } from './quiz/index.js';
 
 assertProductionEnv();
 
@@ -101,6 +102,7 @@ const rooms = createInitialRooms();
 for (const room of rooms.values()) {
   hydrateRoomHistory(room);
 }
+initAllQuizRooms(rooms.values());
 const sessions = new Map<string, Session>();
 const userSocketIds = new Map<number, Set<string>>();
 const DEFAULT_CHAT_LIMIT = 15;
@@ -386,7 +388,11 @@ app.use(
     deleteMessage: adminDeleteMessage,
     clearRoomMessages: adminClearRoomMessages,
     renameRoom: (id, name) => renameRoom(rooms, id, name),
-    addChatRoom: (name) => addChatRoom(rooms, name),
+    addChatRoom: (name) => {
+      const room = addChatRoom(rooms, name);
+      if (isQuizRoom(room)) initQuizRoom(room);
+      return room;
+    },
     addGameRoom: (name) => addGameRoom(rooms, name),
     deleteChatRoom: (id) => adminDeleteRoom(id),
     listSilencedPlayers: () => listSilencedPlayers(rooms),
@@ -884,6 +890,10 @@ io.on('connection', (socket) => {
       toPlayerId: targetId && targetId !== session.playerId ? targetId : undefined,
     });
     if (!msg) return cb?.({ error: 'Не удалось отправить' });
+
+    if (isQuizRoom(room)) {
+      handleQuizAnswer(room, me.userId ?? null, me.username || me.name, trimmed);
+    }
 
     broadcastRoom(room.id);
     cb?.({ ok: true });

@@ -111,6 +111,14 @@ export function createInitialRooms(): Map<number, GameRoom> {
     saveRoomConfig(id, room.name, 'chat');
   }
 
+  if (!Array.from(rooms.values()).some((r) => r.kind === 'chat' && /викторин/i.test(r.name))) {
+    const id = nextRoomId(rooms.keys());
+    const room = createChatRoom(id, 'Викторина');
+    freshChatRoomState(room);
+    rooms.set(id, room);
+    saveRoomConfig(id, room.name, 'chat');
+  }
+
   return rooms;
 }
 
@@ -224,7 +232,9 @@ export function addChatRoom(rooms: Map<number, GameRoom>, name: string): GameRoo
   const id = nextRoomId(rooms.keys());
   const room = createChatRoom(id, trimmed);
   freshChatRoomState(room);
-  addSystemMessage(room, `💬 Чат-комната «${room.name}» создана.`);
+  if (!/викторин/i.test(trimmed)) {
+    addSystemMessage(room, `💬 Чат-комната «${room.name}» создана.`);
+  }
   rooms.set(id, room);
   saveRoomConfig(id, room.name, 'chat');
   return room;
