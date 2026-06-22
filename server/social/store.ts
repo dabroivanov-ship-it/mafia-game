@@ -27,11 +27,21 @@ export function incrementGamesPlayed(userId: number): void {
   db.prepare('UPDATE users SET games_played = COALESCE(games_played, 0) + 1 WHERE id = ?').run(userId);
 }
 
+export function syncUserGamesPlayed(userId: number): void {
+  const row = db.prepare('SELECT COUNT(*) AS c FROM user_game_results WHERE user_id = ?').get(userId) as
+    | { c: number }
+    | undefined;
+  db.prepare('UPDATE users SET games_played = ? WHERE id = ?').run(row?.c ?? 0, userId);
+}
+
 export function getGamesPlayed(userId: number): number {
-  const row = db.prepare('SELECT games_played FROM users WHERE id = ?').get(userId) as
+  const fromResults = db
+    .prepare('SELECT COUNT(*) AS c FROM user_game_results WHERE user_id = ?')
+    .get(userId) as { c: number } | undefined;
+  const fromColumn = db.prepare('SELECT games_played FROM users WHERE id = ?').get(userId) as
     | { games_played: number }
     | undefined;
-  return row?.games_played ?? 0;
+  return Math.max(fromResults?.c ?? 0, fromColumn?.games_played ?? 0);
 }
 
 export function getReputation(userId: number): number {

@@ -1062,6 +1062,7 @@ export function checkWin(room: GameRoom): boolean {
 
 function endGame(room: GameRoom, team: 'town' | 'mafia', message: string): void {
   room.phase = PHASE.ENDED;
+  room.winnerTeam = team;
   clearTimer(room);
   addSystemMessage(room, `🏁 ${message}`);
   addSystemMessage(room, getGameEndRolesMessage(room));

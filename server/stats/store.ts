@@ -1,5 +1,6 @@
 import db from '../auth/db.js';
 import { findUserById } from '../auth/db.js';
+import { syncUserGamesPlayed } from '../social/store.js';
 import { getRoleLabel, isMafiaTeam, isTown } from '../game/roles.js';
 import type { GameRoom, RoleId, WinnerTeam } from '../types/index.js';
 
@@ -33,6 +34,18 @@ function migrateMmrColumn(): void {
 }
 
 migrateMmrColumn();
+
+function backfillGamesPlayedFromResults(): void {
+  db.exec(`
+    UPDATE users
+    SET games_played = (
+      SELECT COUNT(*) FROM user_game_results WHERE user_id = users.id
+    )
+    WHERE id IN (SELECT DISTINCT user_id FROM user_game_results)
+  `);
+}
+
+backfillGamesPlayedFromResults();
 
 export type PlayerTeam = 'town' | 'mafia' | 'neutral';
 
@@ -145,6 +158,7 @@ export function recordRoomGameResults(room: GameRoom): void {
   if (room.phase !== 'ended' || room.statsSynced || !room.winnerTeam || room.kind === 'chat') return;
 
   const winnerTeam = room.winnerTeam;
+  const syncedUserIds = new Set<number>();
   for (const player of room.players) {
     if (!player.userId || !player.inGame || !player.role) continue;
 
@@ -172,6 +186,11 @@ export function recordRoomGameResults(room: GameRoom): void {
       mmrDelta,
       mmrAfter
     );
+    syncedUserIds.add(player.userId);
+  }
+
+  for (const userId of syncedUserIds) {
+    syncUserGamesPlayed(userId);
   }
 
   room.statsSynced = true;

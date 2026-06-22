@@ -2829,6 +2829,35 @@ html.telegram-webapp .app-body {
   line-height: 1.5;
 }
 
+.site-footer--compact {
+  padding: 14px 20px calc(14px + var(--safe-bottom));
+}
+
+.site-footer-telegram-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: #229ed9;
+  background: color-mix(in srgb, #229ed9 12%, transparent);
+  text-decoration: none;
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease;
+}
+
+.site-footer-telegram-icon:hover {
+  transform: translateY(-1px);
+  background: color-mix(in srgb, #229ed9 20%, transparent);
+}
+
+.site-footer-telegram-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
 .site-footer-social {
   display: flex;
   flex-direction: column;

@@ -8,7 +8,6 @@ import { CONFIG, PHASE, isActiveGamePhase } from './game/config.js';
 import { isMafiaTeam } from './game/roles.js';
 import authRoutes from './auth/routes.js';
 import { getOnlineUserCount } from './presence.js';
-import { incrementGamesPlayed } from './social/store.js';
 import friendsRoutes from './social/routes.js';
 import reputationRoutes from './reputation/routes.js';
 import './social/store.js';
@@ -507,9 +506,6 @@ function syncRoomScores(room: GameRoom): void {
   if (room.phase !== 'ended' || room.scoresSynced) return;
   recordRoomGameResults(room);
   for (const p of room.players) {
-    if (p.userId && p.inGame) {
-      incrementGamesPlayed(p.userId);
-    }
     if (p.userId && p.score !== 0) {
       updateUserScore(p.userId, p.score);
     }

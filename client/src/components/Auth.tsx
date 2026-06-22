@@ -395,7 +395,7 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
 
       </div>
 
-      <SiteFooter text={branding.footerText} />
+      <SiteFooter variant="auth" text={branding.footerText} />
     </div>
   );
 }
