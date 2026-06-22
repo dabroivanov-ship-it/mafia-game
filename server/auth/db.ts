@@ -276,6 +276,13 @@ export function linkTelegramUserEmail(
   return findUserPublic(userId);
 }
 
+export function updateUserPasswordHash(userId: number, passwordHash: string): PublicUser | null {
+  const user = findUserById(userId);
+  if (!user) return null;
+  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, userId);
+  return findUserPublic(userId);
+}
+
 export function deleteAvatarFile(avatarPath: string | null | undefined): void {
   if (avatarPath?.startsWith('/uploads/')) {
     const filePath = path.join(uploadsDir, path.basename(avatarPath));

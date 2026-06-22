@@ -4,6 +4,7 @@ import Roles from './Roles';
 import ChatRules from './ChatRules';
 import Staff from './Staff';
 import PlayerRating from './PlayerRating';
+import Faq from './Faq';
 import {
   type InfoSection,
   infoSectionFromPath,
@@ -130,6 +131,15 @@ export default function Info({
     );
   }
 
+  if (section === 'faq') {
+    return (
+      <div className="info-page">
+        {backNav('hub', 'Информация')}
+        <Faq />
+      </div>
+    );
+  }
+
   return (
     <div className="info-page">
       {publicMode && (
@@ -167,6 +177,19 @@ export default function Info({
           <span className="info-hub-body">
             <strong>Правила игры</strong>
             <span className="muted">Как начать, фазы, победа и очки</span>
+          </span>
+          <span className="info-hub-arrow" aria-hidden="true">
+            →
+          </span>
+        </button>
+
+        <button type="button" className="info-hub-card" onClick={() => navigate('faq')}>
+          <span className="info-hub-icon" aria-hidden="true">
+            ❓
+          </span>
+          <span className="info-hub-body">
+            <strong>Частые вопросы</strong>
+            <span className="muted">Как начать, роли и ведущий</span>
           </span>
           <span className="info-hub-arrow" aria-hidden="true">
             →

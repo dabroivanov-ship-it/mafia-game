@@ -226,6 +226,12 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
           </span>
           <strong>Лидеры</strong>
         </a>
+        <a href="/info/faq" className="home-quick-link">
+          <span className="home-quick-link-icon" aria-hidden="true">
+            ❓
+          </span>
+          <strong>FAQ</strong>
+        </a>
       </div>
 
       <div className="auth-card">

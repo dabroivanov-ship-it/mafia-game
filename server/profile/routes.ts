@@ -9,11 +9,13 @@ import {
   listStaffUsers,
   listLeaderboard,
   linkTelegramUserEmail,
+  updateUserPasswordHash,
   searchPublicUsers,
   updateUserProfile,
   updateUserAvatar,
   deleteAvatarFile,
   CHAT_LIMIT_OPTIONS,
+  userNeedsEmailLink,
 } from '../auth/db.js';
 import { createAvatarUpload } from '../upload/avatar.js';
 import { validateImageFile } from '../security/validate.js';
@@ -116,6 +118,46 @@ export function createProfileRouter({ onProfileUpdated }: ProfileRouterOptions =
     } catch (e) {
       const err = e as Error;
       res.status(400).json({ error: err.message || 'Не удалось привязать email' });
+    }
+  });
+
+  router.post('/change-password', authMiddleware, async (req, res) => {
+    try {
+      const currentPassword = String(req.body?.currentPassword ?? '');
+      const password = String(req.body?.password ?? '');
+      const confirm = String(req.body?.confirm ?? '');
+
+      if (!currentPassword || !password) {
+        return res.status(400).json({ error: 'Заполните все поля' });
+      }
+      if (password !== confirm) {
+        return res.status(400).json({ error: 'Пароли не совпадают' });
+      }
+      if (password.length < 8) {
+        return res.status(400).json({ error: 'Пароль: минимум 8 символов' });
+      }
+      if (password.length > MAX_PASSWORD_LENGTH) {
+        return res.status(400).json({ error: 'Пароль слишком длинный' });
+      }
+
+      const account = findUserById(req.userId!);
+      if (!account) return res.status(404).json({ error: 'Пользователь не найден' });
+      if (userNeedsEmailLink(account)) {
+        return res.status(400).json({ error: 'Сначала привяжите email и пароль' });
+      }
+
+      const ok = await bcrypt.compare(currentPassword, account.password_hash);
+      if (!ok) {
+        return res.status(401).json({ error: 'Неверный текущий пароль' });
+      }
+
+      const passwordHash = await bcrypt.hash(password, 10);
+      const user = updateUserPasswordHash(req.userId!, passwordHash);
+      if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
+      res.json({ user });
+    } catch (e) {
+      const err = e as Error;
+      res.status(400).json({ error: err.message || 'Не удалось сменить пароль' });
     }
   });
 

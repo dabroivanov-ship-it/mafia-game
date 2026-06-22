@@ -30,7 +30,9 @@ import {
   getLobbySnapshot,
   addPlayerToRoom,
   markPlayerDisconnected,
+  announcePlayerDisconnected,
   finalizePlayerLeave,
+  removePlayer,
   addHostPrivateMessage,
   reconnectPlayer,
   startRegistration,
@@ -106,9 +108,19 @@ const CHAT_LOAD_STEP = 30;
 const MAX_CHAT_LIMIT = 300;
 
 const disconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const inactivityTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 function disconnectTimerKey(roomId: number, playerId: number): string {
   return `${roomId}:${playerId}`;
+}
+
+function cancelInactivityTimer(roomId: number, playerId: number): void {
+  const key = disconnectTimerKey(roomId, playerId);
+  const timer = inactivityTimers.get(key);
+  if (timer) {
+    clearTimeout(timer);
+    inactivityTimers.delete(key);
+  }
 }
 
 function cancelDisconnectTimer(roomId: number, playerId: number): void {
@@ -118,6 +130,24 @@ function cancelDisconnectTimer(roomId: number, playerId: number): void {
     clearTimeout(timer);
     disconnectTimers.delete(key);
   }
+  cancelInactivityTimer(roomId, playerId);
+}
+
+function scheduleInactivityAnnounce(roomId: number, playerId: number): void {
+  cancelInactivityTimer(roomId, playerId);
+  const key = disconnectTimerKey(roomId, playerId);
+  const timer = setTimeout(() => {
+    inactivityTimers.delete(key);
+    const room = rooms.get(roomId);
+    if (!room) return;
+    const player = room.players.find((p) => p.id === playerId);
+    if (!player || player.connected) return;
+    if (!isChatRoom(room) && isActiveGamePhase(room.phase) && player.inGame && player.alive) {
+      announcePlayerDisconnected(room, playerId);
+      scheduleDisconnectTimer(roomId, playerId);
+    }
+  }, CONFIG.INACTIVITY_ANNOUNCE_SEC * 1000);
+  inactivityTimers.set(key, timer);
 }
 
 function scheduleDisconnectTimer(roomId: number, playerId: number): void {
@@ -704,10 +734,7 @@ io.on('connection', (socket) => {
     const room = rooms.get(session.roomId);
     if (room) {
       cancelDisconnectTimer(session.roomId, session.playerId);
-      const player = markPlayerDisconnected(room, socket.id);
-      if (player && !isChatRoom(room) && isActiveGamePhase(room.phase) && player.inGame && player.alive) {
-        scheduleDisconnectTimer(room.id, player.id);
-      }
+      removePlayer(room, socket.id, true);
       broadcastRoom(session.roomId);
     }
 
@@ -1053,7 +1080,7 @@ io.on('connection', (socket) => {
     sessions.delete(socket.id);
 
     if (player && !isChatRoom(room) && isActiveGamePhase(room.phase) && player.inGame && player.alive) {
-      scheduleDisconnectTimer(room.id, player.id);
+      scheduleInactivityAnnounce(room.id, player.id);
     }
 
     broadcastRoom(room.id);

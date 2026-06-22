@@ -201,6 +201,7 @@ html.telegram-webapp .app-body {
 
 .auth-top-links.home-quick-links {
   margin-top: 0;
+  grid-template-columns: repeat(3, 1fr);
 }
 
 .home-quick-link {
@@ -2096,6 +2097,41 @@ html.telegram-webapp .app-body {
 
 .info-hub-body strong {
   font-size: 1.05rem;
+}
+
+.faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.faq-item {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  overflow: hidden;
+}
+
+.faq-question {
+  padding: 14px 16px;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.faq-question::-webkit-details-marker {
+  display: none;
+}
+
+.faq-answer {
+  margin: 0;
+  padding: 0 16px 14px;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.faq-answer a {
+  color: var(--accent);
 }
 
 .info-hub-arrow {

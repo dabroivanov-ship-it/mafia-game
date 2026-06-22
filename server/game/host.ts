@@ -491,7 +491,9 @@ export function buildMorningReportMessage(
 
 
 
-  parts.push(getMorningIntroMessage(report.killed));
+  if (!hadActions) {
+    parts.push(getMorningIntroMessage(report.killed));
+  }
 
   return parts.join('\n');
 

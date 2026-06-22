@@ -1,5 +1,5 @@
 import { useState, useRef, FormEvent, ChangeEvent } from 'react';
-import { avatarUrl, updateProfile, uploadAvatar, linkTelegramEmail } from '../api';
+import { avatarUrl, updateProfile, uploadAvatar, linkTelegramEmail, changePassword } from '../api';
 import type { User } from '../types';
 
 const CHAT_LIMIT_OPTIONS = [15, 30, 50, 100];
@@ -29,6 +29,8 @@ export default function CabinetProfileSettings({
   const [avatarLoading, setAvatarLoading] = useState(false);
   const [linkForm, setLinkForm] = useState({ email: '', password: '', confirm: '' });
   const [linkLoading, setLinkLoading] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', password: '', confirm: '' });
+  const [passwordLoading, setPasswordLoading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleSave = async (e: FormEvent) => {
@@ -86,6 +88,31 @@ export default function CabinetProfileSettings({
       setError(err instanceof Error ? err.message : 'Ошибка привязки');
     } finally {
       setLinkLoading(false);
+    }
+  };
+
+  const handleChangePassword = async (e: FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    if (passwordForm.password.length < 8) {
+      setError('Новый пароль: минимум 8 символов');
+      return;
+    }
+    if (passwordForm.password !== passwordForm.confirm) {
+      setError('Новые пароли не совпадают');
+      return;
+    }
+    setPasswordLoading(true);
+    try {
+      const { user: updated } = await changePassword(passwordForm);
+      onUpdate(updated);
+      setPasswordForm({ currentPassword: '', password: '', confirm: '' });
+      setSuccess('Пароль изменён');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка смены пароля');
+    } finally {
+      setPasswordLoading(false);
     }
   };
 
@@ -186,6 +213,57 @@ export default function CabinetProfileSettings({
               <div className="profile-actions">
                 <button type="submit" className="btn btn-primary" disabled={linkLoading}>
                   {linkLoading ? 'Сохранение...' : 'Привязать email'}
+                </button>
+              </div>
+            </form>
+          </section>
+        )}
+
+        {!user.needsEmailLink && (
+          <section className="cabinet-link-email-block">
+            <h3>Смена пароля</h3>
+            <p className="muted">Укажите текущий пароль и новый — минимум 8 символов.</p>
+            <form className="auth-form" onSubmit={handleChangePassword}>
+              <label>
+                Текущий пароль
+                <input
+                  type="password"
+                  value={passwordForm.currentPassword}
+                  onChange={(e) =>
+                    setPasswordForm({ ...passwordForm, currentPassword: e.target.value })
+                  }
+                  placeholder="••••••••"
+                  required
+                  autoComplete="current-password"
+                />
+              </label>
+              <label>
+                Новый пароль
+                <input
+                  type="password"
+                  value={passwordForm.password}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, password: e.target.value })}
+                  placeholder="минимум 8 символов"
+                  required
+                  minLength={8}
+                  autoComplete="new-password"
+                />
+              </label>
+              <label>
+                Повтор нового пароля
+                <input
+                  type="password"
+                  value={passwordForm.confirm}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, confirm: e.target.value })}
+                  placeholder="••••••••"
+                  required
+                  minLength={8}
+                  autoComplete="new-password"
+                />
+              </label>
+              <div className="profile-actions">
+                <button type="submit" className="btn btn-primary" disabled={passwordLoading}>
+                  {passwordLoading ? 'Сохранение...' : 'Сменить пароль'}
                 </button>
               </div>
             </form>

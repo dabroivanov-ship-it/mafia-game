@@ -338,14 +338,6 @@ export function markPlayerDisconnected(room: GameRoom, socketId: string): GamePl
   player.socketId = null;
   player.disconnectedAt = Date.now();
 
-  const gameActive = !isLobbyPhase(room.phase);
-  if (!isChatRoom(room) && gameActive && player.inGame && player.alive) {
-    addSystemMessage(
-      room,
-      `${playerNick(player)} отошёл от игры. Есть ${CONFIG.DISCONNECT_GRACE_SEC} сек. на возвращение.`
-    );
-  }
-
   if (
     !isChatRoom(room) &&
     room.phase === PHASE.WAITING &&
@@ -418,6 +410,17 @@ export function removePlayer(room: GameRoom, socketId: string, applyPenalty = tr
   }
 
   return player;
+}
+
+export function announcePlayerDisconnected(room: GameRoom, playerId: number): void {
+  const player = room.players.find((p) => p.id === playerId);
+  if (!player || player.connected) return;
+  const gameActive = !isLobbyPhase(room.phase);
+  if (isChatRoom(room) || !gameActive || !player.inGame || !player.alive) return;
+  addSystemMessage(
+    room,
+    `${playerNick(player)} отошёл от игры. Есть ${CONFIG.DISCONNECT_GRACE_SEC} сек. на возвращение.`
+  );
 }
 
 export function reconnectPlayer(

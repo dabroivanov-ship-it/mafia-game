@@ -401,6 +401,17 @@ export async function linkTelegramEmail(payload: {
   });
 }
 
+export async function changePassword(payload: {
+  currentPassword: string;
+  password: string;
+  confirm: string;
+}): Promise<{ user: User }> {
+  return apiRequest('/api/profile/change-password', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function fetchAdminNews(): Promise<{ news: NewsPost[] }> {
   return apiRequest('/api/admin/news');
 }
