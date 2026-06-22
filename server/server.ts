@@ -734,7 +734,7 @@ io.on('connection', (socket) => {
     const room = rooms.get(session.roomId);
     if (room) {
       cancelDisconnectTimer(session.roomId, session.playerId);
-      removePlayer(room, socket.id, true);
+      removePlayer(room, socket.id, false);
       broadcastRoom(session.roomId);
     }
 
