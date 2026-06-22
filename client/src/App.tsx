@@ -405,6 +405,10 @@ export default function App() {
             unreadMailCount={unreadMailCount}
             onOpenMessages={() => openMessages()}
             onOpenOnlineUsers={() => setLobbyScreen('online-users')}
+            onOpenInfo={(section) => {
+              window.history.pushState(null, '', pathForInfoSection(section));
+              setView('info');
+            }}
           />
         )}
         {view === 'lobby' && lobbyScreen === 'online-users' && (
@@ -483,6 +487,7 @@ export default function App() {
         {view === 'info' && (
           <ViewSuspense label="Информация…">
             <Info
+              initialSection={infoSectionFromPath(window.location.pathname)}
               currentUser={user}
               onWriteMessage={(userId, username) => openMessages({ userId, username })}
             />

@@ -183,6 +183,53 @@ html.telegram-webapp .app-body {
   font-size: 0.95rem;
 }
 
+.home-quick-links {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.home-quick-link {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-hover));
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.home-quick-link:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.home-quick-link-icon {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.home-quick-link strong {
+  font-size: 0.98rem;
+}
+
+.home-quick-link .muted {
+  font-size: 0.8rem;
+  line-height: 1.3;
+}
+
 .auth-info-link {
   display: inline-block;
   margin-top: 12px;

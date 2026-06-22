@@ -187,6 +187,23 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
           <p>Войдите или зарегистрируйтесь, чтобы играть</p>
         </header>
 
+        <div className="home-quick-links">
+          <a href="/info/rules" className="home-quick-link">
+            <span className="home-quick-link-icon" aria-hidden="true">
+              📜
+            </span>
+            <strong>Правила</strong>
+            <span className="muted">Как играть</span>
+          </a>
+          <a href="/info/rating" className="home-quick-link">
+            <span className="home-quick-link-icon" aria-hidden="true">
+              🏆
+            </span>
+            <strong>Лидеры</strong>
+            <span className="muted">Топ игроков</span>
+          </a>
+        </div>
+
         <div className="auth-tabs">
           <button
             type="button"
@@ -355,34 +372,6 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
         )}
 
 
-
-        {!telegramWebAppMode && (
-
-          <a href="/info" className="auth-info-card">
-
-            <span className="auth-info-card-icon" aria-hidden="true">
-
-              ℹ️
-
-            </span>
-
-            <span className="auth-info-card-body">
-
-              <strong>Правила, роли и рейтинг</strong>
-
-              <span className="muted">Информация об игре для новичков и опытных игроков</span>
-
-            </span>
-
-            <span className="auth-info-card-arrow" aria-hidden="true">
-
-              →
-
-            </span>
-
-          </a>
-
-        )}
 
       </div>
 

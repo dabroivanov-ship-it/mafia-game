@@ -1,3 +1,4 @@
+import type { InfoSection } from '../infoRouting';
 import type { GamePhase, LobbyRoom } from '../types';
 
 const PHASE_LABELS: Record<GamePhase, string> = {
@@ -27,6 +28,7 @@ interface LobbyProps {
   unreadMailCount?: number;
   onOpenMessages?: () => void;
   onOpenOnlineUsers?: () => void;
+  onOpenInfo?: (section: InfoSection) => void;
 }
 
 function RoomCard({
@@ -78,6 +80,7 @@ export default function Lobby({
   unreadMailCount = 0,
   onOpenMessages,
   onOpenOnlineUsers,
+  onOpenInfo,
 }: LobbyProps) {
   const gameRooms = rooms.filter((r) => r.kind !== 'chat');
   const chatRooms = rooms.filter((r) => r.kind === 'chat');
@@ -90,6 +93,23 @@ export default function Lobby({
           <p>Выберите комнату для игры или общения</p>
         </div>
       </header>
+
+      <div className="home-quick-links">
+        <button type="button" className="home-quick-link" onClick={() => onOpenInfo?.('rules')}>
+          <span className="home-quick-link-icon" aria-hidden="true">
+            📜
+          </span>
+          <strong>Правила</strong>
+          <span className="muted">Как играть</span>
+        </button>
+        <button type="button" className="home-quick-link" onClick={() => onOpenInfo?.('rating')}>
+          <span className="home-quick-link-icon" aria-hidden="true">
+            🏆
+          </span>
+          <strong>Лидеры</strong>
+          <span className="muted">Топ игроков</span>
+        </button>
+      </div>
 
       {unreadMailCount > 0 && (
         <button type="button" className="lobby-mail-notice" onClick={onOpenMessages}>
