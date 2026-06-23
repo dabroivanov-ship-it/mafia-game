@@ -658,6 +658,16 @@ export async function adminRenameRoom(
   });
 }
 
+export async function adminReorderRooms(
+  kind: RoomKind,
+  roomIds: number[]
+): Promise<{ ok: boolean }> {
+  return apiRequest('/api/admin/rooms/reorder', {
+    method: 'PUT',
+    body: JSON.stringify({ kind, roomIds }),
+  });
+}
+
 export async function adminCreateChatRoom(name: string): Promise<void> {
   return apiRequest('/api/admin/chat-rooms', {
     method: 'POST',

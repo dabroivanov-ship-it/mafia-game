@@ -56,6 +56,7 @@ import {
   resetRoom,
   serializeRoomForPlayer,
   renameRoom,
+  reorderRoomsInMemory,
   addChatRoom,
   addGameRoom,
   clearUserSilenceInAllRooms,
@@ -387,6 +388,7 @@ app.use(
     deleteMessage: adminDeleteMessage,
     clearRoomMessages: adminClearRoomMessages,
     renameRoom: (id, name) => renameRoom(rooms, id, name),
+    reorderRooms: (kind, roomIds) => reorderRoomsInMemory(rooms, kind, roomIds),
     addChatRoom: (name) => {
       const room = addChatRoom(rooms, name);
       if (isQuizRoom(room)) initQuizRoom(room);

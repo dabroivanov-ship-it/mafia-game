@@ -29,7 +29,7 @@ import {
   deleteRoomChatLog,
   hydrateRoomHistory,
 } from '../history/store.js';
-import { loadRoomConfigs, saveRoomConfig, deleteRoomConfig, nextRoomId } from '../rooms/store.js';
+import { loadRoomConfigs, saveRoomConfig, deleteRoomConfig, nextRoomId, getRoomSortOrders, reorderRooms } from '../rooms/store.js';
 import type {
   ChatChannel,
   ChatMessage,
@@ -168,10 +168,13 @@ function createChatRoom(id: number, name?: string): GameRoom {
 }
 
 export function getLobbySnapshot(rooms: Map<number, GameRoom>): LobbyRoom[] {
+  const sortOrders = getRoomSortOrders();
   return Array.from(rooms.values())
     .sort((a, b) => {
       if (a.kind !== b.kind) return a.kind === 'game' ? -1 : 1;
-      return a.id - b.id;
+      const orderA = sortOrders.get(a.id) ?? a.id;
+      const orderB = sortOrders.get(b.id) ?? b.id;
+      return orderA - orderB || a.id - b.id;
     })
     .map((room) => {
     if (isChatRoom(room)) {
@@ -200,6 +203,35 @@ export function getLobbySnapshot(rooms: Map<number, GameRoom>): LobbyRoom[] {
       phase: room.phase,
     };
   });
+}
+
+export function reorderRoomsInMemory(
+  rooms: Map<number, GameRoom>,
+  kind: RoomKind,
+  roomIds: number[]
+): void {
+  const expected = Array.from(rooms.values())
+    .filter((room) => room.kind === kind)
+    .sort((a, b) => {
+      const sortOrders = getRoomSortOrders();
+      const orderA = sortOrders.get(a.id) ?? a.id;
+      const orderB = sortOrders.get(b.id) ?? b.id;
+      return orderA - orderB || a.id - b.id;
+    })
+    .map((room) => room.id);
+
+  if (roomIds.length !== expected.length) {
+    throw new Error('Укажите все комнаты выбранного типа');
+  }
+
+  const expectedSet = new Set(expected);
+  for (const roomId of roomIds) {
+    if (!expectedSet.has(roomId)) {
+      throw new Error('Некорректный список комнат');
+    }
+  }
+
+  reorderRooms(kind, roomIds);
 }
 
 export function renameRoom(rooms: Map<number, GameRoom>, roomId: number, name: string): GameRoom {

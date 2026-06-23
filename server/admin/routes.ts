@@ -39,6 +39,7 @@ export interface AdminRouterHandlers {
   deleteMessage: (roomId: number, messageId: string, channel: string) => boolean;
   clearRoomMessages: (roomId: number) => number;
   renameRoom: (id: number, name: string) => GameRoom;
+  reorderRooms: (kind: 'game' | 'chat', roomIds: number[]) => void;
   addChatRoom: (name: string) => GameRoom;
   addGameRoom: (name: string) => GameRoom;
   deleteChatRoom: (id: number) => void;
@@ -102,6 +103,24 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
   });
 
   /* --- Игровые комнаты (переименование) --- */
+  router.put('/rooms/reorder', (req, res) => {
+    try {
+      const kind = req.body?.kind === 'chat' ? 'chat' : 'game';
+      const roomIds = Array.isArray(req.body?.roomIds)
+        ? req.body.roomIds.map(Number).filter((id: number) => Number.isFinite(id) && id > 0)
+        : [];
+      if (roomIds.length === 0) {
+        return res.status(400).json({ error: 'Укажите порядок комнат' });
+      }
+      handlers.reorderRooms(kind, roomIds);
+      handlers.onRoomsChanged();
+      res.json({ ok: true });
+    } catch (e) {
+      const err = e as Error;
+      res.status(400).json({ error: err.message });
+    }
+  });
+
   router.put('/rooms/:roomId', (req, res) => {
     try {
       const roomId = Number(req.params.roomId);

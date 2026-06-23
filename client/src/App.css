@@ -4386,6 +4386,51 @@ html.telegram-webapp .app-body {
   margin-bottom: 16px;
 }
 
+.admin-room-order-hint {
+  margin: 0 0 4px;
+  font-size: 0.85rem;
+}
+
+.admin-room-list-draggable.is-saving {
+  opacity: 0.75;
+  pointer-events: none;
+}
+
+.admin-room-row-draggable {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.admin-room-row-draggable.is-dragging {
+  opacity: 0.55;
+}
+
+.admin-room-row-draggable.is-drop-target {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.admin-room-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text-muted);
+  cursor: grab;
+  flex-shrink: 0;
+}
+
+.admin-room-drag-handle:active {
+  cursor: grabbing;
+}
+
 .admin-subsection-title {
   margin: 24px 0 12px;
   font-size: 1.05rem;

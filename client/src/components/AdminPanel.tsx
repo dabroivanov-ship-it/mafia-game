@@ -37,6 +37,7 @@ import NewsBody from './NewsBody';
 import { isEmptyNewsBody } from './newsBodyUtils';
 import { initYandexMetrika } from '../metrika';
 import AdminSystemSection, { type SystemView } from './AdminSystemSection';
+import AdminRoomOrderList from './AdminRoomOrderList';
 
 const VIOLATION_LABELS: Record<ViolationType, string> = {
   profanity: 'Мат',
@@ -753,33 +754,39 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
           gameRooms: (
             <section className="admin-section admin-section-embedded">
               <h3>Комнаты мафии ({gameRooms.length})</h3>
-              <div className="admin-room-list">
-                {gameRooms.length === 0 && <p className="muted">Игровых комнат пока нет</p>}
-                {gameRooms.map((r) => (
-                  <div key={r.id} className="admin-room-row">
-                    <input
-                      type="text"
-                      value={roomEdits[r.id] ?? r.name}
-                      onChange={(e) => handleRoomNameChange(r.id, e.target.value)}
-                      onKeyDown={(e) => handleRoomNameKeyDown(e, r.id)}
-                      maxLength={50}
-                    />
-                    <span className="muted room-meta">
-                      {r.playerCount}/{r.maxPlayers} · {r.phase}
-                    </span>
-                    <button type="button" className="btn btn-sm btn-primary" onClick={() => void handleRenameRoom(r.id)}>
-                      Сохранить
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-ghost"
-                      onClick={() => void handleClearRoomMessages(r.id, r.name)}
-                    >
-                      Очистить чат
-                    </button>
-                  </div>
-                ))}
-              </div>
+              {gameRooms.length === 0 ? (
+                <p className="muted">Игровых комнат пока нет</p>
+              ) : (
+                <AdminRoomOrderList
+                  rooms={gameRooms}
+                  kind="game"
+                  onReordered={() => load({ silent: true, syncRoomNames: true })}
+                  renderRow={(r) => (
+                    <>
+                      <input
+                        type="text"
+                        value={roomEdits[r.id] ?? r.name}
+                        onChange={(e) => handleRoomNameChange(r.id, e.target.value)}
+                        onKeyDown={(e) => handleRoomNameKeyDown(e, r.id)}
+                        maxLength={50}
+                      />
+                      <span className="muted room-meta">
+                        {r.playerCount}/{r.maxPlayers} · {r.phase}
+                      </span>
+                      <button type="button" className="btn btn-sm btn-primary" onClick={() => void handleRenameRoom(r.id)}>
+                        Сохранить
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-ghost"
+                        onClick={() => void handleClearRoomMessages(r.id, r.name)}
+                      >
+                        Очистить чат
+                      </button>
+                    </>
+                  )}
+                />
+              )}
               <form className="admin-add-room" onSubmit={handleCreateGameRoom}>
                 <input
                   type="text"
@@ -795,40 +802,46 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
           chatRooms: (
             <section className="admin-section admin-section-embedded">
               <h3>Комнаты чата ({chatRooms.length})</h3>
-              <div className="admin-room-list">
-                {chatRooms.length === 0 && <p className="muted">Чат-комнат пока нет</p>}
-                {chatRooms.map((r) => (
-                  <div key={r.id} className="admin-room-row">
-                    <input
-                      type="text"
-                      value={roomEdits[r.id] ?? r.name}
-                      onChange={(e) => handleRoomNameChange(r.id, e.target.value)}
-                      onKeyDown={(e) => handleRoomNameKeyDown(e, r.id)}
-                      maxLength={50}
-                    />
-                    <span className="muted room-meta">
-                      {r.playerCount} онлайн
-                    </span>
-                    <button type="button" className="btn btn-sm btn-primary" onClick={() => void handleRenameRoom(r.id)}>
-                      Сохранить
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-ghost"
-                      onClick={() => void handleClearRoomMessages(r.id, r.name)}
-                    >
-                      Очистить чат
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-sm danger"
-                      onClick={() => void handleDeleteChatRoom(r.id, r.name)}
-                    >
-                      Удалить
-                    </button>
-                  </div>
-                ))}
-              </div>
+              {chatRooms.length === 0 ? (
+                <p className="muted">Чат-комнат пока нет</p>
+              ) : (
+                <AdminRoomOrderList
+                  rooms={chatRooms}
+                  kind="chat"
+                  onReordered={() => load({ silent: true, syncRoomNames: true })}
+                  renderRow={(r) => (
+                    <>
+                      <input
+                        type="text"
+                        value={roomEdits[r.id] ?? r.name}
+                        onChange={(e) => handleRoomNameChange(r.id, e.target.value)}
+                        onKeyDown={(e) => handleRoomNameKeyDown(e, r.id)}
+                        maxLength={50}
+                      />
+                      <span className="muted room-meta">
+                        {r.playerCount} онлайн
+                      </span>
+                      <button type="button" className="btn btn-sm btn-primary" onClick={() => void handleRenameRoom(r.id)}>
+                        Сохранить
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-ghost"
+                        onClick={() => void handleClearRoomMessages(r.id, r.name)}
+                      >
+                        Очистить чат
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-sm danger"
+                        onClick={() => void handleDeleteChatRoom(r.id, r.name)}
+                      >
+                        Удалить
+                      </button>
+                    </>
+                  )}
+                />
+              )}
               <form className="admin-add-room" onSubmit={handleCreateChatRoom}>
                 <input
                   type="text"
