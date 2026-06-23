@@ -15,10 +15,12 @@ interface QuizRoomState {
   currentQuestion: QuizQuestion | null;
   lastQuestionIndex: number;
   answeredUserIds: Set<number>;
+  questionResolved: boolean;
   timer: ReturnType<typeof setTimeout> | null;
 }
 
-const QUIZ_QUESTION_INTERVAL_MS = 60_000;
+const QUIZ_ANSWER_TIMEOUT_MS = 60_000;
+const QUIZ_NEXT_QUESTION_DELAY_MS = 10_000;
 const roomStates = new Map<number, QuizRoomState>();
 let questionsCache: QuizQuestion[] | null = null;
 let quizBroadcast: ((roomId: number) => void) | null = null;
@@ -120,11 +122,19 @@ function getState(roomId: number): QuizRoomState {
       currentQuestion: null,
       lastQuestionIndex: -1,
       answeredUserIds: new Set(),
+      questionResolved: false,
       timer: null,
     };
     roomStates.set(roomId, state);
   }
   return state;
+}
+
+function clearQuestionTimer(state: QuizRoomState): void {
+  if (state.timer) {
+    clearTimeout(state.timer);
+    state.timer = null;
+  }
 }
 
 function pickRandomQuestion(state: QuizRoomState): QuizQuestion | null {
@@ -149,6 +159,46 @@ function formatQuestionMessage(question: QuizQuestion): string {
   return `❓ ${question.question}`;
 }
 
+function formatPublicAnswer(question: QuizQuestion): string {
+  return question.answers[0] || '?';
+}
+
+function scheduleNextQuestion(room: GameRoom, delayMs: number): void {
+  const state = getState(room.id);
+  clearQuestionTimer(state);
+  state.timer = setTimeout(() => {
+    state.timer = null;
+    postRandomQuestion(room);
+    scheduleAnswerDeadline(room);
+  }, delayMs);
+}
+
+function scheduleAnswerDeadline(room: GameRoom): void {
+  const state = getState(room.id);
+  clearQuestionTimer(state);
+  state.timer = setTimeout(() => onAnswerDeadline(room), QUIZ_ANSWER_TIMEOUT_MS);
+}
+
+function onAnswerDeadline(room: GameRoom): void {
+  const state = getState(room.id);
+  state.timer = null;
+
+  if (state.questionResolved || !state.currentQuestion) {
+    scheduleNextQuestion(room, QUIZ_NEXT_QUESTION_DELAY_MS);
+    return;
+  }
+
+  const answer = formatPublicAnswer(state.currentQuestion);
+  state.questionResolved = true;
+
+  addQuizBotMessage(
+    room,
+    `Увы, на вопрос никто не ответил. А ответ на него был: ${answer}. Следующий вопрос задам через 10 секунд.`
+  );
+  notifyRoom(room);
+  scheduleNextQuestion(room, QUIZ_NEXT_QUESTION_DELAY_MS);
+}
+
 function postRandomQuestion(room: GameRoom): void {
   const state = getState(room.id);
   const questions = loadQuizQuestions();
@@ -162,6 +212,7 @@ function postRandomQuestion(room: GameRoom): void {
   }
 
   state.answeredUserIds.clear();
+  state.questionResolved = false;
   const question = pickRandomQuestion(state);
   if (!question) return;
 
@@ -169,21 +220,9 @@ function postRandomQuestion(room: GameRoom): void {
   notifyRoom(room);
 }
 
-function scheduleQuestionTimer(room: GameRoom): void {
-  const state = getState(room.id);
-  if (state.timer) clearTimeout(state.timer);
-  state.timer = setTimeout(() => {
-    postRandomQuestion(room);
-    scheduleQuestionTimer(room);
-  }, QUIZ_QUESTION_INTERVAL_MS);
-}
-
 export function stopQuizRoom(roomId: number): void {
   const state = roomStates.get(roomId);
-  if (state?.timer) {
-    clearTimeout(state.timer);
-    state.timer = null;
-  }
+  if (state) clearQuestionTimer(state);
 }
 
 export function initQuizRoom(room: GameRoom): void {
@@ -212,7 +251,7 @@ export function initQuizRoom(room: GameRoom): void {
   }
 
   postRandomQuestion(room);
-  scheduleQuestionTimer(room);
+  scheduleAnswerDeadline(room);
 }
 
 export function initAllQuizRooms(rooms: Iterable<GameRoom>): void {
@@ -232,7 +271,7 @@ export function handleQuizAnswer(
 
   const state = getState(room.id);
   const question = state.currentQuestion;
-  if (!question) return false;
+  if (!question || state.questionResolved) return false;
 
   if (state.answeredUserIds.has(userId)) return true;
 
@@ -243,9 +282,13 @@ export function handleQuizAnswer(
   if (!accepted.has(normalized)) return true;
 
   state.answeredUserIds.add(userId);
+  state.questionResolved = true;
+  clearQuestionTimer(state);
+
   const total = incrementQuizCorrectAnswers(userId);
 
   addQuizBotMessage(room, `✅ ${playerName} ответил(а) верно! Верных ответов: ${total}.`);
   notifyRoom(room);
+  scheduleNextQuestion(room, QUIZ_NEXT_QUESTION_DELAY_MS);
   return true;
 }
