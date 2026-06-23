@@ -47,7 +47,9 @@ import type {
 
 let nextPlayerId = 1;
 
-export const SYSTEM_SENDER_NAME = '🛡️ Система';
+export const SYSTEM_SENDER_NAME = 'Система';
+export const HOST_SENDER_NAME = 'Ведущий';
+export const QUIZ_BOT_NAME = 'Умник';
 
 function freshChatRoomState(room: GameRoom): void {
   room.historyLoaded = true;
@@ -391,7 +393,7 @@ export function finalizePlayerLeave(room: GameRoom, playerId: number): boolean {
     if (nextMafia) {
       nextMafia.isDon = true;
       room.mafiaDonId = nextMafia.id;
-      addSystemMessage(room, `🎩 ${playerNick(nextMafia)} стал(а) главным мафиози.`);
+      addHostMessage(room, `🎩 ${playerNick(nextMafia)} стал(а) главным мафиози.`);
     } else {
       room.mafiaDonId = null;
     }
@@ -472,7 +474,7 @@ export function startRegistration(room: GameRoom, _starterPlayerId: number | nul
   saveGameEvent(room.id, room.sessionId, 'registration_start', {
     roomName: room.name,
   });
-  addSystemMessage(
+  addHostMessage(
     room,
     'Регистрация открыта! Нажмите «Присоединиться к игре», чтобы участвовать.'
   );
@@ -556,7 +558,7 @@ export function onRegistrationTimerEnd(room: GameRoom): PrivateNote[] {
     room.players.forEach((p) => {
       p.inGame = true;
     });
-    addSystemMessage(
+    addHostMessage(
       room,
       `⏱ Регистрация завершена: записалось ${registered.length} из ${CONFIG.MIN_PLAYERS} нужных. Игра не состоялась — можно запустить снова, когда наберётся больше игроков.`
     );
@@ -611,8 +613,8 @@ function beginGame(room: GameRoom): PrivateNote[] {
     playerCount: participants.length,
     players: participants.map((p) => ({ name: p.name, userId: p.userId })),
   });
-  addSystemMessage(room, getGameStartSystemMessage(participants.length));
-  addSystemMessage(room, getRolesRevealSystemMessage(participants.length));
+  addHostMessage(room, getGameStartSystemMessage(participants.length));
+  addHostMessage(room, getRolesRevealSystemMessage(participants.length));
   room.phase = PHASE.ROLES;
   setTimer(room, CONFIG.ROLE_REVEAL_SEC * 1000, 'roles');
   return buildRoleRevealNotes(room);
@@ -625,7 +627,7 @@ export function startDayPhase(room: GameRoom): PrivateNote[] {
   room.players.forEach((p) => {
     p.hasVoted = false;
   });
-  addSystemMessage(room, getDayDiscussionMessage(room.nightNumber + 1));
+  addHostMessage(room, getDayDiscussionMessage(room.nightNumber + 1));
   setTimer(room, CONFIG.DAY_DISCUSSION_SEC * 1000, 'day');
   return buildDayDiscussionNotes(room);
 }
@@ -639,7 +641,7 @@ export function startVoting(room: GameRoom): PrivateNote[] {
   room.players.forEach((p) => {
     p.hasVoted = false;
   });
-  addSystemMessage(room, getVotingStartMessage());
+  addHostMessage(room, getVotingStartMessage());
   return buildVotingReminderNotes(room);
 }
 
@@ -685,11 +687,11 @@ function resolveDayVote(room: GameRoom): PrivateNote[] {
   if (candidates.length === 1 && maxVotes > 0) {
     const hanged = room.players.find((p) => p.id === candidates[0]);
     if (hanged) {
-      addSystemMessage(room, getHangVerdictMessage(hanged));
+      addHostMessage(room, getHangVerdictMessage(hanged));
       eliminatePlayer(room, candidates[0], { silent: true });
     }
   } else {
-    addSystemMessage(room, getVotingTieMessage());
+    addHostMessage(room, getVotingTieMessage());
   }
 
   if (checkWin(room)) return [];
@@ -702,7 +704,7 @@ function eliminatePlayer(room: GameRoom, playerId: number, opts: { silent?: bool
 
   player.alive = false;
   if (!opts.silent) {
-    addSystemMessage(room, `💀 ${playerNick(player)} выбыл(а)! Роль: ${getRoleLabel(player.role)}.`);
+    addHostMessage(room, `💀 ${playerNick(player)} выбыл(а)! Роль: ${getRoleLabel(player.role)}.`);
   }
 
   if (player.role === 'commissar') {
@@ -722,7 +724,7 @@ function eliminatePlayer(room: GameRoom, playerId: number, opts: { silent?: bool
     if (nextMafia) {
       nextMafia.isDon = true;
       room.mafiaDonId = nextMafia.id;
-      addSystemMessage(room, `🎩 ${playerNick(nextMafia)} стал(а) главным мафиози.`);
+      addHostMessage(room, `🎩 ${playerNick(nextMafia)} стал(а) главным мафиози.`);
     } else {
       room.mafiaDonId = null;
     }
@@ -739,7 +741,7 @@ export function startNightPhase(room: GameRoom): PrivateNote[] {
     p.nightActionDone = false;
   });
 
-  addSystemMessage(room, getNightFallMessage());
+  addHostMessage(room, getNightFallMessage());
 
   setTimer(room, CONFIG.NIGHT_ACTIONS_SEC * 1000, 'night');
   return buildNightReminderNotes(room);
@@ -781,7 +783,7 @@ function emitNightAtmosphereForAction(room: GameRoom, player: GamePlayer, action
   const msg = getRoleNightAtmosphereMessage(player.role);
   if (!msg) return;
 
-  addSystemMessage(room, msg);
+  addHostMessage(room, msg);
   room.nightAtmosphereSent[atmosphereKey] = true;
 }
 
@@ -1041,7 +1043,7 @@ export function resolveNight(room: GameRoom): NightResolveResult {
   const hadActions = Object.keys(actions).length > 0;
   const morningReport = buildMorningReportMessage(room, report, hadActions);
   if (morningReport.trim()) {
-    addSystemMessage(room, morningReport);
+    addHostMessage(room, morningReport);
   }
 
   if (killedTonight.length > 0) {
@@ -1077,10 +1079,10 @@ function endGame(room: GameRoom, team: 'town' | 'mafia', message: string): void 
   room.phase = PHASE.ENDED;
   room.winnerTeam = team;
   clearTimer(room);
-  addSystemMessage(room, `🏁 ${message}`);
-  addSystemMessage(room, getGameEndRolesMessage(room));
+  addHostMessage(room, `🏁 ${message}`);
+  addHostMessage(room, getGameEndRolesMessage(room));
   const scoreMsg = getScoreSummaryMessage(room);
-  if (scoreMsg) addSystemMessage(room, scoreMsg);
+  if (scoreMsg) addHostMessage(room, scoreMsg);
   saveGameEvent(room.id, room.sessionId, 'game_end', {
     winnerTeam: team,
     message,
@@ -1376,7 +1378,7 @@ export function addHostPrivateMessage(room: GameRoom, toPlayerId: number, text: 
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
     playerId: null,
     userId: null,
-    playerName: '🤖 Ведущий',
+    playerName: HOST_SENDER_NAME,
     toPlayerId: to.id,
     toPlayerName: to.username || to.name,
     text,
@@ -1522,13 +1524,13 @@ export function getModerationSnapshot(rooms: Map<number, GameRoom>): ModerationS
   };
 }
 
-export function addSystemMessage(room: GameRoom, text: string): void {
+export function addBotChatMessage(room: GameRoom, text: string, senderName: string): void {
   const time = new Date().toISOString();
   room.systemMessages.push({ text, time });
   const msg: ChatMessage = {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
     playerId: null,
-    playerName: SYSTEM_SENDER_NAME,
+    playerName: senderName,
     text,
     time,
     system: true,
@@ -1537,6 +1539,18 @@ export function addSystemMessage(room: GameRoom, text: string): void {
   };
   room.chat.push(msg);
   saveChatMessage(room.id, room.sessionId, msg, 'public');
+}
+
+export function addSystemMessage(room: GameRoom, text: string): void {
+  addBotChatMessage(room, text, SYSTEM_SENDER_NAME);
+}
+
+export function addHostMessage(room: GameRoom, text: string): void {
+  addBotChatMessage(room, text, HOST_SENDER_NAME);
+}
+
+export function addQuizBotMessage(room: GameRoom, text: string): void {
+  addBotChatMessage(room, text, QUIZ_BOT_NAME);
 }
 
 const DEFAULT_CHAT_LIMIT = 15;

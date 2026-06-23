@@ -3167,6 +3167,28 @@ html.telegram-webapp .app-body {
   background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
+.quiz-leader-player {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.quiz-leader-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.quiz-leader-avatar.placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-2);
+  font-size: 0.85rem;
+}
+
 .rating-rank {
   width: 48px;
   font-weight: 700;

@@ -5,6 +5,7 @@ import ChatRules from './ChatRules';
 import Staff from './Staff';
 import PlayerRating from './PlayerRating';
 import Faq from './Faq';
+import QuizLeaders from './QuizLeaders';
 import {
   type InfoSection,
   infoSectionFromPath,
@@ -131,6 +132,24 @@ export default function Info({
     );
   }
 
+  if (section === 'quizLeaders') {
+    return (
+      <div className="info-page">
+        {backNav('hub', 'Информация')}
+        <header className="page-header">
+          <h1>🧠 Самые умные</h1>
+          <p className="muted">Топ-10 по верным ответам в викторине</p>
+        </header>
+        <QuizLeaders
+          embedded
+          currentUser={currentUser}
+          onWriteMessage={onWriteMessage}
+          onOpenStatistics={onOpenStatistics}
+        />
+      </div>
+    );
+  }
+
   if (section === 'faq') {
     return (
       <div className="info-page">
@@ -216,6 +235,19 @@ export default function Info({
           <span className="info-hub-body">
             <strong>Рейтинг игроков</strong>
             <span className="muted">Топ по очкам, играм и репутации</span>
+          </span>
+          <span className="info-hub-arrow" aria-hidden="true">
+            →
+          </span>
+        </button>
+
+        <button type="button" className="info-hub-card" onClick={() => navigate('quizLeaders')}>
+          <span className="info-hub-icon" aria-hidden="true">
+            🧠
+          </span>
+          <span className="info-hub-body">
+            <strong>Самые умные</strong>
+            <span className="muted">Топ-10 викторины по верным ответам</span>
           </span>
           <span className="info-hub-arrow" aria-hidden="true">
             →

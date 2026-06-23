@@ -216,6 +216,14 @@ export interface LeaderboardEntry {
   isModerator: boolean;
 }
 
+export interface QuizLeaderboardEntry {
+  id: number;
+  username: string;
+  displayName: string;
+  avatar: string | null;
+  quizCorrectAnswers: number;
+}
+
 export interface UserPresence {
   isOnline: boolean;
   lastSeenAt: string | null;

@@ -1,8 +1,10 @@
 import fs from 'fs';
 import type { GameRoom } from '../types/index.js';
-import { addSystemMessage } from '../game/engine.js';
+import { addQuizBotMessage, QUIZ_BOT_NAME } from '../game/engine.js';
 import { getQuizQuestionsPath } from '../paths.js';
 import { incrementQuizCorrectAnswers } from './store.js';
+
+export { QUIZ_BOT_NAME };
 
 export interface QuizQuestion {
   question: string;
@@ -10,15 +12,27 @@ export interface QuizQuestion {
 }
 
 interface QuizRoomState {
-  questionIndex: number;
+  currentQuestion: QuizQuestion | null;
+  lastQuestionIndex: number;
   answeredUserIds: Set<number>;
+  timer: ReturnType<typeof setTimeout> | null;
 }
 
+const QUIZ_QUESTION_INTERVAL_MS = 60_000;
 const roomStates = new Map<number, QuizRoomState>();
 let questionsCache: QuizQuestion[] | null = null;
+let quizBroadcast: ((roomId: number) => void) | null = null;
 
 export function isQuizRoom(room: GameRoom): boolean {
   return room.kind === 'chat' && /викторин/i.test(room.name);
+}
+
+export function setQuizBroadcaster(fn: (roomId: number) => void): void {
+  quizBroadcast = fn;
+}
+
+function notifyRoom(room: GameRoom): void {
+  quizBroadcast?.(room.id);
 }
 
 function countCyrillic(text: string): number {
@@ -103,65 +117,102 @@ function getState(roomId: number): QuizRoomState {
   let state = roomStates.get(roomId);
   if (!state) {
     state = {
-      questionIndex: 0,
+      currentQuestion: null,
+      lastQuestionIndex: -1,
       answeredUserIds: new Set(),
+      timer: null,
     };
     roomStates.set(roomId, state);
   }
   return state;
 }
 
-function getCurrentQuestion(state: QuizRoomState): QuizQuestion | null {
+function pickRandomQuestion(state: QuizRoomState): QuizQuestion | null {
   const questions = loadQuizQuestions();
   if (questions.length === 0) return null;
-  const index = state.questionIndex % questions.length;
-  return questions[index];
+
+  let index: number;
+  if (questions.length === 1) {
+    index = 0;
+  } else {
+    do {
+      index = Math.floor(Math.random() * questions.length);
+    } while (index === state.lastQuestionIndex);
+  }
+
+  state.lastQuestionIndex = index;
+  state.currentQuestion = questions[index]!;
+  return state.currentQuestion;
 }
 
 function formatQuestionMessage(question: QuizQuestion): string {
   return `❓ ${question.question}`;
 }
 
-function postQuestion(room: GameRoom, state: QuizRoomState): void {
+function postRandomQuestion(room: GameRoom): void {
+  const state = getState(room.id);
   const questions = loadQuizQuestions();
   if (questions.length === 0) {
-    addSystemMessage(
+    addQuizBotMessage(
       room,
       '⚠️ Викторина не настроена: добавьте вопросы в questions.txt в корне проекта.'
     );
+    notifyRoom(room);
     return;
   }
 
   state.answeredUserIds.clear();
-  const question = getCurrentQuestion(state);
+  const question = pickRandomQuestion(state);
   if (!question) return;
 
-  addSystemMessage(room, formatQuestionMessage(question));
+  addQuizBotMessage(room, formatQuestionMessage(question));
+  notifyRoom(room);
+}
+
+function scheduleQuestionTimer(room: GameRoom): void {
+  const state = getState(room.id);
+  if (state.timer) clearTimeout(state.timer);
+  state.timer = setTimeout(() => {
+    postRandomQuestion(room);
+    scheduleQuestionTimer(room);
+  }, QUIZ_QUESTION_INTERVAL_MS);
+}
+
+export function stopQuizRoom(roomId: number): void {
+  const state = roomStates.get(roomId);
+  if (state?.timer) {
+    clearTimeout(state.timer);
+    state.timer = null;
+  }
 }
 
 export function initQuizRoom(room: GameRoom): void {
   if (!isQuizRoom(room)) return;
-  const state = getState(room.id);
+
+  stopQuizRoom(room.id);
+
   const questions = loadQuizQuestions();
-
-  if (room.chat.length === 0) {
-    addSystemMessage(room, '🧠 Добро пожаловать в викторину! Отвечайте в чат — бот засчитает верный ответ.');
-  }
-
   if (questions.length === 0) {
-    addSystemMessage(
+    addQuizBotMessage(
       room,
       '⚠️ Викторина не настроена: добавьте вопросы в questions.txt в корне проекта.'
     );
+    notifyRoom(room);
     return;
   }
 
-  const hasOpenQuestion = room.chat.some(
-    (msg) => msg.system && msg.text.startsWith('❓ ')
+  const hasWelcome = room.chat.some(
+    (msg) => msg.system && msg.playerName === QUIZ_BOT_NAME && msg.text.includes('викторину')
   );
-  if (!hasOpenQuestion) {
-    postQuestion(room, state);
+  if (!hasWelcome) {
+    addQuizBotMessage(
+      room,
+      '🧠 Добро пожаловать в викторину! Отвечайте в чат — бот засчитает верный ответ.'
+    );
   }
+
+  postRandomQuestion(room);
+  scheduleQuestionTimer(room);
 }
 
 export function initAllQuizRooms(rooms: Iterable<GameRoom>): void {
@@ -179,14 +230,11 @@ export function handleQuizAnswer(
 ): boolean {
   if (!isQuizRoom(room) || !userId) return false;
 
-  const questions = loadQuizQuestions();
-  if (questions.length === 0) return false;
-
   const state = getState(room.id);
-  if (state.answeredUserIds.has(userId)) return true;
-
-  const question = getCurrentQuestion(state);
+  const question = state.currentQuestion;
   if (!question) return false;
+
+  if (state.answeredUserIds.has(userId)) return true;
 
   const normalized = normalizeAnswer(text);
   if (!normalized) return true;
@@ -197,8 +245,7 @@ export function handleQuizAnswer(
   state.answeredUserIds.add(userId);
   const total = incrementQuizCorrectAnswers(userId);
 
-  addSystemMessage(room, `✅ ${playerName} ответил(а) верно! Верных ответов: ${total}.`);
-  state.questionIndex += 1;
-  postQuestion(room, state);
+  addQuizBotMessage(room, `✅ ${playerName} ответил(а) верно! Верных ответов: ${total}.`);
+  notifyRoom(room);
   return true;
 }

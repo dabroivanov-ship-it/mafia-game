@@ -87,10 +87,15 @@ interface GameEventRow {
   created_at: string;
 }
 
-const SYSTEM_SENDER_NAME = '🛡️ Система';
+const SYSTEM_SENDER_NAME = 'Система';
+const HOST_SENDER_NAME = 'Ведущий';
+const QUIZ_BOT_NAME = 'Умник';
 
 function normalizeSystemSender(name: string | null | undefined): string {
-  if (!name || name === '🤖 Ведущий') return SYSTEM_SENDER_NAME;
+  if (!name) return SYSTEM_SENDER_NAME;
+  if (name === '🛡️ Система' || name === SYSTEM_SENDER_NAME) return SYSTEM_SENDER_NAME;
+  if (name === '🤖 Ведущий' || name === HOST_SENDER_NAME) return HOST_SENDER_NAME;
+  if (name === QUIZ_BOT_NAME) return QUIZ_BOT_NAME;
   return name;
 }
 

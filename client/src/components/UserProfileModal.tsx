@@ -419,12 +419,10 @@ export default function UserProfileModal({
                     <span className="player-page-label">Сообщений в чате</span>
                     <span>{user.messageCount ?? 0}</span>
                   </li>
-                  {inRoom && data?.user.quizCorrectAnswers != null && (
-                    <li>
-                      <span className="player-page-label">Верных ответов</span>
-                      <span>{data.user.quizCorrectAnswers}</span>
-                    </li>
-                  )}
+                  <li>
+                    <span className="player-page-label">Викторина</span>
+                    <span>{data?.user.quizCorrectAnswers ?? 0} ответов</span>
+                  </li>
                   <li>
                     <span className="player-page-label">Регистрация</span>
                     <span>{new Date(user.createdAt).toLocaleDateString('ru-RU')}</span>

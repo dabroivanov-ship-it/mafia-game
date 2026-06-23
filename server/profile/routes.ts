@@ -24,7 +24,7 @@ import { MAX_PASSWORD_LENGTH } from '../security/constants.js';
 import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import { getUserMessageCount } from '../history/store.js';
-import { getQuizCorrectAnswers } from '../quiz/store.js';
+import { getQuizCorrectAnswers, listQuizLeaderboard } from '../quiz/store.js';
 import { getUserStatistics } from '../stats/store.js';
 import { isValidThemeId } from '../settings/themes.js';
 import { getUserPresence, getOnlineUserCount, listOnlineUsers } from '../presence.js';
@@ -181,6 +181,12 @@ export function createProfileRouter({ onProfileUpdated }: ProfileRouterOptions =
       Number.isFinite(limit) ? limit : 100,
       Number.isFinite(offset) ? offset : 0
     );
+    res.json({ players });
+  });
+
+  router.get('/quiz-leaderboard', (req, res) => {
+    const limit = Number(req.query.limit);
+    const players = listQuizLeaderboard(Number.isFinite(limit) ? limit : 10);
     res.json({ players });
   });
 

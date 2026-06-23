@@ -80,7 +80,7 @@ import fs from 'fs';
 import { ensureNewsUploadsDir } from './upload/newsImage.js';
 import { ensureSiteBrandingUploadsDir } from './upload/siteLogo.js';
 import { ensureSupportUploadsDir } from './upload/supportImage.js';
-import { initAllQuizRooms, initQuizRoom, handleQuizAnswer, isQuizRoom } from './quiz/index.js';
+import { initAllQuizRooms, initQuizRoom, handleQuizAnswer, isQuizRoom, setQuizBroadcaster } from './quiz/index.js';
 
 assertProductionEnv();
 
@@ -102,6 +102,7 @@ const rooms = createInitialRooms();
 for (const room of rooms.values()) {
   hydrateRoomHistory(room);
 }
+setQuizBroadcaster((roomId) => broadcastRoom(roomId));
 initAllQuizRooms(rooms.values());
 const sessions = new Map<string, Session>();
 const userSocketIds = new Map<number, Set<string>>();

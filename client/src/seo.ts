@@ -121,4 +121,9 @@ export const INFO_PAGE_META: Record<string, PageMeta> = {
       'Ответы на частые вопросы об онлайн-игре «Мафия»: как начать, сколько игроков нужно, роли и ведущий.',
     path: '/info/faq',
   },
+  quizLeaders: {
+    title: 'Самые умные',
+    description: 'Топ-10 игроков по верным ответам в викторине на сайте.',
+    path: '/info/quiz',
+  },
 };
