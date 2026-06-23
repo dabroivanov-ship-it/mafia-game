@@ -102,8 +102,6 @@ const rooms = createInitialRooms();
 for (const room of rooms.values()) {
   hydrateRoomHistory(room);
 }
-setQuizBroadcaster((roomId) => broadcastRoom(roomId));
-initAllQuizRooms(rooms.values());
 const sessions = new Map<string, Session>();
 const userSocketIds = new Map<number, Set<string>>();
 const DEFAULT_CHAT_LIMIT = 15;
@@ -590,6 +588,9 @@ function broadcastRoom(roomId: number): void {
 
   broadcastLobby();
 }
+
+setQuizBroadcaster((roomId) => broadcastRoom(roomId));
+initAllQuizRooms(rooms.values());
 
 function deliverHostNotes(room: GameRoom, privateNotes: PrivateNote[] = []): void {
   if (isChatRoom(room) || privateNotes.length === 0) return;
