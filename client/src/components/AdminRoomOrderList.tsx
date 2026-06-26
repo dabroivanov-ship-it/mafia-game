@@ -1,6 +1,6 @@
 import { useEffect, useState, type DragEvent, type ReactNode } from 'react';
-import type { AdminRoom, RoomKind } from '../types';
-import { adminReorderRooms } from '../api';
+import { adminReorderRooms, type AdminRoom } from '../api';
+import type { RoomKind } from '../types';
 
 interface AdminRoomOrderListProps {
   rooms: AdminRoom[];

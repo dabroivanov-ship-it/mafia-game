@@ -19,6 +19,7 @@ import {
   roomMembersPath,
   type RoomScreen,
 } from './roomRouting';
+import { DEFAULT_PAGE_META, updatePageMeta } from './seo';
 import { clearSession, fetchMe, fetchUnreadMailCount, fetchThemeSettings, saveSession, loadStoredPlayerId, saveStoredPlayerId, clearStoredPlayerIds } from './api';
 import type { LobbyRoom, RoomState, User, ThemeId, LobbyUpdate, SiteBranding } from './types';
 import { applyTheme, resolveTheme, DEFAULT_THEME } from './themes';
