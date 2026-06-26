@@ -55,6 +55,7 @@ interface RoomProps {
   socket: Socket | null;
   state: RoomState | null;
   onLeave: () => void;
+  onOpenMembers?: () => void;
   onStateUpdate?: (state: RoomState) => void;
   currentUserId: number;
   onWriteMessage?: (userId: number, username: string) => void;
@@ -65,6 +66,7 @@ export default function Room({
   socket,
   state,
   onLeave,
+  onOpenMembers,
   onStateUpdate,
   currentUserId,
   onWriteMessage,
@@ -181,9 +183,16 @@ export default function Room({
             )}
           </div>
         </div>
-        <button type="button" className="btn btn-ghost btn-leave" onClick={onLeave}>
-          ← Выйти
-        </button>
+        <div className="room-header-actions">
+          {!isChatRoom && onOpenMembers && (
+            <button type="button" className="btn btn-ghost" onClick={onOpenMembers}>
+              Кто тут
+            </button>
+          )}
+          <button type="button" className="btn btn-ghost btn-leave" onClick={onLeave}>
+            {isChatRoom ? '← Выйти' : '← Назад'}
+          </button>
+        </div>
       </header>
 
       {!isChatRoom && state.phase === 'roles' && !state.isSpectator && (
@@ -212,12 +221,12 @@ export default function Room({
         </div>
       )}
 
-      {!isChatRoom && state.canLeaveGame && (
-        <div className="join-game-banner leave-game-banner">
-          <p>Вы зарегистрированы ({state.registeredCount}/{state.maxPlayers}). Ожидайте других или таймера.</p>
-          <button type="button" className="btn btn-ghost btn-block" onClick={() => emit('room:leaveGame')}>
-            Выйти из игры
-          </button>
+      {!isChatRoom && state.isInGame && state.phase === 'registration' && (
+        <div className="join-game-banner">
+          <p>
+            Вы зарегистрированы ({state.registeredCount}/{state.maxPlayers}). Ожидайте других или
+            таймера.
+          </p>
         </div>
       )}
 

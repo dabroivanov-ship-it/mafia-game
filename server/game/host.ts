@@ -577,6 +577,22 @@ export function getVotingTieMessage(): string {
 
 
 
+export function getVotingCountMessage(): string {
+
+  return getPhraseText('voting.count');
+
+}
+
+
+
+export function getVotingRestartMessage(): string {
+
+  return getPhraseText('voting.restart');
+
+}
+
+
+
 export function getDayDiscussionMessage(dayNumber: number): string {
 
   return getPhraseText('day.discussion', { day: dayNumber });

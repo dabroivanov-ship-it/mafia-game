@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { RoomPlayer, RoomState } from '../types';
 
 interface ActionPanelProps {
@@ -10,9 +10,27 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
   const [clownStep, setClownStep] = useState<'first' | 'second' | null>(null);
   const [clownFirst, setClownFirst] = useState<number | null>(null);
   const [commissarMode, setCommissarMode] = useState<'check' | 'kill' | null>(null);
+  const [voteTargetId, setVoteTargetId] = useState<number | null>(null);
+  const [voteSubmitting, setVoteSubmitting] = useState(false);
 
   const me = state.myPlayer;
   const meInList = state.players.find((p) => p.id === state.myId);
+  const hasVoted = me?.hasVoted ?? meInList?.hasVoted;
+
+  useEffect(() => {
+    if (state.phase !== 'voting') {
+      setVoteTargetId(null);
+      setVoteSubmitting(false);
+    }
+  }, [state.phase]);
+
+  useEffect(() => {
+    if (state.phase === 'voting' && !hasVoted) {
+      setVoteTargetId(null);
+      setVoteSubmitting(false);
+    }
+  }, [state.phase, hasVoted]);
+
   const alive = me?.alive ?? meInList?.alive;
   if (!state.isInGame || !alive || !state.myRole) return null;
 
@@ -46,23 +64,73 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
   }
 
   if (state.phase === 'voting') {
-    const hasVoted = me?.hasVoted ?? meInList?.hasVoted;
     if (hasVoted) {
+      const waitingOthers = state.players.some(
+        (p) => p.alive && p.inGame && p.id !== state.myId && !p.hasVoted
+      );
       return (
         <div className="action-panel">
-          <p className="muted">Вы проголосовали ✓</p>
+          <p className="muted">Вы подтвердили казнь ✓</p>
+          {waitingOthers && (
+            <p className="muted" style={{ marginTop: 8 }}>
+              Ожидание остальных игроков...
+            </p>
+          )}
         </div>
       );
     }
+
+    const voteTarget = voteTargetId != null ? aliveOthers.find((p) => p.id === voteTargetId) : null;
+
+    if (voteTarget) {
+      const targetName = voteTarget.username || voteTarget.name;
+      return (
+        <div className="action-panel">
+          <h3>🗳️ Подтверждение</h3>
+          <p style={{ marginBottom: 16 }}>
+            Вы уверены, что хотите казнить <strong>{targetName}</strong>?
+          </p>
+          <div className="action-row">
+            <button
+              type="button"
+              className="btn btn-action danger"
+              disabled={voteSubmitting}
+              onClick={() => {
+                setVoteSubmitting(true);
+                void emit('game:vote', { targetId: voteTarget.id, confirmed: true })
+                  .then((res) => {
+                    if (res?.error) {
+                      setVoteSubmitting(false);
+                      return;
+                    }
+                    setVoteTargetId(null);
+                  })
+                  .catch(() => setVoteSubmitting(false));
+              }}
+            >
+              Да — казнить
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              disabled={voteSubmitting}
+              onClick={() => setVoteTargetId(null)}
+            >
+              Нет — выбрать другого
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="action-panel">
-        <h3>🗳️ Голосование — выберите игрока</h3>
+        <h3>🗳️ Этап отбора — кого казнить?</h3>
+        <p className="muted" style={{ marginBottom: 12, fontSize: '0.9rem' }}>
+          Выберите игрока, затем подтвердите или откажитесь и выберите заново.
+        </p>
         <div className="target-grid">
-          {aliveOthers.map((p) =>
-            targetBtn(p, (id) => {
-              void emit('game:vote', { targetId: id });
-            })
-          )}
+          {aliveOthers.map((p) => targetBtn(p, (id) => setVoteTargetId(id)))}
         </div>
       </div>
     );

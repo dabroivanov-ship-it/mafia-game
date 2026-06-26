@@ -19,6 +19,8 @@ import {
   getVotingStartMessage,
   getHangVerdictMessage,
   getVotingTieMessage,
+  getVotingCountMessage,
+  getVotingRestartMessage,
   playerNick,
   type NightReport,
 } from './host.js';
@@ -682,21 +684,40 @@ export function onDayTimerEnd(room: GameRoom): PrivateNote[] {
   return [];
 }
 
-export function castDayVote(room: GameRoom, voterId: number, targetId: number): PrivateNote[] {
+export function castDayVote(
+  room: GameRoom,
+  voterId: number,
+  targetId: number,
+  confirmed = false
+): PrivateNote[] {
   if (room.phase !== PHASE.VOTING) throw new Error('Сейчас не время голосования');
+  if (!confirmed) throw new Error('Подтвердите голос: «Да» или «Нет»');
 
   const voter = room.players.find((p) => p.id === voterId);
   const target = room.players.find((p) => p.id === targetId);
   if (!voter?.inGame || !voter.role) throw new Error('Вы не участвуете в игре');
   if (!voter?.alive || !target?.alive) throw new Error('Недопустимый голос');
   if (voterId === targetId) throw new Error('Нельзя голосовать за себя');
+  if (voter.hasVoted) throw new Error('Вы уже проголосовали');
 
   room.votes[voterId] = targetId;
   voter.hasVoted = true;
 
   const alive = room.players.filter((p) => p.alive && p.inGame && p.role && p.connected);
-  if (alive.every((p) => p.hasVoted)) return resolveDayVote(room);
+  if (alive.every((p) => p.hasVoted)) {
+    addHostMessage(room, getVotingCountMessage());
+    return resolveDayVote(room);
+  }
   return [];
+}
+
+function restartVotingSelection(room: GameRoom): PrivateNote[] {
+  room.votes = {};
+  room.players.forEach((p) => {
+    p.hasVoted = false;
+  });
+  addHostMessage(room, getVotingRestartMessage());
+  return buildVotingReminderNotes(room);
 }
 
 function resolveDayVote(room: GameRoom): PrivateNote[] {
@@ -722,12 +743,13 @@ function resolveDayVote(room: GameRoom): PrivateNote[] {
       addHostMessage(room, getHangVerdictMessage(hanged));
       eliminatePlayer(room, candidates[0], { silent: true });
     }
-  } else {
-    addHostMessage(room, getVotingTieMessage());
+    if (checkWin(room)) return [];
+    return startNightPhase(room);
   }
 
+  addHostMessage(room, getVotingTieMessage());
   if (checkWin(room)) return [];
-  return startNightPhase(room);
+  return restartVotingSelection(room);
 }
 
 function eliminatePlayer(room: GameRoom, playerId: number, opts: { silent?: boolean } = {}): void {
@@ -1747,6 +1769,20 @@ function buildChatView(
   };
 }
 
+function mapRoomPresence(p: GamePlayer, viewerId: number): RoomPresence {
+  return {
+    id: p.id,
+    userId: p.userId || null,
+    name: p.name,
+    username: p.username || p.name,
+    connected: p.connected,
+    inGame: !!p.inGame,
+    alive: p.alive,
+    roleLabel: (!p.alive || p.id === viewerId) && p.role ? getRoleLabel(p.role) : null,
+    isMe: p.id === viewerId,
+  };
+}
+
 function mapPlayerPublic(
   p: GamePlayer,
   _room: GameRoom,
@@ -1821,6 +1857,7 @@ export function serializeRoomForPlayer(
       isDon: false,
       players: connectedUsers.map((p) => mapPlayerPublic(p, room, playerId, canModerate)),
       spectators: [],
+      presence: connectedUsers.map((p) => mapRoomPresence(p, playerId)),
       chat: chatView.messages,
       chatMode: chatView.mode,
       hasMoreChat: chatView.hasMoreChat,
@@ -1873,8 +1910,7 @@ export function serializeRoomForPlayer(
       slotsAvailable &&
       joinGameCooldownSec === 0,
     joinGameCooldownSec,
-    canLeaveGame:
-      room.phase === PHASE.REGISTRATION && !!me?.connected && !!me.inGame,
+    canLeaveGame: false,
     myPlayer: me
       ? {
           id: me.id,
@@ -1899,6 +1935,7 @@ export function serializeRoomForPlayer(
       username: p.username || p.name,
       connected: p.connected,
     })),
+    presence: room.players.filter((p) => p.connected).map((p) => mapRoomPresence(p, playerId)),
     chat: chatView.messages,
     chatMode: chatView.mode,
     hasMoreChat: chatView.hasMoreChat,

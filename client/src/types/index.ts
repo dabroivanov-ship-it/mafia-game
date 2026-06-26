@@ -122,6 +122,18 @@ export interface RoomSpectator {
   connected: boolean;
 }
 
+export interface RoomPresence {
+  id: number;
+  userId: number | null;
+  name: string;
+  username: string;
+  connected: boolean;
+  inGame: boolean;
+  alive: boolean;
+  roleLabel: string | null;
+  isMe: boolean;
+}
+
 export interface MyPlayer {
   id: number;
   userId: number | null;
@@ -157,6 +169,7 @@ export interface RoomState {
   isDon: boolean;
   players: RoomPlayer[];
   spectators: RoomSpectator[];
+  presence: RoomPresence[];
   chat: ChatMessage[];
   chatMode: 'spectator' | 'dead' | 'alive';
   hasMoreChat: boolean;

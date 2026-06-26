@@ -944,12 +944,12 @@ io.on('connection', (socket) => {
     cb?.({ ok: true });
   });
 
-  socket.on('game:vote', ({ targetId }, cb) => {
+  socket.on('game:vote', ({ targetId, confirmed }, cb) => {
     const ctx = requireRoomPlayer(socket, cb);
     if (!ctx) return;
     const { session, room } = ctx;
     try {
-      const notes = castDayVote(room, session.playerId, targetId);
+      const notes = castDayVote(room, session.playerId, targetId, confirmed === true);
       deliverHostNotes(room, notes);
       broadcastRoom(room.id);
       cb?.({ ok: true });

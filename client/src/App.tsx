@@ -12,7 +12,13 @@ import {
   profileUserIdFromPath,
   readInitialProfileUserId,
 } from './profileRouting';
-import { DEFAULT_PAGE_META, updatePageMeta } from './seo';
+import {
+  parseRoomPath,
+  readInitialRoomScreen,
+  roomGamePath,
+  roomMembersPath,
+  type RoomScreen,
+} from './roomRouting';
 import { clearSession, fetchMe, fetchUnreadMailCount, fetchThemeSettings, saveSession, loadStoredPlayerId, saveStoredPlayerId, clearStoredPlayerIds } from './api';
 import type { LobbyRoom, RoomState, User, ThemeId, LobbyUpdate, SiteBranding } from './types';
 import { applyTheme, resolveTheme, DEFAULT_THEME } from './themes';
@@ -24,6 +30,7 @@ const News = lazy(() => import('./components/News'));
 const Info = lazy(() => import('./components/Info'));
 const AdminPanel = lazy(() => import('./components/AdminPanel'));
 const Room = lazy(() => import('./components/Room'));
+const RoomMembersPage = lazy(() => import('./components/RoomMembersPage'));
 const Messages = lazy(() => import('./components/Messages'));
 const UserSearch = lazy(() => import('./components/UserSearch'));
 const CabinetProfileSettings = lazy(() => import('./components/CabinetProfileSettings'));
@@ -57,6 +64,8 @@ export default function App() {
   const [siteOnlineCount, setSiteOnlineCount] = useState(0);
   const [roomState, setRoomState] = useState<RoomState | null>(null);
   const [currentRoomId, setCurrentRoomId] = useState<number | null>(null);
+  const [roomScreen, setRoomScreen] = useState<RoomScreen>(() => readInitialRoomScreen());
+  const [roomMinimized, setRoomMinimized] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [unreadMailCount, setUnreadMailCount] = useState(0);
@@ -135,6 +144,13 @@ export default function App() {
     if (!user) return;
     const onPopState = () => {
       const path = window.location.pathname;
+      const roomPath = parseRoomPath(path);
+      if (roomPath && currentRoomId === roomPath.roomId) {
+        setRoomScreen(roomPath.screen);
+        setRoomMinimized(false);
+        setProfileStatsUserId(null);
+        return;
+      }
       if (isPublicInfoPath(path)) {
         setView('info');
         setProfileStatsUserId(null);
@@ -149,7 +165,7 @@ export default function App() {
     };
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
-  }, [user]);
+  }, [user, currentRoomId]);
 
   useEffect(() => {
     if (!user) return;
@@ -219,6 +235,8 @@ export default function App() {
       setSocket(null);
       setCurrentRoomId(null);
       setRoomState(null);
+      setRoomMinimized(false);
+      setRoomScreen('game');
       clearStoredPlayerIds();
       setView('lobby');
       setError(reason || 'Сессия завершена');
@@ -227,6 +245,8 @@ export default function App() {
     s.on('room:kicked', ({ reason }: { reason?: string }) => {
       setCurrentRoomId(null);
       setRoomState(null);
+      setRoomMinimized(false);
+      setRoomScreen('game');
       setView('lobby');
       clearStoredPlayerIds();
       setError(reason || 'Вы вышли из комнаты');
@@ -296,6 +316,8 @@ export default function App() {
     setRooms([]);
     setRoomState(null);
     setCurrentRoomId(null);
+    setRoomMinimized(false);
+    setRoomScreen('game');
     clearStoredPlayerIds();
     setView('lobby');
   }, [socket]);
@@ -312,13 +334,17 @@ export default function App() {
     (roomId: number) => {
       if (!socket || !user) return;
       setError(null);
+      setRoomMinimized(false);
+      setRoomScreen('game');
       setView('room');
+      window.history.pushState(null, '', roomGamePath(roomId));
 
       const reconnectId = loadStoredPlayerId(user.id);
       socket.emit('room:join', { roomId, playerId: reconnectId ?? undefined }, (res: RoomJoinResponse) => {
         if (res?.error) {
           setError(res.error);
           setView('lobby');
+          window.history.pushState(null, '', '/');
           return;
         }
         if (res.playerId != null) {
@@ -335,8 +361,42 @@ export default function App() {
     socket?.emit('room:detach');
     setCurrentRoomId(null);
     setRoomState(null);
+    setRoomMinimized(false);
+    setRoomScreen('game');
     setView('lobby');
+    window.history.pushState(null, '', '/');
   }, [socket]);
+
+  const minimizeMafiaRoom = useCallback(() => {
+    setRoomMinimized(true);
+    setRoomScreen('game');
+    setView('lobby');
+    window.history.pushState(null, '', '/');
+  }, []);
+
+  const returnToRoom = useCallback(() => {
+    setRoomMinimized(false);
+    setView('room');
+    if (currentRoomId) {
+      window.history.pushState(
+        null,
+        '',
+        roomScreen === 'members' ? roomMembersPath(currentRoomId) : roomGamePath(currentRoomId)
+      );
+    }
+  }, [currentRoomId, roomScreen]);
+
+  const openRoomMembers = useCallback(() => {
+    if (!currentRoomId) return;
+    setRoomScreen('members');
+    window.history.pushState(null, '', roomMembersPath(currentRoomId));
+  }, [currentRoomId]);
+
+  const backToRoomGame = useCallback(() => {
+    if (!currentRoomId) return;
+    setRoomScreen('game');
+    window.history.pushState(null, '', roomGamePath(currentRoomId));
+  }, [currentRoomId]);
 
   useEffect(() => {
     if (!socket || !currentRoomId || !user) return;
@@ -410,7 +470,8 @@ export default function App() {
     return <Auth onSuccess={handleAuthSuccess} branding={siteBranding} />;
   }
 
-  if (currentRoomId) {
+  if (currentRoomId && !roomMinimized) {
+    const isChatRoom = roomState?.kind === 'chat';
     return (
       <div className="app">
         {notification && (
@@ -422,7 +483,8 @@ export default function App() {
           <div
             className="toast pm-toast"
             onClick={() => {
-              leaveRoom();
+              if (isChatRoom) leaveRoom();
+              else minimizeMafiaRoom();
               openMessages();
             }}
           >
@@ -443,12 +505,21 @@ export default function App() {
               onWriteMessage={(userId, username) => openMessages({ userId, username })}
             />
           </ViewSuspense>
+        ) : roomScreen === 'members' && roomState ? (
+          <ViewSuspense label="Кто в комнате…">
+            <RoomMembersPage
+              state={roomState}
+              onBack={backToRoomGame}
+              onViewProfile={openProfileStatistics}
+            />
+          </ViewSuspense>
         ) : (
           <ViewSuspense label="Загружаем комнату…">
             <Room
               socket={socket}
               state={roomState}
-              onLeave={leaveRoom}
+              onLeave={isChatRoom ? leaveRoom : minimizeMafiaRoom}
+              onOpenMembers={isChatRoom ? undefined : openRoomMembers}
               onStateUpdate={setRoomState}
               currentUserId={user.id}
               onWriteMessage={(userId, username) => openMessages({ userId, username })}
@@ -475,6 +546,18 @@ export default function App() {
       {error && (
         <div className="toast error" onClick={() => setError(null)}>
           {error}
+        </div>
+      )}
+
+      {currentRoomId && roomMinimized && roomState && (
+        <div className="room-return-banner">
+          <span>
+            Вы в комнате «{roomState.name}»
+            {roomState.isInGame ? ' · в партии' : ''}
+          </span>
+          <button type="button" className="btn btn-primary btn-sm" onClick={returnToRoom}>
+            Вернуться в комнату
+          </button>
         </div>
       )}
 

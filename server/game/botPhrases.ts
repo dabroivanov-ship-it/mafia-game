@@ -205,7 +205,21 @@ export const BOT_PHRASE_DEFINITIONS: BotPhraseDefinition[] = [
     group: 'Голосование',
     label: 'Ничья при голосовании',
     type: 'text',
-    defaultValue: 'Голоса разделились — никто не был повешен этим днём.',
+    defaultValue: 'Голоса разделились — казнь не состоялась. Начинается новый этап отбора.',
+  },
+  {
+    key: 'voting.count',
+    group: 'Голосование',
+    label: 'Подсчёт голосов',
+    type: 'text',
+    defaultValue: '🗳️ Все проголосовали. Подсчёт голосов...',
+  },
+  {
+    key: 'voting.restart',
+    group: 'Голосование',
+    label: 'Новый этап отбора',
+    type: 'text',
+    defaultValue: '🗳️ Выберите заново, кого казнить.',
   },
   {
     key: 'voting.hang',
