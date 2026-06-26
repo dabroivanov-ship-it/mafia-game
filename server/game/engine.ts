@@ -42,6 +42,7 @@ import type {
   NightResolveResult,
   PrivateNote,
   RoomKind,
+  RoomPresence,
   RoomState,
   RoomStatePlayer,
   TimerReason,
