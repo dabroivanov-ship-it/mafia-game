@@ -1628,15 +1628,168 @@ html.telegram-webapp .app-body {
   font-size: 0.8rem;
 }
 
+.news-comment-reply-to {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.78rem;
+}
+
+.news-comment-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.news-comment-reply-btn {
+  opacity: 0.85;
+}
+
 .news-comment-delete {
   flex-shrink: 0;
   opacity: 0.7;
+}
+
+.news-comments-replies {
+  margin: 10px 0 0 12px;
+  padding-left: 12px;
+  border-left: 2px solid var(--border);
+}
+
+.news-comment-reply-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border));
 }
 
 .news-comment-body {
   margin: 0;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.news-editor-poll {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent) 4%, var(--bg-card));
+}
+
+.news-editor-poll-note {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+}
+
+.news-editor-poll-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.news-editor-poll-option-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.news-editor-poll-option-row .news-editor-input {
+  flex: 1;
+}
+
+.news-poll {
+  margin: 18px 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-hover);
+}
+
+.news-poll-question {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+}
+
+.news-poll-meta {
+  margin: 0 0 12px;
+  font-size: 0.85rem;
+}
+
+.news-poll-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.news-poll-option-btn {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.news-poll-option-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-card));
+}
+
+.news-poll-option-btn:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.news-poll-result {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+}
+
+.news-poll-result-selected {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+
+.news-poll-result-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+}
+
+.news-poll-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg-hover);
+  overflow: hidden;
+}
+
+.news-poll-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  min-width: 2px;
+  transition: width 0.25s ease;
+}
+
+.news-poll-footer {
+  margin: 12px 0 0;
+  font-size: 0.85rem;
 }
 
 .news-comment-form {
@@ -3232,6 +3385,19 @@ html.telegram-webapp .app-body {
 
 .rating-row-self {
   background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.rating-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.rating-pagination-info {
+  font-size: 0.9rem;
 }
 
 .quiz-leader-player {

@@ -288,6 +288,31 @@ export interface UserStatisticsResponse {
   statistics: UserStatistics;
 }
 
+export interface NewsPollOption {
+  id: number;
+  label: string;
+  voteCount: number;
+  percent: number;
+}
+
+export interface NewsPoll {
+  id: number;
+  newsId: number;
+  question: string;
+  endsAt: string | null;
+  isClosed: boolean;
+  totalVotes: number;
+  options: NewsPollOption[];
+  userVoteOptionId: number | null;
+}
+
+export interface NewsPollInput {
+  enabled: boolean;
+  question: string;
+  options: string[];
+  endsAt?: string | null;
+}
+
 export interface NewsPost {
   id: number;
   title: string;
@@ -300,6 +325,7 @@ export interface NewsPost {
   createdAt: string;
   updatedAt: string;
   commentCount?: number;
+  poll?: NewsPoll | null;
 }
 
 export interface NewsComment {
@@ -307,6 +333,10 @@ export interface NewsComment {
   newsId: number;
   userId: number;
   body: string;
+  parentId: number | null;
+  replyToUserId: number | null;
+  replyToAuthorName: string | null;
+  replyToAuthorUsername: string | null;
   createdAt: string;
   authorName: string;
   authorUsername: string;

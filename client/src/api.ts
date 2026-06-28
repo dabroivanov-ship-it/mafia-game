@@ -1,4 +1,4 @@
-import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, NewsComment, MailConversation, RoomKind, ThemeId, ViolationLogEntry, UserSearchHit, UserPresence, FriendUser, LeaderboardEntry, QuizLeaderboardEntry, SiteBranding, UserStatisticsResponse } from './types';
+import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, NewsPoll, NewsPollInput, NewsComment, MailConversation, RoomKind, ThemeId, ViolationLogEntry, UserSearchHit, UserPresence, FriendUser, LeaderboardEntry, QuizLeaderboardEntry, SiteBranding, UserStatisticsResponse } from './types';
 
 const API_BASE =
   import.meta.env.VITE_API_URL ??
@@ -367,12 +367,27 @@ export async function fetchQuizLeaderboard(
 export async function fetchLeaderboard(
   limit = 100,
   offset = 0
-): Promise<{ players: LeaderboardEntry[] }> {
+): Promise<{ players: LeaderboardEntry[]; total: number }> {
   const params = new URLSearchParams({
     limit: String(limit),
     offset: String(offset),
   });
   return apiRequest(`/api/profile/leaderboard?${params}`);
+}
+
+export async function fetchUnreadNewsCount(): Promise<{ count: number }> {
+  return apiRequest('/api/news/unread-count');
+}
+
+export async function markNewsRead(): Promise<{ count: number }> {
+  return apiRequest('/api/news/mark-read', { method: 'POST' });
+}
+
+export async function voteNewsPoll(newsId: number, optionId: number): Promise<{ poll: NewsPoll }> {
+  return apiRequest(`/api/news/${newsId}/poll/vote`, {
+    method: 'POST',
+    body: JSON.stringify({ optionId }),
+  });
 }
 
 export async function fetchNews(): Promise<{ news: NewsPost[] }> {
@@ -385,11 +400,12 @@ export async function fetchNewsComments(newsId: number): Promise<{ comments: New
 
 export async function postNewsComment(
   newsId: number,
-  body: string
+  body: string,
+  parentId?: number | null
 ): Promise<{ comment: NewsComment }> {
   return apiRequest(`/api/news/${newsId}/comments`, {
     method: 'POST',
-    body: JSON.stringify({ body }),
+    body: JSON.stringify({ body, parentId: parentId ?? null }),
   });
 }
 
@@ -429,6 +445,7 @@ export async function adminCreateNews(payload: {
   coverImage?: string | null;
   isPublished?: boolean;
   isFeatured?: boolean;
+  poll?: NewsPollInput;
 }): Promise<{ news: NewsPost }> {
   return apiRequest('/api/admin/news', {
     method: 'POST',
@@ -444,6 +461,7 @@ export async function adminUpdateNews(
     coverImage?: string | null;
     isPublished?: boolean;
     isFeatured?: boolean;
+    poll?: NewsPollInput;
   }
 ): Promise<{ news: NewsPost }> {
   return apiRequest(`/api/admin/news/${id}`, {

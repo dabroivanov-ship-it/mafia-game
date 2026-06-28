@@ -25,7 +25,9 @@ import {
   updateNews,
   deleteNews,
   listAllNews,
+  findNewsById,
 } from '../news/store.js';
+import { upsertPollForNews, type PollInput } from '../news/polls.js';
 import { listViolations, clearViolations } from '../moderation/violationLog.js';
 import { newsImageUpload, newsImagePublicPath } from '../upload/newsImage.js';
 import { adminSetReputation } from '../social/store.js';
@@ -316,8 +318,8 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     res.json({ ok: true, cleared });
   });
 
-  router.get('/news', (_req, res) => {
-    res.json({ news: listAllNews() });
+  router.get('/news', (req, res) => {
+    res.json({ news: listAllNews(100, req.userId!) });
   });
 
   router.post('/news', (req, res) => {
@@ -329,22 +331,33 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
         isPublished: req.body.isPublished !== false,
         isFeatured: !!req.body.isFeatured,
       });
-      res.status(201).json({ news });
+      if (req.body.poll !== undefined) {
+        upsertPollForNews(news.id, req.body.poll as PollInput, req.userId!);
+      }
+      res.status(201).json({ news: findNewsById(news.id, req.userId!) });
     } catch (err) {
       res.status(400).json({ error: err instanceof Error ? err.message : 'Ошибка' });
     }
   });
 
   router.put('/news/:id', (req, res) => {
-    const news = updateNews(Number(req.params.id), {
-      title: req.body.title,
-      body: req.body.body,
-      coverImage: req.body.coverImage,
-      isPublished: req.body.isPublished,
-      isFeatured: req.body.isFeatured,
-    });
-    if (!news) return res.status(404).json({ error: 'Новость не найдена' });
-    res.json({ news });
+    try {
+      const id = Number(req.params.id);
+      const news = updateNews(id, {
+        title: req.body.title,
+        body: req.body.body,
+        coverImage: req.body.coverImage,
+        isPublished: req.body.isPublished,
+        isFeatured: req.body.isFeatured,
+      });
+      if (!news) return res.status(404).json({ error: 'Новость не найдена' });
+      if (req.body.poll !== undefined) {
+        upsertPollForNews(id, req.body.poll as PollInput, req.userId!);
+      }
+      res.json({ news: findNewsById(id, req.userId!) });
+    } catch (err) {
+      res.status(400).json({ error: err instanceof Error ? err.message : 'Ошибка' });
+    }
   });
 
   router.delete('/news/:id', (req, res) => {

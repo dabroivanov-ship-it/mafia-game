@@ -120,7 +120,7 @@ export default function Info({
         {backNav('hub', 'Информация')}
         <header className="page-header">
           <h1>🏆 Рейтинг игроков</h1>
-          <p className="muted">Топ-100 по очкам за сыгранные партии</p>
+          <p className="muted">Рейтинг игроков по MMR и репутации · по 15 на странице</p>
         </header>
         <PlayerRating
           embedded

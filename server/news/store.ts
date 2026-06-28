@@ -1,6 +1,7 @@
 import db, { findUserById } from '../auth/db.js';
 import { MAX_NEWS_BODY_LENGTH } from '../security/constants.js';
 import { countNewsComments } from './comments.js';
+import { getPollForNews, type NewsPoll } from './polls.js';
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS news_posts (
@@ -14,6 +15,12 @@ db.exec(`
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
   CREATE INDEX IF NOT EXISTS idx_news_published ON news_posts(is_published, created_at DESC);
+
+  CREATE TABLE IF NOT EXISTS user_news_reads (
+    user_id INTEGER PRIMARY KEY,
+    last_read_news_id INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
 `);
 
 const newsCols = db.prepare('PRAGMA table_info(news_posts)').all() as { name: string }[];
@@ -48,9 +55,10 @@ export interface NewsPost {
   createdAt: string;
   updatedAt: string;
   commentCount?: number;
+  poll?: NewsPoll | null;
 }
 
-function rowToPost(row: NewsRow): NewsPost {
+function rowToPost(row: NewsRow, userId?: number): NewsPost {
   const author = findUserById(row.author_id);
   return {
     id: row.id,
@@ -64,23 +72,24 @@ function rowToPost(row: NewsRow): NewsPost {
     createdAt: row.created_at.includes('T') ? row.created_at : `${row.created_at.replace(' ', 'T')}Z`,
     updatedAt: row.updated_at.includes('T') ? row.updated_at : `${row.updated_at.replace(' ', 'T')}Z`,
     commentCount: countNewsComments(row.id),
+    poll: getPollForNews(row.id, userId) ?? null,
   };
 }
 
-export function listPublishedNews(limit = 50): NewsPost[] {
+export function listPublishedNews(limit = 50, userId?: number): NewsPost[] {
   const rows = db
     .prepare(
       `SELECT * FROM news_posts WHERE is_published = 1 ORDER BY is_featured DESC, created_at DESC LIMIT ?`
     )
     .all(limit) as NewsRow[];
-  return rows.map(rowToPost);
+  return rows.map((row) => rowToPost(row, userId));
 }
 
-export function listAllNews(limit = 100): NewsPost[] {
+export function listAllNews(limit = 100, userId?: number): NewsPost[] {
   const rows = db
     .prepare(`SELECT * FROM news_posts ORDER BY created_at DESC LIMIT ?`)
     .all(limit) as NewsRow[];
-  return rows.map(rowToPost);
+  return rows.map((row) => rowToPost(row, userId));
 }
 
 export function createNews(
@@ -115,6 +124,11 @@ export function createNews(
     .prepare('SELECT * FROM news_posts WHERE id = ?')
     .get(Number(result.lastInsertRowid)) as NewsRow;
   return rowToPost(row);
+}
+
+export function findNewsById(id: number, userId?: number): NewsPost | null {
+  const row = db.prepare('SELECT * FROM news_posts WHERE id = ?').get(id) as NewsRow | undefined;
+  return row ? rowToPost(row, userId) : null;
 }
 
 export function updateNews(
@@ -153,4 +167,28 @@ export function updateNews(
 export function deleteNews(id: number): boolean {
   const result = db.prepare('DELETE FROM news_posts WHERE id = ?').run(id);
   return Number(result.changes) > 0;
+}
+
+export function getUnreadNewsCount(userId: number): number {
+  const row = db
+    .prepare('SELECT last_read_news_id FROM user_news_reads WHERE user_id = ?')
+    .get(userId) as { last_read_news_id: number } | undefined;
+  const lastId = row?.last_read_news_id ?? 0;
+  const countRow = db
+    .prepare(
+      'SELECT COUNT(*) as c FROM news_posts WHERE is_published = 1 AND id > ?'
+    )
+    .get(lastId) as { c: number };
+  return countRow.c;
+}
+
+export function markAllNewsRead(userId: number): number {
+  const maxRow = db
+    .prepare('SELECT COALESCE(MAX(id), 0) as maxId FROM news_posts WHERE is_published = 1')
+    .get() as { maxId: number };
+  db.prepare(
+    `INSERT INTO user_news_reads (user_id, last_read_news_id) VALUES (?, ?)
+     ON CONFLICT(user_id) DO UPDATE SET last_read_news_id = excluded.last_read_news_id`
+  ).run(userId, maxRow.maxId);
+  return 0;
 }

@@ -19,6 +19,7 @@ import { createMessagesRouter } from './messages/routes.js';
 import { createSupportRouter } from './support/routes.js';
 import { createNewsRouter } from './news/routes.js';
 import './news/comments.js';
+import './news/polls.js';
 import settingsRoutes from './settings/routes.js';
 import { getUnreadCount } from './messages/store.js';
 import { socketAuthMiddleware, refreshSocketUser } from './auth/jwt.js';

@@ -39,6 +39,49 @@ import { initYandexMetrika } from '../metrika';
 import AdminSystemSection, { type SystemView } from './AdminSystemSection';
 import AdminRoomOrderList from './AdminRoomOrderList';
 
+function defaultNewsForm(): NewsEditorValue {
+  return {
+    title: '',
+    body: '',
+    coverImage: null,
+    isPublished: true,
+    isFeatured: false,
+    pollEnabled: false,
+    pollQuestion: '',
+    pollOptions: ['', ''],
+    pollEndsAt: '',
+  };
+}
+
+function toDatetimeLocalValue(iso: string): string {
+  const date = new Date(iso);
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function newsFormFromPost(item: NewsPost): NewsEditorValue {
+  return {
+    title: item.title,
+    body: item.body,
+    coverImage: item.coverImage ?? null,
+    isPublished: item.isPublished,
+    isFeatured: !!item.isFeatured,
+    pollEnabled: !!item.poll,
+    pollQuestion: item.poll?.question ?? '',
+    pollOptions: item.poll?.options.map((option) => option.label) ?? ['', ''],
+    pollEndsAt: item.poll?.endsAt ? toDatetimeLocalValue(item.poll.endsAt) : '',
+  };
+}
+
+function buildPollPayload(form: NewsEditorValue) {
+  return {
+    enabled: form.pollEnabled,
+    question: form.pollQuestion.trim(),
+    options: form.pollOptions.map((option) => option.trim()).filter(Boolean),
+    endsAt: form.pollEndsAt ? new Date(form.pollEndsAt).toISOString() : null,
+  };
+}
+
 const VIOLATION_LABELS: Record<ViolationType, string> = {
   profanity: 'Мат',
   advertising: 'Реклама',
@@ -74,13 +117,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [newsPosts, setNewsPosts] = useState<NewsPost[]>([]);
   const [newsLoading, setNewsLoading] = useState(false);
-  const [newsForm, setNewsForm] = useState<NewsEditorValue>({
-    title: '',
-    body: '',
-    coverImage: null,
-    isPublished: true,
-    isFeatured: false,
-  });
+  const [newsForm, setNewsForm] = useState<NewsEditorValue>(defaultNewsForm());
   const [showNewsEditor, setShowNewsEditor] = useState(false);
   const [violations, setViolations] = useState<ViolationLogEntry[]>([]);
   const [violationsLoading, setViolationsLoading] = useState(false);
@@ -405,7 +442,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
   };
 
   const resetNewsForm = () => {
-    setNewsForm({ title: '', body: '', coverImage: null, isPublished: true, isFeatured: false });
+    setNewsForm(defaultNewsForm());
     setEditNews(null);
     setShowNewsEditor(false);
   };
@@ -425,6 +462,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
         coverImage: newsForm.coverImage,
         isPublished: newsForm.isPublished,
         isFeatured: newsForm.isFeatured,
+        poll: buildPollPayload(newsForm),
       };
       if (editNews) {
         await adminUpdateNews(editNews.id, payload);
@@ -440,13 +478,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
 
   const handleEditNews = (item: NewsPost) => {
     setEditNews(item);
-    setNewsForm({
-      title: item.title,
-      body: item.body,
-      coverImage: item.coverImage ?? null,
-      isPublished: item.isPublished,
-      isFeatured: !!item.isFeatured,
-    });
+    setNewsForm(newsFormFromPost(item));
     setShowNewsEditor(true);
   };
 
@@ -864,13 +896,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
                     className="btn btn-primary btn-sm"
                     onClick={() => {
                       setEditNews(null);
-                      setNewsForm({
-                        title: '',
-                        body: '',
-                        coverImage: null,
-                        isPublished: true,
-                        isFeatured: false,
-                      });
+                      setNewsForm(defaultNewsForm());
                       setShowNewsEditor(true);
                     }}
                   >
@@ -889,6 +915,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
                     onSubmit={handleSaveNews}
                     submitLabel="Сохранить"
                     onCancel={resetNewsForm}
+                    pollHasVotes={(editNews?.poll?.totalVotes ?? 0) > 0}
                   />
                 </>
               )}
@@ -911,6 +938,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
                     <p className="news-author muted">
                       {item.authorName || '—'} · {item.isPublished ? 'опубликовано' : 'черновик'}
                       {item.isFeatured ? ' · избранное' : ''}
+                      {item.poll ? ` · голосование (${item.poll.totalVotes})` : ''}
                     </p>
                     {item.coverImage && (
                       <img

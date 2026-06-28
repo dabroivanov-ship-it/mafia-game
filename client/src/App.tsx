@@ -20,7 +20,7 @@ import {
   type RoomScreen,
 } from './roomRouting';
 import { DEFAULT_PAGE_META, updatePageMeta } from './seo';
-import { clearSession, fetchMe, fetchUnreadMailCount, fetchThemeSettings, saveSession, loadStoredPlayerId, saveStoredPlayerId, clearStoredPlayerIds } from './api';
+import { clearSession, fetchMe, fetchUnreadMailCount, fetchUnreadNewsCount, fetchThemeSettings, saveSession, loadStoredPlayerId, saveStoredPlayerId, clearStoredPlayerIds } from './api';
 import type { LobbyRoom, RoomState, User, ThemeId, LobbyUpdate, SiteBranding } from './types';
 import { applyTheme, resolveTheme, DEFAULT_THEME } from './themes';
 import { DEFAULT_SITE_BRANDING } from './siteBranding';
@@ -70,6 +70,7 @@ export default function App() {
   const [notification, setNotification] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [unreadMailCount, setUnreadMailCount] = useState(0);
+  const [unreadNewsCount, setUnreadNewsCount] = useState(0);
   const [pmNotice, setPmNotice] = useState<string | null>(null);
   const [lobbyScreen, setLobbyScreen] = useState<LobbyScreen>('rooms');
   const [composeToUserId, setComposeToUserId] = useState<number | null>(null);
@@ -263,6 +264,9 @@ export default function App() {
     if (!token) return;
     void fetchUnreadMailCount()
       .then(({ count }) => setUnreadMailCount(count))
+      .catch(() => {});
+    void fetchUnreadNewsCount()
+      .then(({ count }) => setUnreadNewsCount(count))
       .catch(() => {});
   }, [token]);
 
@@ -550,18 +554,6 @@ export default function App() {
         </div>
       )}
 
-      {currentRoomId && roomMinimized && roomState && (
-        <div className="room-return-banner">
-          <span>
-            Вы в комнате «{roomState.name}»
-            {roomState.isInGame ? ' · в партии' : ''}
-          </span>
-          <button type="button" className="btn btn-primary btn-sm" onClick={returnToRoom}>
-            Вернуться в комнату
-          </button>
-        </div>
-      )}
-
       <div className="app-main">
         <div className="app-body">
         {profileStatsUserId != null ? (
@@ -597,7 +589,11 @@ export default function App() {
         )}
         {view === 'news' && (
           <ViewSuspense label="Новости…">
-            <News user={user} onBack={() => setView('lobby')} />
+            <News
+              user={user}
+              onBack={() => setView('lobby')}
+              onRead={() => setUnreadNewsCount(0)}
+            />
           </ViewSuspense>
         )}
         {view === 'cabinet' && lobbyScreen === 'cabinet-settings' && (
@@ -716,6 +712,7 @@ export default function App() {
         }}
         onLogout={handleLogout}
         unreadMailCount={unreadMailCount}
+        unreadNewsCount={unreadNewsCount}
       />
     </div>
   );

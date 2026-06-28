@@ -8,6 +8,7 @@ import {
   canBanTarget,
   listStaffUsers,
   listLeaderboard,
+  countLeaderboard,
   linkTelegramUserEmail,
   updateUserPasswordHash,
   searchPublicUsers,
@@ -181,7 +182,7 @@ export function createProfileRouter({ onProfileUpdated }: ProfileRouterOptions =
       Number.isFinite(limit) ? limit : 100,
       Number.isFinite(offset) ? offset : 0
     );
-    res.json({ players });
+    res.json({ players, total: countLeaderboard() });
   });
 
   router.get('/quiz-leaderboard', (req, res) => {

@@ -26,6 +26,7 @@ interface MenuProps {
   onNavigate: (view: MenuView) => void;
   onLogout: () => void;
   unreadMailCount?: number;
+  unreadNewsCount?: number;
 }
 
 export default function Menu({
@@ -35,6 +36,7 @@ export default function Menu({
   onNavigate,
   onLogout,
   unreadMailCount = 0,
+  unreadNewsCount = 0,
 }: MenuProps) {
   return (
     <nav className="main-menu" aria-label="Главное меню">
@@ -53,6 +55,9 @@ export default function Menu({
             <span className="menu-label">{item.label}</span>
             {item.id === 'cabinet' && unreadMailCount > 0 && (
               <span className="menu-badge">{unreadMailCount > 99 ? '99+' : unreadMailCount}</span>
+            )}
+            {item.id === 'news' && unreadNewsCount > 0 && (
+              <span className="menu-badge">+{unreadNewsCount > 99 ? '99' : unreadNewsCount}</span>
             )}
           </button>
         ))}

@@ -426,6 +426,13 @@ export function listLeaderboard(limit = 100, offset = 0): LeaderboardEntry[] {
   }));
 }
 
+export function countLeaderboard(): number {
+  const row = db
+    .prepare('SELECT COUNT(*) as c FROM users WHERE is_banned = 0')
+    .get() as { c: number };
+  return row.c;
+}
+
 export function listAllUsers(): PublicUser[] {
   const rows = db
     .prepare(

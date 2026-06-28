@@ -4,12 +4,18 @@ import { isEmptyNewsBody } from './newsBodyUtils';
 import NewsRichEditor from './NewsRichEditor';
 import ToggleSwitch from './ToggleSwitch';
 
+const EMPTY_POLL_OPTIONS = ['', ''];
+
 export interface NewsEditorValue {
   title: string;
   body: string;
   coverImage: string | null;
   isPublished: boolean;
   isFeatured: boolean;
+  pollEnabled: boolean;
+  pollQuestion: string;
+  pollOptions: string[];
+  pollEndsAt: string;
 }
 
 interface NewsEditorProps {
@@ -18,6 +24,7 @@ interface NewsEditorProps {
   onSubmit: (e: FormEvent) => void;
   submitLabel: string;
   onCancel?: () => void;
+  pollHasVotes?: boolean;
 }
 
 export default function NewsEditor({
@@ -26,6 +33,7 @@ export default function NewsEditor({
   onSubmit,
   submitLabel,
   onCancel,
+  pollHasVotes = false,
 }: NewsEditorProps) {
   const coverInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -37,8 +45,35 @@ export default function NewsEditor({
       setError('Введите текст новости');
       return;
     }
+    if (value.pollEnabled) {
+      if (!value.pollQuestion.trim()) {
+        setError('Укажите вопрос голосования');
+        return;
+      }
+      const filledOptions = value.pollOptions.map((item) => item.trim()).filter(Boolean);
+      if (filledOptions.length < 2) {
+        setError('Добавьте минимум 2 варианта ответа');
+        return;
+      }
+    }
     setError('');
     onSubmit(e);
+  };
+
+  const updatePollOption = (index: number, text: string) => {
+    const pollOptions = [...value.pollOptions];
+    pollOptions[index] = text;
+    onChange({ ...value, pollOptions });
+  };
+
+  const addPollOption = () => {
+    if (value.pollOptions.length >= 10) return;
+    onChange({ ...value, pollOptions: [...value.pollOptions, ''] });
+  };
+
+  const removePollOption = (index: number) => {
+    if (value.pollOptions.length <= 2) return;
+    onChange({ ...value, pollOptions: value.pollOptions.filter((_, i) => i !== index) });
   };
 
   const handleCoverUpload = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -120,7 +155,85 @@ export default function NewsEditor({
           checked={value.isFeatured}
           onChange={(isFeatured) => onChange({ ...value, isFeatured })}
         />
+        <ToggleSwitch
+          id="news-poll"
+          label="Голосование"
+          checked={value.pollEnabled}
+          onChange={(pollEnabled) =>
+            onChange({
+              ...value,
+              pollEnabled,
+              pollOptions:
+                pollEnabled && value.pollOptions.length < 2
+                  ? [...EMPTY_POLL_OPTIONS]
+                  : value.pollOptions,
+            })
+          }
+        />
       </div>
+
+      {value.pollEnabled && (
+        <div className="news-editor-poll">
+          <label className="news-editor-field">
+            <span className="news-editor-field-label">Вопрос голосования</span>
+            <input
+              className="news-editor-input"
+              value={value.pollQuestion}
+              onChange={(e) => onChange({ ...value, pollQuestion: e.target.value })}
+              maxLength={200}
+              placeholder="Например: Какую роль добавить в игру?"
+            />
+          </label>
+
+          <div className="news-editor-field">
+            <span className="news-editor-field-label">Варианты ответа</span>
+            {pollHasVotes && (
+              <p className="muted news-editor-poll-note">
+                Уже есть голоса — можно менять только вопрос и дату окончания.
+              </p>
+            )}
+            <div className="news-editor-poll-options">
+              {value.pollOptions.map((option, index) => (
+                <div key={index} className="news-editor-poll-option-row">
+                  <input
+                    className="news-editor-input"
+                    value={option}
+                    onChange={(e) => updatePollOption(index, e.target.value)}
+                    maxLength={120}
+                    placeholder={`Вариант ${index + 1}`}
+                    disabled={pollHasVotes}
+                  />
+                  {!pollHasVotes && value.pollOptions.length > 2 && (
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => removePollOption(index)}
+                      aria-label="Удалить вариант"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            {!pollHasVotes && value.pollOptions.length < 10 && (
+              <button type="button" className="btn btn-ghost btn-sm" onClick={addPollOption}>
+                + Добавить вариант
+              </button>
+            )}
+          </div>
+
+          <label className="news-editor-field">
+            <span className="news-editor-field-label">Окончание голосования (необязательно)</span>
+            <input
+              className="news-editor-input"
+              type="datetime-local"
+              value={value.pollEndsAt}
+              onChange={(e) => onChange({ ...value, pollEndsAt: e.target.value })}
+            />
+          </label>
+        </div>
+      )}
 
       <div className="news-editor-field news-editor-content">
         <span className="news-editor-field-label">Содержание</span>

@@ -1,22 +1,33 @@
 # Мафия — онлайн
 
-Многопользовательская игра «Мафия» с регистрацией, профилями, комнатами, чатом и WebSocket в реальном времени.
+Бесплатная многопользовательская игра «Мафия» с регистрацией, комнатами, чатом, рейтингом и WebSocket в реальном времени.
 
-## Стек
+**Стек:** Node.js + Express + Socket.IO + SQLite (сервер), React + Vite (клиент). Продакшен: PM2 + Caddy (HTTPS).
 
-| Часть | Технологии |
-|-------|------------|
-| Сервер | Node.js, Express, Socket.IO, SQLite, **TypeScript** |
-| Клиент | React, Vite, **TypeScript** |
-| Продакшен | PM2 + Caddy (HTTPS) |
+---
+
+## Возможности
+
+### Игра
+- Комнаты на 3–10 игроков, регистрация в партию, фазы дня и ночи
+- Роли: мафия, дон, комиссар (Катани), доктор, маньяк, адвокат и др. — состав зависит от числа игроков
+- Чат в комнате, голосование днём, ночные действия ролей
+- MMR и статистика после партий, репутация игроков
+
+### Сайт
+- **Комнаты** — игровые и чат-комнаты (в чат-комнатах работает викторина)
+- **Новости** — объявления администрации, голосования, комментарии с ответами, бейдж непрочитанного
+- **Кабинет** — профиль, личные сообщения, поддержка, поиск игроков, тема оформления
+- **Информация** — правила, роли, FAQ, рейтинг (по 15 игроков на странице), топ викторины, команда проекта
+- **Админ-панель** — пользователи, комнаты, новости с опросами, модерация, настройки сайта
 
 ---
 
 ## Требования
 
-- **Node.js 20+** (18 тоже подойдёт)
-- **npm**
-- **Git**
+- Node.js **20+** (18 тоже подойдёт)
+- npm
+- Git
 
 На Linux для `better-sqlite3` могут понадобиться: `build-essential`, `python3`.
 
@@ -26,34 +37,30 @@
 
 | Задача | Команда |
 |--------|---------|
-| Локальная разработка (сервер) | `cd server && npm install && npm run dev` |
-| Локальная разработка (клиент) | `cd client && npm install && npm run dev` |
-| Сборка всего | `cd client && npm run build` → `cd ../server && npm run build` |
-| Обновление на VPS | см. [раздел 4](#4-обновление-на-сервере) |
+| Dev: сервер | `cd server && npm install && npm run dev` |
+| Dev: клиент | `cd client && npm install && npm run dev` |
+| Сборка клиента | `cd client && npm run build` |
+| Сборка сервера | `cd server && npm run build` |
+| Запуск prod локально | `cd server && npm start` (после сборки обоих) |
+| Обновление на VPS | `bash scripts/deploy.sh` или [раздел ниже](#обновление-на-сервере) |
 
 ---
 
-## 1. Локальная установка
+## Локальная разработка
 
-### 1.1. Клонировать репозиторий
+### 1. Клонировать и установить зависимости
 
 ```bash
 git clone https://github.com/dabroivanov-ship-it/mafia-game.git
 cd mafia-game
-```
 
-### 1.2. Установить зависимости
-
-```bash
 cd server && npm install
 cd ../client && npm install
 ```
 
-### 1.3. Запуск для разработки
+### 2. Запуск (два терминала)
 
-Нужны **два терминала**.
-
-**Терминал 1 — сервер** (TypeScript через `tsx`, перезапуск при изменениях):
+**Сервер** — TypeScript через `tsx`, перезапуск при изменениях:
 
 ```bash
 cd server
@@ -62,7 +69,7 @@ npm run dev
 
 → API и WebSocket: http://localhost:3001
 
-**Терминал 2 — клиент** (Vite с hot reload):
+**Клиент** — Vite с hot reload:
 
 ```bash
 cd client
@@ -71,53 +78,45 @@ npm run dev
 
 → Интерфейс: http://localhost:5173
 
-Клиент в dev-режиме проксирует `/socket.io` на порт 3001 (см. `client/vite.config.ts`).
+Клиент в dev-режиме проксирует `/socket.io` и `/api` на порт 3001 (см. `client/vite.config.ts`).
 
-### 1.4. Локальный запуск «как на проде»
+### 3. Локальный запуск «как на проде»
 
 ```bash
-# Клиент → client/dist
-cd client
-npm run build
-
-# Сервер → server/dist
-cd ../server
-npm run build
-npm start
+cd client && npm run build
+cd ../server && npm run build && npm start
 ```
 
-Откройте http://localhost:3001 — сервер отдаёт и API, и собранный React.
+Откройте http://localhost:3001 — сервер отдаёт и API, и собранный React из `client/dist`.
 
-### 1.5. Первый вход
+### 4. Первый вход
 
 1. Откройте http://localhost:5173 (dev) или http://localhost:3001 (prod-режим)
-2. Зарегистрируйтесь (логин, email, пароль)
+2. Зарегистрируйтесь
 3. Зайдите в комнату → **«Запустить игру»** → другие игроки нажимают **«Присоединиться»**
-4. Минимум **3 игрока** в регистрации (удобно проверить в нескольких вкладках с разными аккаунтами)
+4. Минимум **3 игрока** (удобно проверить в нескольких вкладках)
 
-База данных создаётся автоматически: `server/data/mafia.db`  
-Аватары: `server/uploads/avatars/`
+**Данные:**
+- База SQLite: `server/data/mafia.db` (создаётся автоматически)
+- Аватары: `server/uploads/avatars/`
+- Изображения новостей: `server/uploads/news/`
+
+Схема БД и новые таблицы (голосования, прочитанные новости и т.д.) применяются **автоматически** при старте сервера — отдельная миграция не нужна.
 
 ---
 
-## 2. Установка на VPS (продакшен)
+## Установка на VPS (продакшен)
 
 Пример: Ubuntu VPS, домен **24vpsbro.ru**, каталог **`/home/mafia-game`**.
 
-### 2.1. DNS
+### DNS
 
 | Тип | Имя | Значение |
 |-----|-----|----------|
 | A | `@` | IP VPS |
 | A | `www` | IP VPS |
 
-### 2.2. Подключение
-
-```bash
-ssh root@IP_ВАШЕГО_VPS
-```
-
-### 2.3. Установка ПО
+### ПО на сервере
 
 ```bash
 apt update && apt upgrade -y
@@ -133,55 +132,46 @@ curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmo
 curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
 apt update && apt install -y caddy
 
-# PM2
 npm install -g pm2
 ```
 
-### 2.4. Скачать и собрать проект
+### Клонирование и сборка
 
 ```bash
 cd /home
 git clone https://github.com/dabroivanov-ship-it/mafia-game.git
 cd mafia-game
 
-# Зависимости и сборка клиента (TypeScript + Vite → client/dist)
-cd client
-npm install
-npm run build
-
-# Зависимости и сборка сервера (TypeScript → server/dist)
-cd ../server
-npm install
-npm run build
+cd client && npm install && npm run build
+cd ../server && npm install && npm run build
 ```
 
 Проверка:
 
 ```bash
-test -f /home/mafia-game/client/dist/index.html && echo "client OK"
-test -f /home/mafia-game/server/dist/server.js && echo "server OK"
+test -f client/dist/index.html && echo "client OK"
+test -f server/dist/server.js && echo "server OK"
 ```
 
-### 2.5. Переменные окружения (PM2)
+### Переменные окружения
 
 ```bash
-nano /home/mafia-game/ecosystem.config.cjs
+cp server/.env.example server/.env
+nano server/.env
 ```
 
-Обязательно задайте **`JWT_SECRET`** (длинная случайная строка). Пример:
+Обязательно на проде:
 
-```js
-env: {
-  NODE_ENV: 'production',
-  PORT: 3001,
-  JWT_SECRET: 'ваш-длинный-случайный-ключ-минимум-32-символа',
-  ADMIN_USERNAMES: 'admin',  // логины админов через запятую
-},
-```
+| Переменная | Описание |
+|------------|----------|
+| `JWT_SECRET` | Случайная строка **минимум 32 символа** (`openssl rand -hex 32`) |
+| `CORS_ORIGIN` | Публичный URL сайта без слэша в конце, напр. `https://24vpsbro.ru` |
 
-PM2 запускает **`server/dist/server.js`** (скомпилированный TypeScript).
+Остальное — см. [переменные окружения](#переменные-окружения).
 
-### 2.6. Запуск бэкенда
+PM2 читает `server/.env` через `ecosystem.config.cjs`.
+
+### Запуск
 
 ```bash
 cd /home/mafia-game
@@ -195,21 +185,19 @@ pm2 startup   # выполните команду, которую выведет
 ```bash
 pm2 status
 curl http://127.0.0.1:3001/api/health
-curl -sI http://127.0.0.1:3001/ | head -3
 ```
 
-### 2.7. Caddy
+### Caddy
 
 ```bash
-cd /home/mafia-game
 cp Caddyfile /etc/caddy/Caddyfile
-# замените 24vpsbro.ru на свой домен, если нужно
+# замените домен в Caddyfile на свой
 caddy validate --config /etc/caddy/Caddyfile
 systemctl reload caddy
 systemctl enable caddy
 ```
 
-### 2.8. Firewall
+### Firewall
 
 ```bash
 ufw allow OpenSSH
@@ -220,39 +208,18 @@ ufw enable
 
 Порт **3001** наружу не открывайте — к нему ходит только Caddy локально.
 
-### 2.9. Проверка
+---
+
+## Обновление на сервере
+
+**Рекомендуемый способ** — скрипт деплоя (pull, сборка, проверка БД, restart PM2):
 
 ```bash
-curl -sI https://24vpsbro.ru/ | head -3
-pm2 logs mafia-server --lines 20
+cd /home/mafia-game
+bash scripts/deploy.sh
 ```
 
-Откройте **https://24vpsbro.ru** → регистрация → комнаты.
-
----
-
-## 3. Схема работы
-
-```
-Браузер
-   ↓ HTTPS :443
- Caddy
-   ↓ reverse_proxy 127.0.0.1:3001
- Node.js (server/dist/server.js)
-   ├─ /api/auth/*      → регистрация, вход
-   ├─ /api/profile/*   → профиль, настройки
-   ├─ /api/admin/*     → админ-панель
-   ├─ /api/health      → статус
-   ├─ /socket.io/*     → игра (WebSocket)
-   ├─ /uploads/*       → аватары
-   └─ /*               → React (client/dist)
-```
-
----
-
-## 4. Обновление на сервере
-
-Одной цепочкой:
+**Вручную:**
 
 ```bash
 cd /home/mafia-game && git pull && \
@@ -261,16 +228,41 @@ cd ../server && npm install && npm run build && \
 cd .. && pm2 restart mafia-server
 ```
 
-Проверка после обновления:
+После обновления:
 
 ```bash
-pm2 logs mafia-server --lines 15
+pm2 logs mafia-server --lines 20
 curl -s http://127.0.0.1:3001/api/health
+```
+
+В браузере — жёсткое обновление (Ctrl+F5), чтобы подтянуть новый клиент.
+
+Файл **`server/data/mafia.db`** не удаляйте.
+
+---
+
+## Схема работы
+
+```
+Браузер
+   ↓ HTTPS :443
+ Caddy
+   ↓ reverse_proxy 127.0.0.1:3001
+ Node.js (server/dist/server.js)
+   ├─ /api/auth/*        → регистрация, вход, Telegram OIDC
+   ├─ /api/profile/*     → профиль, рейтинг, поиск
+   ├─ /api/news/*        → новости, комментарии, голосования
+   ├─ /api/messages/*    → личные сообщения
+   ├─ /api/admin/*       → админ-панель
+   ├─ /api/health        → статус
+   ├─ /socket.io/*       → игра и чат (WebSocket)
+   ├─ /uploads/*         → аватары, новости, брендинг
+   └─ /*                 → React (client/dist)
 ```
 
 ---
 
-## 5. npm-скрипты
+## npm-скрипты
 
 ### Сервер (`server/`)
 
@@ -290,87 +282,112 @@ curl -s http://127.0.0.1:3001/api/health
 
 ---
 
-## 6. Настройки игры
+## Настройки игры
 
-Файл **`server/game/config.ts`** (после правок на сервере: `npm run build` в `server/` и `pm2 restart`):
+Файл **`server/game/config.ts`**. После правок на сервере: `npm run build` в `server/` и `pm2 restart mafia-server`.
 
 | Параметр | По умолчанию | Описание |
 |----------|--------------|----------|
-| MIN_PLAYERS | 3 | Минимум игроков для старта |
-| MAX_PLAYERS | 10 | Абсолютный максимум |
-| DEFAULT_MAX_PLAYERS | 6 | Мест в комнате |
-| REGISTRATION_SEC | 60 | Время регистрации (сек) |
-| JOIN_GAME_COOLDOWN_SEC | 15 | Пауза перед повторным «Присоединиться» |
-| DAY_DISCUSSION_SEC | 60 | Дневное обсуждение |
-| NIGHT_ACTIONS_SEC | 60 | Ночные действия |
-| ROOM_COUNT | 3 | Число комнат в лобби |
+| `MIN_PLAYERS` | 3 | Минимум игроков для старта |
+| `MAX_PLAYERS` | 10 | Абсолютный максимум |
+| `DEFAULT_MAX_PLAYERS` | 10 | Мест в комнате |
+| `REGISTRATION_SEC` | 60 | Время регистрации (сек) |
+| `JOIN_GAME_COOLDOWN_SEC` | 15 | Пауза перед повторным «Присоединиться» |
+| `DAY_DISCUSSION_SEC` | 60 | Дневное обсуждение |
+| `NIGHT_ACTIONS_SEC` | 60 | Ночные действия |
+| `ROOM_COUNT` | 1 | Число игровых комнат в лобби |
+| `CHAT_ROOM_MAX_PLAYERS` | 50 | Лимит в чат-комнате |
 
 ---
 
-## 7. Переменные окружения
+## Переменные окружения
 
-| Переменная | Описание |
-|------------|----------|
-| `PORT` | Порт сервера (по умолчанию 3001) |
-| `JWT_SECRET` | Секрет JWT (**обязателен на проде**) |
-| `JWT_EXPIRES` | Срок токена (по умолчанию 7d) |
-| `DB_PATH` | Путь к SQLite (по умолчанию `server/data/mafia.db`) |
-| `UPLOADS_DIR` | Папка аватаров |
-| `ADMIN_USERNAMES` | Логины админов через запятую |
+Файл-образец: `server/.env.example`. На VPS копируйте в `server/.env`.
+
+| Переменная | Обязательно | Описание |
+|------------|-------------|----------|
+| `JWT_SECRET` | да (prod) | Секрет JWT, мин. 32 символа |
+| `CORS_ORIGIN` | да (prod) | URL сайта, напр. `https://example.ru` |
+| `PORT` | нет | Порт сервера (по умолчанию 3001) |
+| `JWT_EXPIRES` | нет | Срок токена (по умолчанию 7d) |
+| `ADMIN_USERNAMES` | нет | Логины админов через запятую |
+| `DB_PATH` | нет | Путь к SQLite (по умолчанию `server/data/mafia.db`) |
+| `UPLOADS_DIR` | нет | Папка аватаров |
+| `TELEGRAM_BOT_TOKEN` | нет | Telegram-бот |
+| `TELEGRAM_WEBAPP_URL` | нет | URL Web App |
+| `TELEGRAM_OIDC_CLIENT_ID` | нет | Вход через Telegram OIDC |
+| `TELEGRAM_OIDC_CLIENT_SECRET` | нет | Секрет OIDC |
+| `ALLOW_INSECURE_DEV` | нет | Только локально: ослабить проверки JWT/CORS |
 
 ---
 
-## 8. API (основное)
+## API (основное)
 
 | Метод | URL | Описание |
 |-------|-----|----------|
 | POST | `/api/auth/register` | Регистрация |
 | POST | `/api/auth/login` | Вход |
 | GET | `/api/auth/me` | Текущий пользователь (Bearer token) |
-| PUT | `/api/profile` | Обновление профиля (в т.ч. лимит сообщений в чате) |
-| GET | `/api/health` | Статус сервера и комнат |
+| GET | `/api/profile/leaderboard` | Рейтинг игроков (`limit`, `offset`) |
+| GET | `/api/news` | Опубликованные новости |
+| POST | `/api/news/:id/poll/vote` | Голос в опросе новости |
+| GET | `/api/messages/unread-count` | Непрочитанные личные сообщения |
+| GET | `/api/health` | Статус сервера |
+
+WebSocket: `/socket.io` — комнаты, игра, чат, викторина.
 
 ---
 
-## 9. Частые проблемы
+## Частые проблемы
 
 | Проблема | Решение |
 |----------|---------|
-| Сайт **502 Bad Gateway** | Caddy работает, Node — нет: `pm2 logs mafia-server --lines 50`, затем `bash scripts/deploy.sh` или ручная пересборка (см. ниже) |
-| Сайт 404 / «Клиент не собран» | `cd client && npm run build`, затем `pm2 restart mafia-server` |
+| **502 Bad Gateway** | Node не запущен: `pm2 logs mafia-server`, затем `bash scripts/deploy.sh` |
+| **404 / «Клиент не собран»** | `cd client && npm run build`, `pm2 restart mafia-server` |
 | Сервер не стартует после pull | `cd server && npm install && npm run build` |
 | «Загрузка комнат...» | `pm2 status` — процесс `mafia-server` должен быть online |
-| `git pull` конфликт | `git stash && git pull`, затем пересборка и `pm2 restart mafia-server` |
+| Конфликт `git pull` | `git stash && git pull`, пересборка, `pm2 restart mafia-server` |
 | Нет HTTPS | DNS → IP сервера; порты 80/443 открыты |
 | Ошибка `better-sqlite3` | `apt install -y build-essential python3`, затем `npm install` в `server/` |
-| TypeScript-ошибки при сборке | Исправить код, затем `npm run build` в `client/` и `server/` |
+| Ошибки TypeScript при сборке | Исправить код, `npm run build` в `client/` и `server/` |
+| Старый интерфейс после деплоя | Ctrl+F5 в браузере |
 
 ---
 
-## 10. Структура проекта
+## Структура проекта
 
 ```
 mafia-game/
-├── server/
-│   ├── server.ts          # Исходник: Express + Socket.IO
-│   ├── dist/              # Сборка tsc (в .gitignore)
-│   ├── tsconfig.json
-│   ├── types/             # Типы сервера
-│   ├── auth/              # JWT, SQLite, пользователи
-│   ├── game/              # Логика мафии (engine.ts, config.ts)
-│   ├── history/           # Лог чата и событий
-│   ├── profile/           # API профиля
-│   ├── admin/             # Админ-панель API
-│   └── data/mafia.db      # БД (создаётся автоматически)
 ├── client/
 │   ├── src/
-│   │   ├── types/         # Типы клиента
-│   │   ├── components/    # React (.tsx)
+│   │   ├── components/    # React-компоненты
+│   │   ├── content/       # Тексты правил, FAQ, ролей
 │   │   ├── App.tsx
 │   │   └── api.ts
-│   ├── dist/              # Сборка Vite (в .gitignore)
-│   └── vite.config.ts
+│   └── dist/              # Сборка Vite (не в git)
+├── server/
+│   ├── server.ts          # Express + Socket.IO
+│   ├── dist/              # Сборка tsc (не в git)
+│   ├── auth/              # JWT, SQLite, пользователи
+│   ├── game/              # Движок мафии, config, роли
+│   ├── news/              # Новости, комментарии, голосования
+│   ├── admin/             # API админ-панели
+│   ├── profile/           # Профиль, рейтинг, staff
+│   ├── messages/          # Личные сообщения
+│   ├── moderation/        # Модерация, лог нарушений
+│   ├── quiz/              # Викторина в чат-комнатах
+│   ├── data/mafia.db      # БД (создаётся автоматически)
+│   └── .env.example
+├── scripts/
+│   ├── deploy.sh          # Деплой на VPS
+│   └── verify-db.mjs      # Проверка схемы SQLite
 ├── Caddyfile
-├── ecosystem.config.cjs   # PM2 → server/dist/server.js
+├── ecosystem.config.cjs   # PM2
 └── README.md
 ```
+
+---
+
+## Лицензия и репозиторий
+
+GitHub: https://github.com/dabroivanov-ship-it/mafia-game
