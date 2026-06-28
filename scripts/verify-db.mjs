@@ -16,6 +16,7 @@ async function load(modulePath) {
 const dbModule = await load(path.join(dist, 'auth', 'db.js'));
 await load(path.join(dist, 'history', 'store.js'));
 await load(path.join(dist, 'news', 'store.js'));
+await load(path.join(dist, 'news', 'comments.js'));
 await load(path.join(dist, 'news', 'polls.js'));
 await load(path.join(dist, 'messages', 'store.js'));
 await load(path.join(dist, 'social', 'store.js'));
@@ -82,6 +83,16 @@ const roomsConfigCols = db
 
 if (!roomsConfigCols.includes('kind')) {
   console.error('ERROR: missing rooms_config column: kind');
+  process.exit(1);
+}
+
+const commentCols = db
+  .prepare('PRAGMA table_info(news_comments)')
+  .all()
+  .map((row) => row.name);
+
+if (!commentCols.includes('parent_id')) {
+  console.error('ERROR: missing news_comments column: parent_id');
   process.exit(1);
 }
 

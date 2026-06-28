@@ -314,17 +314,12 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
             <form className="auth-form" onSubmit={handleRegister}>
 
               <label>
-
                 Логин
-
                 <input
-
                   type="text"
-
                   value={regForm.username}
-
                   onChange={(e) => setRegForm({ ...regForm, username: e.target.value })}
-                  placeholder="player123"
+                  placeholder="Будет отображаться в игре"
                   required
                   minLength={3}
                   maxLength={20}
@@ -343,12 +338,12 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
                 />
               </label>
               <label>
-                Имя
+                Ваше имя
                 <input
                   type="text"
                   value={regForm.displayName}
                   onChange={(e) => setRegForm({ ...regForm, displayName: e.target.value })}
-                  placeholder="Как вас видят другие"
+                  placeholder="Ваше имя"
                   maxLength={20}
                 />
               </label>

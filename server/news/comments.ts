@@ -7,20 +7,18 @@ db.exec(`
     news_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
     body TEXT NOT NULL,
-    parent_id INTEGER,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY (news_id) REFERENCES news_posts(id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (parent_id) REFERENCES news_comments(id) ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
   CREATE INDEX IF NOT EXISTS idx_news_comments_news ON news_comments(news_id, created_at ASC);
-  CREATE INDEX IF NOT EXISTS idx_news_comments_parent ON news_comments(parent_id);
 `);
 
 const commentCols = db.prepare('PRAGMA table_info(news_comments)').all() as { name: string }[];
 if (!commentCols.some((c) => c.name === 'parent_id')) {
   db.exec('ALTER TABLE news_comments ADD COLUMN parent_id INTEGER DEFAULT NULL');
 }
+db.exec('CREATE INDEX IF NOT EXISTS idx_news_comments_parent ON news_comments(parent_id)');
 
 interface CommentRow {
   id: number;
