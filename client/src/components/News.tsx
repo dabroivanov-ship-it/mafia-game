@@ -24,14 +24,17 @@ export default function News({ user, onBack, onRead }: NewsProps) {
       setLoading(true);
       setError('');
       try {
-        const [{ news: list }] = await Promise.all([fetchNews(), markNewsRead()]);
+        const { news: list } = await fetchNews();
         setNews(list);
-        onRead?.();
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Ошибка загрузки');
       } finally {
         setLoading(false);
       }
+
+      void markNewsRead()
+        .then(() => onRead?.())
+        .catch(() => {});
     })();
   }, []);
 

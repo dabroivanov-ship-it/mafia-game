@@ -72,8 +72,17 @@ function rowToPost(row: NewsRow, userId?: number): NewsPost {
     createdAt: row.created_at.includes('T') ? row.created_at : `${row.created_at.replace(' ', 'T')}Z`,
     updatedAt: row.updated_at.includes('T') ? row.updated_at : `${row.updated_at.replace(' ', 'T')}Z`,
     commentCount: countNewsComments(row.id),
-    poll: getPollForNews(row.id, userId) ?? null,
+    poll: safePollForNews(row.id, userId),
   };
+}
+
+function safePollForNews(newsId: number, userId?: number): NewsPoll | null {
+  try {
+    return getPollForNews(newsId, userId) ?? null;
+  } catch (e) {
+    console.error(`[news] poll load failed for news #${newsId}:`, e);
+    return null;
+  }
 }
 
 export function listPublishedNews(limit = 50, userId?: number): NewsPost[] {

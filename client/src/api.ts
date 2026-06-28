@@ -27,7 +27,8 @@ export async function apiRequest<T = unknown>(
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    throw new Error((data as { error?: string }).error || 'Ошибка запроса');
+    const fallback = res.status ? `Ошибка запроса (${res.status})` : 'Ошибка запроса';
+    throw new Error((data as { error?: string }).error || fallback);
   }
   return data as T;
 }

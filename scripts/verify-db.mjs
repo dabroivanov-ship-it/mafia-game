@@ -16,6 +16,7 @@ async function load(modulePath) {
 const dbModule = await load(path.join(dist, 'auth', 'db.js'));
 await load(path.join(dist, 'history', 'store.js'));
 await load(path.join(dist, 'news', 'store.js'));
+await load(path.join(dist, 'news', 'polls.js'));
 await load(path.join(dist, 'messages', 'store.js'));
 await load(path.join(dist, 'social', 'store.js'));
 await load(path.join(dist, 'rooms', 'store.js'));

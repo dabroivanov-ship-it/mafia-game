@@ -14,12 +14,24 @@ export function createNewsRouter() {
   });
 
   router.post('/mark-read', (req, res) => {
-    const count = markAllNewsRead(req.userId!);
-    res.json({ count });
+    try {
+      const count = markAllNewsRead(req.userId!);
+      res.json({ count });
+    } catch (e) {
+      const err = e as Error;
+      console.error('[news] mark-read failed:', err);
+      res.status(500).json({ error: err.message || 'Не удалось отметить новости прочитанными' });
+    }
   });
 
   router.get('/', (req, res) => {
-    res.json({ news: listPublishedNews(50, req.userId!) });
+    try {
+      res.json({ news: listPublishedNews(50, req.userId!) });
+    } catch (e) {
+      const err = e as Error;
+      console.error('[news] list failed:', err);
+      res.status(500).json({ error: err.message || 'Не удалось загрузить новости' });
+    }
   });
 
   router.post('/:newsId/poll/vote', (req, res) => {
