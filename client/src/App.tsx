@@ -379,18 +379,6 @@ export default function App() {
     window.history.pushState(null, '', '/');
   }, []);
 
-  const returnToRoom = useCallback(() => {
-    setRoomMinimized(false);
-    setView('room');
-    if (currentRoomId) {
-      window.history.pushState(
-        null,
-        '',
-        roomScreen === 'members' ? roomMembersPath(currentRoomId) : roomGamePath(currentRoomId)
-      );
-    }
-  }, [currentRoomId, roomScreen]);
-
   const openRoomMembers = useCallback(() => {
     if (!currentRoomId) return;
     setRoomScreen('members');
