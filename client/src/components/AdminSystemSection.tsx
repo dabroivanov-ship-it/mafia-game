@@ -74,10 +74,11 @@ const SYSTEM_CATEGORIES: {
     links: [{ view: 'news', label: 'Публикации и черновики' }],
   },
   {
-    id: 'integrations',
-    icon: '📱',
-    title: 'Интеграции',
+    id: 'system',
+    icon: '⚙️',
+    title: 'Система',
     links: [
+      { view: 'theme', label: 'Тема сайта' },
       { view: 'telegram', label: 'Telegram-бот' },
       { view: 'metrika', label: 'Яндекс.Метрика' },
     ],
@@ -87,7 +88,6 @@ const SYSTEM_CATEGORIES: {
     icon: '🎮',
     title: 'Настройки игры',
     links: [
-      { view: 'theme', label: 'Тема сайта' },
       { view: 'phrases', label: 'Фразы ведущего' },
       { view: 'game-rooms', label: 'Комнаты мафии' },
       { view: 'chat-rooms', label: 'Комнаты чата' },
@@ -146,8 +146,8 @@ export default function AdminSystemSection({
   const badgeFor = (categoryId: string) => {
     if (categoryId === 'users') return usersCount + banListCount + violationsCount;
     if (categoryId === 'news') return newsCount;
-    if (categoryId === 'integrations') return 2;
-    if (categoryId === 'game-settings') return gameRoomsCount + chatRoomsCount + 2;
+    if (categoryId === 'system') return 3;
+    if (categoryId === 'game-settings') return gameRoomsCount + chatRoomsCount + 1;
     return roomsCount || 1;
   };
 

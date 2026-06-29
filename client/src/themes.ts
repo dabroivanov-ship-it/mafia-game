@@ -34,9 +34,9 @@ export const THEMES: ThemeDefinition[] = [
   {
     id: 'crimson',
     name: 'Мафия',
-    description: 'Красно-бордовая атмосфера игры',
-    themeColor: '#100808',
-    preview: ['#100808', '#e63946', '#1a1010'],
+    description: 'Тёмно-синий фон и бирюзовое свечение, как на VIZOR',
+    themeColor: '#000511',
+    preview: ['#000511', '#00c8ff', '#061428'],
   },
   {
     id: 'aurora',
