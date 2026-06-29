@@ -69,6 +69,10 @@ function rowToEntry(row: ViolationRow): ViolationEntry {
   };
 }
 
+export function countViolations(): number {
+  return (db.prepare('SELECT COUNT(*) AS c FROM violation_log').get() as { c: number }).c;
+}
+
 export function listViolations(limit = 200): ViolationEntry[] {
   const rows = db
     .prepare(`SELECT * FROM violation_log ORDER BY created_at DESC LIMIT ?`)

@@ -20,6 +20,7 @@ import { createSupportRouter } from './support/routes.js';
 import { createNewsRouter } from './news/routes.js';
 import './news/comments.js';
 import './news/polls.js';
+import './stats/siteStats.js';
 import settingsRoutes from './settings/routes.js';
 import { getUnreadCount } from './messages/store.js';
 import { socketAuthMiddleware, refreshSocketUser } from './auth/jwt.js';

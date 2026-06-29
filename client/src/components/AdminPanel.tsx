@@ -88,6 +88,8 @@ const VIOLATION_LABELS: Record<ViolationType, string> = {
   other: 'Другое',
 };
 
+const USERS_PAGE_SIZE = 15;
+
 interface AdminPanelProps {
   onBack: () => void;
   onDefaultThemeChange?: (theme: ThemeId) => void;
@@ -104,6 +106,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
   const [banReason, setBanReason] = useState('Нарушение правил');
   const [banHours, setBanHours] = useState('');
   const [userSearch, setUserSearch] = useState('');
+  const [userPage, setUserPage] = useState(0);
   const [editUser, setEditUser] = useState<User | null>(null);
   const [editForm, setEditForm] = useState({ displayName: '', city: '', bio: '' });
   const [newChatRoomName, setNewChatRoomName] = useState('');
@@ -270,6 +273,10 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
     if (systemView === 'violations') void loadViolations();
     if (systemView === 'banlist') void loadBanList();
   }, [systemView]);
+
+  useEffect(() => {
+    setUserPage(0);
+  }, [userSearch]);
 
   const openEditUser = (u: User) => {
     setEditUser(u);
@@ -518,10 +525,14 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
     return (
       u.username.toLowerCase().includes(q) ||
       u.displayName.toLowerCase().includes(q) ||
-      (u.city || '').toLowerCase().includes(q) ||
       (u.isAdmin ? 'admin' : u.isModerator ? 'mod moderator' : 'user').includes(q)
     );
   });
+  const userTotalPages = Math.max(1, Math.ceil(filteredUsers.length / USERS_PAGE_SIZE));
+  const paginatedUsers = filteredUsers.slice(
+    userPage * USERS_PAGE_SIZE,
+    (userPage + 1) * USERS_PAGE_SIZE
+  );
 
   const gameRooms = rooms.filter((r) => r.kind !== 'chat');
   const chatRooms = rooms.filter((r) => r.kind === 'chat');
@@ -589,7 +600,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
                 <input
                   type="search"
                   className="admin-search-input"
-                  placeholder="Поиск по логину, имени, городу или роли..."
+                  placeholder="Поиск по логину, имени или роли..."
                   value={userSearch}
                   onChange={(e) => setUserSearch(e.target.value)}
                 />
@@ -600,8 +611,6 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
                     <tr>
                       <th>Игрок</th>
                       <th>Роль</th>
-                      <th>Город</th>
-                      <th>Очки</th>
                       <th>Статус</th>
                       <th>Действия</th>
                     </tr>
@@ -609,10 +618,10 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
                   <tbody>
                     {filteredUsers.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="muted">Ничего не найдено</td>
+                        <td colSpan={4} className="muted">Ничего не найдено</td>
                       </tr>
                     )}
-                    {filteredUsers.map((u) => (
+                    {paginatedUsers.map((u) => (
                       <tr key={u.id}>
                         <td>
                           <div className="admin-user-cell">
@@ -645,8 +654,6 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
                             </select>
                           )}
                         </td>
-                        <td>{u.city || '—'}</td>
-                        <td>{u.totalScore}</td>
                         <td>
                           {u.isBanned ? (
                             <span className="status-banned">🚫 бан</span>
@@ -679,6 +686,29 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
                   </tbody>
                 </table>
               </div>
+              {userTotalPages > 1 && (
+                <nav className="rating-pagination" aria-label="Страницы пользователей">
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    disabled={userPage === 0}
+                    onClick={() => setUserPage((p) => p - 1)}
+                  >
+                    ← Назад
+                  </button>
+                  <span className="rating-pagination-info muted">
+                    Страница {userPage + 1} из {userTotalPages}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    disabled={userPage >= userTotalPages - 1}
+                    onClick={() => setUserPage((p) => p + 1)}
+                  >
+                    Вперёд →
+                  </button>
+                </nav>
+              )}
             </section>
           ),
           banlist: (

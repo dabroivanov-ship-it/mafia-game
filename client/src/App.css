@@ -3158,8 +3158,6 @@ html.telegram-webapp .app-body {
 
 .site-footer-extra {
   margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid var(--border);
 }
 
 .menu-items {
@@ -4667,6 +4665,18 @@ html.telegram-webapp .app-body {
 .admin-subsection-title {
   margin: 24px 0 12px;
   font-size: 1.05rem;
+}
+
+.admin-stats-panel .admin-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.admin-stats-group:last-child {
+  margin-bottom: 0;
 }
 
 .admin-system-section h3 {

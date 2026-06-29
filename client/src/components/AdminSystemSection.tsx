@@ -2,6 +2,7 @@ import { FormEvent, ReactNode, useState } from 'react';
 import ThemePicker from './ThemePicker';
 import AdminBotPhrasesEditor from './AdminBotPhrasesEditor';
 import AdminSiteBrandingEditor from './AdminSiteBrandingEditor';
+import AdminStatsPanel from './AdminStatsPanel';
 import type { ThemeId, SiteBranding } from '../types';
 export type SystemView =
   | 'hub'
@@ -11,6 +12,7 @@ export type SystemView =
   | 'chat-rooms'
   | 'news'
   | 'violations'
+  | 'stats'
   | 'telegram'
   | 'metrika'
   | 'theme'
@@ -78,6 +80,7 @@ const SYSTEM_CATEGORIES: {
     icon: '⚙️',
     title: 'Система',
     links: [
+      { view: 'stats', label: 'Статистика' },
       { view: 'theme', label: 'Тема сайта' },
       { view: 'telegram', label: 'Telegram-бот' },
       { view: 'metrika', label: 'Яндекс.Метрика' },
@@ -102,6 +105,7 @@ const VIEW_TITLES: Record<Exclude<SystemView, 'hub'>, string> = {
   'chat-rooms': 'Комнаты чата',
   news: 'Новости',
   violations: 'Журнал модерации',
+  stats: 'Статистика',
   telegram: 'Telegram-бот',
   metrika: 'Яндекс.Метрика',
   theme: 'Тема сайта',
@@ -146,7 +150,7 @@ export default function AdminSystemSection({
   const badgeFor = (categoryId: string) => {
     if (categoryId === 'users') return usersCount + banListCount + violationsCount;
     if (categoryId === 'news') return newsCount;
-    if (categoryId === 'system') return 3;
+    if (categoryId === 'system') return 4;
     if (categoryId === 'game-settings') return gameRoomsCount + chatRoomsCount + 1;
     return roomsCount || 1;
   };
@@ -177,6 +181,12 @@ export default function AdminSystemSection({
 
         {view === 'violations' && (
           <div className="admin-system-detail-panel admin-system-wide">{panels.violations}</div>
+        )}
+
+        {view === 'stats' && (
+          <div className="admin-system-detail-panel admin-system-wide">
+            <AdminStatsPanel />
+          </div>
         )}
 
         {view === 'telegram' && (

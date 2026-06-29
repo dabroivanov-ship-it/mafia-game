@@ -18,6 +18,7 @@ import {
 import { isTelegramOidcConfigured, verifyTelegramOidcIdToken, createTelegramOidcAuthorizationUrl, completeTelegramOidcAuthorization, buildTelegramOidcSuccessRedirect, buildTelegramOidcErrorRedirect } from './telegramOidc.js';
 import { createRateLimitMiddleware, authRateLimiter } from '../security/rateLimit.js';
 import { MAX_PASSWORD_LENGTH } from '../security/constants.js';
+import { recordSiteVisit } from '../stats/siteStats.js';
 
 const router = Router();
 const authRateLimit = createRateLimitMiddleware(authRateLimiter);
@@ -188,6 +189,11 @@ router.post('/telegram', authRateLimit, async (req, res) => {
 });
 
 router.get('/me', authMiddleware, (req, res) => {
+  try {
+    recordSiteVisit(req.user.id);
+  } catch (e) {
+    console.error('recordSiteVisit error:', e);
+  }
   res.json({ user: publicUser(req.user) });
 });
 

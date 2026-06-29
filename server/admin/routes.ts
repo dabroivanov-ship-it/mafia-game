@@ -32,6 +32,7 @@ import { listViolations, clearViolations } from '../moderation/violationLog.js';
 import { newsImageUpload, newsImagePublicPath } from '../upload/newsImage.js';
 import { adminSetReputation } from '../social/store.js';
 import { listBotPhrasesForAdmin, updateBotPhrasesFromAdmin } from '../game/botPhrases.js';
+import { getAdminSiteStats } from '../stats/siteStats.js';
 
 export interface AdminRouterHandlers {
   getModerationData: () => {
@@ -94,6 +95,10 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
       users: listAllUsers(),
       gameEvents: handlers.getGameEvents?.() || [],
     });
+  });
+
+  router.get('/stats', (_req, res) => {
+    res.json(getAdminSiteStats());
   });
 
   router.get('/rooms/:roomId/history', (req, res) => {

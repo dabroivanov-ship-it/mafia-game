@@ -22,6 +22,7 @@ await load(path.join(dist, 'messages', 'store.js'));
 await load(path.join(dist, 'social', 'store.js'));
 await load(path.join(dist, 'rooms', 'store.js'));
 await load(path.join(dist, 'settings', 'store.js'));
+await load(path.join(dist, 'stats', 'siteStats.js'));
 
 const db = dbModule.default;
 

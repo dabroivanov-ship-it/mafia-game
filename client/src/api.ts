@@ -602,6 +602,28 @@ export async function fetchAdminUsers(): Promise<{ users: User[] }> {
   return apiRequest('/api/admin/users');
 }
 
+export interface AdminSiteStats {
+  usersTotal: number;
+  usersOnline: number;
+  usersBanned: number;
+  usersModerators: number;
+  usersAdmins: number;
+  usersActiveToday: number;
+  usersActiveWeek: number;
+  usersRegisteredToday: number;
+  usersRegisteredWeek: number;
+  gamesPlayedTotal: number;
+  gamesFinishedTotal: number;
+  newsPublished: number;
+  violationsTotal: number;
+  visitsTotal: number;
+  visitsToday: number;
+}
+
+export async function fetchAdminStats(): Promise<AdminSiteStats> {
+  return apiRequest('/api/admin/stats');
+}
+
 export async function modBan(
   userId: number,
   reason: string,

@@ -85,6 +85,11 @@ function safePollForNews(newsId: number, userId?: number): NewsPoll | null {
   }
 }
 
+export function countPublishedNews(): number {
+  return (db.prepare('SELECT COUNT(*) AS c FROM news_posts WHERE is_published = 1').get() as { c: number })
+    .c;
+}
+
 export function listPublishedNews(limit = 50, userId?: number): NewsPost[] {
   const rows = db
     .prepare(
