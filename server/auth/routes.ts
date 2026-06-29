@@ -189,12 +189,17 @@ router.post('/telegram', authRateLimit, async (req, res) => {
 });
 
 router.get('/me', authMiddleware, (req, res) => {
+  const user = req.user;
+  if (!user) {
+    res.status(401).json({ error: 'Требуется авторизация' });
+    return;
+  }
   try {
-    recordSiteVisit(req.user.id);
+    recordSiteVisit(user.id);
   } catch (e) {
     console.error('recordSiteVisit error:', e);
   }
-  res.json({ user: publicUser(req.user) });
+  res.json({ user: publicUser(user) });
 });
 
 export default router;
