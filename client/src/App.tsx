@@ -25,6 +25,7 @@ import type { LobbyRoom, RoomState, User, ThemeId, LobbyUpdate, SiteBranding } f
 import { applyTheme, resolveTheme, DEFAULT_THEME } from './themes';
 import { DEFAULT_SITE_BRANDING } from './siteBranding';
 import SiteFooter from './components/SiteFooter';
+import InstallAppBanner from './components/InstallAppBanner';
 
 const OnlineUsers = lazy(() => import('./components/OnlineUsers'));
 const News = lazy(() => import('./components/News'));
@@ -671,6 +672,8 @@ export default function App() {
 
         <SiteFooter text={siteBranding.footerText} />
       </div>
+
+      <InstallAppBanner />
 
       <Menu
         user={user}

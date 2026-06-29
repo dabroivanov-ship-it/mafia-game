@@ -13,6 +13,7 @@ export function securityHeadersMiddleware(_req: Request, res: Response, next: Ne
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https: https://mc.yandex.ru",
       "connect-src 'self' wss: ws: https://oauth.telegram.org https://mc.yandex.ru https://yandex.ru https://*.yandex.ru https://log.strm.yandex.ru",
+      "worker-src 'self'",
       "frame-src https://oauth.telegram.org https://mc.yandex.ru",
       "font-src 'self'",
       "frame-ancestors 'none'",
