@@ -104,13 +104,19 @@ textarea:focus {
 .theme-picker-card,
 .news-tiptap-wrap,
 .news-tiptap-loading,
-.modal,
 .toast,
 .install-app-banner {
   border-radius: var(--radius-lg);
   background: var(--surface-card);
   box-shadow: var(--shadow-soft);
   border: 1px solid color-mix(in srgb, var(--border) 90%, var(--accent) 10%);
+}
+
+@media (min-width: 769px) {
+  .modal {
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow);
+  }
 }
 
 .home-quick-link,
@@ -145,49 +151,98 @@ textarea:focus {
   border-radius: 16px;
 }
 
-/* ——— Меню ——— */
+/* ——— Меню (не ломаем sidebar на ПК и bottom-bar на телефоне) ——— */
 .menu-icon {
   display: none;
 }
 
-.main-menu {
-  border-bottom: none;
-  background: transparent;
-  padding: 12px 16px 8px;
+@media (min-width: 769px) {
+  .menu-items {
+    gap: 6px;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .menu-item {
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-radius: 14px;
+    padding: 11px 14px;
+    border-color: transparent;
+    background: transparent;
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .menu-item:hover:not(.active) {
+    background: var(--bg-hover);
+  }
+
+  .menu-item.active {
+    background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 75%, #000));
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--accent) 32%, transparent);
+  }
+
+  .menu-item.admin.active {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #fff;
+  }
 }
 
-.menu-items {
-  gap: 6px;
-  padding: 6px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--bg-card) 92%, transparent);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-soft);
-}
+@media (max-width: 768px) {
+  .main-menu {
+    padding: 6px 8px calc(6px + var(--safe-bottom));
+    background: color-mix(in srgb, var(--bg-card) 96%, transparent);
+  }
 
-.menu-item {
-  font-size: 0.88rem;
-  font-weight: 600;
-  border-radius: 999px;
-  padding: 10px 16px;
-  border-color: transparent;
-  background: transparent;
-}
+  .menu-items {
+    gap: 4px;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    overflow-x: visible;
+    flex-wrap: nowrap;
+    justify-content: space-around;
+  }
 
-.menu-item:hover:not(.active) {
-  background: var(--bg-hover);
-}
+  .menu-item {
+    flex: 1;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 4px;
+    min-height: 52px;
+    min-width: 0;
+    border: none;
+    background: transparent;
+    font-size: 0.65rem;
+    border-radius: 12px;
+  }
 
-.menu-item.active {
-  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 75%, #000));
-  border-color: transparent;
-  color: #fff;
-  box-shadow: 0 4px 16px color-mix(in srgb, var(--accent) 35%, transparent);
-}
+  .menu-item.active {
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    color: var(--accent);
+    box-shadow: none;
+    border: none;
+  }
 
-.menu-item.admin.active {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-  color: #fff;
+  .menu-item.admin.active {
+    background: color-mix(in srgb, #ef4444 18%, transparent);
+    color: #f87171;
+  }
+
+  .menu-label {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 /* ——— Заголовки ——— */
@@ -442,6 +497,15 @@ textarea:focus {
   margin-bottom: 24px;
 }
 
+.admin-header > div {
+  min-width: 0;
+  flex: 1;
+}
+
+.admin-header-actions {
+  flex-shrink: 0;
+}
+
 .admin-header h2 {
   margin-bottom: 6px;
 }
@@ -467,7 +531,7 @@ textarea:focus {
 
 .admin-dash-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 18px;
 }
 
@@ -663,9 +727,19 @@ textarea:focus {
   backdrop-filter: blur(6px);
 }
 
-.modal {
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow);
+@media (min-width: 769px) {
+  .modal {
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow);
+  }
+}
+
+@media (max-width: 768px) {
+  .modal,
+  .modal.modal-wide {
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    max-height: 92dvh;
+  }
 }
 
 .news-editor-tool {
@@ -701,31 +775,36 @@ html[data-theme='crimson'] .admin-dash-card {
 }
 
 html[data-theme='crimson'] .menu-items {
-  background: color-mix(in srgb, var(--bg-card) 88%, transparent);
-  border-color: color-mix(in srgb, var(--accent) 22%, var(--border));
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }
 
 @media (max-width: 768px) {
-  .menu-items {
-    border-radius: var(--radius-lg);
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+  .admin-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
   }
 
-  .menu-items::-webkit-scrollbar {
-    display: none;
+  .admin-header-actions {
+    width: 100%;
+    display: flex;
+    gap: 8px;
   }
 
-  .menu-item {
-    flex: 0 0 auto;
-    padding: 10px 14px;
-    font-size: 0.82rem;
+  .admin-header-actions .btn {
+    flex: 1;
+    min-height: 44px;
   }
 
   .admin-dash-grid {
-    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .admin-dash-card {
+    min-height: 0;
+    padding: 18px;
   }
 
   .room-card {
@@ -738,14 +817,50 @@ html[data-theme='crimson'] .menu-items {
     align-self: stretch;
     width: 100%;
   }
+
+  .info-hub-card {
+    padding: 16px;
+  }
+
+  .auth-top-links.home-quick-links {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .home-quick-links {
+    grid-template-columns: 1fr;
+  }
+
+  .lobby-header {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .admin-system-detail-panel {
+    padding: 16px;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1100px) {
+  .admin-dash-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1101px) {
+  .admin-dash-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (min-width: 769px) {
-  .main-menu {
-    max-width: 920px;
-  }
-
-  .menu-items {
-    justify-content: center;
+  .admin-page,
+  .lobby,
+  .info-page,
+  .cabinet-hub-page {
+    max-width: 960px;
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
   }
 }

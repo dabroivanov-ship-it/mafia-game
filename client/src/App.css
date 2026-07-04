@@ -5216,7 +5216,7 @@ html.telegram-webapp .app-body {
     border-bottom: none;
     border-top: 1px solid var(--border);
     padding: 6px 8px calc(6px + var(--safe-bottom));
-    background: rgba(21, 24, 33, 0.95);
+    background: color-mix(in srgb, var(--bg-card) 96%, transparent);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
   }
@@ -5544,7 +5544,7 @@ html.telegram-webapp .app-body {
     border-right: 1px solid var(--border);
     border-bottom: none;
     border-top: none;
-    background: rgba(21, 24, 33, 0.92);
+    background: color-mix(in srgb, var(--bg-card) 94%, transparent);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
   }
