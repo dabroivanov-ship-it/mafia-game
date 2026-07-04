@@ -200,8 +200,8 @@ export default function UserStatisticsPage({
                       <tr key={game.id}>
                         <td>{new Date(game.createdAt).toLocaleString('ru-RU')}</td>
                         <td>{game.roleLabel}</td>
-                        <td className={game.won ? 'user-stats-win' : 'user-stats-loss'}>
-                          {game.won ? 'Победа' : 'Поражение'}
+                        <td className={game.isDraw ? '' : game.won ? 'user-stats-win' : 'user-stats-loss'}>
+                          {game.isDraw ? 'Ничья' : game.won ? 'Победа' : 'Поражение'}
                         </td>
                         <td>{game.score > 0 ? `+${game.score}` : game.score}</td>
                         <td className={game.mmrDelta >= 0 ? 'user-stats-win' : 'user-stats-loss'}>

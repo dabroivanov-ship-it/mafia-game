@@ -281,6 +281,7 @@ export interface RecentGameStat {
   role: string;
   roleLabel: string;
   won: boolean;
+  isDraw?: boolean;
   score: number;
   mmrDelta: number;
   mmrAfter: number;

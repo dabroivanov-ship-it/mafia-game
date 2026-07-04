@@ -67,6 +67,10 @@ export default function Rules({ embedded = false }: RulesProps) {
           <ul>
             <li><strong>Мирные побеждают</strong>, если мафия и маньяк уничтожены.</li>
             <li><strong>Мафия побеждает</strong>, если мафии не меньше, чем мирных.</li>
+            <li>
+              Исключение: если в живых только <strong>Катани</strong> и <strong>мафия</strong> —
+              <strong>ничья</strong>.
+            </li>
           </ul>
         </section>
 
@@ -85,6 +89,9 @@ export default function Rules({ embedded = false }: RulesProps) {
             </li>
             <li>
               <strong>Победа мафии:</strong> +50 каждому живому мафиози.
+            </li>
+            <li>
+              <strong>Ничья</strong> (Катани и мафия 1v1): бонусов за победу нет.
             </li>
           </ul>
 

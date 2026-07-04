@@ -24,7 +24,7 @@ export type ChatChannel = 'public' | 'mafia' | 'dead' | 'spectator' | 'private';
 
 export type TimerReason = 'registration' | 'roles' | 'day' | 'night';
 
-export type WinnerTeam = 'town' | 'mafia' | null;
+export type WinnerTeam = 'town' | 'mafia' | 'draw' | null;
 
 export type RoomKind = 'game' | 'chat';
 

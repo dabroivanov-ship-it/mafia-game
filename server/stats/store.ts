@@ -85,6 +85,7 @@ export interface RecentGameStat {
   role: RoleId;
   roleLabel: string;
   won: boolean;
+  isDraw: boolean;
   score: number;
   mmrDelta: number;
   mmrAfter: number;
@@ -113,10 +114,14 @@ function getPlayerTeam(role: RoleId): PlayerTeam {
 }
 
 function didPlayerWin(role: RoleId | null, winnerTeam: WinnerTeam): boolean {
-  if (!role || !winnerTeam) return false;
+  if (!role || !winnerTeam || winnerTeam === 'draw') return false;
   if (winnerTeam === 'town') return isTown(role) && role !== 'maniac';
   if (winnerTeam === 'mafia') return isMafiaTeam(role);
   return false;
+}
+
+function calculateMmrDeltaForDraw(score: number): number {
+  return Math.max(-5, Math.min(5, Math.round(score / 40)));
 }
 
 export function calculateMmrDelta(won: boolean, score: number): number {
@@ -166,7 +171,10 @@ export function recordRoomGameResults(room: GameRoom): void {
     const team = getPlayerTeam(role);
     const won = didPlayerWin(role, winnerTeam);
     const mmrBefore = getUserMmr(player.userId);
-    const mmrDelta = calculateMmrDelta(won, player.score);
+    const mmrDelta =
+      winnerTeam === 'draw'
+        ? calculateMmrDeltaForDraw(player.score)
+        : calculateMmrDelta(won, player.score);
     const mmrAfter = updateUserMmr(player.userId, mmrDelta);
 
     db.prepare(
@@ -201,6 +209,7 @@ function mapRecentRow(row: {
   room_id: number;
   role: string;
   won: number;
+  winner_team: string;
   score: number;
   mmr_delta: number;
   mmr_after: number;
@@ -213,6 +222,7 @@ function mapRecentRow(row: {
     role,
     roleLabel: getRoleLabel(role),
     won: !!row.won,
+    isDraw: row.winner_team === 'draw',
     score: row.score,
     mmrDelta: row.mmr_delta,
     mmrAfter: row.mmr_after,
@@ -226,7 +236,7 @@ export function getUserStatistics(userId: number): UserStatistics | null {
 
   const rows = db
     .prepare(
-      `SELECT id, room_id, role, won, score, mmr_delta, mmr_after, created_at, team
+      `SELECT id, room_id, role, won, winner_team, score, mmr_delta, mmr_after, created_at, team
        FROM user_game_results
        WHERE user_id = ?
        ORDER BY created_at DESC`
@@ -237,6 +247,7 @@ export function getUserStatistics(userId: number): UserStatistics | null {
     role: string;
     team: PlayerTeam;
     won: number;
+    winner_team: string;
     score: number;
     mmr_delta: number;
     mmr_after: number;

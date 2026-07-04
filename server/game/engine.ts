@@ -1136,6 +1136,12 @@ export function resolveNight(room: GameRoom): NightResolveResult {
   return { privateNotes };
 }
 
+/** Катани и мафия 1v1 — ничья. */
+function isCommissarMafiaDraw(alive: GamePlayer[]): boolean {
+  if (alive.length !== 2) return false;
+  return alive.some((p) => p.role === 'commissar') && alive.some((p) => p.role === 'mafia');
+}
+
 export function checkWin(room: GameRoom): boolean {
   const alive = room.players.filter((p) => p.alive && p.inGame && p.role);
   const mafiaTeamAlive = alive.filter((p) => isMafiaTeam(p.role)).length;
@@ -1147,13 +1153,17 @@ export function checkWin(room: GameRoom): boolean {
     return true;
   }
   if (mafiaTeamAlive > 0 && mafiaTeamAlive >= townAlive) {
+    if (isCommissarMafiaDraw(alive)) {
+      endGame(room, 'draw', 'Ничья! Катани и мафия остались один на один.');
+      return true;
+    }
     endGame(room, 'mafia', 'Мафия победила!');
     return true;
   }
   return false;
 }
 
-function endGame(room: GameRoom, team: 'town' | 'mafia', message: string): void {
+function endGame(room: GameRoom, team: 'town' | 'mafia' | 'draw', message: string): void {
   room.phase = PHASE.ENDED;
   room.winnerTeam = team;
   clearTimer(room);
