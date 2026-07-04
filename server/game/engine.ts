@@ -76,6 +76,18 @@ export function isChatRoom(room: GameRoom): boolean {
   return room.kind === 'chat';
 }
 
+/** During registration a slot is reserved by inGame even if the socket briefly drops. */
+export function listRegisteredPlayers(room: GameRoom): GamePlayer[] {
+  if (room.phase === PHASE.REGISTRATION) {
+    return room.players.filter((p) => p.inGame);
+  }
+  return room.players.filter((p) => p.connected && p.inGame);
+}
+
+export function countRegisteredPlayers(room: GameRoom): number {
+  return listRegisteredPlayers(room).length;
+}
+
 export function createInitialRooms(): Map<number, GameRoom> {
   const rooms = new Map<number, GameRoom>();
   const savedConfigs = loadRoomConfigs();
@@ -199,7 +211,7 @@ export function getLobbySnapshot(rooms: Map<number, GameRoom>): LobbyRoom[] {
       };
     }
 
-    const inGame = room.players.filter((p) => p.connected && p.inGame).length;
+    const inGame = countRegisteredPlayers(room);
     const connected = room.players.filter((p) => p.connected).length;
     const gameRunning = !isLobbyPhase(room.phase);
     return {
@@ -337,7 +349,7 @@ export function addPlayerToRoom(
   }
 
   const connectedCount = room.players.filter((p) => p.connected).length;
-  const inGameCount = room.players.filter((p) => p.connected && p.inGame).length;
+  const inGameCount = countRegisteredPlayers(room);
   const isGamePhase = !isLobbyPhase(room.phase);
   const defaultInGame = isChatRoom(room) ? false : !isGamePhase;
 
@@ -537,7 +549,7 @@ export function joinGame(room: GameRoom, playerId: number): { player: GamePlayer
   player.connected = true;
   if (player.inGame) throw new Error('Вы уже в игре');
 
-  const inGameCount = room.players.filter((p) => p.connected && p.inGame).length;
+  const inGameCount = countRegisteredPlayers(room);
   if (inGameCount >= room.maxPlayers) {
     throw new Error('Все места в игре заняты');
   }
@@ -583,7 +595,7 @@ export function clearTimer(room: GameRoom): void {
 
 export function tryStartGameAfterRegistration(room: GameRoom): PrivateNote[] {
   if (room.phase !== PHASE.REGISTRATION) return [];
-  const registered = room.players.filter((p) => p.connected && p.inGame);
+  const registered = listRegisteredPlayers(room);
   if (registered.length >= room.maxPlayers) {
     return beginGame(room);
   }
@@ -592,7 +604,7 @@ export function tryStartGameAfterRegistration(room: GameRoom): PrivateNote[] {
 
 export function onRegistrationTimerEnd(room: GameRoom): PrivateNote[] {
   if (room.phase !== PHASE.REGISTRATION) return [];
-  const registered = room.players.filter((p) => p.connected && p.inGame);
+  const registered = listRegisteredPlayers(room);
   if (registered.length < CONFIG.MIN_PLAYERS) {
     room.phase = PHASE.WAITING;
     clearTimer(room);
@@ -615,6 +627,11 @@ export function onRolesTimerEnd(room: GameRoom): PrivateNote[] {
 
 function beginGame(room: GameRoom): PrivateNote[] {
   clearTimer(room);
+  room.players.forEach((p) => {
+    if (p.inGame && !p.connected) {
+      p.inGame = false;
+    }
+  });
   const participants = room.players.filter((p) => p.connected && p.inGame);
 
   const roles = distributeRoles(participants.length);
@@ -1886,7 +1903,7 @@ export function serializeRoomForPlayer(
 
   const gameRunning = isActiveGamePhase(room.phase);
   const isSpectator = !!(me && !me.inGame && gameRunning);
-  const registeredCount = room.players.filter((p) => p.connected && p.inGame).length;
+  const registeredCount = countRegisteredPlayers(room);
   const slotsAvailable = registeredCount < room.maxPlayers;
   const joinGameCooldownSec = getJoinCooldownSec(me);
 

@@ -1,5 +1,15 @@
 import type { GamePhase, LobbyRoom } from '../types';
 
+function mailNoticeLabel(count: number): string {
+  if (count === 1) return 'У вас 1 новое сообщение';
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
+    return `У вас ${count} новых сообщения`;
+  }
+  return `У вас ${count} новых сообщений`;
+}
+
 const PHASE_LABELS: Record<GamePhase, string> = {
   waiting: 'Ожидание',
   registration: 'Регистрация',
@@ -86,8 +96,7 @@ export default function Lobby({
         <button type="button" className="lobby-mail-notice" onClick={onOpenMessages}>
           <span className="lobby-mail-notice-icon">✉️</span>
           <span>
-            У вас {unreadMailCount} нов{unreadMailCount === 1 ? 'ое' : unreadMailCount < 5 ? 'ых' : 'ых'}{' '}
-            сообщени{unreadMailCount === 1 ? 'е' : unreadMailCount < 5 ? 'я' : 'й'} — открыть письма
+            {mailNoticeLabel(unreadMailCount)} — открыть
           </span>
         </button>
       )}

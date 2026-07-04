@@ -17,17 +17,27 @@ type ListTab = 'dialogs' | 'friends';
 interface MessagesProps {
   composeToUserId?: number | null;
   composeToUsername?: string | null;
+  threadUserId?: number | null;
+  threadUsername?: string | null;
+  openUnread?: boolean;
   onUnreadChange?: (count: number) => void;
   onBack: () => void;
+  onInitialNavigationHandled?: () => void;
 }
 
 export default function Messages({
   composeToUserId = null,
   composeToUsername = null,
+  threadUserId = null,
+  threadUsername = null,
+  openUnread = false,
   onUnreadChange,
   onBack,
+  onInitialNavigationHandled,
 }: MessagesProps) {
-  const [view, setView] = useState<MailView>(composeToUserId || composeToUsername ? 'compose' : 'list');
+  const [view, setView] = useState<MailView>(
+    threadUserId ? 'thread' : composeToUserId || composeToUsername ? 'compose' : 'list'
+  );
   const [listTab, setListTab] = useState<ListTab>('dialogs');
   const [conversations, setConversations] = useState<MailConversation[]>([]);
   const [friends, setFriends] = useState<FriendUser[]>([]);
@@ -102,6 +112,10 @@ export default function Messages({
       setThreadTotal(total);
       onUnreadChange?.(unreadCount);
 
+      if (!opts?.append && messages.length > 0) {
+        setThreadUser(messages[0].otherUser);
+      }
+
       if (!opts?.append) {
         await loadConversations();
       }
@@ -114,9 +128,10 @@ export default function Messages({
   };
 
   useEffect(() => {
+    if (threadUserId || openUnread) return;
     if (listTab === 'dialogs') void loadConversations();
     else void loadFriends();
-  }, [listTab]);
+  }, [listTab, threadUserId, openUnread]);
 
   useEffect(() => {
     if (composeToUserId) {
@@ -127,6 +142,41 @@ export default function Messages({
       setView('compose');
     }
   }, [composeToUserId, composeToUsername]);
+
+  useEffect(() => {
+    if (!threadUserId) return;
+    const user: PrivateMessage['otherUser'] = {
+      id: threadUserId,
+      username: threadUsername || '…',
+      displayName: threadUsername || '',
+      avatar: null,
+    };
+    void loadThread(user).finally(() => onInitialNavigationHandled?.());
+  }, [threadUserId, threadUsername]);
+
+  useEffect(() => {
+    if (!openUnread || threadUserId) return;
+    void (async () => {
+      try {
+        const [convRes, unreadRes] = await Promise.all([
+          fetchMailConversations(),
+          fetchUnreadMailCount(),
+        ]);
+        setConversations(convRes.conversations);
+        onUnreadChange?.(unreadRes.count);
+        const firstUnread = convRes.conversations.find((conv) => conv.unreadCount > 0);
+        if (firstUnread) {
+          await loadThread(firstUnread.otherUser);
+        } else {
+          setView('list');
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Ошибка загрузки');
+      } finally {
+        onInitialNavigationHandled?.();
+      }
+    })();
+  }, [openUnread, threadUserId]);
 
   useEffect(() => {
     const el = threadRef.current;

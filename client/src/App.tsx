@@ -80,6 +80,9 @@ export default function App() {
   const [lobbyScreen, setLobbyScreen] = useState<LobbyScreen>('rooms');
   const [composeToUserId, setComposeToUserId] = useState<number | null>(null);
   const [composeToUsername, setComposeToUsername] = useState<string | null>(null);
+  const [messageThreadUserId, setMessageThreadUserId] = useState<number | null>(null);
+  const [messageThreadUsername, setMessageThreadUsername] = useState<string | null>(null);
+  const [messagesOpenUnread, setMessagesOpenUnread] = useState(false);
   const [profileStatsUserId, setProfileStatsUserId] = useState<number | null>(() =>
     readInitialProfileUserId()
   );
@@ -294,12 +297,32 @@ export default function App() {
       .finally(() => setNotificationsLoading(false));
   }, [token]);
 
-  const openMessages = useCallback((opts?: { userId?: number; username?: string }) => {
-    setComposeToUserId(opts?.userId ?? null);
-    setComposeToUsername(opts?.username ?? null);
-    setView('cabinet');
-    setLobbyScreen('cabinet-messages');
-  }, []);
+  const openMessages = useCallback(
+    (opts?: { userId?: number; username?: string; thread?: boolean; openUnread?: boolean }) => {
+      if (opts?.thread && opts.userId) {
+        setMessageThreadUserId(opts.userId);
+        setMessageThreadUsername(opts.username ?? null);
+        setComposeToUserId(null);
+        setComposeToUsername(null);
+        setMessagesOpenUnread(false);
+      } else if (opts?.openUnread) {
+        setMessageThreadUserId(null);
+        setMessageThreadUsername(null);
+        setComposeToUserId(null);
+        setComposeToUsername(null);
+        setMessagesOpenUnread(true);
+      } else {
+        setMessageThreadUserId(null);
+        setMessageThreadUsername(null);
+        setComposeToUserId(opts?.userId ?? null);
+        setComposeToUsername(opts?.username ?? null);
+        setMessagesOpenUnread(false);
+      }
+      setView('cabinet');
+      setLobbyScreen('cabinet-messages');
+    },
+    []
+  );
 
   const openProfileStatistics = useCallback(
     (userId: number) => {
@@ -431,7 +454,7 @@ export default function App() {
           typeof notification.payload?.fromUsername === 'string'
             ? notification.payload.fromUsername
             : undefined;
-        openMessages({ userId: fromUserId, username: fromUsername });
+        openMessages({ userId: fromUserId, username: fromUsername, thread: true });
         return;
       }
 
@@ -658,7 +681,7 @@ export default function App() {
             siteOnlineCount={siteOnlineCount}
             onJoin={joinRoom}
             unreadMailCount={unreadMailCount}
-            onOpenMessages={() => openMessages()}
+            onOpenMessages={() => openMessages({ openUnread: true })}
             onOpenOnlineUsers={() => setLobbyScreen('online-users')}
           />
         )}
@@ -705,10 +728,21 @@ export default function App() {
             <Messages
               composeToUserId={composeToUserId}
               composeToUsername={composeToUsername}
+              threadUserId={messageThreadUserId}
+              threadUsername={messageThreadUsername}
+              openUnread={messagesOpenUnread}
               onUnreadChange={setUnreadMailCount}
+              onInitialNavigationHandled={() => {
+                setMessageThreadUserId(null);
+                setMessageThreadUsername(null);
+                setMessagesOpenUnread(false);
+              }}
               onBack={() => {
                 setComposeToUserId(null);
                 setComposeToUsername(null);
+                setMessageThreadUserId(null);
+                setMessageThreadUsername(null);
+                setMessagesOpenUnread(false);
                 setLobbyScreen('cabinet');
               }}
             />
@@ -735,7 +769,7 @@ export default function App() {
             unreadMailCount={unreadMailCount}
             onOpenProfileSettings={() => setLobbyScreen('cabinet-settings')}
             onOpenSiteSettings={() => setLobbyScreen('cabinet-site-settings')}
-            onOpenMessages={() => setLobbyScreen('cabinet-messages')}
+            onOpenMessages={() => openMessages({ openUnread: unreadMailCount > 0 })}
             onOpenSupport={() => setLobbyScreen('cabinet-support')}
             onOpenUserSearch={() => setLobbyScreen('cabinet-search')}
             onOpenStatistics={() => openProfileStatistics(user.id)}
