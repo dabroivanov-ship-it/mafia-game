@@ -76,7 +76,6 @@ export default function Room({
   const [profileTarget, setProfileTarget] = useState<ChatReplyTarget | null>(null);
   const [loadingMoreChat, setLoadingMoreChat] = useState(false);
   const [chatReplyTo, setChatReplyTo] = useState<ChatReplyTarget | null>(null);
-  const [chatPrivateMode, setChatPrivateMode] = useState(false);
 
   const timerLeft = useTimer(state?.timerEnd ?? null);
   const joinCooldown = useCountdown(state?.joinGameCooldownSec || 0);
@@ -106,21 +105,21 @@ export default function Room({
 
   const openPlayerPage = (target: ChatReplyTarget) => {
     if (!target.userId || target.userId === currentUserId) return;
-    const livePlayer = state.players.find((p) => p.userId === target.userId);
     setProfileTarget({
       userId: target.userId,
       playerName: target.playerName,
-      playerId: target.playerId ?? livePlayer?.id,
+      playerId: target.playerId,
     });
   };
 
   const sendRoomChat = async (
     text: string,
-    opts?: { toPlayerId?: number; isPrivate?: boolean }
+    opts?: { toPlayerId?: number; toUserId?: number; isPrivate?: boolean }
   ) => {
     return emit('chat:send', {
       text,
       toPlayerId: opts?.toPlayerId,
+      toUserId: opts?.toUserId,
       isPrivate: opts?.isPrivate,
     });
   };
@@ -285,19 +284,13 @@ export default function Room({
                 currentUserId={currentUserId}
                 replyTo={chatReplyTo}
                 onReplyToChange={setChatReplyTo}
-                privateMode={chatPrivateMode}
-                onPrivateModeChange={setChatPrivateMode}
                 onSend={(text, opts) => {
                   void emit('chat:send', {
                     text,
                     toPlayerId: opts?.toPlayerId,
-                    isPrivate: opts?.isPrivate,
                   }).then((res) => {
                     if (res?.error) alert(res.error);
-                    else {
-                      setChatReplyTo(null);
-                      setChatPrivateMode(false);
-                    }
+                    else setChatReplyTo(null);
                   });
                 }}
                 onOpenPlayerPage={openPlayerPage}

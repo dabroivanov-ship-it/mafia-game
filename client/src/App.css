@@ -2863,9 +2863,17 @@ html.telegram-webapp .app-body {
 }
 
 .chat-msg.system {
+  white-space: pre-line;
+}
+
+.chat-msg.system .chat-text {
   color: var(--text-muted);
   font-style: italic;
-  white-space: pre-line;
+}
+
+.chat-msg.system .chat-author,
+.chat-msg.system .chat-author-btn {
+  font-style: normal;
 }
 
 .chat-msg.spectator-only {
@@ -2886,13 +2894,23 @@ html.telegram-webapp .app-body {
 
 .chat-time {
   color: var(--text-muted);
-  font-size: 0.75rem;
-  margin-right: 6px;
+  font-size: 0.85rem;
+}
+
+.chat-line {
+  display: inline;
 }
 
 .chat-author {
   font-weight: 600;
-  margin-right: 4px;
+}
+
+.chat-host-btn {
+  color: var(--text);
+}
+
+.chat-host-btn:hover {
+  color: var(--accent);
 }
 
 .chat-gender {
@@ -2903,7 +2921,6 @@ html.telegram-webapp .app-body {
 
 .chat-author-btn {
   font-weight: 600;
-  margin-right: 4px;
   padding: 0;
   border: none;
   background: none;
@@ -2954,9 +2971,7 @@ html.telegram-webapp .app-body {
 }
 
 .chat-direct-to {
-  margin-right: 4px;
   color: var(--accent);
-  font-size: 0.85rem;
   font-weight: 600;
 }
 
@@ -3014,6 +3029,53 @@ html.telegram-webapp .app-body {
 .chat-private-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+.host-profile-modal .host-profile-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.host-profile-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.host-profile-intro {
+  margin: 0 0 16px;
+  line-height: 1.55;
+}
+
+.host-profile-section-title {
+  margin: 0 0 10px;
+  font-size: 1rem;
+}
+
+.host-profile-list {
+  margin: 0 0 16px;
+  padding-left: 1.2rem;
+  line-height: 1.55;
+}
+
+.host-profile-list li + li {
+  margin-top: 6px;
+}
+
+.host-profile-note {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.host-profile-note a {
+  color: var(--accent);
 }
 
 .chat-input {
@@ -3592,27 +3654,64 @@ html.telegram-webapp .app-body {
   background: var(--bg-hover);
 }
 
-.profile-staff-meta h4 {
-  margin: 0 0 10px;
+.profile-staff-meta-summary,
+.profile-staff-meta-expand-summary {
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.profile-staff-meta-summary::-webkit-details-marker,
+.profile-staff-meta-expand-summary::-webkit-details-marker {
+  display: none;
+}
+
+.profile-staff-meta-summary {
   font-size: 0.9rem;
+  font-weight: 600;
   color: var(--text-muted);
+}
+
+.profile-staff-meta-summary::before,
+.profile-staff-meta-expand-summary::before {
+  content: '▸ ';
+  color: var(--accent);
+}
+
+.profile-staff-meta[open] > .profile-staff-meta-summary::before,
+.profile-staff-meta-expand[open] > .profile-staff-meta-expand-summary::before {
+  content: '▾ ';
+}
+
+.profile-staff-meta-body {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .profile-staff-meta-row {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  margin-bottom: 10px;
 }
 
-.profile-staff-meta-row:last-child {
-  margin-bottom: 0;
+.profile-staff-meta-expand {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.profile-staff-meta-expand-summary {
+  font-size: 0.85rem;
+  color: var(--text-muted);
 }
 
 .profile-user-agent {
+  margin: 8px 0 0;
   font-size: 0.85rem;
-  line-height: 1.4;
+  line-height: 1.45;
   word-break: break-word;
+  color: var(--text);
 }
 
 .admin-search-row {
@@ -5097,6 +5196,10 @@ html.telegram-webapp .app-body {
 .admin-bot-phrase-field input,
 .admin-bot-phrase-field textarea {
   width: 100%;
+  padding: 12px 14px;
+  font-size: 16px;
+  color: var(--text);
+  background: var(--bg-card);
 }
 
 .admin-system-detail {

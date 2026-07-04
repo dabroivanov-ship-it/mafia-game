@@ -894,7 +894,7 @@ io.on('connection', (socket) => {
     cb?.({ ok: true });
   });
 
-  socket.on('chat:send', ({ text, toPlayerId, isPrivate }, cb) => {
+  socket.on('chat:send', ({ text, toPlayerId, toUserId, isPrivate }, cb) => {
     const user = requireSocketUser(socket, cb);
     if (!user) return;
     if (!chatSocketRateLimiter.try(`chat:${user.id}`)) {
@@ -908,21 +908,29 @@ io.on('connection', (socket) => {
     const trimmed = normalizeChatText(text);
     if (!trimmed) return cb?.({ error: 'Пустое сообщение' });
 
-    const targetId = toPlayerId ? Number(toPlayerId) : null;
+    const targetPlayer = findRoomPlayer(room, {
+      playerId: toPlayerId != null ? Number(toPlayerId) : undefined,
+      userId: toUserId != null ? Number(toUserId) : undefined,
+    });
+    const hasTarget =
+      targetPlayer != null &&
+      targetPlayer.id !== session.playerId &&
+      (toPlayerId != null || toUserId != null);
 
-    if (isPrivate && targetId) {
-      const target = room.players.find((p) => p.id === targetId && p.connected);
-      if (!target) return cb?.({ error: 'Получатель не в комнате' });
-      if (targetId === session.playerId) return cb?.({ error: 'Нельзя написать себе' });
+    if (isPrivate && hasTarget) {
       if (isPlayerSilenced(me)) {
         addMutedOnlyMessage(room, me, trimmed, 'private');
         broadcastRoom(room.id);
         return cb?.({ ok: true });
       }
-      const msg = addPrivateChatMessage(room, session.playerId, targetId, trimmed);
+      const msg = addPrivateChatMessage(room, session.playerId, targetPlayer!.id, trimmed);
       if (!msg) return cb?.({ error: 'Не удалось отправить' });
       broadcastRoom(room.id);
       return cb?.({ ok: true });
+    }
+
+    if (isPrivate && (toPlayerId != null || toUserId != null) && !targetPlayer) {
+      return cb?.({ error: 'Получатель не найден' });
     }
 
     const gameRunning = isActiveGamePhase(room.phase);
@@ -946,7 +954,7 @@ io.on('connection', (socket) => {
     }
 
     const msg = addChatMessage(room, session.playerId, trimmed, channel, {
-      toPlayerId: targetId && targetId !== session.playerId ? targetId : undefined,
+      toPlayerId: hasTarget ? targetPlayer!.id : undefined,
     });
     if (!msg) return cb?.({ error: 'Не удалось отправить' });
 

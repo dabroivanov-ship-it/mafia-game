@@ -16,7 +16,7 @@ import type { User, ProfileStaffMeta, ChatReplyTarget, UserPresence } from '../t
 import { USER_GENDER_LABELS, genderLabel } from '../gender';
 import { formatPresenceLabel } from '../utils/presence';
 
-type ChatVisibility = 'all' | 'direct' | 'private';
+type ChatVisibility = 'direct' | 'private';
 
 interface UserProfileModalProps {
   userId: number;
@@ -32,7 +32,7 @@ interface UserProfileModalProps {
   canSendChat?: boolean;
   onSendChat?: (
     text: string,
-    opts: { toPlayerId?: number; isPrivate?: boolean }
+    opts: { toPlayerId?: number; toUserId?: number; isPrivate?: boolean }
   ) => Promise<{ error?: string } | void>;
   targetPlayerId?: number;
   targetSilenced?: boolean;
@@ -268,12 +268,11 @@ export default function UserProfileModal({
     setError('');
     setChatSuccess('');
 
-    const opts =
-      chatVisibility === 'all'
-        ? {}
-        : chatVisibility === 'private'
-          ? { toPlayerId: replyTarget!.playerId, isPrivate: true }
-          : { toPlayerId: replyTarget!.playerId, isPrivate: false };
+    const opts = {
+      toPlayerId: replyTarget!.playerId,
+      toUserId: replyTarget!.userId,
+      isPrivate: chatVisibility === 'private',
+    };
 
     try {
       const res = await onSendChat(trimmed, opts);
@@ -319,7 +318,7 @@ export default function UserProfileModal({
                 onChange={(e) => setChatText(e.target.value)}
                 rows={4}
                 maxLength={300}
-                placeholder="Напишите сообщение..."
+                placeholder={`Сообщение для ${replyTarget!.playerName}...`}
                 disabled={chatSending}
               />
               <div className="player-page-compose-controls">
@@ -330,7 +329,6 @@ export default function UserProfileModal({
                     onChange={(e) => setChatVisibility(e.target.value as ChatVisibility)}
                     disabled={chatSending}
                   >
-                    <option value="all">Всем</option>
                     <option value="direct">{replyTarget!.playerName}</option>
                     <option value="private">Приватно [P]</option>
                   </select>
@@ -556,19 +554,19 @@ export default function UserProfileModal({
                 )}
 
                 {canProfileModerate && data?.staffMeta && (
-                  <div className="profile-staff-meta">
-                    <h4>Данные подключения</h4>
-                    <div className="profile-staff-meta-row">
-                      <span className="muted">IP</span>
-                      <strong>{data.staffMeta.lastIp || '—'}</strong>
+                  <details className="profile-staff-meta">
+                    <summary className="profile-staff-meta-summary">Данные подключения</summary>
+                    <div className="profile-staff-meta-body">
+                      <div className="profile-staff-meta-row">
+                        <span className="muted">IP</span>
+                        <strong>{data.staffMeta.lastIp || '—'}</strong>
+                      </div>
+                      <details className="profile-staff-meta-expand">
+                        <summary className="profile-staff-meta-expand-summary">Софт / браузер</summary>
+                        <p className="profile-user-agent">{data.staffMeta.lastUserAgent || '—'}</p>
+                      </details>
                     </div>
-                    <div className="profile-staff-meta-row">
-                      <span className="muted">Софт / браузер</span>
-                      <strong className="profile-user-agent">
-                        {data.staffMeta.lastUserAgent || '—'}
-                      </strong>
-                    </div>
-                  </div>
+                  </details>
                 )}
               </>
             ) : (

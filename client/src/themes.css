@@ -3,6 +3,7 @@
 
 html {
   font-family: 'Geologica', 'Segoe UI', system-ui, sans-serif;
+  color-scheme: dark;
 }
 
 [data-theme='midnight'] {

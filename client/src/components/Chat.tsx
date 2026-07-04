@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, FormEvent } from 'react';
-import type { ChatChannel, ChatMessage, ChatReplyTarget, UserGender, ViolationType } from '../types';
+import type { ChatChannel, ChatMessage, ChatReplyTarget, ViolationType } from '../types';
+import { isHostSender } from '../content/hostContent';
 import DeleteMessageModal from './DeleteMessageModal';
+import HostProfileModal from './HostProfileModal';
 
 export interface ChatSendOptions {
   toPlayerId?: number;
@@ -26,8 +28,6 @@ interface ChatProps {
   loadingMore?: boolean;
   replyTo?: ChatReplyTarget | null;
   onReplyToChange?: (target: ChatReplyTarget | null) => void;
-  privateMode?: boolean;
-  onPrivateModeChange?: (value: boolean) => void;
 }
 
 export default function Chat({
@@ -45,11 +45,10 @@ export default function Chat({
   loadingMore = false,
   replyTo = null,
   onReplyToChange,
-  privateMode = false,
-  onPrivateModeChange,
 }: ChatProps) {
   const [text, setText] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<ChatMessage | null>(null);
+  const [showHostProfile, setShowHostProfile] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -98,29 +97,8 @@ export default function Chat({
     atBottomRef.current = true;
     onSend(trimmed, {
       toPlayerId: replyTo?.playerId,
-      isPrivate: privateMode && !!replyTo,
     });
     setText('');
-  };
-
-  const genderMark = (gender?: UserGender): string | null => {
-    if (gender === 'male') return '♂';
-    if (gender === 'female') return '♀';
-    return null;
-  };
-
-  const renderAuthor = (msg: ChatMessage) => {
-    const mark = genderMark(msg.authorGender);
-    return (
-      <>
-        {mark && (
-          <span className="chat-gender" title={mark === '♂' ? 'Мужской' : 'Женский'}>
-            {mark}
-          </span>
-        )}
-        {msg.playerName}:
-      </>
-    );
   };
 
   const handleLoadMore = () => {
@@ -138,6 +116,9 @@ export default function Chat({
   const canOpenAuthorProfile = (msg: ChatMessage): boolean =>
     !!msg.userId && !msg.system && !isOwnMessage(msg) && !!onOpenPlayerPage;
 
+  const canOpenHostProfile = (msg: ChatMessage): boolean =>
+    !!msg.system && isHostSender(msg.playerName);
+
   const handleAuthorClick = (msg: ChatMessage) => {
     if (!canOpenAuthorProfile(msg) || !msg.userId) return;
     onOpenPlayerPage?.({
@@ -145,6 +126,36 @@ export default function Chat({
       playerId: msg.playerId ?? undefined,
       playerName: msg.playerName,
     });
+  };
+
+  const renderAuthor = (msg: ChatMessage) => {
+    if (canOpenAuthorProfile(msg)) {
+      return (
+        <button
+          type="button"
+          className={`chat-author-btn ${replyTo?.userId === msg.userId ? 'selected' : ''}`}
+          onClick={() => handleAuthorClick(msg)}
+          title="Открыть профиль и написать"
+        >
+          {msg.playerName}:
+        </button>
+      );
+    }
+
+    if (canOpenHostProfile(msg)) {
+      return (
+        <button
+          type="button"
+          className="chat-author-btn chat-host-btn"
+          onClick={() => setShowHostProfile(true)}
+          title="О ведущем"
+        >
+          {msg.playerName}:
+        </button>
+      );
+    }
+
+    return <span className="chat-author">{msg.playerName}:</span>;
   };
 
   const formatTime = (iso: string) => {
@@ -174,9 +185,8 @@ export default function Chat({
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`chat-msg ${msg.system ? 'system' : ''} ${msg.deleted ? 'deleted' : ''} ${msg.sourceChannel === 'spectator' ? 'spectator-only' : ''} ${msg.isPrivate ? 'private' : ''} ${msg.toPlayerName && !msg.isPrivate ? 'direct' : ''}`}
+            className={`chat-msg ${msg.system ? 'system' : ''} ${msg.deleted ? 'deleted' : ''} ${msg.sourceChannel === 'spectator' ? 'spectator-only' : ''} ${msg.isPrivate ? 'private' : ''} ${msg.toPlayerName ? 'direct' : ''}`}
           >
-            <span className="chat-time">{formatTime(msg.time)}</span>
             {msg.isPrivate && (
               <span className="chat-private-tag" title="Приватное сообщение">
                 [P]
@@ -192,24 +202,16 @@ export default function Chat({
                 💀
               </span>
             )}
-            {canOpenAuthorProfile(msg) ? (
-              <button
-                type="button"
-                className={`chat-author-btn ${replyTo?.userId === msg.userId ? 'selected' : ''}`}
-                onClick={() => handleAuthorClick(msg)}
-                title="Открыть профиль и написать"
-              >
-                {renderAuthor(msg)}
-              </button>
-            ) : (
-              <span className="chat-author">{renderAuthor(msg)}</span>
-            )}
-            {msg.toPlayerName && (
-              <span className="chat-direct-to" title="Адресат">
-                → {msg.toPlayerName}
-              </span>
-            )}
-            <span className="chat-text">{msg.text}</span>
+            <span className="chat-line">
+              <span className="chat-time">{formatTime(msg.time)}</span>
+              {renderAuthor(msg)}
+              {msg.toPlayerName && (
+                <span className="chat-direct-to" title="Адресат">
+                  → {msg.toPlayerName}:
+                </span>
+              )}
+              <span className="chat-text">{msg.text}</span>
+            </span>
             {canModerate && !msg.system && !msg.deleted && onDeleteMessage && (
               <button
                 type="button"
@@ -229,15 +231,11 @@ export default function Chat({
         <div className="chat-reply-bar">
           <span>
             Кому: <strong>{replyTo.playerName}</strong>
-            {privateMode && <span className="chat-reply-private"> · приватно [P]</span>}
           </span>
           <button
             type="button"
             className="btn btn-ghost btn-sm"
-            onClick={() => {
-              onReplyToChange?.(null);
-              onPrivateModeChange?.(false);
-            }}
+            onClick={() => onReplyToChange?.(null)}
             aria-label="Отменить адресата"
           >
             ✕
@@ -255,23 +253,12 @@ export default function Chat({
             !canSend
               ? 'Чат недоступен'
               : replyTo
-                ? privateMode
-                  ? `Приватно для ${replyTo.playerName}...`
-                  : `Сообщение для ${replyTo.playerName}...`
+                ? `Сообщение для ${replyTo.playerName}...`
                 : placeholder
           }
           disabled={!canSend}
           maxLength={300}
         />
-        <button
-          type="button"
-          className={`btn chat-private-btn ${privateMode ? 'active' : ''}`}
-          disabled={!canSend || !replyTo}
-          onClick={() => onPrivateModeChange?.(!privateMode)}
-          title="Приватно — видят только вы и адресат"
-        >
-          🔒
-        </button>
         <button type="submit" className="btn btn-primary" disabled={!canSend || !text.trim()}>
           ➤
         </button>
@@ -292,6 +279,8 @@ export default function Chat({
           }}
         />
       )}
+
+      {showHostProfile && <HostProfileModal onClose={() => setShowHostProfile(false)} />}
     </div>
   );
 }
