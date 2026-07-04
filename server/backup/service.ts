@@ -61,13 +61,13 @@ export function listBackups(): BackupInfo[] {
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
-export function createBackup(includeUploads = true): BackupInfo {
+export async function createBackup(includeUploads = true): Promise<BackupInfo> {
   const id = new Date().toISOString().replace(/[:.]/g, '-');
   const dir = path.join(getBackupsDir(), id);
   fs.mkdirSync(dir, { recursive: true });
 
   const dbDest = path.join(dir, 'mafia.db');
-  db.backup(dbDest).transfer();
+  await db.backup(dbDest);
 
   if (includeUploads) {
     const uploadsSrc = path.join(getServerRoot(), 'uploads');
@@ -90,7 +90,7 @@ export function createBackup(includeUploads = true): BackupInfo {
   };
 }
 
-export function restoreBackup(backupId: string): void {
+export async function restoreBackup(backupId: string): Promise<void> {
   const dir = path.join(getBackupsDir(), backupId);
   const backupDbPath = path.join(dir, 'mafia.db');
   if (!fs.existsSync(backupDbPath)) {
@@ -98,8 +98,11 @@ export function restoreBackup(backupId: string): void {
   }
 
   const src = new Database(backupDbPath, { readonly: true });
-  src.backup(db).transfer();
-  src.close();
+  try {
+    await src.backup(getDbPath());
+  } finally {
+    src.close();
+  }
 
   const uploadsBackup = path.join(dir, 'uploads');
   if (fs.existsSync(uploadsBackup)) {
@@ -111,7 +114,7 @@ export function restoreBackup(backupId: string): void {
 export function deleteBackup(backupId: string): void {
   const dir = path.join(getBackupsDir(), backupId);
   if (!fs.existsSync(dir)) {
-    throw new Error('Резервная кopyия не найдена');
+    throw new Error('Резервная копия не найдена');
   }
   fs.rmSync(dir, { recursive: true, force: true });
 }

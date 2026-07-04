@@ -409,10 +409,10 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     res.json({ backups });
   });
 
-  router.post('/backups', (req, res) => {
+  router.post('/backups', async (req, res) => {
     try {
       const includeUploads = req.body?.includeUploads !== false;
-      const backup = createBackup(includeUploads);
+      const backup = await createBackup(includeUploads);
       res.status(201).json({
         backup: { ...backup, sizeLabel: formatBackupSize(backup.sizeBytes) },
       });
@@ -421,9 +421,9 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     }
   });
 
-  router.post('/backups/:id/restore', (req, res) => {
+  router.post('/backups/:id/restore', async (req, res) => {
     try {
-      restoreBackup(req.params.id);
+      await restoreBackup(req.params.id);
       res.json({ ok: true });
     } catch (err) {
       res.status(400).json({ error: err instanceof Error ? err.message : 'Ошибка восстановления' });
