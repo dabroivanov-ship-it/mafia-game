@@ -795,6 +795,7 @@ export default function App() {
             onOpenMessages={() => openMessages({ openUnread: unreadMailCount > 0 })}
             onOpenSupport={() => setLobbyScreen('cabinet-support')}
             onOpenUserSearch={() => setLobbyScreen('cabinet-search')}
+            onOpenInfo={() => setView('info')}
             onOpenStatistics={() => openProfileStatistics(user.id)}
             onLogout={handleLogout}
             onBack={() => setView('lobby')}

@@ -16,7 +16,7 @@ const ITEMS: MenuItem[] = [
   { id: 'lobby', icon: '', label: 'Комнаты', mobileBottom: true },
   { id: 'news', icon: '', label: 'Новости', mobileBottom: true },
   { id: 'cabinet', icon: '', label: 'Кабинет', mobileBottom: true },
-  { id: 'info', icon: '', label: 'Информация', mobileBottom: true },
+  { id: 'info', icon: '', label: 'Информация', mobileBottom: true, desktopOnly: true },
 ];
 
 interface MenuProps {

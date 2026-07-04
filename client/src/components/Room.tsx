@@ -184,12 +184,26 @@ export default function Room({
         </div>
         <div className="room-header-actions">
           {onOpenMembers && (
-            <button type="button" className="btn btn-ghost" onClick={onOpenMembers}>
-              Кто тут
+            <button
+              type="button"
+              className="btn btn-ghost btn-room-members"
+              onClick={onOpenMembers}
+              aria-label="Кто тут"
+              title="Кто тут"
+            >
+              <span className="btn-mobile-icon" aria-hidden="true">
+                👥
+              </span>
+              <span className="btn-mobile-label">Кто тут</span>
             </button>
           )}
-          <button type="button" className="btn btn-ghost btn-leave" onClick={onLeave}>
-            {isChatRoom ? '← Выйти' : '← Назад'}
+          <button
+            type="button"
+            className="btn btn-ghost btn-leave"
+            onClick={onLeave}
+            aria-label={isChatRoom ? 'Выйти из комнаты' : 'Назад к комнатам'}
+          >
+            ← <span className="btn-mobile-label">{isChatRoom ? 'Выйти' : 'Назад'}</span>
           </button>
         </div>
       </header>

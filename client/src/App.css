@@ -2533,6 +2533,10 @@ html.telegram-webapp .app-body {
   flex-shrink: 0;
 }
 
+.room-header-actions .btn-mobile-icon {
+  display: none;
+}
+
 .room-return-banner {
   display: flex;
   flex-wrap: wrap;
@@ -5315,6 +5319,7 @@ html.telegram-webapp .app-body {
 @media (max-width: 768px) {
   .app-shell {
     flex-direction: column;
+    --nav-height: 56px;
   }
 
   .app-shell .app-body {
@@ -5335,7 +5340,7 @@ html.telegram-webapp .app-body {
     margin: 0;
     border-bottom: none;
     border-top: 1px solid var(--border);
-    padding: 6px 8px calc(6px + var(--safe-bottom));
+    padding: 4px 6px calc(4px + var(--safe-bottom));
     background: color-mix(in srgb, var(--bg-card) 96%, transparent);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -5354,12 +5359,12 @@ html.telegram-webapp .app-body {
   .menu-item {
     flex: 1;
     flex-direction: column;
-    gap: 2px;
-    padding: 6px 4px;
-    min-height: 52px;
+    gap: 1px;
+    padding: 4px 2px;
+    min-height: 44px;
     border: none;
     background: transparent;
-    font-size: 0.65rem;
+    font-size: 0.62rem;
     border-radius: var(--radius-sm);
   }
 
@@ -5566,20 +5571,108 @@ html.telegram-webapp .app-body {
   }
 
   .btn-target {
-    flex: 1 1 calc(50% - 6px);
+    flex: 1 1 calc(33.333% - 6px);
     min-width: unset;
-    min-height: 48px;
-    padding: 12px 10px;
-    font-size: 0.95rem;
+    min-height: 40px;
+    padding: 8px 6px;
+    font-size: 0.85rem;
+  }
+
+  .action-panel {
+    padding: 8px 12px;
+  }
+
+  .action-panel h3 {
+    margin-bottom: 8px;
+    font-size: 0.92rem;
+  }
+
+  .target-grid {
+    gap: 6px;
   }
 
   .action-row {
-    flex-direction: column;
+    flex-direction: row;
   }
 
   .action-row .btn {
-    width: 100%;
-    min-height: 48px;
+    flex: 1;
+    width: auto;
+    min-height: 42px;
+  }
+
+  .join-game-banner {
+    margin: 8px 10px 0;
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .join-game-banner .btn-lg,
+  .room-footer .btn-lg {
+    min-height: 44px;
+    padding: 10px 14px;
+    font-size: 0.95rem;
+  }
+
+  .roles-banner p,
+  .join-game-banner p {
+    font-size: 0.84rem;
+  }
+
+  .mafia-tabs {
+    padding: 6px 10px 0;
+    gap: 6px;
+  }
+
+  .mafia-tabs button {
+    min-height: 36px;
+    padding: 8px 10px;
+    font-size: 0.88rem;
+  }
+
+  .room-header {
+    padding: calc(8px + var(--safe-top)) 10px 8px;
+    gap: 8px;
+  }
+
+  .room-header-actions .btn-mobile-label {
+    display: none;
+  }
+
+  .room-header-actions .btn-mobile-icon {
+    display: inline;
+    font-size: 1.1rem;
+    line-height: 1;
+  }
+
+  .room-header-actions .btn {
+    min-height: 36px;
+    padding: 6px 10px;
+    font-size: 0.95rem;
+  }
+
+  .room-header-actions .btn-leave {
+    min-width: 36px;
+  }
+
+  .chat-input {
+    gap: 6px;
+    padding: 8px 10px calc(8px + var(--safe-bottom));
+  }
+
+  .chat-input input {
+    min-height: 40px;
+    padding: 10px 12px;
+  }
+
+  .chat-input .btn {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 0 12px;
+  }
+
+  .cabinet-hub-item-mobile-only {
+    display: flex;
   }
 
   .chat-header-bar {
@@ -5644,6 +5737,10 @@ html.telegram-webapp .app-body {
 @media (min-width: 769px) {
   .app-shell {
     flex-direction: row;
+  }
+
+  .cabinet-hub-item-mobile-only {
+    display: none !important;
   }
 
   .app-main {
