@@ -215,11 +215,30 @@ ufw enable
 
 ## Обновление на сервере
 
-**Рекомендуемый способ** — скрипт деплоя (pull, сборка, проверка БД, restart PM2):
+**Рекомендуемый способ** — скрипт деплоя (sync git, сборка, проверка БД, restart PM2):
 
 ```bash
 cd /home/mafia-game
 bash scripts/deploy.sh
+```
+
+Скрипт сбрасывает локальные правки **отслеживаемых** файлов (например старый `Caddyfile` на сервере) до версии из репозитория. Файлы вне git (`server/.env`, `data/`, `uploads/`) не затрагиваются.
+
+Если `git pull` падает с «would be overwritten by merge», выполните один раз:
+
+```bash
+cd /home/mafia-game
+git fetch origin
+git reset --hard origin/main
+bash scripts/deploy.sh
+```
+
+Домен для Caddy задаётся в `Caddyfile` в репозитории; после деплоя при необходимости:
+
+```bash
+cp Caddyfile /etc/caddy/Caddyfile
+caddy validate --config /etc/caddy/Caddyfile
+systemctl reload caddy
 ```
 
 **Вручную:**

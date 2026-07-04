@@ -58,8 +58,27 @@ npm_install_build_deps() {
   npm install --include=dev
 }
 
-echo "==> git pull"
-git pull --ff-only
+sync_git() {
+  echo "==> git sync"
+  git fetch origin
+  local branch upstream
+  branch="$(git rev-parse --abbrev-ref HEAD)"
+  upstream="origin/${branch}"
+
+  if ! git rev-parse --verify "$upstream" >/dev/null 2>&1; then
+    echo "ERROR: remote branch $upstream not found"
+    exit 1
+  fi
+
+  if ! git diff --quiet || ! git diff --cached --quiet; then
+    echo "WARN: local changes to tracked files will be discarded"
+    echo "      (server/.env, data/, uploads/ are not in git and stay untouched)"
+  fi
+
+  git reset --hard "$upstream"
+}
+
+sync_git
 
 echo "==> build client"
 cd "$ROOT/client"
