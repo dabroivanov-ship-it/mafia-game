@@ -15,11 +15,11 @@ interface CabinetHubProps {
 }
 
 const HUB_ITEMS = [
-  { n: '01', title: 'Письма', desc: 'История переписки и новые сообщения', action: 'messages' as const },
-  { n: '02', title: 'Поддержка', desc: 'Сообщить о проблеме администратору', action: 'support' as const },
-  { n: '03', title: 'Поиск пользователей', desc: 'Найти игрока по логину, имени или городу', action: 'search' as const },
-  { n: '04', title: 'Личные настройки', desc: 'Имя, город, аватар, лимит чата', action: 'profile' as const },
-  { n: '05', title: 'Оформление сайта', desc: 'Цветовая тема интерфейса', action: 'theme' as const },
+  { icon: '✉️', title: 'Письма', desc: 'История переписки и новые сообщения', action: 'messages' as const },
+  { icon: '🆘', title: 'Поддержка', desc: 'Сообщить о проблеме администратору', action: 'support' as const },
+  { icon: '🔍', title: 'Поиск пользователей', desc: 'Найти игрока по логину, имени или городу', action: 'search' as const },
+  { icon: '👤', title: 'Личные настройки', desc: 'Имя, город, аватар, лимит чата', action: 'profile' as const },
+  { icon: '🎨', title: 'Оформление сайта', desc: 'Цветовая тема интерфейса', action: 'theme' as const },
 ];
 
 export default function CabinetHub({
@@ -51,23 +51,25 @@ export default function CabinetHub({
       </nav>
 
       <header className="page-header">
-        <h1>Кабинет</h1>
+        <h1>👤 Кабинет</h1>
       </header>
 
       <div className="cabinet-hub-user">
         {user.avatar ? (
           <img src={avatarUrl(user.avatar) ?? undefined} alt="" className="cabinet-hub-avatar" />
         ) : (
-          <div className="cabinet-hub-avatar placeholder" aria-hidden="true" />
+          <div className="cabinet-hub-avatar placeholder" aria-hidden="true">
+            👤
+          </div>
         )}
         <div>
           <strong>{user.username}</strong>
           {onOpenStatistics ? (
             <button type="button" className="cabinet-hub-mmr-link" onClick={onOpenStatistics}>
-              MMR {user.mmr ?? user.totalScore}
+              🏆 MMR {user.mmr ?? user.totalScore}
             </button>
           ) : (
-            <span className="muted">MMR {user.mmr ?? user.totalScore}</span>
+            <span className="muted">🏆 MMR {user.mmr ?? user.totalScore}</span>
           )}
         </div>
       </div>
@@ -80,8 +82,8 @@ export default function CabinetHub({
             className="info-hub-card"
             onClick={handlers[item.action]}
           >
-            <span className="info-hub-index" aria-hidden="true">
-              {item.n}
+            <span className="info-hub-icon" aria-hidden="true">
+              {item.icon}
             </span>
             <span className="info-hub-body">
               <strong>
@@ -101,7 +103,7 @@ export default function CabinetHub({
 
       <div className="cabinet-hub-logout">
         <button type="button" className="btn btn-ghost danger" onClick={onLogout}>
-          Выйти
+          🚪 Выйти
         </button>
       </div>
     </div>

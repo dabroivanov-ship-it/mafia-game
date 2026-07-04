@@ -483,7 +483,6 @@ textarea:focus {
 /* ——— Placeholder avatars ——— */
 .profile-avatar.placeholder,
 .admin-avatar.placeholder,
-.cabinet-hub-avatar.placeholder,
 .user-search-avatar.placeholder,
 .user-stats-avatar.placeholder,
 .staff-avatar.placeholder,
@@ -500,7 +499,6 @@ textarea:focus {
 
 .profile-avatar.placeholder::after,
 .admin-avatar.placeholder::after,
-.cabinet-hub-avatar.placeholder::after,
 .user-search-avatar.placeholder::after,
 .user-stats-avatar.placeholder::after,
 .staff-avatar.placeholder::after,

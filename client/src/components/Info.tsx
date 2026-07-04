@@ -16,15 +16,23 @@ import { ROLES_INTRO } from '../content/rolesContent';
 
 import type { User } from '../types';
 
-const INFO_HUB_ITEMS = [
-  { icon: '🎭', section: 'roles' as const, title: 'Игровые роли', desc: 'Мафия, город, маньяк — все способности' },
-  { icon: '📜', section: 'rules' as const, title: 'Правила игры', desc: 'Как начать, фазы, победа и очки' },
-  { icon: '❓', section: 'faq' as const, title: 'Частые вопросы', desc: 'Как начать, роли и ведущий' },
-  { icon: '💬', section: 'chatRules' as const, title: 'Правила чата', desc: 'Общение, профили и модерация' },
-  { icon: '🏆', section: 'rating' as const, title: 'Рейтинг игроков', desc: 'Топ по очкам, играм и репутации' },
-  { icon: '🧠', section: 'quizLeaders' as const, title: 'Самые умные', desc: 'Топ-10 викторины по верным ответам' },
-  { icon: '🛡️', section: 'team' as const, title: 'Команда', desc: 'Администраторы и модераторы', authOnly: true },
-] as const;
+type InfoHubItem = {
+  icon: string;
+  section: Exclude<InfoSection, 'hub'>;
+  title: string;
+  desc: string;
+  authOnly?: boolean;
+};
+
+const INFO_HUB_ITEMS: InfoHubItem[] = [
+  { icon: '🎭', section: 'roles', title: 'Игровые роли', desc: 'Мафия, город, маньяк — все способности' },
+  { icon: '📜', section: 'rules', title: 'Правила игры', desc: 'Как начать, фазы, победа и очки' },
+  { icon: '❓', section: 'faq', title: 'Частые вопросы', desc: 'Как начать, роли и ведущий' },
+  { icon: '💬', section: 'chatRules', title: 'Правила чата', desc: 'Общение, профили и модерация' },
+  { icon: '🏆', section: 'rating', title: 'Рейтинг игроков', desc: 'Топ по очкам, играм и репутации' },
+  { icon: '🧠', section: 'quizLeaders', title: 'Самые умные', desc: 'Топ-10 викторины по верным ответам' },
+  { icon: '🛡️', section: 'team', title: 'Команда', desc: 'Администраторы и модераторы', authOnly: true },
+];
 
 interface InfoProps {
   initialSection?: InfoSection;
