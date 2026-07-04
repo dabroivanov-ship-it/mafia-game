@@ -222,6 +222,24 @@ export default function App() {
       setUnreadMailCount(count);
     });
 
+    const applyNotificationSync = (list: UserNotification[], unreadCount: number) => {
+      setNotifications(list);
+      setNotificationUnreadCount(unreadCount);
+    };
+
+    s.on('connect', () => {
+      void fetchNotifications()
+        .then(({ notifications: list, unreadCount }) => applyNotificationSync(list, unreadCount))
+        .catch(() => {});
+    });
+
+    s.on(
+      'notification:sync',
+      ({ notifications: list, unreadCount }: { notifications: UserNotification[]; unreadCount: number }) => {
+        applyNotificationSync(list, unreadCount);
+      }
+    );
+
     s.on(
       'notification:new',
       ({ notification, unreadCount }: { notification: UserNotification; unreadCount: number }) => {
@@ -246,6 +264,11 @@ export default function App() {
       'pm:received',
       ({ unreadCount }: { fromDisplayName: string; preview: string; unreadCount: number }) => {
         setUnreadMailCount(unreadCount);
+        void fetchNotifications()
+          .then(({ notifications: list, unreadCount: bellUnread }) =>
+            applyNotificationSync(list, bellUnread)
+          )
+          .catch(() => {});
       }
     );
 

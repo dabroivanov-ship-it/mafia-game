@@ -24,6 +24,7 @@ import './stats/siteStats.js';
 import settingsRoutes from './settings/routes.js';
 import notificationRoutes from './notifications/routes.js';
 import { initNotificationPush, pushMailNotification } from './notifications/push.js';
+import { getUnreadNotificationCount, listNotifications } from './notifications/store.js';
 import { getUnreadCount } from './messages/store.js';
 import { socketAuthMiddleware, refreshSocketUser } from './auth/jwt.js';
 import { findUserById, updateUserScore, isAdmin, isStaff, isModerator, canModerateSilence, canSilenceTarget, updateUserConnectionInfo, uploadsDir, normalizeChatLimit, canBanTarget } from './auth/db.js';
@@ -416,12 +417,35 @@ app.use(
   })
 );
 app.use('/api/moderation', createModerationRouter({ onUserBanned: handleUserBanned }));
+
+function notifyMailReceived(
+  recipientId: number,
+  payload: {
+    fromUserId: number;
+    fromUsername: string;
+    fromDisplayName: string;
+    preview: string;
+    unreadCount: number;
+  }
+): void {
+  notifyUser(recipientId, 'pm:received', payload);
+  try {
+    pushMailNotification(recipientId, {
+      fromUserId: payload.fromUserId,
+      fromUsername: payload.fromUsername,
+      fromDisplayName: payload.fromDisplayName,
+      preview: payload.preview,
+    });
+  } catch (err) {
+    console.error('Failed to store mail notification:', err);
+  }
+}
+
 app.use(
   '/api/messages',
   createMessagesRouter({
     onMessageSent: (recipientId, payload) => {
-      notifyUser(recipientId, 'pm:received', payload);
-      pushMailNotification(recipientId, payload);
+      notifyMailReceived(recipientId, payload);
     },
     onMessageRead: (userId, unreadCount) => {
       notifyUser(userId, 'pm:unread', { count: unreadCount });
@@ -432,8 +456,7 @@ app.use(
   '/api/support',
   createSupportRouter({
     onMessageSent: (recipientId, payload) => {
-      notifyUser(recipientId, 'pm:received', payload);
-      pushMailNotification(recipientId, payload);
+      notifyMailReceived(recipientId, payload);
     },
   })
 );
@@ -536,13 +559,15 @@ function requireSocketSilenceModerator(
   return user;
 }
 
-function notifyUser(userId: number, event: string, data: unknown): void {
-  const socketIds = userSocketIds.get(userId);
-  if (!socketIds) return;
-  for (const socketId of socketIds) {
-    io.to(socketId).emit(event, data);
-  }
+function userRoom(userId: number): string {
+  return `user:${userId}`;
 }
+
+function notifyUser(userId: number, event: string, data: unknown): void {
+  io.to(userRoom(userId)).emit(event, data);
+}
+
+initNotificationPush(notifyUser);
 
 function serializeForSocketUser(
   room: GameRoom,
@@ -693,7 +718,12 @@ io.on('connection', (socket) => {
   socket.isStaff = isStaff(user);
   trackUserConnection(socket);
   attachUserSocket(socket.userId!, socket.id);
+  void socket.join(userRoom(socket.userId!));
   socket.emit('pm:unread', { count: getUnreadCount(socket.userId!) });
+  socket.emit('notification:sync', {
+    notifications: listNotifications(socket.userId!, 40),
+    unreadCount: getUnreadNotificationCount(socket.userId!),
+  });
 
   socket.emit('lobby:update', getLobbyPayload());
 
@@ -1143,7 +1173,6 @@ app.get('*', (req, res, next) => {
 
 const PORT = process.env.PORT || 3001;
 httpServer.listen(PORT, () => {
-  initNotificationPush(notifyUser);
   console.log(`🎭 Mafia server: http://localhost:${PORT}`);
   console.log(`   Комнат: ${CONFIG.ROOM_COUNT}, игроков: ${CONFIG.MIN_PLAYERS}–${CONFIG.MAX_PLAYERS}`);
   console.log(`   Static: ${clientDist}`);
