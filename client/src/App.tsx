@@ -20,12 +20,13 @@ import {
   type RoomScreen,
 } from './roomRouting';
 import { DEFAULT_PAGE_META, updatePageMeta } from './seo';
-import { clearSession, fetchMe, fetchUnreadMailCount, fetchUnreadNewsCount, fetchThemeSettings, saveSession, loadStoredPlayerId, saveStoredPlayerId, clearStoredPlayerIds } from './api';
-import type { LobbyRoom, RoomState, User, ThemeId, LobbyUpdate, SiteBranding } from './types';
+import { clearSession, fetchMe, fetchUnreadMailCount, fetchUnreadNewsCount, fetchThemeSettings, fetchNotifications, markNotificationRead, markAllNotificationsRead, saveSession, loadStoredPlayerId, saveStoredPlayerId, clearStoredPlayerIds } from './api';
+import type { LobbyRoom, RoomState, User, ThemeId, LobbyUpdate, SiteBranding, UserNotification } from './types';
 import { applyTheme, resolveTheme, DEFAULT_THEME } from './themes';
 import { DEFAULT_SITE_BRANDING } from './siteBranding';
 import SiteFooter from './components/SiteFooter';
 import InstallAppBanner from './components/InstallAppBanner';
+import NotificationBell from './components/NotificationBell';
 
 const OnlineUsers = lazy(() => import('./components/OnlineUsers'));
 const News = lazy(() => import('./components/News'));
@@ -72,7 +73,10 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [unreadMailCount, setUnreadMailCount] = useState(0);
   const [unreadNewsCount, setUnreadNewsCount] = useState(0);
-  const [pmNotice, setPmNotice] = useState<string | null>(null);
+  const [notifications, setNotifications] = useState<UserNotification[]>([]);
+  const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [lobbyScreen, setLobbyScreen] = useState<LobbyScreen>('rooms');
   const [composeToUserId, setComposeToUserId] = useState<number | null>(null);
   const [composeToUsername, setComposeToUsername] = useState<string | null>(null);
@@ -173,7 +177,7 @@ export default function App() {
   useEffect(() => {
     if (!user) return;
     void import('./components/Room');
-    if (user.isAdmin) void import('./components/AdminPanel');
+    if (user.canAccessAdminPanel) void import('./components/AdminPanel');
   }, [user]);
 
   useEffect(() => {
@@ -216,6 +220,26 @@ export default function App() {
     });
 
     s.on(
+      'notification:new',
+      ({ notification, unreadCount }: { notification: UserNotification; unreadCount: number }) => {
+        setNotifications((prev) => {
+          const without = prev.filter((item) => item.id !== notification.id);
+          return [notification, ...without].slice(0, 40);
+        });
+        setNotificationUnreadCount(unreadCount);
+        if (notification.type === 'mail') {
+          const payload = notification.payload;
+          const fromUserId = typeof payload?.fromUserId === 'number' ? payload.fromUserId : undefined;
+          if (fromUserId) {
+            void fetchUnreadMailCount()
+              .then(({ count }) => setUnreadMailCount(count))
+              .catch(() => {});
+          }
+        }
+      }
+    );
+
+    s.on(
       'pm:received',
       ({
         fromDisplayName,
@@ -227,7 +251,6 @@ export default function App() {
         unreadCount: number;
       }) => {
         setUnreadMailCount(unreadCount);
-        setPmNotice(`✉️ ${fromDisplayName}: ${preview}`);
       }
     );
 
@@ -269,6 +292,14 @@ export default function App() {
     void fetchUnreadNewsCount()
       .then(({ count }) => setUnreadNewsCount(count))
       .catch(() => {});
+    setNotificationsLoading(true);
+    void fetchNotifications()
+      .then(({ notifications: list, unreadCount }) => {
+        setNotifications(list);
+        setNotificationUnreadCount(unreadCount);
+      })
+      .catch(() => {})
+      .finally(() => setNotificationsLoading(false));
   }, [token]);
 
   const openMessages = useCallback((opts?: { userId?: number; username?: string }) => {
@@ -276,7 +307,6 @@ export default function App() {
     setComposeToUsername(opts?.username ?? null);
     setView('cabinet');
     setLobbyScreen('cabinet-messages');
-    setPmNotice(null);
   }, []);
 
   const openProfileStatistics = useCallback(
@@ -380,6 +410,95 @@ export default function App() {
     window.history.pushState(null, '', '/');
   }, []);
 
+  const handleNotificationSelect = useCallback(
+    async (notification: UserNotification) => {
+      if (!notification.isRead) {
+        try {
+          const { unreadCount } = await markNotificationRead(notification.id);
+          setNotificationUnreadCount(unreadCount);
+          setNotifications((prev) =>
+            prev.map((item) => (item.id === notification.id ? { ...item, isRead: true } : item))
+          );
+        } catch {
+          /* ignore */
+        }
+      }
+      setNotificationsOpen(false);
+
+      if (currentRoomId && !roomMinimized) {
+        if (roomState?.kind === 'chat') leaveRoom();
+        else minimizeMafiaRoom();
+      }
+
+      if (notification.action === 'messages') {
+        const fromUserId =
+          typeof notification.payload?.fromUserId === 'number'
+            ? notification.payload.fromUserId
+            : undefined;
+        const fromUsername =
+          typeof notification.payload?.fromUsername === 'string'
+            ? notification.payload.fromUsername
+            : undefined;
+        openMessages({ userId: fromUserId, username: fromUsername });
+        return;
+      }
+
+      if (notification.action === 'profile') {
+        const userId =
+          typeof notification.payload?.userId === 'number' ? notification.payload.userId : user?.id;
+        if (userId) openProfileStatistics(userId);
+      }
+    },
+    [
+      currentRoomId,
+      roomMinimized,
+      roomState?.kind,
+      leaveRoom,
+      minimizeMafiaRoom,
+      openMessages,
+      openProfileStatistics,
+      user?.id,
+    ]
+  );
+
+  const handleMarkAllNotificationsRead = useCallback(async () => {
+    try {
+      const { unreadCount } = await markAllNotificationsRead();
+      setNotificationUnreadCount(unreadCount);
+      setNotifications((prev) => prev.map((item) => ({ ...item, isRead: true })));
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const notificationBar = (
+    <header className="app-topbar">
+      <NotificationBell
+        notifications={notifications}
+        unreadCount={notificationUnreadCount}
+        open={notificationsOpen}
+        loading={notificationsLoading}
+        onToggle={() => {
+          setNotificationsOpen((prev) => {
+            const next = !prev;
+            if (next) {
+              void fetchNotifications()
+                .then(({ notifications: list, unreadCount }) => {
+                  setNotifications(list);
+                  setNotificationUnreadCount(unreadCount);
+                })
+                .catch(() => {});
+            }
+            return next;
+          });
+        }}
+        onClose={() => setNotificationsOpen(false)}
+        onMarkAllRead={() => void handleMarkAllNotificationsRead()}
+        onSelect={(item) => void handleNotificationSelect(item)}
+      />
+    </header>
+  );
+
   const openRoomMembers = useCallback(() => {
     if (!currentRoomId) return;
     setRoomScreen('members');
@@ -467,22 +586,11 @@ export default function App() {
   if (currentRoomId && !roomMinimized) {
     const isChatRoom = roomState?.kind === 'chat';
     return (
-      <div className="app">
+      <div className="app app-in-room">
+        {notificationBar}
         {notification && (
           <div className="toast" onClick={() => setNotification(null)}>
             🔒 {notification}
-          </div>
-        )}
-        {pmNotice && (
-          <div
-            className="toast pm-toast"
-            onClick={() => {
-              if (isChatRoom) leaveRoom();
-              else minimizeMafiaRoom();
-              openMessages();
-            }}
-          >
-            {pmNotice}
           </div>
         )}
         {error && (
@@ -527,11 +635,6 @@ export default function App() {
 
   return (
     <div className="app app-shell">
-      {pmNotice && (
-        <div className="toast pm-toast" onClick={() => { setPmNotice(null); openMessages(); }}>
-          {pmNotice}
-        </div>
-      )}
       {notification && (
         <div className="toast" onClick={() => setNotification(null)}>
           🔒 {notification}
@@ -544,6 +647,7 @@ export default function App() {
       )}
 
       <div className="app-main">
+        {notificationBar}
         <div className="app-body">
         {profileStatsUserId != null ? (
           <ViewSuspense label="Статистика…">
@@ -657,7 +761,7 @@ export default function App() {
             />
           </ViewSuspense>
         )}
-        {view === 'admin' && user.isAdmin && (
+        {view === 'admin' && user.canAccessAdminPanel && (
           <ViewSuspense label="Админка…">
             <AdminPanel
               onBack={() => setView('lobby')}

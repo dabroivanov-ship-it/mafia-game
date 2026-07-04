@@ -1,10 +1,13 @@
 import { FormEvent, useEffect, useState } from 'react';
 import {
   fetchAdminBackups,
+  fetchBackupSchedule,
   adminCreateBackup,
+  adminSaveBackupSchedule,
   adminRestoreBackup,
   adminDeleteBackup,
   type AdminBackupInfo,
+  type BackupScheduleSettings,
 } from '../api';
 
 function formatSize(bytes: number): string {
@@ -21,11 +24,25 @@ export default function AdminBackupPanel() {
   const [error, setError] = useState('');
   const [restoringId, setRestoringId] = useState<string | null>(null);
 
+  const [schedule, setSchedule] = useState<BackupScheduleSettings>({
+    enabled: false,
+    time: '03:00',
+    includeUploads: true,
+    keepCount: 7,
+    lastRunAt: null,
+  });
+  const [scheduleSaving, setScheduleSaving] = useState(false);
+  const [scheduleSaved, setScheduleSaved] = useState(false);
+
   const load = async () => {
     setError('');
     try {
-      const { backups: list } = await fetchAdminBackups();
+      const [{ backups: list }, { schedule: saved }] = await Promise.all([
+        fetchAdminBackups(),
+        fetchBackupSchedule(),
+      ]);
       setBackups(list);
+      setSchedule(saved);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка загрузки');
     } finally {
@@ -48,6 +65,27 @@ export default function AdminBackupPanel() {
       setError(err instanceof Error ? err.message : 'Ошибка создания бэкапа');
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleSaveSchedule = async (e: FormEvent) => {
+    e.preventDefault();
+    setScheduleSaving(true);
+    setScheduleSaved(false);
+    setError('');
+    try {
+      const { schedule: saved } = await adminSaveBackupSchedule({
+        enabled: schedule.enabled,
+        time: schedule.time,
+        includeUploads: schedule.includeUploads,
+        keepCount: schedule.keepCount,
+      });
+      setSchedule(saved);
+      setScheduleSaved(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка сохранения расписания');
+    } finally {
+      setScheduleSaving(false);
     }
   };
 
@@ -86,7 +124,88 @@ export default function AdminBackupPanel() {
     <div className="admin-backup-panel">
       {error && <div className="auth-error">{error}</div>}
 
-      <form className="admin-backup-create" onSubmit={handleCreate}>
+      <form className="admin-backup-schedule theme-settings-block" onSubmit={handleSaveSchedule}>
+        <h4>Автоматический бэкап</h4>
+        <p className="theme-settings-hint">
+          Копия создаётся ежедневно в указанное время по часам сервера. Если сервер был выключен — копия
+          создастся при следующем запуске после этого времени.
+        </p>
+
+        <label className="theme-use-default">
+          <input
+            type="checkbox"
+            checked={schedule.enabled}
+            onChange={(e) => {
+              setSchedule((prev) => ({ ...prev, enabled: e.target.checked }));
+              setScheduleSaved(false);
+            }}
+            disabled={scheduleSaving}
+          />
+          <span>Включить автобэкап</span>
+        </label>
+
+        <label>
+          Время (ЧЧ:ММ)
+          <input
+            type="time"
+            value={schedule.time}
+            onChange={(e) => {
+              setSchedule((prev) => ({ ...prev, time: e.target.value }));
+              setScheduleSaved(false);
+            }}
+            disabled={scheduleSaving || !schedule.enabled}
+            required
+          />
+        </label>
+
+        <label className="theme-use-default">
+          <input
+            type="checkbox"
+            checked={schedule.includeUploads}
+            onChange={(e) => {
+              setSchedule((prev) => ({ ...prev, includeUploads: e.target.checked }));
+              setScheduleSaved(false);
+            }}
+            disabled={scheduleSaving || !schedule.enabled}
+          />
+          <span>Включать uploads в автокопию</span>
+        </label>
+
+        <label>
+          Хранить последних копий (0 — все)
+          <input
+            type="number"
+            min={0}
+            max={100}
+            value={schedule.keepCount}
+            onChange={(e) => {
+              setSchedule((prev) => ({
+                ...prev,
+                keepCount: Math.max(0, Math.min(100, Number(e.target.value) || 0)),
+              }));
+              setScheduleSaved(false);
+            }}
+            disabled={scheduleSaving || !schedule.enabled}
+          />
+        </label>
+
+        {schedule.lastRunAt && (
+          <p className="theme-settings-hint">
+            Последний автобэкап:{' '}
+            <strong>{new Date(schedule.lastRunAt).toLocaleString('ru-RU')}</strong>
+          </p>
+        )}
+
+        <div className="profile-actions">
+          <button type="submit" className="btn btn-primary" disabled={scheduleSaving}>
+            {scheduleSaving ? 'Сохранение…' : 'Сохранить расписание'}
+          </button>
+          {scheduleSaved && <span className="muted">Сохранено</span>}
+        </div>
+      </form>
+
+      <form className="admin-backup-create theme-settings-block" onSubmit={handleCreate}>
+        <h4>Ручной бэкап</h4>
         <p className="theme-settings-hint">
           Создаётся копия базы данных SQLite. Можно включить папку uploads (аватары, обложки новостей).
         </p>

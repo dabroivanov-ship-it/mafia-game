@@ -28,10 +28,16 @@ import {
   adminSetTelegramSettings,
   fetchMetrikaSettings,
   adminSetMetrikaSettings,
+  fetchAdminPermissions,
   type AdminRoom,
   type SilencedPlayerEntry,
 } from '../api';
-import type { User, NewsPost, ThemeId, ViolationLogEntry, ViolationType, SiteBranding } from '../types';
+import type { User, NewsPost, ThemeId, ViolationLogEntry, ViolationType, SiteBranding, UserRole } from '../types';
+import {
+  adminPanelRoleLabel,
+  hasAdminPermission,
+  type AdminPermission,
+} from '../adminPermissions';
 import NewsEditor, { type NewsEditorValue } from './NewsEditor';
 import NewsBody from './NewsBody';
 import { isEmptyNewsBody } from './newsBodyUtils';
@@ -90,6 +96,19 @@ const VIOLATION_LABELS: Record<ViolationType, string> = {
 
 const USERS_PAGE_SIZE = 15;
 
+function assignableRole(u: User): 'user' | 'watcher' | 'moderator' {
+  if (u.isModerator) return 'moderator';
+  if (u.isWatcher) return 'watcher';
+  return 'user';
+}
+
+function userRoleSearchText(u: User): string {
+  if (u.isAdmin) return 'admin';
+  if (u.isModerator) return 'mod moderator';
+  if (u.isWatcher) return 'watcher watch смотрящий';
+  return 'user';
+}
+
 interface AdminPanelProps {
   onBack: () => void;
   onDefaultThemeChange?: (theme: ThemeId) => void;
@@ -104,7 +123,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
   const [error, setError] = useState('');
   const [banTarget, setBanTarget] = useState<User | null>(null);
   const [banReason, setBanReason] = useState('Нарушение правил');
-  const [banHours, setBanHours] = useState('');
+  const [banMinutes, setBanMinutes] = useState('');
   const [userSearch, setUserSearch] = useState('');
   const [userPage, setUserPage] = useState(0);
   const [editUser, setEditUser] = useState<User | null>(null);
@@ -132,6 +151,8 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
   const [metrikaId, setMetrikaId] = useState('');
   const [metrikaDisabled, setMetrikaDisabled] = useState(false);
   const [metrikaSaving, setMetrikaSaving] = useState(false);
+  const [permissions, setPermissions] = useState<AdminPermission[]>([]);
+  const [panelRole, setPanelRole] = useState<UserRole>('user');
 
   const load = async ({ silent = false, syncRoomNames = false } = {}) => {
     if (!silent) setLoading(true);
@@ -161,6 +182,15 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
     void load();
     const id = setInterval(() => void load({ silent: true }), 10000);
     return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    fetchAdminPermissions()
+      .then(({ role, permissions: perms }) => {
+        setPanelRole(role as UserRole);
+        setPermissions(perms);
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -326,12 +356,21 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
     }
   };
 
-  const handleRoleChange = async (userId: number, role: 'user' | 'moderator') => {
+  const handleRoleChange = async (userId: number, role: 'user' | 'watcher' | 'moderator') => {
     try {
       await adminSetUserRole(userId, role);
       await load();
       if (editUser?.id === userId) {
-        setEditUser((prev) => (prev ? { ...prev, isModerator: role === 'moderator' } : null));
+        setEditUser((prev) =>
+          prev
+            ? {
+                ...prev,
+                role,
+                isModerator: role === 'moderator',
+                isWatcher: role === 'watcher',
+              }
+            : null
+        );
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка смены роли');
@@ -405,7 +444,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
   const handleBan = async () => {
     if (!banTarget) return;
     try {
-      await adminBan(banTarget.id, banReason, banHours ? Number(banHours) : null);
+      await adminBan(banTarget.id, banReason, banMinutes ? Number(banMinutes) : null);
       setBanTarget(null);
       await load();
     } catch (err) {
@@ -533,7 +572,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
     return (
       u.username.toLowerCase().includes(q) ||
       u.displayName.toLowerCase().includes(q) ||
-      (u.isAdmin ? 'admin' : u.isModerator ? 'mod moderator' : 'user').includes(q)
+      userRoleSearchText(u).includes(q)
     );
   });
   const userTotalPages = Math.max(1, Math.ceil(filteredUsers.length / USERS_PAGE_SIZE));
@@ -545,6 +584,16 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
   const gameRooms = rooms.filter((r) => r.kind !== 'chat');
   const chatRooms = rooms.filter((r) => r.kind === 'chat');
   const banListCount = users.filter((u) => u.isBanned).length + silencedPlayers.length;
+
+  const canEditUsers = hasAdminPermission(permissions, 'edit_users');
+  const canBanUsers = hasAdminPermission(permissions, 'ban_users');
+  const canDeleteUsers = hasAdminPermission(permissions, 'delete_users');
+  const canSetRoles = hasAdminPermission(permissions, 'set_roles');
+  const canManageSilence = hasAdminPermission(permissions, 'manage_silence');
+  const canClearViolations = hasAdminPermission(permissions, 'clear_violations');
+  const canManageNews = hasAdminPermission(permissions, 'manage_news');
+  const canManageGameRooms = hasAdminPermission(permissions, 'manage_game_rooms');
+  const canManageChatRooms = hasAdminPermission(permissions, 'manage_chat_rooms');
 
   const formatUntil = (value?: string | null) => {
     if (!value) return 'навсегда';
@@ -567,9 +616,17 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
     <div className="admin-page">
       <div className="admin-header">
         <div>
-          <h2>Панель администратора</h2>
+          <h2>
+            {panelRole === 'watcher'
+              ? 'Панель смотрящего'
+              : panelRole === 'moderator'
+                ? 'Панель модератора'
+                : 'Панель администратора'}
+          </h2>
           {systemView === 'hub' && (
             <p className="admin-header-sub">
+              {adminPanelRoleLabel(panelRole)}
+              {' · '}
               Пользователей: <strong>{users.length}</strong> · Комнат: <strong>{rooms.length}</strong>
             </p>
           )}
@@ -585,6 +642,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
       <AdminSystemSection
         view={systemView}
         onViewChange={setSystemView}
+        permissions={permissions}
         usersCount={users.length}
         banListCount={banListCount}
         roomsCount={rooms.length}
@@ -636,6 +694,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
                       </span>
                       {u.isAdmin && <span className="admin-badge">admin</span>}
                       {u.isModerator && <span className="mod-badge">mod</span>}
+                      {u.isWatcher && <span className="watcher-badge">watch</span>}
                       {u.isBanned && <span className="status-banned">бан</span>}
                     </button>
                   </li>
@@ -712,9 +771,11 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
                           <td>{u.banReason || '—'}</td>
                           <td>{formatUntil(u.bannedUntil)}</td>
                           <td className="admin-actions">
-                            <button type="button" className="btn btn-sm" onClick={() => void handleUnban(u.id)}>
-                              Разбан
-                            </button>
+                            {canBanUsers && (
+                              <button type="button" className="btn btn-sm" onClick={() => void handleUnban(u.id)}>
+                                Разбан
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -752,13 +813,15 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
                           <td>{entry.silenceReason || '—'}</td>
                           <td>{formatSilenceUntil(entry.silencedUntil, entry.permanent)}</td>
                           <td className="admin-actions">
-                            <button
-                              type="button"
-                              className="btn btn-sm"
-                              onClick={() => void handleUnsilence(entry.userId)}
-                            >
-                              Снять заглушку
-                            </button>
+                            {canManageSilence && (
+                              <button
+                                type="button"
+                                className="btn btn-sm"
+                                onClick={() => void handleUnsilence(entry.userId)}
+                              >
+                                Снять заглушку
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -777,33 +840,43 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
                 <AdminRoomOrderList
                   rooms={gameRooms}
                   kind="game"
+                  readOnly={!canManageGameRooms}
                   onReordered={() => load({ silent: true, syncRoomNames: true })}
                   renderRow={(r) => (
                     <>
-                      <input
-                        type="text"
-                        value={roomEdits[r.id] ?? r.name}
-                        onChange={(e) => handleRoomNameChange(r.id, e.target.value)}
-                        onKeyDown={(e) => handleRoomNameKeyDown(e, r.id)}
-                        maxLength={50}
-                      />
+                      {canManageGameRooms ? (
+                        <input
+                          type="text"
+                          value={roomEdits[r.id] ?? r.name}
+                          onChange={(e) => handleRoomNameChange(r.id, e.target.value)}
+                          onKeyDown={(e) => handleRoomNameKeyDown(e, r.id)}
+                          maxLength={50}
+                        />
+                      ) : (
+                        <strong>{r.name}</strong>
+                      )}
                       <span className="muted room-meta">
                         {r.playerCount} · {r.phase}
                       </span>
-                      <button type="button" className="btn btn-sm btn-primary" onClick={() => void handleRenameRoom(r.id)}>
-                        Сохранить
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-ghost"
-                        onClick={() => void handleClearRoomMessages(r.id, r.name)}
-                      >
-                        Очистить чат
-                      </button>
+                      {canManageGameRooms && (
+                        <>
+                          <button type="button" className="btn btn-sm btn-primary" onClick={() => void handleRenameRoom(r.id)}>
+                            Сохранить
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-ghost"
+                            onClick={() => void handleClearRoomMessages(r.id, r.name)}
+                          >
+                            Очистить чат
+                          </button>
+                        </>
+                      )}
                     </>
                   )}
                 />
               )}
+              {canManageGameRooms && (
               <form className="admin-add-room" onSubmit={handleCreateGameRoom}>
                 <input
                   type="text"
@@ -814,6 +887,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
                 />
                 <button type="submit" className="btn btn-primary">+ Создать комнату мафии</button>
               </form>
+              )}
             </section>
           ),
           chatRooms: (
@@ -825,40 +899,50 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
                 <AdminRoomOrderList
                   rooms={chatRooms}
                   kind="chat"
+                  readOnly={!canManageChatRooms}
                   onReordered={() => load({ silent: true, syncRoomNames: true })}
                   renderRow={(r) => (
                     <>
-                      <input
-                        type="text"
-                        value={roomEdits[r.id] ?? r.name}
-                        onChange={(e) => handleRoomNameChange(r.id, e.target.value)}
-                        onKeyDown={(e) => handleRoomNameKeyDown(e, r.id)}
-                        maxLength={50}
-                      />
+                      {canManageChatRooms ? (
+                        <input
+                          type="text"
+                          value={roomEdits[r.id] ?? r.name}
+                          onChange={(e) => handleRoomNameChange(r.id, e.target.value)}
+                          onKeyDown={(e) => handleRoomNameKeyDown(e, r.id)}
+                          maxLength={50}
+                        />
+                      ) : (
+                        <strong>{r.name}</strong>
+                      )}
                       <span className="muted room-meta">
                         {r.playerCount}
                       </span>
-                      <button type="button" className="btn btn-sm btn-primary" onClick={() => void handleRenameRoom(r.id)}>
-                        Сохранить
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-ghost"
-                        onClick={() => void handleClearRoomMessages(r.id, r.name)}
-                      >
-                        Очистить чат
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-sm danger"
-                        onClick={() => void handleDeleteChatRoom(r.id, r.name)}
-                      >
-                        Удалить
-                      </button>
+                      {canManageChatRooms && (
+                        <>
+                          <button type="button" className="btn btn-sm btn-primary" onClick={() => void handleRenameRoom(r.id)}>
+                            Сохранить
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-ghost"
+                            onClick={() => void handleClearRoomMessages(r.id, r.name)}
+                          >
+                            Очистить чат
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-sm danger"
+                            onClick={() => void handleDeleteChatRoom(r.id, r.name)}
+                          >
+                            Удалить
+                          </button>
+                        </>
+                      )}
                     </>
                   )}
                 />
               )}
+              {canManageChatRooms && (
               <form className="admin-add-room" onSubmit={handleCreateChatRoom}>
                 <input
                   type="text"
@@ -869,13 +953,14 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
                 />
                 <button type="submit" className="btn btn-primary">+ Создать чат-комнату</button>
               </form>
+              )}
             </section>
           ),
           news: (
             <section className="admin-section admin-section-embedded">
               <div className="admin-section-head">
                 <h3>Новости ({newsPosts.length})</h3>
-                {!showNewsEditor && (
+                {!showNewsEditor && canManageNews && (
                   <button
                     type="button"
                     className="btn btn-primary btn-sm"
@@ -934,15 +1019,19 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
                     )}
                     <NewsBody body={item.body} />
                     <div className="admin-actions">
-                      <button type="button" className="btn btn-sm" onClick={() => handleEditNews(item)}>
-                        Редактировать
-                      </button>
-                      <button type="button" className="btn btn-sm" onClick={() => void handleToggleNewsPublished(item)}>
-                        {item.isPublished ? 'Снять с публикации' : 'Опубликовать'}
-                      </button>
-                      <button type="button" className="btn btn-sm danger" onClick={() => void handleDeleteNews(item.id)}>
-                        Удалить
-                      </button>
+                      {canManageNews && (
+                        <>
+                          <button type="button" className="btn btn-sm" onClick={() => handleEditNews(item)}>
+                            Редактировать
+                          </button>
+                          <button type="button" className="btn btn-sm" onClick={() => void handleToggleNewsPublished(item)}>
+                            {item.isPublished ? 'Снять с публикации' : 'Опубликовать'}
+                          </button>
+                          <button type="button" className="btn btn-sm danger" onClick={() => void handleDeleteNews(item.id)}>
+                            Удалить
+                          </button>
+                        </>
+                      )}
                     </div>
                   </article>
                 ))}
@@ -957,7 +1046,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
                   type="button"
                   className="btn btn-sm danger"
                   onClick={() => void handleClearViolations()}
-                  disabled={violations.length === 0}
+                  disabled={violations.length === 0 || !canClearViolations}
                 >
                   Очистить лог
                 </button>
@@ -1009,8 +1098,11 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
       {editUser && (
         <div className="modal-overlay" onClick={() => setEditUser(null)}>
           <div className="modal modal-wide" onClick={(e) => e.stopPropagation()}>
-            <h3>Редактировать: {editUser.username}</h3>
+            <h3>
+              {canEditUsers ? 'Редактировать' : 'Профиль'}: {editUser.username}
+            </h3>
 
+            {canEditUsers && (
             <div className="profile-avatar-block">
               {editUser.avatar ? (
                 <img src={avatarUrl(editUser.avatar) ?? undefined} alt="" className="profile-avatar" />
@@ -1027,6 +1119,11 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
                 )}
               </div>
             </div>
+            )}
+
+            {!canEditUsers && editUser.avatar && (
+              <img src={avatarUrl(editUser.avatar) ?? undefined} alt="" className="profile-avatar" />
+            )}
 
             <label>
               Логин (ник)
@@ -1034,7 +1131,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
                 value={editForm.username}
                 onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
                 maxLength={30}
-                disabled={editUser.isAdmin}
+                disabled={!canEditUsers || editUser.isAdmin}
               />
             </label>
             <label>
@@ -1043,6 +1140,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
                 value={editForm.displayName}
                 onChange={(e) => setEditForm({ ...editForm, displayName: e.target.value })}
                 maxLength={30}
+                disabled={!canEditUsers}
               />
             </label>
             <label>
@@ -1051,6 +1149,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
                 value={editForm.city}
                 onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
                 maxLength={50}
+                disabled={!canEditUsers}
               />
             </label>
             <label>
@@ -1060,48 +1159,64 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
                 onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
                 maxLength={500}
                 rows={3}
+                disabled={!canEditUsers}
               />
             </label>
-            <p className="muted">Игр: {editUser.gamesPlayed ?? 0} · Репутация: {editUser.reputation ?? 0}</p>
+            <p className="muted">
+              Игр: {editUser.gamesPlayed ?? 0} · Репутация: {editUser.reputation ?? 0}
+              {editUser.isAdmin && <> · <span className="admin-badge">admin</span></>}
+              {editUser.isModerator && <> · <span className="mod-badge">mod</span></>}
+              {editUser.isWatcher && <> · <span className="watcher-badge">watch</span></>}
+            </p>
 
-            {!editUser.isAdmin && (
+            {!editUser.isAdmin && (canSetRoles || canBanUsers || canDeleteUsers) && (
               <div className="admin-edit-user-actions">
-                <label>
-                  Роль
-                  <select
-                    className="admin-role-select"
-                    value={editUser.isModerator ? 'moderator' : 'user'}
-                    onChange={(e) =>
-                      void handleRoleChange(editUser.id, e.target.value as 'user' | 'moderator')
-                    }
-                  >
-                    <option value="user">игрок</option>
-                    <option value="moderator">модер</option>
-                  </select>
-                </label>
-                {!editUser.isModerator && !editUser.isBanned && (
+                {canSetRoles && (
+                  <label>
+                    Роль
+                    <select
+                      className="admin-role-select"
+                      value={assignableRole(editUser)}
+                      onChange={(e) =>
+                        void handleRoleChange(
+                          editUser.id,
+                          e.target.value as 'user' | 'watcher' | 'moderator'
+                        )
+                      }
+                    >
+                      <option value="user">игрок</option>
+                      <option value="watcher">смотрящий</option>
+                      <option value="moderator">модер</option>
+                    </select>
+                  </label>
+                )}
+                {canBanUsers && !editUser.isModerator && !editUser.isWatcher && !editUser.isBanned && (
                   <button type="button" className="btn btn-sm danger" onClick={() => setBanTarget(editUser)}>
                     Забанить
                   </button>
                 )}
-                {editUser.isBanned && (
+                {canBanUsers && editUser.isBanned && (
                   <button type="button" className="btn btn-sm" onClick={() => void handleUnban(editUser.id)}>
                     Разбан
                   </button>
                 )}
-                <button
-                  type="button"
-                  className="btn btn-sm btn-ghost danger"
-                  onClick={() => void handleDeleteUser(editUser.id)}
-                >
-                  Удалить аккаунт
-                </button>
+                {canDeleteUsers && (
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-ghost danger"
+                    onClick={() => void handleDeleteUser(editUser.id)}
+                  >
+                    Удалить аккаунт
+                  </button>
+                )}
               </div>
             )}
 
             <div className="profile-actions">
-              <button type="button" className="btn btn-ghost" onClick={() => setEditUser(null)}>Отмена</button>
-              <button type="button" className="btn btn-primary" onClick={() => void handleSaveUser()}>Сохранить</button>
+              <button type="button" className="btn btn-ghost" onClick={() => setEditUser(null)}>Закрыть</button>
+              {canEditUsers && (
+                <button type="button" className="btn btn-primary" onClick={() => void handleSaveUser()}>Сохранить</button>
+              )}
             </div>
           </div>
         </div>
@@ -1116,13 +1231,13 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
               <input value={banReason} onChange={(e) => setBanReason(e.target.value)} />
             </label>
             <label>
-              Часов (пусто = навсегда)
+              Минут (пусто = навсегда)
               <input
                 type="number"
                 min="1"
-                value={banHours}
-                onChange={(e) => setBanHours(e.target.value)}
-                placeholder="24"
+                value={banMinutes}
+                onChange={(e) => setBanMinutes(e.target.value)}
+                placeholder="60"
               />
             </label>
             <div className="profile-actions">

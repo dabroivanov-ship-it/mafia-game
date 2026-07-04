@@ -7,6 +7,7 @@ interface AdminRoomOrderListProps {
   kind: RoomKind;
   onReordered?: () => void | Promise<void>;
   renderRow: (room: AdminRoom) => ReactNode;
+  readOnly?: boolean;
 }
 
 export default function AdminRoomOrderList({
@@ -14,6 +15,7 @@ export default function AdminRoomOrderList({
   kind,
   onReordered,
   renderRow,
+  readOnly = false,
 }: AdminRoomOrderListProps) {
   const [items, setItems] = useState(rooms);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -68,6 +70,18 @@ export default function AdminRoomOrderList({
     if (dragIndex == null || dragIndex === index) return;
     setOverIndex(index);
   };
+
+  if (readOnly) {
+    return (
+      <div className="admin-room-list">
+        {items.map((room) => (
+          <div key={room.id} className="admin-room-row">
+            {renderRow(room)}
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className={`admin-room-list admin-room-list-draggable${saving ? ' is-saving' : ''}`}>

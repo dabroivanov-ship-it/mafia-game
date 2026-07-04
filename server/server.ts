@@ -22,9 +22,11 @@ import './news/comments.js';
 import './news/polls.js';
 import './stats/siteStats.js';
 import settingsRoutes from './settings/routes.js';
+import notificationRoutes from './notifications/routes.js';
+import { initNotificationPush, pushMailNotification } from './notifications/push.js';
 import { getUnreadCount } from './messages/store.js';
 import { socketAuthMiddleware, refreshSocketUser } from './auth/jwt.js';
-import { findUserById, updateUserScore, isAdmin, isStaff, isModerator, updateUserConnectionInfo, uploadsDir, normalizeChatLimit, canBanTarget } from './auth/db.js';
+import { findUserById, updateUserScore, isAdmin, isStaff, isModerator, canModerateSilence, canSilenceTarget, updateUserConnectionInfo, uploadsDir, normalizeChatLimit, canBanTarget } from './auth/db.js';
 import { hydrateRoomHistory, loadGameEvents, getRecentGameEvents, getAdminChatHistory, getRecentChatForAdmin } from './history/store.js';
 import { recordRoomGameResults } from './stats/store.js';
 import {
@@ -203,6 +205,8 @@ app.get('/api/health', (_req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/notifications', notificationRoutes);
+
 app.use(
   '/api/profile',
   createProfileRouter({ onProfileUpdated: syncUserProfileInRooms })
@@ -417,6 +421,7 @@ app.use(
   createMessagesRouter({
     onMessageSent: (recipientId, payload) => {
       notifyUser(recipientId, 'pm:received', payload);
+      pushMailNotification(recipientId, payload);
     },
     onMessageRead: (userId, unreadCount) => {
       notifyUser(userId, 'pm:unread', { count: unreadCount });
@@ -428,6 +433,7 @@ app.use(
   createSupportRouter({
     onMessageSent: (recipientId, payload) => {
       notifyUser(recipientId, 'pm:received', payload);
+      pushMailNotification(recipientId, payload);
     },
   })
 );
@@ -517,6 +523,19 @@ function requireSocketStaff(
   return user;
 }
 
+function requireSocketSilenceModerator(
+  socket: Socket,
+  cb?: (res: { error?: string }) => void
+): User | null {
+  const user = requireSocketUser(socket, cb);
+  if (!user) return null;
+  if (!canModerateSilence(user)) {
+    cb?.({ error: 'Нет доступа' });
+    return null;
+  }
+  return user;
+}
+
 function notifyUser(userId: number, event: string, data: unknown): void {
   const socketIds = userSocketIds.get(userId);
   if (!socketIds) return;
@@ -537,6 +556,7 @@ function serializeForSocketUser(
   const state = serializeRoomForPlayer(room, gamePlayerId, {
     isAdmin: isAdmin(acc),
     canModerate: isStaff(acc),
+    canSilence: canModerateSilence(acc),
     chatLimit,
   });
 
@@ -1009,8 +1029,8 @@ io.on('connection', (socket) => {
     cb?.({ ok: true });
   });
 
-  socket.on('mod:silence', ({ targetPlayerId, targetUserId, reason, hours }, cb) => {
-    if (!requireSocketStaff(socket, cb)) return;
+  socket.on('mod:silence', ({ targetPlayerId, targetUserId, reason, minutes }, cb) => {
+    if (!requireSocketSilenceModerator(socket, cb)) return;
     const session = sessions.get(socket.id);
     if (!session) return cb?.({ error: 'Вы не в комнате' });
 
@@ -1025,20 +1045,20 @@ io.on('connection', (socket) => {
     if (!target?.userId) return cb?.({ error: 'Игрок не найден в комнате' });
 
     const targetUser = findUserById(target.userId);
-    if (!staffUser || !targetUser || !canBanTarget(staffUser, targetUser)) {
+    if (!staffUser || !targetUser || !canSilenceTarget(staffUser, targetUser)) {
       return cb?.({ error: 'Нет прав для молчания этого игрока' });
     }
 
     try {
-      const hoursNum = hours && Number(hours) > 0 ? Number(hours) : null;
+      const minutesNum = minutes && Number(minutes) > 0 ? Number(minutes) : null;
       setPlayerSilenceForUser(
         room,
         { playerId: target.id, userId: target.userId },
-        hoursNum,
+        minutesNum,
         String(normalizeModerationReason(reason))
       );
       const duration =
-        hoursNum && hoursNum > 0 ? `на ${hoursNum} ч.` : 'бессрочно';
+        minutesNum && minutesNum > 0 ? `на ${minutesNum} мин.` : 'бессрочно';
       const reasonText = normalizeModerationReason(reason) || 'нарушение правил';
       addSystemMessage(
         room,
@@ -1053,7 +1073,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('mod:unsilence', ({ targetPlayerId, targetUserId }, cb) => {
-    if (!requireSocketStaff(socket, cb)) return;
+    if (!requireSocketSilenceModerator(socket, cb)) return;
     const session = sessions.get(socket.id);
     if (!session) return cb?.({ error: 'Вы не в комнате' });
 
@@ -1068,7 +1088,7 @@ io.on('connection', (socket) => {
     if (!target?.userId) return cb?.({ error: 'Игрок не найден в комнате' });
 
     const targetUser = findUserById(target.userId);
-    if (!staffUser || !targetUser || !canBanTarget(staffUser, targetUser)) {
+    if (!staffUser || !targetUser || !canSilenceTarget(staffUser, targetUser)) {
       return cb?.({ error: 'Нет прав' });
     }
 
@@ -1123,8 +1143,10 @@ app.get('*', (req, res, next) => {
 
 const PORT = process.env.PORT || 3001;
 httpServer.listen(PORT, () => {
+  initNotificationPush(notifyUser);
   console.log(`🎭 Mafia server: http://localhost:${PORT}`);
   console.log(`   Комнат: ${CONFIG.ROOM_COUNT}, игроков: ${CONFIG.MIN_PLAYERS}–${CONFIG.MAX_PLAYERS}`);
   console.log(`   Static: ${clientDist}`);
   void import('./telegram/bot.js').then(({ startTelegramBot }) => startTelegramBot());
+  void import('./backup/schedule.js').then(({ startBackupScheduler }) => startBackupScheduler());
 });

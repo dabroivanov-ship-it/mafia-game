@@ -1,7 +1,7 @@
 import jwt, { type SignOptions } from 'jsonwebtoken';
 import type { NextFunction, Request, Response } from 'express';
 import type { Socket } from 'socket.io';
-import { findUserById, isUserBanned, isAdmin, isModerator, isStaff } from './db.js';
+import { findUserById, isUserBanned, isAdmin, isModerator, isWatcher, isStaff } from './db.js';
 import type { User } from '../types/index.js';
 import { getJwtSecret } from '../config/env.js';
 
@@ -79,6 +79,15 @@ export function staffMiddleware(req: Request, res: Response, next: NextFunction)
   next();
 }
 
+export function panelMiddleware(req: Request, res: Response, next: NextFunction): void {
+  const user = req.user;
+  if (!user || (user.role !== 'admin' && user.role !== 'moderator' && user.role !== 'watcher')) {
+    res.status(403).json({ error: 'Нет доступа к панели управления' });
+    return;
+  }
+  next();
+}
+
 export function refreshSocketUser(socket: Socket): User | null {
   if (!socket.userId) return null;
   const user = findUserById(socket.userId);
@@ -88,6 +97,7 @@ export function refreshSocketUser(socket: Socket): User | null {
   socket.userRole = user.role;
   socket.isAdmin = isAdmin(user);
   socket.isModerator = isModerator(user);
+  socket.isWatcher = isWatcher(user);
   socket.isStaff = isStaff(user);
   return user;
 }
@@ -113,6 +123,7 @@ export function socketAuthMiddleware(socket: Socket, next: (err?: Error) => void
     socket.userRole = user.role;
     socket.isAdmin = isAdmin(user);
     socket.isModerator = isModerator(user);
+    socket.isWatcher = isWatcher(user);
     socket.isStaff = isStaff(user);
     next();
   } catch {

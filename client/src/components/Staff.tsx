@@ -28,6 +28,7 @@ export default function Staff({ embedded = false }: StaffProps) {
 
   const admins = staff.filter((m) => m.role === 'admin');
   const moderators = staff.filter((m) => m.role === 'moderator');
+  const watchers = staff.filter((m) => m.role === 'watcher');
 
   return (
     <div className={embedded ? 'staff-embedded' : 'staff-page'}>
@@ -35,8 +36,8 @@ export default function Staff({ embedded = false }: StaffProps) {
         <h1>{embedded ? '🛡️ Команда' : '🛡️ Команда проекта'}</h1>
         <p className="muted">
           {embedded
-            ? 'Администраторы и модераторы проекта'
-            : 'Администраторы и модераторы, следящие за порядком в игре'}
+            ? 'Администраторы, модераторы и смотрящие проекта'
+            : 'Команда, следящая за порядком в игре'}
         </p>
       </header>
 
@@ -70,6 +71,19 @@ export default function Staff({ embedded = false }: StaffProps) {
               </div>
             )}
           </section>
+
+          <section className="staff-section">
+            <h2>Смотрящие ({watchers.length})</h2>
+            {watchers.length === 0 ? (
+              <p className="muted">Пока не назначены</p>
+            ) : (
+              <div className="staff-grid">
+                {watchers.map((member) => (
+                  <StaffCard key={member.id} member={member} />
+                ))}
+              </div>
+            )}
+          </section>
         </>
       )}
     </div>
@@ -90,8 +104,10 @@ function StaffCard({ member }: { member: StaffMember }) {
         {member.city && <span className="muted staff-city">📍 {member.city}</span>}
         {member.role === 'admin' ? (
           <span className="admin-badge">admin</span>
-        ) : (
+        ) : member.role === 'moderator' ? (
           <span className="mod-badge">mod</span>
+        ) : (
+          <span className="watcher-badge">watch</span>
         )}
       </div>
     </div>

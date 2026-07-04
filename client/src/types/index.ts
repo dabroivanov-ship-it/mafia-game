@@ -7,7 +7,7 @@ export type GamePhase =
   | 'night'
   | 'ended';
 
-export type UserRole = 'user' | 'moderator' | 'admin';
+export type UserRole = 'user' | 'watcher' | 'moderator' | 'admin';
 
 export type RoomKind = 'game' | 'chat';
 
@@ -18,6 +18,19 @@ export interface SiteBranding {
   logoText: string;
   logoMark: string;
   footerText: string;
+}
+
+export type NotificationType = 'mail' | 'reputation_up' | 'reputation_down' | 'system';
+
+export interface UserNotification {
+  id: number;
+  type: NotificationType;
+  title: string;
+  body: string;
+  action: string | null;
+  payload: Record<string, unknown> | null;
+  isRead: boolean;
+  createdAt: string;
 }
 
 export interface User {
@@ -31,7 +44,9 @@ export interface User {
   role: UserRole;
   isAdmin: boolean;
   isModerator: boolean;
+  isWatcher: boolean;
   isStaff: boolean;
+  canAccessAdminPanel: boolean;
   totalScore: number;
   mmr: number;
   gamesPlayed?: number;
@@ -184,6 +199,7 @@ export interface RoomState {
   nightActionDone: boolean;
   isAdmin: boolean;
   canModerate: boolean;
+  canSilence: boolean;
   isQuizRoom?: boolean;
 }
 
@@ -197,7 +213,7 @@ export interface StaffMember {
   displayName: string;
   city: string;
   avatar: string | null;
-  role: 'admin' | 'moderator';
+  role: 'admin' | 'moderator' | 'watcher';
 }
 
 export interface UserSearchHit {

@@ -4,6 +4,7 @@ declare module 'socket.io' {
     userRole?: string;
     isAdmin?: boolean;
     isModerator?: boolean;
+    isWatcher?: boolean;
     isStaff?: boolean;
     displayName?: string;
     username?: string;

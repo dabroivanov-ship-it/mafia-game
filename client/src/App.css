@@ -4381,6 +4381,16 @@ html.telegram-webapp .app-body {
   margin-left: 4px;
 }
 
+.watcher-badge {
+  display: inline-block;
+  background: #4a5568;
+  color: #fff;
+  font-size: 0.7rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-left: 4px;
+}
+
 .admin-role-select {
   font-size: 0.85rem;
   padding: 4px 6px;

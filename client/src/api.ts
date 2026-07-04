@@ -1,4 +1,5 @@
-import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, NewsPoll, NewsPollInput, NewsComment, MailConversation, RoomKind, ThemeId, ViolationLogEntry, UserSearchHit, UserPresence, FriendUser, LeaderboardEntry, QuizLeaderboardEntry, SiteBranding, UserStatisticsResponse } from './types';
+import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, NewsPoll, NewsPollInput, NewsComment, MailConversation, RoomKind, ThemeId, ViolationLogEntry, UserSearchHit, UserPresence, FriendUser, LeaderboardEntry, QuizLeaderboardEntry, SiteBranding, UserStatisticsResponse, UserNotification } from './types';
+import type { AdminPermission } from './adminPermissions';
 
 const API_BASE =
   import.meta.env.VITE_API_URL ??
@@ -302,6 +303,21 @@ export async function fetchUnreadMailCount(): Promise<{ count: number }> {
   return apiRequest('/api/messages/unread-count');
 }
 
+export async function fetchNotifications(): Promise<{
+  notifications: UserNotification[];
+  unreadCount: number;
+}> {
+  return apiRequest('/api/notifications');
+}
+
+export async function markNotificationRead(id: number): Promise<{ unreadCount: number }> {
+  return apiRequest(`/api/notifications/${id}/read`, { method: 'POST' });
+}
+
+export async function markAllNotificationsRead(): Promise<{ unreadCount: number }> {
+  return apiRequest('/api/notifications/read-all', { method: 'POST' });
+}
+
 export async function fetchInbox(): Promise<{ messages: PrivateMessage[] }> {
   return apiRequest('/api/messages/inbox');
 }
@@ -500,6 +516,7 @@ export async function fetchUserProfile(userId: number): Promise<{
   viewerGamesPlayed?: number;
   canAdmin: boolean;
   canModerate: boolean;
+  canSilence: boolean;
   staffMeta?: ProfileStaffMeta;
 }> {
   return apiRequest(`/api/profile/${userId}`);
@@ -627,11 +644,11 @@ export async function fetchAdminStats(): Promise<AdminSiteStats> {
 export async function modBan(
   userId: number,
   reason: string,
-  hours: number | null
+  minutes: number | null
 ): Promise<void> {
   return apiRequest('/api/moderation/ban', {
     method: 'POST',
-    body: JSON.stringify({ userId, reason, hours }),
+    body: JSON.stringify({ userId, reason, minutes }),
   });
 }
 
@@ -642,9 +659,16 @@ export async function modUnban(userId: number): Promise<void> {
   });
 }
 
+export async function fetchAdminPermissions(): Promise<{
+  role: string;
+  permissions: AdminPermission[];
+}> {
+  return apiRequest('/api/admin/permissions');
+}
+
 export async function adminSetUserRole(
   userId: number,
-  role: 'user' | 'moderator'
+  role: 'user' | 'watcher' | 'moderator'
 ): Promise<{ user: User }> {
   return apiRequest(`/api/admin/users/${userId}/role`, {
     method: 'POST',
@@ -655,11 +679,11 @@ export async function adminSetUserRole(
 export async function adminBan(
   userId: number,
   reason: string,
-  hours: number | null
+  minutes: number | null
 ): Promise<void> {
   return apiRequest('/api/admin/ban', {
     method: 'POST',
-    body: JSON.stringify({ userId, reason, hours }),
+    body: JSON.stringify({ userId, reason, minutes }),
   });
 }
 
@@ -778,8 +802,29 @@ export interface AdminBackupInfo {
   sizeLabel?: string;
 }
 
+export interface BackupScheduleSettings {
+  enabled: boolean;
+  time: string;
+  includeUploads: boolean;
+  keepCount: number;
+  lastRunAt: string | null;
+}
+
 export async function fetchAdminBackups(): Promise<{ backups: AdminBackupInfo[] }> {
   return apiRequest('/api/admin/backups');
+}
+
+export async function fetchBackupSchedule(): Promise<{ schedule: BackupScheduleSettings }> {
+  return apiRequest('/api/admin/backups/schedule');
+}
+
+export async function adminSaveBackupSchedule(
+  schedule: Partial<Pick<BackupScheduleSettings, 'enabled' | 'time' | 'includeUploads' | 'keepCount'>>
+): Promise<{ schedule: BackupScheduleSettings }> {
+  return apiRequest('/api/admin/backups/schedule', {
+    method: 'PUT',
+    body: JSON.stringify(schedule),
+  });
 }
 
 export async function adminCreateBackup(includeUploads = true): Promise<{ backup: AdminBackupInfo }> {

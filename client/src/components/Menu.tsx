@@ -61,14 +61,18 @@ export default function Menu({
             )}
           </button>
         ))}
-        {user.isAdmin && (
+        {user.canAccessAdminPanel && (
           <button
             type="button"
-            className={`menu-item admin menu-item-mobile-nav ${view === 'admin' ? 'active' : ''}`}
+            className={`menu-item admin menu-item-mobile-nav ${view === 'admin' ? 'active' : ''}${
+              user.isWatcher ? ' watcher' : user.isModerator && !user.isAdmin ? ' mod' : ''
+            }`}
             onClick={() => onNavigate('admin')}
           >
             <span className="menu-icon" aria-hidden="true" />
-            <span className="menu-label">Админ</span>
+            <span className="menu-label">
+              {user.isAdmin ? 'Админ' : user.isModerator ? 'Модер' : 'Смотр'}
+            </span>
           </button>
         )}
         <button type="button" className="menu-item logout menu-item-desktop-only" onClick={onLogout}>

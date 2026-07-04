@@ -12,7 +12,7 @@ export function createModerationRouter({ onUserBanned }: ModerationRouterOptions
   router.use(authMiddleware, staffMiddleware);
 
   router.post('/ban', (req, res) => {
-    const { userId, reason, hours } = req.body;
+    const { userId, reason, minutes } = req.body;
     const targetId = Number(userId);
     const target = findUserById(targetId);
     if (!target) return res.status(404).json({ error: 'Пользователь не найден' });
@@ -21,8 +21,8 @@ export function createModerationRouter({ onUserBanned }: ModerationRouterOptions
     }
 
     let until: string | null = null;
-    if (hours && Number(hours) > 0) {
-      until = new Date(Date.now() + Number(hours) * 3600000).toISOString();
+    if (minutes && Number(minutes) > 0) {
+      until = new Date(Date.now() + Number(minutes) * 60000).toISOString();
     }
     const reasonText = normalizeModerationReason(reason);
     const user = banUser(targetId, reasonText, until);

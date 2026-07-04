@@ -379,6 +379,7 @@ export default function Room({
           currentUserId={currentUserId}
           viewerIsAdmin={state.isAdmin}
           viewerCanModerate={state.canModerate}
+          viewerCanSilence={state.canSilence}
           replyTarget={profileTarget}
           canSendChat={state.canChat}
           onSendChat={sendRoomChat}
@@ -392,12 +393,12 @@ export default function Room({
                 (profileTarget.userId != null && p.userId === profileTarget.userId)
             )?.silenced ?? false
           }
-          onSilence={async ({ userId: targetUserId, playerId, reason, hours }) => {
+          onSilence={async ({ userId: targetUserId, playerId, reason, minutes }) => {
             const res = await emit('mod:silence', {
               targetUserId,
               targetPlayerId: playerId,
               reason,
-              hours,
+              minutes,
             });
             if (res?.error) throw new Error(res.error);
           }}

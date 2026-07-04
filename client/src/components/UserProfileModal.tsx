@@ -22,6 +22,7 @@ interface UserProfileModalProps {
   currentUserId: number;
   viewerIsAdmin: boolean;
   viewerCanModerate?: boolean;
+  viewerCanSilence?: boolean;
   onClose: () => void;
   onAdminAction?: () => void;
   onWriteMessage?: (userId: number, username: string) => void;
@@ -39,7 +40,7 @@ interface UserProfileModalProps {
     userId: number;
     playerId?: number;
     reason: string;
-    hours: number | null;
+    minutes: number | null;
   }) => Promise<void>;
   onUnsilence?: (payload: { userId: number; playerId?: number }) => Promise<void>;
 }
@@ -54,6 +55,7 @@ interface ProfileData {
   viewerGamesPlayed?: number;
   canAdmin: boolean;
   canModerate: boolean;
+  canSilence: boolean;
   staffMeta?: ProfileStaffMeta;
 }
 
@@ -62,6 +64,7 @@ export default function UserProfileModal({
   currentUserId,
   viewerIsAdmin,
   viewerCanModerate = false,
+  viewerCanSilence = false,
   onClose,
   onAdminAction,
   onWriteMessage,
@@ -81,10 +84,10 @@ export default function UserProfileModal({
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState({ displayName: '', city: '', bio: '' });
   const [banReason, setBanReason] = useState('Нарушение правил');
-  const [banHours, setBanHours] = useState('');
+  const [banMinutes, setBanMinutes] = useState('');
   const [showBanForm, setShowBanForm] = useState(false);
   const [silenceReason, setSilenceReason] = useState('Нарушение правил чата');
-  const [silenceHours, setSilenceHours] = useState('');
+  const [silenceMinutes, setSilenceMinutes] = useState('');
   const [showSilenceForm, setShowSilenceForm] = useState(false);
   const [showMailCompose, setShowMailCompose] = useState(false);
   const [mailText, setMailText] = useState('');
@@ -151,7 +154,7 @@ export default function UserProfileModal({
   const handleBan = async () => {
     try {
       const ban = viewerIsAdmin ? adminBan : modBan;
-      await ban(userId, banReason, banHours ? Number(banHours) : null);
+      await ban(userId, banReason, banMinutes ? Number(banMinutes) : null);
       setShowBanForm(false);
       await load();
       onAdminAction?.();
@@ -178,7 +181,7 @@ export default function UserProfileModal({
         userId,
         playerId: targetPlayerId,
         reason: silenceReason,
-        hours: silenceHours ? Number(silenceHours) : null,
+        minutes: silenceMinutes ? Number(silenceMinutes) : null,
       });
       setShowSilenceForm(false);
       onAdminAction?.();
@@ -288,7 +291,7 @@ export default function UserProfileModal({
   const canAdmin = data?.canAdmin && viewerIsAdmin;
   const canProfileModerate = (data?.canModerate && viewerCanModerate) || canAdmin;
   const canRoomSilence =
-    inRoom && viewerCanModerate && userId !== currentUserId && !!onSilence;
+    inRoom && viewerCanSilence && userId !== currentUserId && !!onSilence;
   const canWriteMail = userId !== currentUserId;
   const displayTitle = user?.username || replyTarget?.playerName || 'Игрок';
 
@@ -357,6 +360,7 @@ export default function UserProfileModal({
                     <strong>@{user.username}</strong>
                     {user.isAdmin && <span className="admin-badge">admin</span>}
                     {user.isModerator && <span className="mod-badge">mod</span>}
+                    {user.isWatcher && <span className="watcher-badge">watch</span>}
                   </div>
                 </div>
 
@@ -632,13 +636,13 @@ export default function UserProfileModal({
                       <input value={silenceReason} onChange={(e) => setSilenceReason(e.target.value)} />
                     </label>
                     <label>
-                      Часов (пусто = бессрочно)
+                      Минут (пусто = бессрочно)
                       <input
                         type="number"
                         min="1"
-                        value={silenceHours}
-                        onChange={(e) => setSilenceHours(e.target.value)}
-                        placeholder="24"
+                        value={silenceMinutes}
+                        onChange={(e) => setSilenceMinutes(e.target.value)}
+                        placeholder="60"
                       />
                     </label>
                     <div className="profile-actions">
@@ -659,13 +663,13 @@ export default function UserProfileModal({
                       <input value={banReason} onChange={(e) => setBanReason(e.target.value)} />
                     </label>
                     <label>
-                      Часов (пусто = навсегда)
+                      Минут (пусто = навсегда)
                       <input
                         type="number"
                         min="1"
-                        value={banHours}
-                        onChange={(e) => setBanHours(e.target.value)}
-                        placeholder="24"
+                        value={banMinutes}
+                        onChange={(e) => setBanMinutes(e.target.value)}
+                        placeholder="60"
                       />
                     </label>
                     <div className="profile-actions">

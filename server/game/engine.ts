@@ -1321,32 +1321,32 @@ export function findRoomPlayer(
 export function setPlayerSilence(
   room: GameRoom,
   playerId: number,
-  hours: number | null,
+  minutes: number | null,
   reason: string
 ): GamePlayer {
   const player = findRoomPlayer(room, { playerId });
   if (!player) throw new Error('Игрок не найден');
-  return applyPlayerSilence(player, hours, reason);
+  return applyPlayerSilence(player, minutes, reason);
 }
 
 export function setPlayerSilenceForUser(
   room: GameRoom,
   ids: { playerId?: number | null; userId?: number | null },
-  hours: number | null,
+  minutes: number | null,
   reason: string
 ): GamePlayer {
   const player = findRoomPlayer(room, ids);
   if (!player) throw new Error('Игрок не найден в комнате');
-  return applyPlayerSilence(player, hours, reason);
+  return applyPlayerSilence(player, minutes, reason);
 }
 
 function applyPlayerSilence(
   player: GamePlayer,
-  hours: number | null,
+  minutes: number | null,
   reason: string
 ): GamePlayer {
   player.silencedUntil =
-    hours && hours > 0 ? Date.now() + hours * 3600000 : SILENCE_PERMANENT;
+    minutes && minutes > 0 ? Date.now() + minutes * 60000 : SILENCE_PERMANENT;
   player.silenceReason = reason.trim() || 'нарушение правил';
   player.mutedChat = [];
   return player;
@@ -1821,10 +1821,11 @@ function getJoinCooldownSec(player: GamePlayer | undefined): number {
 export function serializeRoomForPlayer(
   room: GameRoom,
   playerId: number,
-  options: { isAdmin?: boolean; canModerate?: boolean; chatLimit?: number } = {}
+  options: { isAdmin?: boolean; canModerate?: boolean; canSilence?: boolean; chatLimit?: number } = {}
 ): RoomState {
   const me = room.players.find((p) => p.id === playerId);
-  const { isAdmin = false, canModerate = false, chatLimit = DEFAULT_CHAT_LIMIT } = options;
+  const { isAdmin = false, canModerate = false, canSilence = false, chatLimit = DEFAULT_CHAT_LIMIT } = options;
+  const seesModerationInfo = canModerate || canSilence;
   const chatView = buildChatView(room, me, chatLimit);
 
   if (isChatRoom(room)) {
@@ -1862,7 +1863,7 @@ export function serializeRoomForPlayer(
       myRole: null,
       myRoleLabel: null,
       isDon: false,
-      players: connectedUsers.map((p) => mapPlayerPublic(p, room, playerId, canModerate)),
+      players: connectedUsers.map((p) => mapPlayerPublic(p, room, playerId, seesModerationInfo)),
       spectators: [],
       presence: connectedUsers.map((p) => mapRoomPresence(p, playerId)),
       chat: chatView.messages,
@@ -1879,6 +1880,7 @@ export function serializeRoomForPlayer(
       nightActionDone: false,
       isAdmin,
       canModerate,
+      canSilence,
     };
   }
 
@@ -1934,7 +1936,7 @@ export function serializeRoomForPlayer(
     myRole: me?.inGame ? me.role || null : null,
     myRoleLabel: me?.inGame && me.role ? getRoleLabel(me.role) : null,
     isDon: me?.isDon || false,
-    players: visiblePlayers.map((p) => mapPlayerPublic(p, room, playerId, canModerate)),
+    players: visiblePlayers.map((p) => mapPlayerPublic(p, room, playerId, seesModerationInfo)),
     spectators: visibleSpectators.map((p) => ({
       id: p.id,
       userId: p.userId || null,
@@ -1962,5 +1964,6 @@ export function serializeRoomForPlayer(
     nightActionDone: me?.nightActionDone || false,
     isAdmin,
     canModerate,
+    canSilence,
   };
 }

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authMiddleware, adminMiddleware } from '../auth/jwt.js';
+import { authMiddleware, panelMiddleware } from '../auth/jwt.js';
 import {
   listAllUsers,
   banUser,
@@ -31,7 +31,7 @@ import {
 import { upsertPollForNews, type PollInput } from '../news/polls.js';
 import { listViolations, clearViolations } from '../moderation/violationLog.js';
 import { newsImageUpload, newsImagePublicPath } from '../upload/newsImage.js';
-import { adminSetReputation } from '../social/store.js';
+import { adminSetReputation, getReputation } from '../social/store.js';
 import { listBotPhrasesForAdmin, updateBotPhrasesFromAdmin } from '../game/botPhrases.js';
 import { getAdminSiteStats } from '../stats/siteStats.js';
 import {
@@ -41,6 +41,24 @@ import {
   deleteBackup,
   formatBackupSize,
 } from '../backup/service.js';
+import { getBackupScheduleSettings, setBackupScheduleSettings } from '../backup/schedule.js';
+import { pushAdminReputationNotification } from '../notifications/push.js';
+import {
+  hasAdminPermission,
+  getAdminPermissions,
+  type AdminPermission,
+} from './permissions.js';
+import type { NextFunction, Request, Response } from 'express';
+
+function requireAdminPermission(permission: AdminPermission) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!hasAdminPermission(req.user, permission)) {
+      res.status(403).json({ error: 'Недостаточно прав для этого действия' });
+      return;
+    }
+    next();
+  };
+}
 
 export interface AdminRouterHandlers {
   getModerationData: () => {
@@ -69,13 +87,20 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
   const router = Router();
   const avatarUpload = createAvatarUpload((req) => req.params.userId || 'admin');
 
-  router.use(authMiddleware, adminMiddleware);
+  router.use(authMiddleware, panelMiddleware);
 
-  router.get('/users', (_req, res) => {
+  router.get('/permissions', (req, res) => {
+    res.json({
+      role: req.user!.role,
+      permissions: getAdminPermissions(req.user),
+    });
+  });
+
+  router.get('/users', requireAdminPermission('view_users'), (_req, res) => {
     res.json({ users: listAllUsers() });
   });
 
-  router.get('/ban-list', (_req, res) => {
+  router.get('/ban-list', requireAdminPermission('view_banlist'), (_req, res) => {
     const banned = listAllUsers().filter((u) => u.isBanned);
     const silenced = handlers.listSilencedPlayers().map((entry) => {
       const user = findUserPublic(entry.userId);
@@ -87,7 +112,7 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     res.json({ banned, silenced });
   });
 
-  router.post('/users/:userId/unsilence', (req, res) => {
+  router.post('/users/:userId/unsilence', requireAdminPermission('manage_silence'), (req, res) => {
     const userId = Number(req.params.userId);
     if (!findUserPublic(userId)) {
       return res.status(404).json({ error: 'Пользователь не найден' });
@@ -97,7 +122,7 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     res.json({ cleared });
   });
 
-  router.get('/overview', (_req, res) => {
+  router.get('/overview', requireAdminPermission('view_users'), (_req, res) => {
     res.json({
       ...handlers.getModerationData(),
       users: listAllUsers(),
@@ -105,11 +130,11 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     });
   });
 
-  router.get('/stats', (_req, res) => {
+  router.get('/stats', requireAdminPermission('view_stats'), (_req, res) => {
     res.json(getAdminSiteStats());
   });
 
-  router.get('/rooms/:roomId/history', (req, res) => {
+  router.get('/rooms/:roomId/history', requireAdminPermission('view_rooms'), (req, res) => {
     const roomId = Number(req.params.roomId);
     res.json({
       chat: handlers.getChatHistory?.(roomId) || [],
@@ -118,7 +143,7 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
   });
 
   /* --- Игровые комнаты (переименование) --- */
-  router.put('/rooms/reorder', (req, res) => {
+  router.put('/rooms/reorder', requireAdminPermission('manage_game_rooms'), (req, res) => {
     try {
       const kind = req.body?.kind === 'chat' ? 'chat' : 'game';
       const roomIds = Array.isArray(req.body?.roomIds)
@@ -136,7 +161,7 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     }
   });
 
-  router.put('/rooms/:roomId', (req, res) => {
+  router.put('/rooms/:roomId', requireAdminPermission('manage_game_rooms'), (req, res) => {
     try {
       const roomId = Number(req.params.roomId);
       const room = handlers.renameRoom(roomId, req.body.name);
@@ -148,7 +173,7 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     }
   });
 
-  router.post('/game-rooms', (req, res) => {
+  router.post('/game-rooms', requireAdminPermission('manage_game_rooms'), (req, res) => {
     try {
       const name = String(req.body?.name ?? '').trim();
       if (!name) {
@@ -164,7 +189,7 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
   });
 
   /* --- Чат-комнаты --- */
-  router.post('/chat-rooms', (req, res) => {
+  router.post('/chat-rooms', requireAdminPermission('manage_chat_rooms'), (req, res) => {
     try {
       const name = String(req.body?.name ?? '').trim();
       if (!name) {
@@ -179,7 +204,7 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     }
   });
 
-  router.delete('/chat-rooms/:roomId', (req, res) => {
+  router.delete('/chat-rooms/:roomId', requireAdminPermission('manage_chat_rooms'), (req, res) => {
     try {
       handlers.deleteChatRoom(Number(req.params.roomId));
       handlers.onRoomsChanged();
@@ -195,7 +220,7 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
   });
 
   /* --- Пользователи: профиль --- */
-  router.put('/users/:userId', (req, res) => {
+  router.put('/users/:userId', requireAdminPermission('edit_users'), (req, res) => {
     const id = Number(req.params.userId);
     const target = findUserPublic(id);
     if (!target) return res.status(404).json({ error: 'Пользователь не найден' });
@@ -223,7 +248,7 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     res.json({ user });
   });
 
-  router.put('/users/:userId/reputation', (req, res) => {
+  router.put('/users/:userId/reputation', requireAdminPermission('set_reputation'), (req, res) => {
     const id = Number(req.params.userId);
     if (!findUserPublic(id)) return res.status(404).json({ error: 'Пользователь не найден' });
     const reputation = Number(req.body?.reputation);
@@ -231,14 +256,18 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
       return res.status(400).json({ error: 'Укажите reputation (число)' });
     }
     try {
+      const previous = getReputation(id);
       const saved = adminSetReputation(id, reputation);
+      if (saved !== previous) {
+        pushAdminReputationNotification(id, saved);
+      }
       res.json({ reputation: saved });
     } catch (err) {
       res.status(400).json({ error: err instanceof Error ? err.message : 'Ошибка' });
     }
   });
 
-  router.post('/users/:userId/avatar', (req, res) => {
+  router.post('/users/:userId/avatar', requireAdminPermission('edit_users'), (req, res) => {
     const id = Number(req.params.userId);
     if (!findUserPublic(id)) return res.status(404).json({ error: 'Пользователь не найден' });
 
@@ -257,15 +286,15 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     });
   });
 
-  router.delete('/users/:userId/avatar', (req, res) => {
+  router.delete('/users/:userId/avatar', requireAdminPermission('edit_users'), (req, res) => {
     const id = Number(req.params.userId);
     if (!findUserPublic(id)) return res.status(404).json({ error: 'Пользователь не найден' });
     const user = removeUserAvatar(id);
     res.json({ user });
   });
 
-  router.post('/ban', (req, res) => {
-    const { userId, reason, hours } = req.body;
+  router.post('/ban', requireAdminPermission('ban_users'), (req, res) => {
+    const { userId, reason, minutes } = req.body;
     const targetId = Number(userId);
     const target = findUserById(targetId);
     if (!target) return res.status(404).json({ error: 'Пользователь не найден' });
@@ -274,25 +303,25 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     }
 
     let until: string | null = null;
-    if (hours && Number(hours) > 0) {
-      until = new Date(Date.now() + Number(hours) * 3600000).toISOString();
+    if (minutes && Number(minutes) > 0) {
+      until = new Date(Date.now() + Number(minutes) * 60000).toISOString();
     }
     const user = banUser(targetId, normalizeModerationReason(reason), until);
     handlers.onUserBanned?.(targetId, normalizeModerationReason(reason), until);
     res.json({ user });
   });
 
-  router.post('/unban', (req, res) => {
+  router.post('/unban', requireAdminPermission('ban_users'), (req, res) => {
     const { userId } = req.body;
     const user = clearBan(Number(userId));
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
     res.json({ user });
   });
 
-  router.post('/users/:userId/role', (req, res) => {
+  router.post('/users/:userId/role', requireAdminPermission('set_roles'), (req, res) => {
     const id = Number(req.params.userId);
     const role = req.body.role as AssignableRole;
-    if (role !== 'user' && role !== 'moderator') {
+    if (role !== 'user' && role !== 'moderator' && role !== 'watcher') {
       return res.status(400).json({ error: 'Недопустимая роль' });
     }
     const user = updateUserRole(id, role);
@@ -301,7 +330,7 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     res.json({ user });
   });
 
-  router.delete('/users/:userId', (req, res) => {
+  router.delete('/users/:userId', requireAdminPermission('delete_users'), (req, res) => {
     const id = Number(req.params.userId);
     const target = findUserPublic(id);
     if (!target) return res.status(404).json({ error: 'Пользователь не найден' });
@@ -314,16 +343,16 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     res.status(400).json({ error: 'Удаляйте сообщения из комнаты с указанием типа нарушения' });
   });
 
-  router.get('/violations', (_req, res) => {
+  router.get('/violations', requireAdminPermission('view_violations'), (_req, res) => {
     res.json({ violations: listViolations(300) });
   });
 
-  router.delete('/violations', (_req, res) => {
+  router.delete('/violations', requireAdminPermission('clear_violations'), (_req, res) => {
     const cleared = clearViolations();
     res.json({ ok: true, cleared });
   });
 
-  router.post('/news/upload-image', (req, res) => {
+  router.post('/news/upload-image', requireAdminPermission('manage_news'), (req, res) => {
     newsImageUpload.single('image')(req, res, (err) => {
       if (err) return res.status(400).json({ error: err.message || 'Ошибка загрузки' });
       if (!req.file) return res.status(400).json({ error: 'Файл не выбран' });
@@ -335,16 +364,16 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     });
   });
 
-  router.delete('/rooms/:roomId/messages', (req, res) => {
+  router.delete('/rooms/:roomId/messages', requireAdminPermission('manage_chat_rooms'), (req, res) => {
     const cleared = handlers.clearRoomMessages(Number(req.params.roomId));
     res.json({ ok: true, cleared });
   });
 
-  router.get('/news', (req, res) => {
+  router.get('/news', requireAdminPermission('manage_news'), (req, res) => {
     res.json({ news: listAllNews(100, req.userId!) });
   });
 
-  router.post('/news', (req, res) => {
+  router.post('/news', requireAdminPermission('manage_news'), (req, res) => {
     try {
       const news = createNews(req.userId!, {
         title: req.body.title,
@@ -362,7 +391,7 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     }
   });
 
-  router.put('/news/:id', (req, res) => {
+  router.put('/news/:id', requireAdminPermission('manage_news'), (req, res) => {
     try {
       const id = Number(req.params.id);
       const news = updateNews(id, {
@@ -382,17 +411,17 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     }
   });
 
-  router.delete('/news/:id', (req, res) => {
+  router.delete('/news/:id', requireAdminPermission('manage_news'), (req, res) => {
     const ok = deleteNews(Number(req.params.id));
     if (!ok) return res.status(404).json({ error: 'Новость не найдена' });
     res.json({ ok: true });
   });
 
-  router.get('/bot-phrases', (_req, res) => {
+  router.get('/bot-phrases', requireAdminPermission('manage_phrases'), (_req, res) => {
     res.json(listBotPhrasesForAdmin());
   });
 
-  router.put('/bot-phrases', (req, res) => {
+  router.put('/bot-phrases', requireAdminPermission('manage_phrases'), (req, res) => {
     const phrases = req.body?.phrases;
     if (!phrases || typeof phrases !== 'object' || Array.isArray(phrases)) {
       return res.status(400).json({ error: 'Укажите объект phrases' });
@@ -401,7 +430,20 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     res.json({ ...listBotPhrasesForAdmin(), updated });
   });
 
-  router.get('/backups', (_req, res) => {
+  router.get('/backups/schedule', requireAdminPermission('manage_backups'), (_req, res) => {
+    res.json({ schedule: getBackupScheduleSettings() });
+  });
+
+  router.put('/backups/schedule', requireAdminPermission('manage_backups'), (req, res) => {
+    try {
+      const schedule = setBackupScheduleSettings(req.body ?? {});
+      res.json({ schedule });
+    } catch (err) {
+      res.status(400).json({ error: err instanceof Error ? err.message : 'Неверные настройки' });
+    }
+  });
+
+  router.get('/backups', requireAdminPermission('manage_backups'), (_req, res) => {
     const backups = listBackups().map((b) => ({
       ...b,
       sizeLabel: formatBackupSize(b.sizeBytes),
@@ -409,7 +451,7 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     res.json({ backups });
   });
 
-  router.post('/backups', async (req, res) => {
+  router.post('/backups', requireAdminPermission('manage_backups'), async (req, res) => {
     try {
       const includeUploads = req.body?.includeUploads !== false;
       const backup = await createBackup(includeUploads);
@@ -421,7 +463,7 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     }
   });
 
-  router.post('/backups/:id/restore', async (req, res) => {
+  router.post('/backups/:id/restore', requireAdminPermission('manage_backups'), async (req, res) => {
     try {
       await restoreBackup(req.params.id);
       res.json({ ok: true });
@@ -430,7 +472,7 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     }
   });
 
-  router.delete('/backups/:id', (req, res) => {
+  router.delete('/backups/:id', requireAdminPermission('manage_backups'), (req, res) => {
     try {
       deleteBackup(req.params.id);
       res.json({ ok: true });

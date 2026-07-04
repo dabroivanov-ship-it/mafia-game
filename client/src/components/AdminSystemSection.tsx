@@ -6,6 +6,7 @@ import AdminStatsPanel from './AdminStatsPanel';
 import AdminBackupPanel from './AdminBackupPanel';
 import AdminCategoryIcon from './AdminCategoryIcon';
 import type { ThemeId, SiteBranding } from '../types';
+import { canOpenSystemView, hasAdminPermission, type AdminPermission } from '../adminPermissions';
 
 export type SystemView =
   | 'hub'
@@ -28,6 +29,7 @@ type CategoryTone = 'orange' | 'teal' | 'gold';
 interface AdminSystemSectionProps {
   view?: SystemView;
   onViewChange?: (view: SystemView) => void;
+  permissions: AdminPermission[];
   usersCount: number;
   banListCount?: number;
   roomsCount?: number;
@@ -139,6 +141,7 @@ export default function AdminSystemSection({
   onMetrikaIdChange,
   onMetrikaDisabledChange,
   onSaveMetrika,
+  permissions,
   panels,
 }: AdminSystemSectionProps) {
   const [internalView, setInternalView] = useState<SystemView>('hub');
@@ -154,6 +157,25 @@ export default function AdminSystemSection({
     if (categoryId === 'system') return 6;
     return gameRoomsCount + chatRoomsCount + 1;
   };
+
+  const visibleCategories = SYSTEM_CATEGORIES.map((category) => ({
+    ...category,
+    links: category.links.filter((link) => canOpenSystemView(permissions, link.view)),
+  })).filter((category) => category.links.length > 0);
+
+  if (view !== 'hub' && !canOpenSystemView(permissions, view)) {
+    return (
+      <section className="admin-section admin-system-section admin-system-detail">
+        <div className="admin-system-detail-head">
+          <button type="button" className="btn btn-ghost btn-sm admin-back-btn" onClick={() => setView('hub')}>
+            ← К разделам
+          </button>
+          <h3>Нет доступа</h3>
+        </div>
+        <p className="muted">У вашей роли нет прав для этого раздела.</p>
+      </section>
+    );
+  }
 
   if (view !== 'hub') {
     return (
@@ -277,7 +299,7 @@ export default function AdminSystemSection({
   return (
     <section className="admin-section admin-system-section admin-system-hub">
       <div className="admin-dash-grid">
-        {SYSTEM_CATEGORIES.map((category) => (
+        {visibleCategories.map((category) => (
           <article key={category.id} className={`admin-dash-card admin-dash-card--${category.tone}`}>
             <header className="admin-dash-card-head">
               <span className={`admin-dash-icon admin-dash-icon--${category.tone}`}>

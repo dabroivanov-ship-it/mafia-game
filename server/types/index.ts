@@ -60,7 +60,7 @@ export interface StaffMember {
   displayName: string;
   city: string;
   avatar: string | null;
-  role: 'admin' | 'moderator';
+  role: 'admin' | 'moderator' | 'watcher';
 }
 
 export interface PublicUser {
@@ -74,7 +74,9 @@ export interface PublicUser {
   role: string;
   isAdmin: boolean;
   isModerator: boolean;
+  isWatcher: boolean;
   isStaff: boolean;
+  canAccessAdminPanel?: boolean;
   totalScore: number;
   mmr: number;
   gamesPlayed: number;
@@ -238,6 +240,7 @@ export interface RoomState {
   nightActionDone: boolean;
   isAdmin: boolean;
   canModerate: boolean;
+  canSilence: boolean;
   isQuizRoom?: boolean;
 }
 

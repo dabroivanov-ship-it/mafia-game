@@ -85,7 +85,7 @@ export function isAdminReservedUsername(username: string): boolean {
   return admins.includes(username.trim().toLowerCase());
 }
 
-export type AssignableRole = 'user' | 'moderator';
+export type AssignableRole = 'user' | 'watcher' | 'moderator';
 
 export function isAdmin(user: User | null | undefined): boolean {
   return user?.role === 'admin';
@@ -95,18 +95,39 @@ export function isModerator(user: User | null | undefined): boolean {
   return user?.role === 'moderator';
 }
 
+export function isWatcher(user: User | null | undefined): boolean {
+  return user?.role === 'watcher';
+}
+
 export function isStaff(user: User | null | undefined): boolean {
   return isAdmin(user) || isModerator(user);
+}
+
+export function canModerateSilence(user: User | null | undefined): boolean {
+  return isAdmin(user) || isModerator(user) || isWatcher(user);
+}
+
+export function canSilenceTarget(
+  actor: User | null | undefined,
+  target: User | null | undefined
+): boolean {
+  if (!actor || !target || actor.id === target.id) return false;
+  if (!canModerateSilence(actor)) return false;
+  if (isAdmin(target)) return false;
+  if (isModerator(target) || isWatcher(target)) return isAdmin(actor);
+  return true;
 }
 
 export function canBanTarget(
   actor: User | null | undefined,
   target: User | null | undefined
 ): boolean {
-  if (!isStaff(actor) || !target) return false;
+  if (!actor || !target) return false;
   if (isAdmin(target)) return false;
-  if (isModerator(target)) return isAdmin(actor);
-  return true;
+  if (isModerator(target) || isWatcher(target)) return isAdmin(actor);
+  if (isAdmin(actor)) return true;
+  if (isModerator(actor)) return !isStaff(target);
+  return false;
 }
 
 export function isUserBanned(user: User | null | undefined): boolean {
@@ -151,7 +172,10 @@ export function publicUser(user: User | null | undefined): PublicUser | null {
     role: user.role || 'user',
     isAdmin: user.role === 'admin',
     isModerator: user.role === 'moderator',
+    isWatcher: user.role === 'watcher',
     isStaff: isStaff(user),
+    canAccessAdminPanel:
+      user.role === 'admin' || user.role === 'moderator' || user.role === 'watcher',
     totalScore: user.total_score,
     mmr: user.mmr ?? 1000,
     gamesPlayed: user.games_played ?? 0,
@@ -473,8 +497,8 @@ export function listStaffUsers(): StaffMember[] {
   const rows = db
     .prepare(
       `SELECT id, username, display_name, city, avatar, role
-       FROM users WHERE role IN ('admin', 'moderator')
-       ORDER BY CASE role WHEN 'admin' THEN 0 ELSE 1 END, display_name COLLATE NOCASE`
+       FROM users WHERE role IN ('admin', 'moderator', 'watcher')
+       ORDER BY CASE role WHEN 'admin' THEN 0 WHEN 'moderator' THEN 1 ELSE 2 END, display_name COLLATE NOCASE`
     )
     .all() as Pick<User, 'id' | 'username' | 'display_name' | 'city' | 'avatar' | 'role'>[];
   return rows.map((row) => ({
@@ -483,7 +507,7 @@ export function listStaffUsers(): StaffMember[] {
     displayName: row.display_name,
     city: row.city || '',
     avatar: row.avatar || null,
-    role: row.role as 'admin' | 'moderator',
+    role: row.role as 'admin' | 'moderator' | 'watcher',
   }));
 }
 
@@ -529,6 +553,7 @@ export function clearBan(userId: number): PublicUser | null {
 export function updateUserRole(userId: number, role: AssignableRole): PublicUser | null {
   const target = findUserById(userId);
   if (!target || target.role === 'admin') return null;
+  if (role !== 'user' && role !== 'moderator' && role !== 'watcher') return null;
   db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, userId);
   return findUserPublic(userId);
 }

@@ -6,6 +6,7 @@ import {
   isAdmin,
   isStaff,
   canBanTarget,
+  canSilenceTarget,
   listStaffUsers,
   listLeaderboard,
   countLeaderboard,
@@ -250,6 +251,7 @@ export function createProfileRouter({ onProfileUpdated }: ProfileRouterOptions =
       viewerGamesPlayed: getGamesPlayed(req.userId!),
       canAdmin: viewerIsAdmin && !target.isAdmin && !isSelf,
       canModerate: canBanTarget(viewer, targetUser) && !isSelf,
+      canSilence: canSilenceTarget(viewer, targetUser) && !isSelf,
       staffMeta:
         viewerIsStaff && !isSelf
           ? {
