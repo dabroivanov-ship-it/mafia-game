@@ -1971,7 +1971,7 @@ export function serializeRoomForPlayer(
         : [],
     canStartGame:
       room.phase === PHASE.WAITING || room.phase === PHASE.REGISTRATION || room.phase === PHASE.ENDED,
-    canChat: !!me?.connected && room.phase !== PHASE.ROLES,
+    canChat: !!me?.connected,
     canPlay: !!me?.inGame && !!me?.role && room.phase === PHASE.NIGHT,
     wifeRevengeAvailable:
       me?.role === 'commissar_wife' && room.wifeRevengeAvailable && !room.wifeRevengeUsed,
