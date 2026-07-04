@@ -32,6 +32,8 @@ import {
   hydrateRoomHistory,
 } from '../history/store.js';
 import { loadRoomConfigs, saveRoomConfig, deleteRoomConfig, nextRoomId, getRoomSortOrders, reorderRooms } from '../rooms/store.js';
+import { findUserById } from '../auth/db.js';
+import { normalizeGender } from '../auth/gender.js';
 import type {
   ChatChannel,
   ChatMessage,
@@ -1693,11 +1695,15 @@ function enrichChatMessage(room: GameRoom, msg: ChatMessage): ChatMessage {
   const author = findMessageAuthor(room, msg);
   if (!author) return msg;
 
+  const user = author.userId ? findUserById(author.userId) : undefined;
+  const authorGender = user ? normalizeGender(user.gender) : undefined;
+
   return {
     ...msg,
     userId: author.userId ?? msg.userId,
     playerId: author.id,
     playerName: author.username || author.name || msg.playerName,
+    authorGender: authorGender || undefined,
   };
 }
 

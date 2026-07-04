@@ -85,6 +85,7 @@ export interface ChatMessage {
   id: string | number;
   playerId?: number | null;
   playerName: string;
+  authorGender?: UserGender;
   text: string;
   time: string;
   userId?: number | null;

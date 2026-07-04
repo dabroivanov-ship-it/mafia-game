@@ -101,6 +101,7 @@ export interface ChatMessage {
   playerId: number | null;
   userId: number | null;
   playerName: string;
+  authorGender?: UserGender;
   text: string;
   time: string;
   system?: boolean;

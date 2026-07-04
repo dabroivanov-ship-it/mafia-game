@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, FormEvent } from 'react';
-import type { ChatChannel, ChatMessage, ChatReplyTarget, ViolationType } from '../types';
+import type { ChatChannel, ChatMessage, ChatReplyTarget, UserGender, ViolationType } from '../types';
 import DeleteMessageModal from './DeleteMessageModal';
 
 export interface ChatSendOptions {
@@ -103,6 +103,26 @@ export default function Chat({
     setText('');
   };
 
+  const genderMark = (gender?: UserGender): string | null => {
+    if (gender === 'male') return '♂';
+    if (gender === 'female') return '♀';
+    return null;
+  };
+
+  const renderAuthor = (msg: ChatMessage) => {
+    const mark = genderMark(msg.authorGender);
+    return (
+      <>
+        {mark && (
+          <span className="chat-gender" title={mark === '♂' ? 'Мужской' : 'Женский'}>
+            {mark}
+          </span>
+        )}
+        {msg.playerName}:
+      </>
+    );
+  };
+
   const handleLoadMore = () => {
     if (!onLoadMore || loadingMore) return;
     loadingMoreRef.current = true;
@@ -179,10 +199,10 @@ export default function Chat({
                 onClick={() => handleAuthorClick(msg)}
                 title="Открыть профиль и написать"
               >
-                {msg.playerName}:
+                {renderAuthor(msg)}
               </button>
             ) : (
-              <span className="chat-author">{msg.playerName}:</span>
+              <span className="chat-author">{renderAuthor(msg)}</span>
             )}
             {msg.toPlayerName && (
               <span className="chat-direct-to" title="Адресат">
