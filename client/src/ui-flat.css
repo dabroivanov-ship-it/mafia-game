@@ -411,10 +411,21 @@ textarea:focus {
 }
 
 .info-hub-icon {
-  display: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  font-size: 1.45rem;
+  line-height: 1;
 }
 
 .info-hub-index {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 14px;
