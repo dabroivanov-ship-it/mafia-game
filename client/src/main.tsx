@@ -7,6 +7,7 @@ import { initTelegramWebApp } from './telegramWebApp';
 import { initYandexMetrika } from './metrika';
 import './themes.css';
 import './App.css';
+import './ui-flat.css';
 
 if ('serviceWorker' in navigator) {
   registerSW({ immediate: true });

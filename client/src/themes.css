@@ -1,7 +1,12 @@
 /* === Color themes (data-theme on <html>) === */
-@import url('https://fonts.googleapis.com/css2?family=Geologica:wght@300;400;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geologica:wght@400;500;600;700&display=swap');
+
+html {
+  font-family: 'Geologica', 'Segoe UI', system-ui, sans-serif;
+}
 
 [data-theme='midnight'] {
+  --font: 'Geologica', 'Segoe UI', system-ui, sans-serif;
   --bg: #0a0b10;
   --bg-card: #151821;
   --bg-hover: #1e2230;
@@ -20,6 +25,7 @@
 }
 
 [data-theme='emerald'] {
+  --font: 'Geologica', 'Segoe UI', system-ui, sans-serif;
   --bg: #080f0c;
   --bg-card: #101a14;
   --bg-hover: #162219;
@@ -101,6 +107,7 @@ html[data-theme='crimson'] .menu-item.active {
 }
 
 [data-theme='aurora'] {
+  --font: 'Geologica', 'Segoe UI', system-ui, sans-serif;
   --bg: #080812;
   --bg-card: #12101f;
   --bg-hover: #181528;

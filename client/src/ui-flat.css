@@ -1,0 +1,385 @@
+/* Editorial flat UI — без glow, gradient-рамок и card-wall */
+
+:root {
+  --radius: 6px;
+  --radius-sm: 4px;
+  --shadow: none;
+  --font: 'Geologica', 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+body {
+  background-image: none;
+  background-color: var(--bg);
+  font-feature-settings: 'kern' 1;
+}
+
+/* Placeholder avatars — буква вместо emoji */
+.profile-avatar.placeholder,
+.admin-avatar.placeholder,
+.cabinet-hub-avatar.placeholder,
+.user-search-avatar.placeholder,
+.user-stats-avatar.placeholder,
+.staff-avatar.placeholder,
+.mail-avatar.placeholder,
+.news-comment-avatar.placeholder,
+.quiz-leader-avatar.placeholder,
+.lobby-cabinet-avatar.placeholder {
+  font-size: 0;
+  color: transparent;
+  position: relative;
+}
+
+.profile-avatar.placeholder::after,
+.admin-avatar.placeholder::after,
+.cabinet-hub-avatar.placeholder::after,
+.user-search-avatar.placeholder::after,
+.user-stats-avatar.placeholder::after,
+.staff-avatar.placeholder::after,
+.mail-avatar.placeholder::after,
+.news-comment-avatar.placeholder::after,
+.quiz-leader-avatar.placeholder::after,
+.lobby-cabinet-avatar.placeholder::after {
+  content: '?';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* Кнопки — плоские */
+.btn-primary {
+  box-shadow: none;
+}
+
+.home-quick-link:hover,
+.auth-info-card:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Логотип */
+.site-logo-mark,
+.menu-logo-mark {
+  background: var(--accent);
+  animation: none;
+  box-shadow: none;
+  border-radius: 8px;
+  font-size: 1.25rem;
+}
+
+.site-logo-mark::after,
+.menu-logo-mark::after {
+  display: none;
+}
+
+/* Меню — текстовые вкладки */
+.menu-icon {
+  display: none;
+}
+
+.menu-item {
+  font-size: 0.88rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  border-radius: var(--radius-sm);
+}
+
+.menu-item.active {
+  box-shadow: none;
+  background: var(--bg-hover);
+}
+
+/* Заголовки страниц */
+.page-header h1,
+.lobby-header h1,
+.cabinet-page h1,
+.admin-header h2 {
+  font-size: clamp(1.35rem, 4vw, 1.65rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.lobby-section-title,
+.cabinet-section-title {
+  margin: 0 0 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Комнаты — строки списка */
+.room-card-wrap {
+  padding: 0;
+  overflow: visible;
+  box-shadow: none;
+  border-radius: 0;
+  background: none;
+}
+
+.room-card-wrap::before {
+  display: none;
+}
+
+.room-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: none;
+  padding: 12px 14px;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.room-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+  background: color-mix(in srgb, var(--bg-hover) 70%, var(--bg-card));
+}
+
+.room-card:active {
+  transform: none;
+}
+
+.room-card-info h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.room-status {
+  background: transparent;
+  color: var(--text-muted);
+  padding: 0;
+  border-radius: 0;
+  font-size: 0.78rem;
+  font-weight: 500;
+  text-transform: lowercase;
+}
+
+.room-status::before {
+  content: '· ';
+}
+
+.room-count {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.room-count::after {
+  content: ' онл.';
+  font-weight: 400;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.room-card .btn-primary {
+  min-width: 72px;
+  min-height: 38px;
+  padding: 8px 14px;
+  font-size: 0.88rem;
+}
+
+.rooms-list {
+  gap: 8px;
+}
+
+/* Информация — единый список */
+.info-hub {
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.info-hub-card {
+  box-shadow: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  padding: 14px 16px;
+  gap: 12px;
+}
+
+.info-hub-card:last-child {
+  border-bottom: none;
+}
+
+.info-hub-card:hover {
+  border-color: var(--border);
+  background: var(--bg-hover);
+}
+
+.info-hub-card:active {
+  transform: none;
+}
+
+.info-hub-icon {
+  display: none;
+}
+
+.info-hub-index {
+  flex-shrink: 0;
+  width: 2rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.info-hub-body strong {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.info-hub-arrow {
+  font-size: 0.9rem;
+  opacity: 0.45;
+}
+
+/* Новости */
+.news-card {
+  border-radius: var(--radius-sm);
+  box-shadow: none;
+  border-left: 3px solid color-mix(in srgb, var(--accent) 55%, var(--border));
+}
+
+.news-card-header h2 {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.news-featured-badge {
+  color: var(--accent);
+  margin-right: 4px;
+}
+
+/* Кабинет / поиск */
+.lobby-cabinet-card,
+.user-search-card,
+.cabinet-hub-card {
+  box-shadow: none;
+}
+
+.lobby-cabinet-card:hover,
+.cabinet-hub-card:hover {
+  transform: none;
+}
+
+.lobby-mail-notice {
+  border-radius: var(--radius-sm);
+  box-shadow: none;
+  border-left: 3px solid var(--accent);
+}
+
+.lobby-mail-notice-icon {
+  display: none;
+}
+
+/* Админка */
+.admin-section {
+  box-shadow: none;
+  border-radius: var(--radius-sm);
+}
+
+.admin-system-categories {
+  grid-template-columns: 1fr;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.admin-system-category-card {
+  min-height: 0;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  padding: 14px 16px;
+  background: var(--bg-card);
+}
+
+.admin-system-category-card:last-child {
+  border-bottom: none;
+}
+
+.admin-system-category-icon {
+  display: none;
+}
+
+.admin-system-category-head h4 {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.admin-system-category-badge {
+  border-radius: var(--radius-sm);
+  background: var(--bg-hover);
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.admin-system-category-links button {
+  padding: 6px 0;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.admin-system-category-links button:hover {
+  background: transparent;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.admin-users-list-btn {
+  border-radius: var(--radius-sm);
+  box-shadow: none;
+}
+
+/* Уведомления */
+.toast,
+.install-app-banner {
+  box-shadow: none;
+}
+
+/* Crimson theme — убрать gradient overrides */
+html[data-theme='crimson'] body {
+  background-image: none;
+  background-color: var(--bg);
+}
+
+html[data-theme='crimson'] .btn-primary {
+  background: var(--accent);
+  box-shadow: none;
+}
+
+html[data-theme='crimson'] .btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  box-shadow: none;
+}
+
+html[data-theme='crimson'] .auth-card,
+html[data-theme='crimson'] .room-card,
+html[data-theme='crimson'] .news-card,
+html[data-theme='crimson'] .info-hub-card,
+html[data-theme='crimson'] .admin-section,
+html[data-theme='crimson'] .profile-card {
+  box-shadow: none;
+}
+
+html[data-theme='crimson'] .main-menu {
+  background: var(--bg-card);
+  box-shadow: none;
+}
+
+html[data-theme='crimson'] .menu-item.active {
+  box-shadow: none;
+}

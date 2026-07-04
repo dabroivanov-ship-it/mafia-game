@@ -77,8 +77,8 @@ export default function Lobby({
     <div className="lobby">
       <header className="lobby-header">
         <div className="lobby-header-brand">
-          <h1>🎭 Мафия</h1>
-          <p>Выберите комнату для игры или общения</p>
+          <h1>Мафия</h1>
+          <p>Выберите комнату</p>
         </div>
       </header>
 
@@ -93,7 +93,7 @@ export default function Lobby({
       )}
 
       <section className="lobby-rooms-section">
-        <h2 className="lobby-section-title">🎭 Мафия</h2>
+        <h2 className="lobby-section-title">Игровые комнаты</h2>
         <div className="rooms-list">
           {rooms.length === 0 && <p className="muted">Загрузка комнат...</p>}
           {gameRooms.length === 0 && rooms.length > 0 && (
@@ -106,7 +106,7 @@ export default function Lobby({
       </section>
 
       <section className="lobby-rooms-section">
-        <h2 className="lobby-section-title">💬 Чат</h2>
+        <h2 className="lobby-section-title">Чат</h2>
         <div className="rooms-list">
           {chatRooms.length === 0 && rooms.length > 0 && (
             <p className="muted">Чат-комнат пока нет</p>

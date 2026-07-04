@@ -71,7 +71,7 @@ export default function Info({
       <div className="info-page">
         {backNav('hub', 'Информация')}
         <header className="page-header">
-          <h1>📜 Правила игры</h1>
+          <h1>Правила игры</h1>
           <p className="muted">Как играть, фазы дня и ночи, победа и очки</p>
         </header>
         <Rules embedded />
@@ -84,7 +84,7 @@ export default function Info({
       <div className="info-page">
         {backNav('hub', 'Информация')}
         <header className="page-header">
-          <h1>🎭 Игровые роли</h1>
+          <h1>Игровые роли</h1>
           <p className="roles-intro muted">{ROLES_INTRO}</p>
         </header>
         <Roles embedded />
@@ -97,7 +97,7 @@ export default function Info({
       <div className="info-page">
         {backNav('hub', 'Информация')}
         <header className="page-header">
-          <h1>💬 Правила чата</h1>
+          <h1>Правила чата</h1>
           <p className="muted">Общение в комнатах и во время игры</p>
         </header>
         <ChatRules embedded />
@@ -171,103 +171,42 @@ export default function Info({
       )}
 
       <header className="page-header">
-        <h1>ℹ️ Информация</h1>
+        <h1>Информация</h1>
         <p className="muted">Правила, роли, чат, рейтинг и команда проекта</p>
       </header>
 
       <div className="info-hub">
-        <button type="button" className="info-hub-card" onClick={() => navigate('roles')}>
-          <span className="info-hub-icon" aria-hidden="true">
-            🎭
-          </span>
-          <span className="info-hub-body">
-            <strong>Игровые роли</strong>
-            <span className="muted">Мафия, город, маньяк — все способности</span>
-          </span>
-          <span className="info-hub-arrow" aria-hidden="true">
-            →
-          </span>
-        </button>
-
-        <button type="button" className="info-hub-card" onClick={() => navigate('rules')}>
-          <span className="info-hub-icon" aria-hidden="true">
-            📜
-          </span>
-          <span className="info-hub-body">
-            <strong>Правила игры</strong>
-            <span className="muted">Как начать, фазы, победа и очки</span>
-          </span>
-          <span className="info-hub-arrow" aria-hidden="true">
-            →
-          </span>
-        </button>
-
-        <button type="button" className="info-hub-card" onClick={() => navigate('faq')}>
-          <span className="info-hub-icon" aria-hidden="true">
-            ❓
-          </span>
-          <span className="info-hub-body">
-            <strong>Частые вопросы</strong>
-            <span className="muted">Как начать, роли и ведущий</span>
-          </span>
-          <span className="info-hub-arrow" aria-hidden="true">
-            →
-          </span>
-        </button>
-
-        <button type="button" className="info-hub-card" onClick={() => navigate('chatRules')}>
-          <span className="info-hub-icon" aria-hidden="true">
-            💬
-          </span>
-          <span className="info-hub-body">
-            <strong>Правила чата</strong>
-            <span className="muted">Общение, профили и модерация</span>
-          </span>
-          <span className="info-hub-arrow" aria-hidden="true">
-            →
-          </span>
-        </button>
-
-        <button type="button" className="info-hub-card" onClick={() => navigate('rating')}>
-          <span className="info-hub-icon" aria-hidden="true">
-            🏆
-          </span>
-          <span className="info-hub-body">
-            <strong>Рейтинг игроков</strong>
-            <span className="muted">Топ по очкам, играм и репутации</span>
-          </span>
-          <span className="info-hub-arrow" aria-hidden="true">
-            →
-          </span>
-        </button>
-
-        <button type="button" className="info-hub-card" onClick={() => navigate('quizLeaders')}>
-          <span className="info-hub-icon" aria-hidden="true">
-            🧠
-          </span>
-          <span className="info-hub-body">
-            <strong>Самые умные</strong>
-            <span className="muted">Топ-10 викторины по верным ответам</span>
-          </span>
-          <span className="info-hub-arrow" aria-hidden="true">
-            →
-          </span>
-        </button>
-
-        {!publicMode && (
-          <button type="button" className="info-hub-card" onClick={() => navigate('team')}>
-            <span className="info-hub-icon" aria-hidden="true">
-              🛡️
+        {(
+          [
+            { n: '01', section: 'roles' as const, title: 'Игровые роли', desc: 'Мафия, город, маньяк — все способности' },
+            { n: '02', section: 'rules' as const, title: 'Правила игры', desc: 'Как начать, фазы, победа и очки' },
+            { n: '03', section: 'faq' as const, title: 'Частые вопросы', desc: 'Как начать, роли и ведущий' },
+            { n: '04', section: 'chatRules' as const, title: 'Правила чата', desc: 'Общение, профили и модерация' },
+            { n: '05', section: 'rating' as const, title: 'Рейтинг игроков', desc: 'Топ по очкам, играм и репутации' },
+            { n: '06', section: 'quizLeaders' as const, title: 'Самые умные', desc: 'Топ-10 викторины по верным ответам' },
+            ...(!publicMode
+              ? [{ n: '07', section: 'team' as const, title: 'Команда', desc: 'Администраторы и модераторы' }]
+              : []),
+          ] as const
+        ).map((item) => (
+          <button
+            key={item.section}
+            type="button"
+            className="info-hub-card"
+            onClick={() => navigate(item.section)}
+          >
+            <span className="info-hub-index" aria-hidden="true">
+              {item.n}
             </span>
             <span className="info-hub-body">
-              <strong>Команда</strong>
-              <span className="muted">Администраторы и модераторы</span>
+              <strong>{item.title}</strong>
+              <span className="muted">{item.desc}</span>
             </span>
             <span className="info-hub-arrow" aria-hidden="true">
               →
             </span>
           </button>
-        )}
+        ))}
       </div>
     </div>
   );

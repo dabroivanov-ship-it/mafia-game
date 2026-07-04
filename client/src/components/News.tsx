@@ -51,7 +51,7 @@ export default function News({ user, onBack, onRead }: NewsProps) {
       </nav>
 
       <header className="page-header">
-        <h1>📰 Новости</h1>
+        <h1>Новости</h1>
         <p className="muted">Объявления и обновления проекта</p>
       </header>
 

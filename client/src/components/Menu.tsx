@@ -13,10 +13,10 @@ interface MenuItem {
 }
 
 const ITEMS: MenuItem[] = [
-  { id: 'lobby', icon: '🏠', label: 'Комнаты', mobileBottom: true },
-  { id: 'news', icon: '📰', label: 'Новости', mobileBottom: true },
-  { id: 'cabinet', icon: '👤', label: 'Кабинет', mobileBottom: true },
-  { id: 'info', icon: 'ℹ️', label: 'Информация', mobileBottom: true },
+  { id: 'lobby', icon: '', label: 'Комнаты', mobileBottom: true },
+  { id: 'news', icon: '', label: 'Новости', mobileBottom: true },
+  { id: 'cabinet', icon: '', label: 'Кабинет', mobileBottom: true },
+  { id: 'info', icon: '', label: 'Информация', mobileBottom: true },
 ];
 
 interface MenuProps {
@@ -67,12 +67,12 @@ export default function Menu({
             className={`menu-item admin menu-item-mobile-nav ${view === 'admin' ? 'active' : ''}`}
             onClick={() => onNavigate('admin')}
           >
-            <span className="menu-icon">⚙️</span>
+            <span className="menu-icon" aria-hidden="true" />
             <span className="menu-label">Админ</span>
           </button>
         )}
         <button type="button" className="menu-item logout menu-item-desktop-only" onClick={onLogout}>
-          <span className="menu-icon">🚪</span>
+          <span className="menu-icon" aria-hidden="true" />
           <span className="menu-label">Выйти</span>
         </button>
       </div>
