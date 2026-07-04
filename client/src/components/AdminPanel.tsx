@@ -566,7 +566,14 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
   return (
     <div className="admin-page">
       <div className="admin-header">
-        <h2>Панель администратора</h2>
+        <div>
+          <h2>Панель администратора</h2>
+          {systemView === 'hub' && (
+            <p className="admin-header-sub">
+              Пользователей: <strong>{users.length}</strong> · Комнат: <strong>{rooms.length}</strong>
+            </p>
+          )}
+        </div>
         <div className="admin-header-actions">
           <button type="button" className="btn btn-ghost" onClick={() => void load()}>Обновить</button>
           <button type="button" className="btn btn-ghost" onClick={onBack}>Назад</button>

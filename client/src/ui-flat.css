@@ -1,19 +1,400 @@
-/* Editorial flat UI — без glow, gradient-рамок и card-wall */
+/* Полировка UI: мягкие формы, глубина, закругления (референс VPN BRO) */
 
 :root {
-  --radius: 6px;
-  --radius-sm: 4px;
-  --shadow: none;
-  --font: 'Geologica', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --radius: 18px;
+  --radius-sm: 14px;
+  --radius-lg: 22px;
+  --radius-xl: 28px;
+  --shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+  --shadow-soft: 0 2px 6px rgba(0, 0, 0, 0.16), 0 14px 36px rgba(0, 0, 0, 0.18);
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.28);
+  --surface-card: linear-gradient(
+    168deg,
+    color-mix(in srgb, var(--bg-card) 97%, #fff 3%) 0%,
+    var(--bg-card) 48%,
+    color-mix(in srgb, var(--bg-card) 94%, #000 6%) 100%
+  );
 }
 
 body {
-  background-image: none;
   background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse 100% 60% at 50% -18%, color-mix(in srgb, var(--body-glow-1) 90%, transparent), transparent 70%),
+    radial-gradient(ellipse 50% 40% at 100% 100%, color-mix(in srgb, var(--body-glow-2) 80%, transparent), transparent 65%);
   font-feature-settings: 'kern' 1;
+  line-height: 1.45;
 }
 
-/* Placeholder avatars — буква вместо emoji */
+/* ——— Кнопки ——— */
+.btn {
+  border-radius: 999px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.btn-sm {
+  border-radius: 999px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 78%, #000));
+  box-shadow: 0 4px 18px color-mix(in srgb, var(--accent) 32%, transparent);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--accent-hover), color-mix(in srgb, var(--accent-hover) 78%, #000));
+  box-shadow: 0 6px 24px color-mix(in srgb, var(--accent) 38%, transparent);
+  transform: translateY(-1px);
+}
+
+.btn-ghost {
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--border) 90%, var(--accent) 10%);
+  background: color-mix(in srgb, var(--bg-hover) 80%, transparent);
+}
+
+.btn-ghost:hover {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+  background: var(--bg-hover);
+}
+
+.btn-action,
+.btn-target {
+  border-radius: var(--radius-sm);
+}
+
+/* ——— Поля ввода ——— */
+input:not([type='checkbox']):not([type='radio']):not([type='range']),
+select,
+textarea {
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--border) 85%, var(--accent) 15%);
+  background: color-mix(in srgb, var(--bg) 88%, var(--bg-card));
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+input:not([type='checkbox']):not([type='radio']):focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.auth-tabs button {
+  border-radius: 999px;
+}
+
+.auth-error {
+  border-radius: var(--radius-sm);
+}
+
+/* ——— Карточки (общий стиль) ——— */
+.auth-card,
+.profile-card,
+.user-bar,
+.user-search-card,
+.lobby-cabinet-card,
+.cabinet-hub-user,
+.admin-system-stat-card,
+.admin-system-detail-panel,
+.theme-picker-card,
+.news-tiptap-wrap,
+.news-tiptap-loading,
+.modal,
+.toast,
+.install-app-banner {
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-soft);
+  border: 1px solid color-mix(in srgb, var(--border) 90%, var(--accent) 10%);
+}
+
+.home-quick-link,
+.auth-info-card {
+  border-radius: var(--radius);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-soft);
+}
+
+.home-quick-link:hover,
+.auth-info-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-soft), 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+/* ——— Логотип ——— */
+.site-logo-mark,
+.menu-logo-mark {
+  background: linear-gradient(145deg, var(--accent), color-mix(in srgb, var(--accent) 65%, #000));
+  animation: none;
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: 16px;
+  font-size: 1.3rem;
+}
+
+.site-logo-mark::after,
+.menu-logo-mark::after {
+  display: none;
+}
+
+.site-logo-image {
+  border-radius: 16px;
+}
+
+/* ——— Меню ——— */
+.menu-icon {
+  display: none;
+}
+
+.main-menu {
+  border-bottom: none;
+  background: transparent;
+  padding: 12px 16px 8px;
+}
+
+.menu-items {
+  gap: 6px;
+  padding: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-card) 92%, transparent);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-soft);
+}
+
+.menu-item {
+  font-size: 0.88rem;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 10px 16px;
+  border-color: transparent;
+  background: transparent;
+}
+
+.menu-item:hover:not(.active) {
+  background: var(--bg-hover);
+}
+
+.menu-item.active {
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 75%, #000));
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.menu-item.admin.active {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #fff;
+}
+
+/* ——— Заголовки ——— */
+.page-header h1,
+.lobby-header h1,
+.cabinet-page h1,
+.admin-header h2 {
+  font-size: clamp(1.6rem, 4.5vw, 2.1rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.12;
+}
+
+.page-header p,
+.lobby-header p {
+  line-height: 1.5;
+}
+
+.lobby-section-title,
+.cabinet-section-title {
+  margin: 0 0 14px;
+  padding: 0;
+  border: none;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--text-muted) 88%, var(--text));
+}
+
+.lobby {
+  padding: 24px 18px 32px;
+}
+
+/* ——— Комнаты ——— */
+.room-card-wrap {
+  --room-glow: var(--accent);
+  position: relative;
+  border-radius: calc(var(--radius-lg) + 2px);
+  padding: 1px;
+  overflow: hidden;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--room-glow) 45%, transparent),
+    color-mix(in srgb, var(--room-glow) 12%, var(--border))
+  );
+  box-shadow: var(--shadow-soft);
+}
+
+.room-card-wrap::before {
+  display: none;
+}
+
+.room-card {
+  border: none;
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 4%, transparent);
+  padding: 18px 20px;
+  transition:
+    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.22s ease;
+}
+
+.room-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 4%, transparent),
+    0 8px 28px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.room-card:active {
+  transform: scale(0.995);
+}
+
+.room-card-info h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.room-card-meta {
+  gap: 10px;
+}
+
+.room-status {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.room-status::before {
+  content: none;
+}
+
+.room-count {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.room-count::after {
+  content: none;
+}
+
+.room-card .btn-primary {
+  min-width: 88px;
+  min-height: 42px;
+  padding: 10px 20px;
+  font-size: 0.88rem;
+}
+
+.rooms-list {
+  gap: 14px;
+}
+
+/* ——— Инфо / кабинет ——— */
+.info-hub {
+  gap: 12px;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
+}
+
+.info-hub-card {
+  border: 1px solid color-mix(in srgb, var(--border) 88%, var(--accent) 12%);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-soft);
+  padding: 18px 20px;
+  gap: 14px;
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.info-hub-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-soft), 0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.info-hub-icon {
+  display: none;
+}
+
+.info-hub-index {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--accent) 14%, var(--bg-hover));
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.info-hub-body strong {
+  font-size: 1.02rem;
+  font-weight: 600;
+}
+
+.info-hub-body .muted {
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.info-hub-arrow {
+  font-size: 1.1rem;
+  opacity: 0.4;
+}
+
+/* ——— Новости ——— */
+.news-card {
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-soft);
+  border: 1px solid color-mix(in srgb, var(--border) 88%, var(--accent) 12%);
+  border-left: none;
+  background: var(--surface-card);
+  overflow: hidden;
+}
+
+.news-list {
+  gap: 16px;
+}
+
+.lobby-mail-notice {
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border));
+  border-left: none;
+  background: var(--surface-card);
+}
+
+.lobby-mail-notice-icon {
+  display: none;
+}
+
+.lobby-online-footer {
+  margin-top: 10px;
+}
+
+/* ——— Placeholder avatars ——— */
 .profile-avatar.placeholder,
 .admin-avatar.placeholder,
 .cabinet-hub-avatar.placeholder,
@@ -27,6 +408,8 @@ body {
   font-size: 0;
   color: transparent;
   position: relative;
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-hover));
+  border-radius: 50%;
 }
 
 .profile-avatar.placeholder::after,
@@ -45,341 +428,324 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-weight: 600;
   color: var(--text-muted);
 }
 
-/* Кнопки — плоские */
-.btn-primary {
-  box-shadow: none;
+/* ——— Админка ——— */
+.admin-page {
+  padding-bottom: 28px;
 }
 
-.home-quick-link:hover,
-.auth-info-card:hover {
-  transform: none;
-  box-shadow: none;
+.admin-header {
+  margin-bottom: 24px;
 }
 
-/* Логотип */
-.site-logo-mark,
-.menu-logo-mark {
-  background: var(--accent);
-  animation: none;
-  box-shadow: none;
-  border-radius: 8px;
-  font-size: 1.25rem;
-}
-
-.site-logo-mark::after,
-.menu-logo-mark::after {
-  display: none;
-}
-
-/* Меню — текстовые вкладки */
-.menu-icon {
-  display: none;
-}
-
-.menu-item {
-  font-size: 0.88rem;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  border-radius: var(--radius-sm);
-}
-
-.menu-item.active {
-  box-shadow: none;
-  background: var(--bg-hover);
-}
-
-/* Заголовки страниц */
-.page-header h1,
-.lobby-header h1,
-.cabinet-page h1,
 .admin-header h2 {
-  font-size: clamp(1.35rem, 4vw, 1.65rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
+  margin-bottom: 6px;
 }
 
-.lobby-section-title,
-.cabinet-section-title {
-  margin: 0 0 10px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--border);
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-/* Комнаты — строки списка */
-.room-card-wrap {
-  padding: 0;
-  overflow: visible;
-  box-shadow: none;
-  border-radius: 0;
-  background: none;
-}
-
-.room-card-wrap::before {
-  display: none;
-}
-
-.room-card {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  box-shadow: none;
-  padding: 12px 14px;
-  transition: border-color 0.15s, background 0.15s;
-}
-
-.room-card:hover {
-  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
-  background: color-mix(in srgb, var(--bg-hover) 70%, var(--bg-card));
-}
-
-.room-card:active {
-  transform: none;
-}
-
-.room-card-info h2 {
-  font-size: 1rem;
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-
-.room-status {
-  background: transparent;
-  color: var(--text-muted);
-  padding: 0;
-  border-radius: 0;
-  font-size: 0.78rem;
-  font-weight: 500;
-  text-transform: lowercase;
-}
-
-.room-status::before {
-  content: '· ';
-}
-
-.room-count {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
-}
-
-.room-count::after {
-  content: ' онл.';
-  font-weight: 400;
-  color: var(--text-muted);
-  font-size: 0.78rem;
-}
-
-.room-card .btn-primary {
-  min-width: 72px;
-  min-height: 38px;
-  padding: 8px 14px;
+.admin-header-sub {
+  margin: 0;
   font-size: 0.88rem;
+  color: var(--text-muted);
 }
 
-.rooms-list {
-  gap: 8px;
+.admin-header-sub strong {
+  color: var(--accent);
+  font-weight: 600;
 }
 
-/* Информация — единый список */
-.info-hub {
-  gap: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-}
-
-.info-hub-card {
+.admin-section {
   box-shadow: none;
-  border: none;
-  border-bottom: 1px solid var(--border);
   border-radius: 0;
-  padding: 14px 16px;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.admin-dash-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.admin-dash-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 20px 22px 18px;
+  background: var(--surface-card);
+  box-shadow: var(--shadow-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 230px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.admin-dash-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-soft), 0 0 0 1px color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.admin-dash-card--orange {
+  border-color: color-mix(in srgb, #f59e0b 28%, var(--border));
+}
+
+.admin-dash-card--teal {
+  border-color: color-mix(in srgb, #14b8a6 28%, var(--border));
+}
+
+.admin-dash-card--gold {
+  border-color: color-mix(in srgb, #eab308 28%, var(--border));
+}
+
+.admin-dash-card-head {
+  display: flex;
+  align-items: center;
   gap: 12px;
 }
 
-.info-hub-card:last-child {
-  border-bottom: none;
+.admin-dash-card-head h4 {
+  flex: 1;
+  margin: 0;
+  font-size: 1.08rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
-.info-hub-card:hover {
-  border-color: var(--border);
-  background: var(--bg-hover);
-}
-
-.info-hub-card:active {
-  transform: none;
-}
-
-.info-hub-icon {
-  display: none;
-}
-
-.info-hub-index {
+.admin-dash-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
   flex-shrink: 0;
-  width: 2rem;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
+}
+
+.admin-dash-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.admin-dash-icon--orange {
+  background: color-mix(in srgb, #f59e0b 20%, transparent);
+  color: #f59e0b;
+}
+
+.admin-dash-icon--teal {
+  background: color-mix(in srgb, #14b8a6 20%, transparent);
+  color: #14b8a6;
+}
+
+.admin-dash-icon--gold {
+  background: color-mix(in srgb, #eab308 20%, transparent);
+  color: #eab308;
+}
+
+.admin-dash-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
 
-.info-hub-body strong {
-  font-size: 0.95rem;
-  font-weight: 600;
+.admin-dash-badge--orange {
+  background: color-mix(in srgb, #f59e0b 24%, transparent);
+  color: #fbbf24;
 }
 
-.info-hub-arrow {
-  font-size: 0.9rem;
-  opacity: 0.45;
+.admin-dash-badge--teal {
+  background: color-mix(in srgb, #14b8a6 24%, transparent);
+  color: #2dd4bf;
 }
 
-/* Новости */
-.news-card {
-  border-radius: var(--radius-sm);
-  box-shadow: none;
-  border-left: 3px solid color-mix(in srgb, var(--accent) 55%, var(--border));
+.admin-dash-badge--gold {
+  background: color-mix(in srgb, #eab308 24%, transparent);
+  color: #facc15;
 }
 
-.news-card-header h2 {
-  font-size: 1.05rem;
-  font-weight: 600;
+.admin-dash-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 
-.news-featured-badge {
-  color: var(--accent);
-  margin-right: 4px;
-}
-
-/* Кабинет / поиск */
-.lobby-cabinet-card,
-.user-search-card,
-.cabinet-hub-card {
-  box-shadow: none;
-}
-
-.lobby-cabinet-card:hover,
-.cabinet-hub-card:hover {
-  transform: none;
-}
-
-.lobby-mail-notice {
-  border-radius: var(--radius-sm);
-  box-shadow: none;
-  border-left: 3px solid var(--accent);
-}
-
-.lobby-mail-notice-icon {
-  display: none;
-}
-
-/* Админка */
-.admin-section {
-  box-shadow: none;
-  border-radius: var(--radius-sm);
-}
-
-.admin-system-categories {
-  grid-template-columns: 1fr;
-  gap: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-}
-
-.admin-system-category-card {
-  min-height: 0;
+.admin-dash-links button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  padding: 10px 12px;
   border: none;
-  border-bottom: 1px solid var(--border);
-  border-radius: 0;
-  padding: 14px 16px;
-  background: var(--bg-card);
-}
-
-.admin-system-category-card:last-child {
-  border-bottom: none;
-}
-
-.admin-system-category-icon {
-  display: none;
-}
-
-.admin-system-category-head h4 {
-  font-size: 0.95rem;
-  font-weight: 600;
-}
-
-.admin-system-category-badge {
   border-radius: var(--radius-sm);
-  background: var(--bg-hover);
-  color: var(--text-muted);
-  font-weight: 600;
-}
-
-.admin-system-category-links button {
-  padding: 6px 0;
-  font-size: 0.88rem;
-  color: var(--text-muted);
-}
-
-.admin-system-category-links button:hover {
   background: transparent;
-  color: var(--accent);
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.admin-dash-link-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--text-muted) 50%, transparent);
+  flex-shrink: 0;
+}
+
+.admin-dash-card--orange .admin-dash-links button:hover {
+  background: color-mix(in srgb, #f59e0b 12%, var(--bg-hover));
+  color: #fbbf24;
+}
+
+.admin-dash-card--orange .admin-dash-links button:hover .admin-dash-link-dot {
+  background: #f59e0b;
+}
+
+.admin-dash-card--teal .admin-dash-links button:hover {
+  background: color-mix(in srgb, #14b8a6 12%, var(--bg-hover));
+  color: #2dd4bf;
+}
+
+.admin-dash-card--teal .admin-dash-links button:hover .admin-dash-link-dot {
+  background: #14b8a6;
+}
+
+.admin-dash-card--gold .admin-dash-links button:hover {
+  background: color-mix(in srgb, #eab308 12%, var(--bg-hover));
+  color: #facc15;
+}
+
+.admin-dash-card--gold .admin-dash-links button:hover .admin-dash-link-dot {
+  background: #eab308;
+}
+
+.admin-system-detail-head {
+  margin-bottom: 22px;
+}
+
+.admin-back-btn {
+  border-radius: 999px;
 }
 
 .admin-users-list-btn {
   border-radius: var(--radius-sm);
-  box-shadow: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
 
-/* Уведомления */
-.toast,
-.install-app-banner {
-  box-shadow: none;
+.admin-users-list-btn:hover {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+  background: var(--bg-hover);
 }
 
-/* Crimson theme — убрать gradient overrides */
+.admin-search-input {
+  border-radius: 999px;
+  padding-left: 18px;
+  padding-right: 18px;
+}
+
+/* ——— Модалки и редактор ——— */
+.modal-overlay {
+  backdrop-filter: blur(6px);
+}
+
+.modal {
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow);
+}
+
+.news-editor-tool {
+  border-radius: 10px;
+}
+
+.news-editor-toolbar {
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
+.news-tiptap-wrap .news-editor-toolbar {
+  border-radius: 0;
+}
+
+/* ——— Crimson theme tweaks ——— */
 html[data-theme='crimson'] body {
-  background-image: none;
-  background-color: var(--bg);
+  background-image:
+    radial-gradient(circle at 15% 18%, rgba(0, 184, 255, 0.16), transparent 480px),
+    radial-gradient(circle at 82% 8%, rgba(0, 96, 220, 0.22), transparent 448px),
+    linear-gradient(135deg, #000511 0%, #061a45 52%, #03102a 100%);
 }
 
 html[data-theme='crimson'] .btn-primary {
-  background: var(--accent);
-  box-shadow: none;
+  background: linear-gradient(135deg, #00c8ff, #0775d9);
+  box-shadow: 0 8px 28px rgba(0, 200, 255, 0.28);
 }
 
-html[data-theme='crimson'] .btn-primary:hover:not(:disabled) {
-  background: var(--accent-hover);
-  box-shadow: none;
-}
-
-html[data-theme='crimson'] .auth-card,
 html[data-theme='crimson'] .room-card,
 html[data-theme='crimson'] .news-card,
 html[data-theme='crimson'] .info-hub-card,
-html[data-theme='crimson'] .admin-section,
-html[data-theme='crimson'] .profile-card {
-  box-shadow: none;
+html[data-theme='crimson'] .admin-dash-card {
+  border-color: color-mix(in srgb, var(--accent) 22%, var(--border));
 }
 
-html[data-theme='crimson'] .main-menu {
-  background: var(--bg-card);
-  box-shadow: none;
+html[data-theme='crimson'] .menu-items {
+  background: color-mix(in srgb, var(--bg-card) 88%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 22%, var(--border));
 }
 
-html[data-theme='crimson'] .menu-item.active {
-  box-shadow: none;
+@media (max-width: 768px) {
+  .menu-items {
+    border-radius: var(--radius-lg);
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .menu-items::-webkit-scrollbar {
+    display: none;
+  }
+
+  .menu-item {
+    flex: 0 0 auto;
+    padding: 10px 14px;
+    font-size: 0.82rem;
+  }
+
+  .admin-dash-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .room-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  .room-card .btn-primary {
+    align-self: stretch;
+    width: 100%;
+  }
+}
+
+@media (min-width: 769px) {
+  .main-menu {
+    max-width: 920px;
+  }
+
+  .menu-items {
+    justify-content: center;
+  }
 }

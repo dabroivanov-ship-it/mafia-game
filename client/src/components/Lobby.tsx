@@ -78,7 +78,7 @@ export default function Lobby({
       <header className="lobby-header">
         <div className="lobby-header-brand">
           <h1>Мафия</h1>
-          <p>Выберите комнату</p>
+          <p>Выберите комнату для игры</p>
         </div>
       </header>
 

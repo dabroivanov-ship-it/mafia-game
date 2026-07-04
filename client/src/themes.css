@@ -7,21 +7,25 @@ html {
 
 [data-theme='midnight'] {
   --font: 'Geologica', 'Segoe UI', system-ui, sans-serif;
-  --bg: #0a0b10;
-  --bg-card: #151821;
-  --bg-hover: #1e2230;
-  --bg-elevated: #252a3a;
-  --border: #2a3044;
-  --text: #eef0f4;
-  --text-muted: #8b93a8;
-  --accent: #7c6cf0;
-  --accent-hover: #9588f5;
-  --accent-glow: rgba(124, 108, 240, 0.35);
-  --danger: #ef5350;
-  --success: #4caf87;
-  --warning: #f0b429;
-  --body-glow-1: rgba(124, 108, 240, 0.12);
-  --body-glow-2: rgba(76, 175, 135, 0.06);
+  --bg: #0a0a0a;
+  --bg-card: #141414;
+  --bg-hover: #1c1c1c;
+  --bg-elevated: #222222;
+  --border: rgba(255, 255, 255, 0.09);
+  --text: #f5f5f5;
+  --text-muted: #9ca3af;
+  --accent: #f59e0b;
+  --accent-hover: #fbbf24;
+  --accent-glow: rgba(245, 158, 11, 0.32);
+  --danger: #ef4444;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --body-glow-1: rgba(245, 158, 11, 0.1);
+  --body-glow-2: rgba(245, 158, 11, 0.05);
+  --radius: 18px;
+  --radius-sm: 14px;
+  --radius-lg: 22px;
+  --radius-xl: 28px;
 }
 
 [data-theme='emerald'] {
@@ -61,6 +65,8 @@ html {
   --body-glow-2: rgba(0, 96, 220, 0.26);
   --radius: 16px;
   --radius-sm: 12px;
+  --radius-lg: 20px;
+  --radius-xl: 24px;
   --font: 'Geologica', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --shadow: 0 18px 55px rgba(0, 0, 0, 0.35), 0 -1px 0 rgba(119, 237, 255, 0.12) inset;
 }
