@@ -6,7 +6,7 @@ import AdminStatsPanel from './AdminStatsPanel';
 import AdminBackupPanel from './AdminBackupPanel';
 import AdminCategoryIcon from './AdminCategoryIcon';
 import type { ThemeId, SiteBranding } from '../types';
-import { canOpenSystemView, hasAdminPermission, type AdminPermission } from '../adminPermissions';
+import { canOpenSystemView, type AdminPermission } from '../adminPermissions';
 
 export type SystemView =
   | 'hub'

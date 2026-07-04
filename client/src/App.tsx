@@ -241,15 +241,7 @@ export default function App() {
 
     s.on(
       'pm:received',
-      ({
-        fromDisplayName,
-        preview,
-        unreadCount,
-      }: {
-        fromDisplayName: string;
-        preview: string;
-        unreadCount: number;
-      }) => {
+      ({ unreadCount }: { fromDisplayName: string; preview: string; unreadCount: number }) => {
         setUnreadMailCount(unreadCount);
       }
     );
