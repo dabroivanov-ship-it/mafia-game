@@ -529,7 +529,7 @@ export function startRegistration(room: GameRoom, _starterPlayerId: number | nul
   });
   addHostMessage(
     room,
-    'Регистрация открыта! Нажмите «Присоединиться к игре», чтобы участвовать.'
+    'Регистрация открыта! Нажмите «Вступить в игру», чтобы участвовать.'
   );
   setTimer(room, CONFIG.REGISTRATION_SEC * 1000, 'registration');
 }
@@ -539,7 +539,7 @@ export function joinGame(room: GameRoom, playerId: number): { player: GamePlayer
     throw new Error('В чат-комнате нет игры');
   }
   if (room.phase !== PHASE.REGISTRATION) {
-    throw new Error('Присоединиться можно только во время регистрации');
+    throw new Error('Вступить в игру можно только во время регистрации');
   }
   const player = room.players.find((p) => p.id === playerId);
   if (!player) throw new Error('Игрок не найден');

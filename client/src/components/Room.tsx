@@ -216,7 +216,7 @@ export default function Room({
           >
             {joinCooldown > 0
               ? `Подождите ${joinCooldown} сек.`
-              : `Присоединиться (${state.registeredCount}/${state.maxPlayers})`}
+              : `Вступить в игру (${state.registeredCount}/${state.maxPlayers})`}
           </button>
         </div>
       )}
@@ -349,7 +349,7 @@ export default function Room({
 
       {!isChatRoom && (
         <footer className="room-footer">
-          {state.canStartGame && state.phase === 'waiting' && (
+          {state.canStartGame && (state.phase === 'waiting' || state.phase === 'ended') && (
             <button
               type="button"
               className="btn btn-primary btn-lg btn-block"
@@ -364,11 +364,6 @@ export default function Room({
           )}
           {state.phase === 'registration' && me && !state.isInGame && !showJoin && (
             <p className="muted">Все места заняты — дождитесь начала или наблюдайте в чате.</p>
-          )}
-          {state.phase === 'ended' && (
-            <button type="button" className="btn btn-primary btn-lg btn-block" onClick={() => emit('room:newGame')}>
-              Новая игра
-            </button>
           )}
         </footer>
       )}
