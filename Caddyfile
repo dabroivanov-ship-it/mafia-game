@@ -1,9 +1,9 @@
 # Весь трафик → Node.js (API + WebSocket + React из client/dist)
 
-24vpsbro.ru {
+realmafia.online {
 	reverse_proxy 127.0.0.1:3001
 }
 
-www.24vpsbro.ru {
-	redir https://24vpsbro.ru{uri} permanent
+www.realmafia.online {
+	redir https://realmafia.online{uri} permanent
 }

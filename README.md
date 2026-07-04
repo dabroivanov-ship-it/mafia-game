@@ -1,3 +1,6 @@
+<div align="center">
+
+<img src="logo.jpg" alt="realmafia" width="800" />
 # Мафия — онлайн
 
 Бесплатная многопользовательская игра «Мафия» с регистрацией, комнатами, чатом, рейтингом и WebSocket в реальном времени.
@@ -107,7 +110,7 @@ cd ../server && npm run build && npm start
 
 ## Установка на VPS (продакшен)
 
-Пример: Ubuntu VPS, домен **24vpsbro.ru**, каталог **`/home/mafia-game`**.
+Пример: Ubuntu VPS, домен **realmafia.online**, каталог **`/home/mafia-game`**.
 
 ### DNS
 
@@ -226,14 +229,6 @@ cd /home/mafia-game && git pull && \
 cd client && npm install && npm run build && \
 cd ../server && npm install && npm run build && \
 cd .. && pm2 restart mafia-server
-```
-
-После обновления:
-
-```bash
-pm2 logs mafia-server --lines 20
-curl -s http://127.0.0.1:3001/api/health
-```
 
 В браузере — жёсткое обновление (Ctrl+F5), чтобы подтянуть новый клиент.
 
@@ -259,44 +254,6 @@ curl -s http://127.0.0.1:3001/api/health
    ├─ /uploads/*         → аватары, новости, брендинг
    └─ /*                 → React (client/dist)
 ```
-
----
-
-## npm-скрипты
-
-### Сервер (`server/`)
-
-| Скрипт | Описание |
-|--------|----------|
-| `npm run dev` | Разработка: `tsx watch server.ts` |
-| `npm run build` | Компиляция TypeScript → `dist/` |
-| `npm start` | Запуск: `node dist/server.js` |
-
-### Клиент (`client/`)
-
-| Скрипт | Описание |
-|--------|----------|
-| `npm run dev` | Vite dev-сервер :5173 |
-| `npm run build` | `tsc` + сборка в `dist/` |
-| `npm run preview` | Просмотр production-сборки |
-
----
-
-## Настройки игры
-
-Файл **`server/game/config.ts`**. После правок на сервере: `npm run build` в `server/` и `pm2 restart mafia-server`.
-
-| Параметр | По умолчанию | Описание |
-|----------|--------------|----------|
-| `MIN_PLAYERS` | 3 | Минимум игроков для старта |
-| `MAX_PLAYERS` | 10 | Абсолютный максимум |
-| `DEFAULT_MAX_PLAYERS` | 10 | Мест в комнате |
-| `REGISTRATION_SEC` | 60 | Время регистрации (сек) |
-| `JOIN_GAME_COOLDOWN_SEC` | 15 | Пауза перед повторным «Присоединиться» |
-| `DAY_DISCUSSION_SEC` | 60 | Дневное обсуждение |
-| `NIGHT_ACTIONS_SEC` | 60 | Ночные действия |
-| `ROOM_COUNT` | 1 | Число игровых комнат в лобби |
-| `CHAT_ROOM_MAX_PLAYERS` | 50 | Лимит в чат-комнате |
 
 ---
 
@@ -336,21 +293,7 @@ curl -s http://127.0.0.1:3001/api/health
 
 WebSocket: `/socket.io` — комнаты, игра, чат, викторина.
 
----
 
-## Частые проблемы
-
-| Проблема | Решение |
-|----------|---------|
-| **502 Bad Gateway** | Node не запущен: `pm2 logs mafia-server`, затем `bash scripts/deploy.sh` |
-| **404 / «Клиент не собран»** | `cd client && npm run build`, `pm2 restart mafia-server` |
-| Сервер не стартует после pull | `cd server && npm install && npm run build` |
-| «Загрузка комнат...» | `pm2 status` — процесс `mafia-server` должен быть online |
-| Конфликт `git pull` | `git stash && git pull`, пересборка, `pm2 restart mafia-server` |
-| Нет HTTPS | DNS → IP сервера; порты 80/443 открыты |
-| Ошибка `better-sqlite3` | `apt install -y build-essential python3`, затем `npm install` в `server/` |
-| Ошибки TypeScript при сборке | Исправить код, `npm run build` в `client/` и `server/` |
-| Старый интерфейс после деплоя | Ctrl+F5 в браузере |
 
 ---
 

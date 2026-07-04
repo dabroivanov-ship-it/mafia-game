@@ -48,19 +48,10 @@ function RoomCard({
         <div className="room-card-info">
           <h2>{room.name}</h2>
           <div className="room-card-meta">
-            {isChat ? (
-              <span className="room-count">{room.playerCount} онлайн</span>
-            ) : (
-              <>
-                {showPhase && (
-                  <span className="room-status">{PHASE_LABELS[room.phase] || room.phase}</span>
-                )}
-                <span className="room-count">
-                  👥 {room.playerCount}/{room.maxPlayers}
-                  {room.spectatorCount > 0 && ` · 👁 ${room.spectatorCount}`}
-                </span>
-              </>
+            {showPhase && !isChat && (
+              <span className="room-status">{PHASE_LABELS[room.phase] || room.phase}</span>
             )}
+            <span className="room-count">{room.playerCount}</span>
           </div>
         </div>
         <button type="button" className="btn btn-primary" onClick={() => onJoin(room.id)}>

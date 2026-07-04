@@ -513,7 +513,7 @@ export default function App() {
               socket={socket}
               state={roomState}
               onLeave={isChatRoom ? leaveRoom : minimizeMafiaRoom}
-              onOpenMembers={isChatRoom ? undefined : openRoomMembers}
+              onOpenMembers={openRoomMembers}
               onStateUpdate={setRoomState}
               currentUserId={user.id}
               onWriteMessage={(userId, username) => openMessages({ userId, username })}

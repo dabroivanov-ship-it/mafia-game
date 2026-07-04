@@ -124,6 +124,12 @@ export function createInitialRooms(): Map<number, GameRoom> {
     saveRoomConfig(id, room.name, 'chat');
   }
 
+  for (const room of rooms.values()) {
+    if (room.kind === 'game' && room.maxPlayers < CONFIG.DEFAULT_MAX_PLAYERS) {
+      room.maxPlayers = CONFIG.DEFAULT_MAX_PLAYERS;
+    }
+  }
+
   return rooms;
 }
 

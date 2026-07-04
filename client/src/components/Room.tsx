@@ -184,7 +184,7 @@ export default function Room({
           </div>
         </div>
         <div className="room-header-actions">
-          {!isChatRoom && onOpenMembers && (
+          {onOpenMembers && (
             <button type="button" className="btn btn-ghost" onClick={onOpenMembers}>
               Кто тут
             </button>

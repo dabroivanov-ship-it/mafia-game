@@ -762,12 +762,39 @@ export async function adminDeleteRoom(roomId: number): Promise<void> {
 
 export async function adminUpdateUser(
   userId: number,
-  payload: { displayName: string; city: string; bio: string }
+  payload: { displayName: string; city: string; bio: string; username?: string }
 ): Promise<void> {
   return apiRequest(`/api/admin/users/${userId}`, {
     method: 'PUT',
     body: JSON.stringify(payload),
   });
+}
+
+export interface AdminBackupInfo {
+  id: string;
+  createdAt: string;
+  sizeBytes: number;
+  includeUploads: boolean;
+  sizeLabel?: string;
+}
+
+export async function fetchAdminBackups(): Promise<{ backups: AdminBackupInfo[] }> {
+  return apiRequest('/api/admin/backups');
+}
+
+export async function adminCreateBackup(includeUploads = true): Promise<{ backup: AdminBackupInfo }> {
+  return apiRequest('/api/admin/backups', {
+    method: 'POST',
+    body: JSON.stringify({ includeUploads }),
+  });
+}
+
+export async function adminRestoreBackup(id: string): Promise<void> {
+  return apiRequest(`/api/admin/backups/${encodeURIComponent(id)}/restore`, { method: 'POST' });
+}
+
+export async function adminDeleteBackup(id: string): Promise<void> {
+  return apiRequest(`/api/admin/backups/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }
 
 export async function adminUploadUserAvatar(userId: number, file: File): Promise<void> {

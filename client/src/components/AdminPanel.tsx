@@ -108,7 +108,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
   const [userSearch, setUserSearch] = useState('');
   const [userPage, setUserPage] = useState(0);
   const [editUser, setEditUser] = useState<User | null>(null);
-  const [editForm, setEditForm] = useState({ displayName: '', city: '', bio: '' });
+  const [editForm, setEditForm] = useState({ displayName: '', username: '', city: '', bio: '' });
   const [newChatRoomName, setNewChatRoomName] = useState('');
   const [newGameRoomName, setNewGameRoomName] = useState('');
   const [bannedUsers, setBannedUsers] = useState<User[]>([]);
@@ -282,6 +282,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
     setEditUser(u);
     setEditForm({
       displayName: u.displayName || '',
+      username: u.username || '',
       city: u.city || '',
       bio: u.bio || '',
     });
@@ -329,6 +330,9 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
     try {
       await adminSetUserRole(userId, role);
       await load();
+      if (editUser?.id === userId) {
+        setEditUser((prev) => (prev ? { ...prev, isModerator: role === 'moderator' } : null));
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка смены роли');
     }
@@ -412,6 +416,9 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
   const handleUnban = async (userId: number) => {
     try {
       await adminUnban(userId);
+      if (editUser?.id === userId) {
+        setEditUser((prev) => (prev ? { ...prev, isBanned: false, banReason: null, bannedUntil: null } : null));
+      }
       await load();
       if (systemView === 'banlist') await loadBanList();
     } catch (err) {
@@ -432,6 +439,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
     if (!confirm('Удалить пользователя и его профиль?')) return;
     try {
       await adminDeleteUser(userId);
+      if (editUser?.id === userId) setEditUser(null);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка удаления');
@@ -595,97 +603,37 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
         panels={{
           users: (
             <section className="admin-section admin-section-embedded">
-              <h3>Управление пользователями ({filteredUsers.length}{userSearch ? ` из ${users.length}` : ''})</h3>
+              <h3>Пользователи ({filteredUsers.length}{userSearch ? ` из ${users.length}` : ''})</h3>
               <div className="admin-search-row">
                 <input
                   type="search"
                   className="admin-search-input"
-                  placeholder="Поиск по логину, имени или роли..."
+                  placeholder="Поиск по логину или имени..."
                   value={userSearch}
                   onChange={(e) => setUserSearch(e.target.value)}
                 />
               </div>
-              <div className="admin-table-wrap">
-                <table className="admin-table">
-                  <thead>
-                    <tr>
-                      <th>Игрок</th>
-                      <th>Роль</th>
-                      <th>Статус</th>
-                      <th>Действия</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredUsers.length === 0 && (
-                      <tr>
-                        <td colSpan={4} className="muted">Ничего не найдено</td>
-                      </tr>
-                    )}
-                    {paginatedUsers.map((u) => (
-                      <tr key={u.id}>
-                        <td>
-                          <div className="admin-user-cell">
-                            {u.avatar ? (
-                              <img src={avatarUrl(u.avatar) ?? undefined} alt="" className="admin-avatar" />
-                            ) : (
-                              <span className="admin-avatar placeholder">👤</span>
-                            )}
-                            <div>
-                              <strong>{u.displayName}</strong>
-                              <span className="muted">@{u.username}</span>
-                              {u.isAdmin && <span className="admin-badge">admin</span>}
-                              {u.isModerator && <span className="mod-badge">mod</span>}
-                            </div>
-                          </div>
-                        </td>
-                        <td>
-                          {u.isAdmin ? (
-                            <span className="muted">—</span>
-                          ) : (
-                            <select
-                              className="admin-role-select"
-                              value={u.isModerator ? 'moderator' : 'user'}
-                              onChange={(e) =>
-                                void handleRoleChange(u.id, e.target.value as 'user' | 'moderator')
-                              }
-                            >
-                              <option value="user">игрок</option>
-                              <option value="moderator">модер</option>
-                            </select>
-                          )}
-                        </td>
-                        <td>
-                          {u.isBanned ? (
-                            <span className="status-banned">🚫 бан</span>
-                          ) : (
-                            <span className="status-ok">активен</span>
-                          )}
-                        </td>
-                        <td className="admin-actions">
-                          <button type="button" className="btn btn-sm" onClick={() => openEditUser(u)}>
-                            Профиль
-                          </button>
-                          {!u.isAdmin && !u.isModerator && !u.isBanned && (
-                            <button type="button" className="btn btn-sm danger" onClick={() => setBanTarget(u)}>
-                              Бан
-                            </button>
-                          )}
-                          {u.isBanned && (
-                            <button type="button" className="btn btn-sm" onClick={() => void handleUnban(u.id)}>
-                              Разбан
-                            </button>
-                          )}
-                          {!u.isAdmin && (
-                            <button type="button" className="btn btn-sm btn-ghost" onClick={() => void handleDeleteUser(u.id)}>
-                              Удалить
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              {filteredUsers.length === 0 && <p className="muted">Ничего не найдено</p>}
+              <ul className="admin-users-list">
+                {paginatedUsers.map((u) => (
+                  <li key={u.id} className="admin-users-list-item">
+                    <button type="button" className="admin-users-list-btn" onClick={() => openEditUser(u)}>
+                      {u.avatar ? (
+                        <img src={avatarUrl(u.avatar) ?? undefined} alt="" className="admin-avatar" />
+                      ) : (
+                        <span className="admin-avatar placeholder">👤</span>
+                      )}
+                      <span className="admin-users-list-name">
+                        <strong>{u.displayName}</strong>
+                        <span className="muted">@{u.username}</span>
+                      </span>
+                      {u.isAdmin && <span className="admin-badge">admin</span>}
+                      {u.isModerator && <span className="mod-badge">mod</span>}
+                      {u.isBanned && <span className="status-banned">бан</span>}
+                    </button>
+                  </li>
+                ))}
+              </ul>
               {userTotalPages > 1 && (
                 <nav className="rating-pagination" aria-label="Страницы пользователей">
                   <button
@@ -833,7 +781,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
                         maxLength={50}
                       />
                       <span className="muted room-meta">
-                        {r.playerCount}/{r.maxPlayers} · {r.phase}
+                        {r.playerCount} · {r.phase}
                       </span>
                       <button type="button" className="btn btn-sm btn-primary" onClick={() => void handleRenameRoom(r.id)}>
                         Сохранить
@@ -881,7 +829,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
                         maxLength={50}
                       />
                       <span className="muted room-meta">
-                        {r.playerCount} онлайн
+                        {r.playerCount}
                       </span>
                       <button type="button" className="btn btn-sm btn-primary" onClick={() => void handleRenameRoom(r.id)}>
                         Сохранить
@@ -1074,6 +1022,15 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
             </div>
 
             <label>
+              Логин (ник)
+              <input
+                value={editForm.username}
+                onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
+                maxLength={30}
+                disabled={editUser.isAdmin}
+              />
+            </label>
+            <label>
               Имя
               <input
                 value={editForm.displayName}
@@ -1099,6 +1056,42 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
               />
             </label>
             <p className="muted">Игр: {editUser.gamesPlayed ?? 0} · Репутация: {editUser.reputation ?? 0}</p>
+
+            {!editUser.isAdmin && (
+              <div className="admin-edit-user-actions">
+                <label>
+                  Роль
+                  <select
+                    className="admin-role-select"
+                    value={editUser.isModerator ? 'moderator' : 'user'}
+                    onChange={(e) =>
+                      void handleRoleChange(editUser.id, e.target.value as 'user' | 'moderator')
+                    }
+                  >
+                    <option value="user">игрок</option>
+                    <option value="moderator">модер</option>
+                  </select>
+                </label>
+                {!editUser.isModerator && !editUser.isBanned && (
+                  <button type="button" className="btn btn-sm danger" onClick={() => setBanTarget(editUser)}>
+                    Забанить
+                  </button>
+                )}
+                {editUser.isBanned && (
+                  <button type="button" className="btn btn-sm" onClick={() => void handleUnban(editUser.id)}>
+                    Разбан
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="btn btn-sm btn-ghost danger"
+                  onClick={() => void handleDeleteUser(editUser.id)}
+                >
+                  Удалить аккаунт
+                </button>
+              </div>
+            )}
+
             <div className="profile-actions">
               <button type="button" className="btn btn-ghost" onClick={() => setEditUser(null)}>Отмена</button>
               <button type="button" className="btn btn-primary" onClick={() => void handleSaveUser()}>Сохранить</button>

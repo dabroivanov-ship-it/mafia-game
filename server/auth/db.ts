@@ -11,7 +11,7 @@ export const uploadsDir = getUploadsDir();
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
 const dbPath = getDbPath();
-const db: Database.Database = new Database(dbPath);
+export const db: Database.Database = new Database(dbPath);
 console.log(`📦 SQLite: ${dbPath}`);
 db.pragma('journal_mode = WAL');
 
@@ -244,6 +244,25 @@ export function updateUserProfile(
   }
   values.push(userId);
   db.prepare(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+  return findUserPublic(userId);
+}
+
+export function updateUserUsername(userId: number, username: string): PublicUser | null {
+  const u = username.trim();
+  if (u.length < 3 || u.length > 20) {
+    throw new Error('Логин: от 3 до 20 символов');
+  }
+  if (!/^[a-zA-Z0-9_]+$/.test(u)) {
+    throw new Error('Логин: только буквы, цифры и _');
+  }
+  if (isAdminReservedUsername(u)) {
+    throw new Error('Этот логин зарезервирован');
+  }
+  const existing = findUserByUsername(u);
+  if (existing && existing.id !== userId) {
+    throw new Error('Логин уже занят');
+  }
+  db.prepare('UPDATE users SET username = ? WHERE id = ?').run(u, userId);
   return findUserPublic(userId);
 }
 

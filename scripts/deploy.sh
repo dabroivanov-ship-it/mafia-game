@@ -64,6 +64,7 @@ git pull --ff-only
 echo "==> build client"
 cd "$ROOT/client"
 npm_install_build_deps
+npm run icons
 npm run build
 
 echo "==> build server"

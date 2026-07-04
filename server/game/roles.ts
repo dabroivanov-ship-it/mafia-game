@@ -2,7 +2,7 @@ import { ROLE_LABELS } from './config.js';
 import type { RoleId } from '../types/index.js';
 
 /**
- * Распределение ролей по количеству игроков (3–10).
+ * Распределение ролей по количеству игроков (3–15).
  * Первый мафия в списке становится главным (don).
  */
 export function distributeRoles(playerCount: number): RoleId[] {
@@ -40,6 +40,21 @@ export function distributeRoles(playerCount: number): RoleId[] {
       pool.splice(idx, 1);
     }
     pool.push('commissar_wife', 'highlander', 'mafia');
+  }
+  if (playerCount >= 11) {
+    pool.push('civilian');
+  }
+  if (playerCount >= 12) {
+    pool.push('mafia');
+  }
+  if (playerCount >= 13) {
+    pool.push('civilian');
+  }
+  if (playerCount >= 14) {
+    pool.push('civilian');
+  }
+  if (playerCount >= 15) {
+    pool.push('mafia');
   }
 
   // Обрезаем до нужного количества

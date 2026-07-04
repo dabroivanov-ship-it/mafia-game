@@ -8,6 +8,7 @@ import {
   findUserPublic,
   findUserById,
   updateUserProfile,
+  updateUserUsername,
   updateUserAvatar,
   removeUserAvatar,
   deleteAvatarFile,
@@ -33,6 +34,13 @@ import { newsImageUpload, newsImagePublicPath } from '../upload/newsImage.js';
 import { adminSetReputation } from '../social/store.js';
 import { listBotPhrasesForAdmin, updateBotPhrasesFromAdmin } from '../game/botPhrases.js';
 import { getAdminSiteStats } from '../stats/siteStats.js';
+import {
+  listBackups,
+  createBackup,
+  restoreBackup,
+  deleteBackup,
+  formatBackupSize,
+} from '../backup/service.js';
 
 export interface AdminRouterHandlers {
   getModerationData: () => {
@@ -49,7 +57,7 @@ export interface AdminRouterHandlers {
   listSilencedPlayers: () => import('../game/engine.js').SilencedPlayerEntry[];
   clearUserSilence: (userId: number) => number;
   onRoomsChanged: (changedRoomId?: number | null) => void;
-  syncUserInRooms?: (userId: number, displayName: string) => void;
+  syncUserInRooms?: (userId: number, displayName: string, username?: string) => void;
   onUserBanned?: (userId: number, reason: string, until: string | null) => void;
   onUserRoleChanged?: (userId: number) => void;
   getGameEvents?: () => GameEvent[];
@@ -192,17 +200,26 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     const target = findUserPublic(id);
     if (!target) return res.status(404).json({ error: 'Пользователь не найден' });
 
-    const { displayName, city, bio } = req.body;
+    const { displayName, city, bio, username } = req.body;
     if (!displayName?.trim()) {
       return res.status(400).json({ error: 'Укажите имя' });
     }
 
-    const user = updateUserProfile(id, {
+    let user = updateUserProfile(id, {
       displayName: displayName.trim().slice(0, 30),
       city: (city || '').trim().slice(0, 50),
       bio: (bio || '').trim().slice(0, 500),
     });
-    handlers.syncUserInRooms?.(id, user!.displayName);
+
+    if (username?.trim()) {
+      try {
+        user = updateUserUsername(id, username);
+      } catch (err) {
+        return res.status(400).json({ error: err instanceof Error ? err.message : 'Ошибка логина' });
+      }
+    }
+
+    handlers.syncUserInRooms?.(id, user!.displayName, user!.username);
     res.json({ user });
   });
 
@@ -382,6 +399,44 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     }
     const { updated } = updateBotPhrasesFromAdmin(phrases as Record<string, string>);
     res.json({ ...listBotPhrasesForAdmin(), updated });
+  });
+
+  router.get('/backups', (_req, res) => {
+    const backups = listBackups().map((b) => ({
+      ...b,
+      sizeLabel: formatBackupSize(b.sizeBytes),
+    }));
+    res.json({ backups });
+  });
+
+  router.post('/backups', (req, res) => {
+    try {
+      const includeUploads = req.body?.includeUploads !== false;
+      const backup = createBackup(includeUploads);
+      res.status(201).json({
+        backup: { ...backup, sizeLabel: formatBackupSize(backup.sizeBytes) },
+      });
+    } catch (err) {
+      res.status(500).json({ error: err instanceof Error ? err.message : 'Ошибка создания бэкапа' });
+    }
+  });
+
+  router.post('/backups/:id/restore', (req, res) => {
+    try {
+      restoreBackup(req.params.id);
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(400).json({ error: err instanceof Error ? err.message : 'Ошибка восстановления' });
+    }
+  });
+
+  router.delete('/backups/:id', (req, res) => {
+    try {
+      deleteBackup(req.params.id);
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(400).json({ error: err instanceof Error ? err.message : 'Ошибка удаления' });
+    }
   });
 
   return router;
