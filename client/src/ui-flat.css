@@ -886,6 +886,22 @@ html[data-theme='crimson'] .menu-items {
 }
 
 /* ——— Уведомления (колокольчик) ——— */
+.app-in-room {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+  position: relative;
+}
+
+.app-in-room .room {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+  max-height: 100%;
+}
+
 .app-topbar {
   position: sticky;
   top: 0;
@@ -898,7 +914,22 @@ html[data-theme='crimson'] .menu-items {
 }
 
 .app-in-room .app-topbar {
-  padding-top: calc(6px + var(--safe-top));
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: auto;
+  width: auto;
+  padding: calc(8px + var(--safe-top)) 12px 0;
+  background: transparent;
+}
+
+.app-in-room .room-header {
+  padding-right: calc(14px + 44px + 12px);
+}
+
+.app-in-room .room-header-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .app-topbar > * {
@@ -1086,5 +1117,30 @@ html[data-theme='crimson'] .menu-items {
     right: 12px;
     left: 12px;
     width: auto;
+  }
+
+  .app-in-room .room-header {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-right: calc(10px + 44px + 10px);
+  }
+
+  .app-in-room .room-header-main {
+    flex: 1 1 calc(100% - 52px);
+    min-width: 0;
+  }
+
+  .app-in-room .room-header-actions {
+    flex: 1 1 100%;
+    max-width: 100%;
+    justify-content: flex-start;
+    padding-right: calc(44px + 8px);
+  }
+
+  .app-in-room .room-header-actions .btn {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-left: 10px;
+    padding-right: 10px;
   }
 }
