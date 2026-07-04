@@ -2895,6 +2895,7 @@ html.telegram-webapp .app-body {
 .chat-time {
   color: var(--text-muted);
   font-size: 0.85rem;
+  margin-right: 0.35em;
 }
 
 .chat-line {

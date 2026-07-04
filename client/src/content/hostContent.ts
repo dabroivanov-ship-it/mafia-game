@@ -8,8 +8,7 @@ export function isHostSender(name: string | undefined | null): boolean {
   return HOST_SENDER_ALIASES.has(trimmed) || trimmed.replace(/^🤖\s*/, '') === HOST_SENDER_NAME;
 }
 
-export const HOST_PROFILE_INTRO =
-  'Автоматический ведущий онлайн-игры «Мафия». Живого человека в роли ведущего не требуется.';
+export const HOST_PROFILE_INTRO = 'Ведущий онлайн-игры «Мафия».';
 
 export const HOST_PROFILE_DUTIES = [
   'Запускает регистрацию и раздаёт роли игрокам в личных сообщениях [P].',
