@@ -19,6 +19,7 @@ import {
   CHAT_LIMIT_OPTIONS,
   userNeedsEmailLink,
 } from '../auth/db.js';
+import { normalizeGender } from '../auth/gender.js';
 import { createAvatarUpload } from '../upload/avatar.js';
 import { validateImageFile } from '../security/validate.js';
 import { createRateLimitMiddleware, searchRateLimiter } from '../security/rateLimit.js';
@@ -52,9 +53,12 @@ export function createProfileRouter({ onProfileUpdated }: ProfileRouterOptions =
   );
 
   router.put('/', authMiddleware, (req, res) => {
-    const { displayName, city, bio, chatLimit, theme } = req.body;
+    const { displayName, gender, city, bio, chatLimit, theme } = req.body;
     if (!displayName?.trim()) {
       return res.status(400).json({ error: 'Укажите имя' });
+    }
+    if (gender !== undefined && gender !== null && gender !== '' && normalizeGender(gender) === '') {
+      return res.status(400).json({ error: 'Укажите пол' });
     }
     if (chatLimit != null && !(CHAT_LIMIT_OPTIONS as readonly number[]).includes(Number(chatLimit))) {
       return res.status(400).json({ error: 'Недопустимое число сообщений в чате' });
@@ -64,6 +68,7 @@ export function createProfileRouter({ onProfileUpdated }: ProfileRouterOptions =
     }
     const user = updateUserProfile(req.userId!, {
       displayName: displayName.trim().slice(0, 30),
+      gender: gender !== undefined ? normalizeGender(gender) : undefined,
       city: (city || '').trim().slice(0, 50),
       bio: (bio || '').trim().slice(0, 500),
       chatLimit: chatLimit != null ? Number(chatLimit) : undefined,

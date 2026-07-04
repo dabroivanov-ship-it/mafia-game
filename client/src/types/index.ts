@@ -22,6 +22,8 @@ export interface SiteBranding {
 
 export type NotificationType = 'mail' | 'reputation_up' | 'reputation_down' | 'system';
 
+export type UserGender = 'male' | 'female' | '';
+
 export interface UserNotification {
   id: number;
   type: NotificationType;
@@ -38,6 +40,7 @@ export interface User {
   username: string;
   email: string;
   displayName: string;
+  gender: UserGender;
   city: string;
   bio: string;
   avatar: string | null;

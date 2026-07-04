@@ -10,6 +10,7 @@ import {
   fetchMe,
 } from '../api';
 import type { User } from '../types';
+import { USER_GENDER_LABELS } from '../gender';
 import { getTelegramWebApp, isTelegramWebApp } from '../telegramWebApp';
 import TelegramLoginWidget from './TelegramLoginWidget';
 import SiteLogo from './SiteLogo';
@@ -40,6 +41,7 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
     password: '',
     confirm: '',
     displayName: '',
+    gender: '' as '' | 'male' | 'female',
   });
 
   useEffect(() => {
@@ -193,6 +195,11 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
       return;
     }
 
+    if (regForm.gender !== 'male' && regForm.gender !== 'female') {
+      setError('Укажите пол');
+      return;
+    }
+
     setLoading(true);
     try {
       const { token, user } = await register({
@@ -200,6 +207,7 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
         email: regForm.email,
         password: regForm.password,
         displayName: regForm.displayName || regForm.username,
+        gender: regForm.gender,
       });
       saveRememberedLogin(regForm.username.trim(), true);
       saveSession(token, user);
@@ -346,6 +354,23 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
                   placeholder="Ваше имя"
                   maxLength={20}
                 />
+              </label>
+              <label>
+                Пол
+                <select
+                  value={regForm.gender}
+                  onChange={(e) =>
+                    setRegForm({
+                      ...regForm,
+                      gender: e.target.value as '' | 'male' | 'female',
+                    })
+                  }
+                  required
+                >
+                  <option value="">Выберите пол</option>
+                  <option value="male">{USER_GENDER_LABELS.male}</option>
+                  <option value="female">{USER_GENDER_LABELS.female}</option>
+                </select>
               </label>
               <label>
                 Пароль

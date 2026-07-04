@@ -1,7 +1,8 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
-import type { PublicUser, User, StaffMember } from '../types/index.js';
+import type { PublicUser, User, StaffMember, UserGender } from '../types/index.js';
+import { normalizeGender } from './gender.js';
 import { getDataDir, getDbPath, getUploadsDir } from '../paths.js';
 
 const dataDir = getDataDir();
@@ -64,6 +65,7 @@ function migrateColumns(): void {
   if (!cols.includes('quiz_correct_answers')) {
     add('ALTER TABLE users ADD COLUMN quiz_correct_answers INTEGER NOT NULL DEFAULT 0');
   }
+  if (!cols.includes('gender')) add('ALTER TABLE users ADD COLUMN gender TEXT NOT NULL DEFAULT ""');
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_telegram_id ON users(telegram_id)');
 }
 
@@ -166,6 +168,7 @@ export function publicUser(user: User | null | undefined): PublicUser | null {
     username: user.username,
     email: placeholderEmail ? undefined : user.email,
     displayName: user.display_name,
+    gender: normalizeGender(user.gender),
     city: user.city || '',
     bio: user.bio || '',
     avatar: user.avatar || null,
@@ -218,6 +221,7 @@ export function createUser({
   email,
   passwordHash,
   displayName,
+  gender,
   telegramId,
   telegramUsername,
 }: {
@@ -225,6 +229,7 @@ export function createUser({
   email: string;
   passwordHash: string;
   displayName: string;
+  gender?: UserGender;
   telegramId?: string | null;
   telegramUsername?: string | null;
 }): User | undefined {
@@ -233,10 +238,19 @@ export function createUser({
   const result = db
     .prepare(
       `INSERT INTO users
-      (username, email, password_hash, display_name, role, telegram_id, telegram_username)
-      VALUES (?, ?, ?, ?, ?, ?, ?)`
+      (username, email, password_hash, display_name, gender, role, telegram_id, telegram_username)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
     )
-    .run(username, email, passwordHash, displayName, role, telegramId || null, telegramUsername || null);
+    .run(
+      username,
+      email,
+      passwordHash,
+      displayName,
+      normalizeGender(gender),
+      role,
+      telegramId || null,
+      telegramUsername || null
+    );
   return findUserById(Number(result.lastInsertRowid));
 }
 
@@ -244,12 +258,14 @@ export function updateUserProfile(
   userId: number,
   {
     displayName,
+    gender,
     city,
     bio,
     chatLimit,
     theme,
   }: {
     displayName: string;
+    gender?: UserGender;
     city?: string;
     bio?: string;
     chatLimit?: number;
@@ -258,6 +274,10 @@ export function updateUserProfile(
 ): PublicUser | null {
   const fields = ['display_name = ?', 'city = ?', 'bio = ?'];
   const values: (string | number | null)[] = [displayName, city || '', bio || ''];
+  if (gender !== undefined) {
+    fields.push('gender = ?');
+    values.push(normalizeGender(gender));
+  }
   if (chatLimit != null) {
     fields.push('chat_limit = ?');
     values.push(normalizeChatLimit(chatLimit));

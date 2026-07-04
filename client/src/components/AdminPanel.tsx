@@ -33,6 +33,7 @@ import {
   type SilencedPlayerEntry,
 } from '../api';
 import type { User, NewsPost, ThemeId, ViolationLogEntry, ViolationType, SiteBranding, UserRole } from '../types';
+import { USER_GENDER_LABELS } from '../gender';
 import {
   adminPanelRoleLabel,
   hasAdminPermission,
@@ -127,7 +128,13 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
   const [userSearch, setUserSearch] = useState('');
   const [userPage, setUserPage] = useState(0);
   const [editUser, setEditUser] = useState<User | null>(null);
-  const [editForm, setEditForm] = useState({ displayName: '', username: '', city: '', bio: '' });
+  const [editForm, setEditForm] = useState({
+    displayName: '',
+    username: '',
+    gender: '' as '' | 'male' | 'female',
+    city: '',
+    bio: '',
+  });
   const [newChatRoomName, setNewChatRoomName] = useState('');
   const [newGameRoomName, setNewGameRoomName] = useState('');
   const [bannedUsers, setBannedUsers] = useState<User[]>([]);
@@ -313,6 +320,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
     setEditForm({
       displayName: u.displayName || '',
       username: u.username || '',
+      gender: u.gender || '',
       city: u.city || '',
       bio: u.bio || '',
     });
@@ -1142,6 +1150,23 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
                 maxLength={30}
                 disabled={!canEditUsers}
               />
+            </label>
+            <label>
+              Пол
+              <select
+                value={editForm.gender}
+                onChange={(e) =>
+                  setEditForm({
+                    ...editForm,
+                    gender: e.target.value as '' | 'male' | 'female',
+                  })
+                }
+                disabled={!canEditUsers}
+              >
+                <option value="">Не указан</option>
+                <option value="male">{USER_GENDER_LABELS.male}</option>
+                <option value="female">{USER_GENDER_LABELS.female}</option>
+              </select>
             </label>
             <label>
               Город

@@ -8,6 +8,7 @@ import {
   isUserBanned,
   isAdminReservedUsername,
 } from './db.js';
+import { isValidRegistrationGender, normalizeGender } from './gender.js';
 import { signToken, authMiddleware } from './jwt.js';
 import {
   verifyTelegramWebAppInitData,
@@ -25,10 +26,13 @@ const authRateLimit = createRateLimitMiddleware(authRateLimiter);
 
 router.post('/register', authRateLimit, async (req, res) => {
   try {
-    const { username, email, password, displayName } = req.body;
+    const { username, email, password, displayName, gender } = req.body;
 
     if (!username?.trim() || !email?.trim() || !password) {
       return res.status(400).json({ error: 'Заполните все поля' });
+    }
+    if (!isValidRegistrationGender(gender)) {
+      return res.status(400).json({ error: 'Укажите пол' });
     }
 
     const u = username.trim();
@@ -59,7 +63,13 @@ router.post('/register', authRateLimit, async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 10);
     const name = (displayName?.trim() || u).slice(0, 20);
 
-    const user = createUser({ username: u, email: e, passwordHash, displayName: name });
+    const user = createUser({
+      username: u,
+      email: e,
+      passwordHash,
+      displayName: name,
+      gender: normalizeGender(gender),
+    });
     if (!user) return res.status(500).json({ error: 'Ошибка регистрации' });
     const token = signToken(user, false);
     res.status(201).json({ token, user: publicUser(user) });

@@ -20,15 +20,40 @@ export function playerNick(p: Pick<GamePlayer, 'username' | 'name'>): string {
   return p.username || p.name;
 }
 
+/** Роль жертвы в винительном падеже для сводки ночи: «мафия убила комиссара nick». */
+const KILL_TARGET_ROLE: Record<RoleId, string> = {
+  mafia: 'мафиозi',
+  commissar: 'комиссара Катани',
+  doctor: 'доктора',
+  homeless: 'бомжа',
+  prostitute: 'путану',
+  maniac: 'маньяка',
+  clown: 'клоуна',
+  commissar_wife: 'жену комиссара',
+  highlander: 'горца',
+  civilian: 'мирного жителя',
+  advocate: 'адвоката',
+};
+
+function getKillTargetRolePhrase(target: GamePlayer): string {
+  if (target.isDon) return 'главаря мафии';
+  if (!target.role) return 'игрока';
+  return KILL_TARGET_ROLE[target.role] || getRoleLabel(target.role).toLowerCase();
+}
+
+function killReportVars(target: GamePlayer): { nick: string; role: string } {
+  return { nick: playerNick(target), role: getKillTargetRolePhrase(target) };
+}
+
 function getCommissarKillReportLine(target: GamePlayer): string {
-  const nick = playerNick(target);
+  const vars = killReportVars(target);
   if (target.isDon) {
-    return getPhraseText('report.commissar_kill_don', { nick });
+    return getPhraseText('report.commissar_kill_don', vars);
   }
   if (isMafia(target.role) || target.role === 'advocate') {
-    return getPhraseText('report.commissar_kill_mafioso', { nick });
+    return getPhraseText('report.commissar_kill_mafioso', vars);
   }
-  return getPhraseText('report.commissar_kill_other', { nick });
+  return getPhraseText('report.commissar_kill_other', vars);
 }
 
 
@@ -428,15 +453,13 @@ export function buildMorningReportMessage(
 
 
   if (report.maniacKilled) {
-    parts.push(
-      getPhraseText('report.maniac_kill', { nick: playerNick(report.maniacKilled) })
-    );
+    parts.push(getPhraseText('report.maniac_kill', killReportVars(report.maniacKilled)));
   }
 
 
 
   if (report.wifeKilled) {
-    parts.push(getPhraseText('report.wife_kill', { nick: playerNick(report.wifeKilled) }));
+    parts.push(getPhraseText('report.wife_kill', killReportVars(report.wifeKilled)));
   }
 
 
@@ -466,7 +489,7 @@ export function buildMorningReportMessage(
       );
 
     } else if (report.mafiaKilled) {
-      parts.push(getPhraseText('report.mafia_kill', { nick: playerNick(report.mafiaKilled) }));
+      parts.push(getPhraseText('report.mafia_kill', killReportVars(report.mafiaKilled)));
     } else if (
 
       report.doctorHealed &&

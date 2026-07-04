@@ -1,6 +1,7 @@
 import { useState, useRef, FormEvent, ChangeEvent } from 'react';
 import { avatarUrl, updateProfile, uploadAvatar, linkTelegramEmail, changePassword } from '../api';
 import type { User } from '../types';
+import { USER_GENDER_LABELS } from '../gender';
 
 const CHAT_LIMIT_OPTIONS = [15, 30, 50, 100];
 
@@ -19,6 +20,7 @@ export default function CabinetProfileSettings({
 }: CabinetProfileSettingsProps) {
   const [form, setForm] = useState({
     displayName: user.displayName || '',
+    gender: user.gender || ('' as '' | 'male' | 'female'),
     city: user.city || '',
     bio: user.bio || '',
     chatLimit: user.chatLimit ?? 15,
@@ -282,6 +284,20 @@ export default function CabinetProfileSettings({
               maxLength={30}
               required
             />
+          </label>
+          <label>
+            Пол
+            <select
+              value={form.gender}
+              onChange={(e) =>
+                setForm({ ...form, gender: e.target.value as '' | 'male' | 'female' })
+              }
+              required
+            >
+              <option value="">Выберите пол</option>
+              <option value="male">{USER_GENDER_LABELS.male}</option>
+              <option value="female">{USER_GENDER_LABELS.female}</option>
+            </select>
           </label>
           <label>
             Город

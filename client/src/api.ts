@@ -109,6 +109,7 @@ export async function register(payload: {
   email: string;
   password: string;
   displayName: string;
+  gender: 'male' | 'female';
 }): Promise<{ token: string; user: User }> {
   return apiRequest('/api/auth/register', {
     method: 'POST',
@@ -274,6 +275,7 @@ export async function adminRemoveSiteLogo(): Promise<{ branding: SiteBranding }>
 
 export async function updateProfile(payload: {
   displayName: string;
+  gender?: 'male' | 'female' | '';
   city: string;
   bio: string;
   chatLimit: number;
@@ -786,7 +788,7 @@ export async function adminDeleteRoom(roomId: number): Promise<void> {
 
 export async function adminUpdateUser(
   userId: number,
-  payload: { displayName: string; city: string; bio: string; username?: string }
+  payload: { displayName: string; gender?: 'male' | 'female' | ''; city: string; bio: string; username?: string }
 ): Promise<void> {
   return apiRequest(`/api/admin/users/${userId}`, {
     method: 'PUT',

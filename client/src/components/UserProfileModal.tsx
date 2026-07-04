@@ -13,6 +13,7 @@ import {
   voteReputation,
 } from '../api';
 import type { User, ProfileStaffMeta, ChatReplyTarget, UserPresence } from '../types';
+import { USER_GENDER_LABELS, genderLabel } from '../gender';
 import { formatPresenceLabel } from '../utils/presence';
 
 type ChatVisibility = 'all' | 'direct' | 'private';
@@ -82,7 +83,12 @@ export default function UserProfileModal({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [editMode, setEditMode] = useState(false);
-  const [editForm, setEditForm] = useState({ displayName: '', city: '', bio: '' });
+  const [editForm, setEditForm] = useState({
+    displayName: '',
+    gender: '' as '' | 'male' | 'female',
+    city: '',
+    bio: '',
+  });
   const [banReason, setBanReason] = useState('Нарушение правил');
   const [banMinutes, setBanMinutes] = useState('');
   const [showBanForm, setShowBanForm] = useState(false);
@@ -112,6 +118,7 @@ export default function UserProfileModal({
       setData(res);
       setEditForm({
         displayName: res.user.displayName || '',
+        gender: res.user.gender || '',
         city: res.user.city || '',
         bio: res.user.bio || '',
       });
@@ -370,6 +377,10 @@ export default function UserProfileModal({
                     <span>{user.displayName}</span>
                   </li>
                   <li>
+                    <span className="player-page-label">Пол</span>
+                    <span>{genderLabel(user.gender)}</span>
+                  </li>
+                  <li>
                     <span className="player-page-label">Город</span>
                     <span>{user.city || '—'}</span>
                   </li>
@@ -569,6 +580,22 @@ export default function UserProfileModal({
                     onChange={(e) => setEditForm({ ...editForm, displayName: e.target.value })}
                     maxLength={30}
                   />
+                </label>
+                <label>
+                  Пол
+                  <select
+                    value={editForm.gender}
+                    onChange={(e) =>
+                      setEditForm({
+                        ...editForm,
+                        gender: e.target.value as '' | 'male' | 'female',
+                      })
+                    }
+                  >
+                    <option value="">Не указан</option>
+                    <option value="male">{USER_GENDER_LABELS.male}</option>
+                    <option value="female">{USER_GENDER_LABELS.female}</option>
+                  </select>
                 </label>
                 <label>
                   Город

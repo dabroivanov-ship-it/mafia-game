@@ -28,6 +28,8 @@ export type WinnerTeam = 'town' | 'mafia' | null;
 
 export type RoomKind = 'game' | 'chat';
 
+export type UserGender = 'male' | 'female' | '';
+
 export interface User {
   id: number;
   username: string;
@@ -36,6 +38,7 @@ export interface User {
   telegram_id?: string | null;
   telegram_username?: string | null;
   display_name: string;
+  gender: UserGender;
   city: string;
   bio: string;
   avatar: string | null;
@@ -68,6 +71,7 @@ export interface PublicUser {
   username: string;
   email?: string;
   displayName: string;
+  gender: UserGender;
   city: string;
   bio: string;
   avatar: string | null;

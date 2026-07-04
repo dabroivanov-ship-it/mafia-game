@@ -16,6 +16,7 @@ import {
   canBanTarget,
   type AssignableRole,
 } from '../auth/db.js';
+import { normalizeGender } from '../auth/gender.js';
 import { createAvatarUpload } from '../upload/avatar.js';
 import { validateImageFile, normalizeModerationReason } from '../security/validate.js';
 import fs from 'fs';
@@ -225,13 +226,17 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     const target = findUserPublic(id);
     if (!target) return res.status(404).json({ error: 'Пользователь не найден' });
 
-    const { displayName, city, bio, username } = req.body;
+    const { displayName, gender, city, bio, username } = req.body;
     if (!displayName?.trim()) {
       return res.status(400).json({ error: 'Укажите имя' });
+    }
+    if (gender !== undefined && gender !== null && gender !== '' && normalizeGender(gender) === '') {
+      return res.status(400).json({ error: 'Укажите пол' });
     }
 
     let user = updateUserProfile(id, {
       displayName: displayName.trim().slice(0, 30),
+      gender: gender !== undefined ? normalizeGender(gender) : undefined,
       city: (city || '').trim().slice(0, 50),
       bio: (bio || '').trim().slice(0, 500),
     });
