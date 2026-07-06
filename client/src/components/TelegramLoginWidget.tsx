@@ -1,3 +1,5 @@
+import TelegramIcon from './TelegramIcon';
+
 interface TelegramLoginWidgetProps {
   loginReady: boolean;
   oidcRedirectUri?: string | null;
@@ -49,6 +51,7 @@ export default function TelegramLoginWidget({
         onClick={handleLogin}
         disabled={loading}
       >
+        <TelegramIcon className="auth-telegram-btn-icon" />
         {loading ? 'Входим через Telegram...' : 'Войти через Telegram'}
       </button>
     </div>

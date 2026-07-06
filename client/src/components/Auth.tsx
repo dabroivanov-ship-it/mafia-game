@@ -13,6 +13,7 @@ import type { User } from '../types';
 import { USER_GENDER_LABELS } from '../gender';
 import { isTelegramWebApp, waitForTelegramWebApp } from '../telegramWebApp';
 import TelegramLoginWidget from './TelegramLoginWidget';
+import TelegramIcon from './TelegramIcon';
 import SiteLogo from './SiteLogo';
 import SiteFooter from './SiteFooter';
 import { DEFAULT_PAGE_META, updatePageMeta } from '../seo';
@@ -256,7 +257,10 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
         {error && <div className="auth-error">{error}</div>}
 
         {telegramWebAppMode && telegramLoading && (
-          <p className="muted auth-telegram-block">Входим через Telegram...</p>
+          <p className="muted auth-telegram-block auth-telegram-loading">
+            <TelegramIcon className="auth-telegram-btn-icon" />
+            Входим через Telegram...
+          </p>
         )}
 
         {!(mode === 'login' && telegramWebAppMode && telegramLoading) &&

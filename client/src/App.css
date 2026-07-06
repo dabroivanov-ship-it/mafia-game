@@ -450,6 +450,36 @@ html.telegram-webapp .app-body {
 
 .auth-telegram-btn {
   width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #229ed9;
+  border-color: #229ed9;
+  color: #fff;
+}
+
+.auth-telegram-btn:hover:not(:disabled) {
+  background: #1e8fc7;
+  border-color: #1e8fc7;
+}
+
+.auth-telegram-btn-icon {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.auth-telegram-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--text);
+}
+
+.auth-telegram-loading .auth-telegram-btn-icon {
+  color: #229ed9;
 }
 
 .auth-telegram-hint code {
