@@ -73,3 +73,4 @@ export function buildSitemapXml(origin = getPublicSiteOrigin()): string {
 ${urls}
 </urlset>
 `;
+}
