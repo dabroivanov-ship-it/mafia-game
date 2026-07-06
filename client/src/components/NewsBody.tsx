@@ -1,7 +1,7 @@
 import DOMPurify from 'dompurify';
 import { avatarUrl } from '../api';
-import NewsBodyMarkdown from './NewsBodyMarkdown';
-import { isNewsHtmlBody } from './newsBodyUtils';
+import { isSafePublicUrl } from '../utils/safeUrl';
+import NewsBodyMarkdown from './NewsBodyMarkdown';import { isNewsHtmlBody } from './newsBodyUtils';
 
 export { isEmptyNewsBody, isNewsHtmlBody } from './newsBodyUtils';
 
@@ -25,7 +25,15 @@ const ALLOWED_TAGS = [
   'img',
 ];
 
-const ALLOWED_ATTR = ['href', 'src', 'alt', 'title', 'class', 'target', 'rel', 'style'];
+const ALLOWED_ATTR = ['href', 'src', 'alt', 'title', 'class', 'target', 'rel'];
+
+function normalizeNewsMediaUrl(src: string | null): string | null {
+  if (!src) return null;
+  const trimmed = src.trim();
+  if (!isSafePublicUrl(trimmed)) return null;
+  if (trimmed.startsWith('/')) return avatarUrl(trimmed) ?? trimmed;
+  return trimmed;
+}
 
 function sanitizeNewsHtml(html: string): string {
   const safe = DOMPurify.sanitize(html, {
@@ -36,10 +44,16 @@ function sanitizeNewsHtml(html: string): string {
 
   const doc = new DOMParser().parseFromString(safe, 'text/html');
   doc.querySelectorAll('img').forEach((img) => {
-    const src = img.getAttribute('src');
-    if (src) img.setAttribute('src', avatarUrl(src) ?? src);
+    const src = normalizeNewsMediaUrl(img.getAttribute('src'));
+    if (!src) img.remove();
+    else img.setAttribute('src', src);
   });
   doc.querySelectorAll('a').forEach((a) => {
+    const href = a.getAttribute('href');
+    if (!href || !isSafePublicUrl(href)) {
+      a.removeAttribute('href');
+      return;
+    }
     a.setAttribute('rel', 'noopener noreferrer');
     if (!a.getAttribute('target')) a.setAttribute('target', '_blank');
   });

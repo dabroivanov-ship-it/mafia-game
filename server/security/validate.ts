@@ -2,6 +2,18 @@ import fs from 'fs';
 import type { RoleId, NightAction } from '../types/index.js';
 import { MAX_CHAT_MESSAGE_LENGTH, MAX_MODERATION_REASON_LENGTH, VIOLATION_TYPES, type ViolationTypeId } from './constants.js';
 
+export function isSafePublicUrl(url: string): boolean {
+  const trimmed = String(url || '').trim();
+  if (!trimmed) return false;
+  if (trimmed.startsWith('/') && !trimmed.startsWith('//')) return true;
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
 export function normalizeChatText(text: unknown): string | null {
   const trimmed = String(text ?? '').trim();
   if (!trimmed) return null;

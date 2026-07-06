@@ -22,7 +22,7 @@ import {
 import { DEFAULT_PAGE_META, updatePageMeta } from './seo';
 import { clearSession, fetchMe, fetchUnreadMailCount, fetchUnreadNewsCount, fetchThemeSettings, fetchNotifications, markNotificationRead, markAllNotificationsRead, saveSession, loadStoredPlayerId, saveStoredPlayerId, clearStoredPlayerIds, telegramWebAppLogin } from './api';
 import { waitForTelegramWebApp } from './telegramWebApp';
-import type { LobbyRoom, RoomState, User, ThemeId, LobbyUpdate, SiteBranding, UserNotification } from './types';
+import type { LobbyRoom, RoomState, User, ThemeId, LobbyUpdate, SiteBranding, UserNotification, LobbyAnnouncement } from './types';
 import { applyTheme, resolveTheme, DEFAULT_THEME } from './themes';
 import { DEFAULT_SITE_BRANDING } from './siteBranding';
 import SiteFooter from './components/SiteFooter';
@@ -94,13 +94,18 @@ export default function App() {
   } | null>(null);
   const [siteDefaultTheme, setSiteDefaultTheme] = useState<ThemeId>(DEFAULT_THEME);
   const [siteBranding, setSiteBranding] = useState<SiteBranding>(DEFAULT_SITE_BRANDING);
+  const [lobbyAnnouncement, setLobbyAnnouncement] = useState<LobbyAnnouncement>({
+    enabled: false,
+    text: '',
+  });
 
   useEffect(() => {
     async function bootstrap() {
       const themePromise = fetchThemeSettings()
-        .then(({ defaultTheme, branding }) => {
+        .then(({ defaultTheme, branding, lobbyAnnouncement: announcement }) => {
           setSiteDefaultTheme(defaultTheme);
           setSiteBranding(branding);
+          setLobbyAnnouncement(announcement ?? { enabled: false, text: '' });
         })
         .catch(() => {});
 
@@ -720,6 +725,7 @@ export default function App() {
           <Lobby
             rooms={rooms}
             siteOnlineCount={siteOnlineCount}
+            announcement={lobbyAnnouncement}
             onJoin={joinRoom}
             unreadMailCount={unreadMailCount}
             onOpenMessages={() => openMessages({ openUnread: true })}
@@ -834,6 +840,7 @@ export default function App() {
               onBack={() => setView('lobby')}
               onDefaultThemeChange={setSiteDefaultTheme}
               onBrandingChange={setSiteBranding}
+              onLobbyAnnouncementChange={setLobbyAnnouncement}
             />
           </ViewSuspense>
         )}

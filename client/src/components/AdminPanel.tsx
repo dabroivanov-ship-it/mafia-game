@@ -32,7 +32,7 @@ import {
   type AdminRoom,
   type SilencedPlayerEntry,
 } from '../api';
-import type { User, NewsPost, ThemeId, ViolationLogEntry, ViolationType, SiteBranding, UserRole } from '../types';
+import type { User, NewsPost, ThemeId, ViolationLogEntry, ViolationType, SiteBranding, LobbyAnnouncement, UserRole } from '../types';
 import { USER_GENDER_LABELS } from '../gender';
 import {
   adminPanelRoleLabel,
@@ -114,11 +114,18 @@ interface AdminPanelProps {
   onBack: () => void;
   onDefaultThemeChange?: (theme: ThemeId) => void;
   onBrandingChange?: (branding: SiteBranding) => void;
+  onLobbyAnnouncementChange?: (announcement: LobbyAnnouncement) => void;
 }
 
-export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingChange }: AdminPanelProps) {
+export default function AdminPanel({
+  onBack,
+  onDefaultThemeChange,
+  onBrandingChange,
+  onLobbyAnnouncementChange,
+}: AdminPanelProps) {
   const [systemView, setSystemView] = useState<SystemView>('hub');
   const [users, setUsers] = useState<User[]>([]);
+  const [usersRegisteredToday, setUsersRegisteredToday] = useState(0);
   const [rooms, setRooms] = useState<AdminRoom[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -167,6 +174,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
     try {
       const data = await fetchAdminOverview();
       setUsers(data.users || []);
+      setUsersRegisteredToday(data.usersRegisteredToday ?? 0);
       setRooms(data.rooms || []);
 
       if (!roomEditsInitializedRef.current || syncRoomNames) {
@@ -635,7 +643,18 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
             <p className="admin-header-sub">
               {adminPanelRoleLabel(panelRole)}
               {' · '}
-              Пользователей: <strong>{users.length}</strong> · Комнат: <strong>{rooms.length}</strong>
+              Пользователей:{' '}
+              <strong title={usersRegisteredToday > 0 ? 'Всего и зарегистрировались сегодня' : undefined}>
+                {users.length}
+                {usersRegisteredToday > 0 && (
+                  <>
+                    {' '}
+                    + <span className="admin-header-today">{usersRegisteredToday}</span>
+                  </>
+                )}
+              </strong>
+              {' · '}
+              Комнат: <strong>{rooms.length}</strong>
             </p>
           )}
         </div>
@@ -662,6 +681,7 @@ export default function AdminPanel({ onBack, onDefaultThemeChange, onBrandingCha
         themeSaving={themeSaving}
         onThemeChange={(id) => void handleDefaultThemeChange(id)}
         onBrandingChange={onBrandingChange}
+        onAnnouncementChange={onLobbyAnnouncementChange}
         telegramForm={telegramForm}
         telegramSaving={telegramSaving}
         onTelegramFormChange={(patch) => setTelegramForm((prev) => ({ ...prev, ...patch }))}

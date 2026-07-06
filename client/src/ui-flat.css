@@ -498,6 +498,13 @@ textarea:focus {
   background: var(--surface-card);
 }
 
+.lobby-announcement {
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  background: var(--surface-card);
+}
+
 .lobby-mail-notice-icon {
   display: none;
 }
@@ -574,6 +581,11 @@ textarea:focus {
 .admin-header-sub strong {
   color: var(--accent);
   font-weight: 600;
+}
+
+.admin-header-today {
+  color: var(--success);
+  font-weight: 700;
 }
 
 .admin-section {

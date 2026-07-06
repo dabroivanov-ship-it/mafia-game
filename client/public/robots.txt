@@ -1,11 +1,26 @@
-User-agent: *
-Allow: /
-Allow: /info
-Allow: /info/roles
-Allow: /info/rules
-Allow: /info/chat
+# robots.txt — Мафия онлайн
+# https://24vpsbro.ru
 
+User-agent: *
 Disallow: /api/
 Disallow: /socket.io/
+Disallow: /uploads/
+Disallow: /profile/
+
+User-agent: Googlebot
+Allow: /
+Disallow: /api/
+Disallow: /socket.io/
+Disallow: /uploads/
+Disallow: /profile/
+
+User-agent: Yandex
+Allow: /
+Disallow: /api/
+Disallow: /socket.io/
+Disallow: /uploads/
+Disallow: /profile/
+Host: 24vpsbro.ru
+Clean-param: tg_token&tg_error /
 
 Sitemap: https://24vpsbro.ru/sitemap.xml

@@ -4,8 +4,9 @@ import AdminBotPhrasesEditor from './AdminBotPhrasesEditor';
 import AdminSiteBrandingEditor from './AdminSiteBrandingEditor';
 import AdminStatsPanel from './AdminStatsPanel';
 import AdminBackupPanel from './AdminBackupPanel';
+import AdminLobbyAnnouncementEditor from './AdminLobbyAnnouncementEditor';
 import AdminCategoryIcon from './AdminCategoryIcon';
-import type { ThemeId, SiteBranding } from '../types';
+import type { ThemeId, SiteBranding, LobbyAnnouncement } from '../types';
 import { canOpenSystemView, type AdminPermission } from '../adminPermissions';
 
 export type SystemView =
@@ -15,6 +16,7 @@ export type SystemView =
   | 'game-rooms'
   | 'chat-rooms'
   | 'news'
+  | 'announcement'
   | 'violations'
   | 'stats'
   | 'telegram'
@@ -41,6 +43,7 @@ interface AdminSystemSectionProps {
   themeSaving: boolean;
   onThemeChange: (id: ThemeId) => void;
   onBrandingChange?: (branding: SiteBranding) => void;
+  onAnnouncementChange?: (announcement: LobbyAnnouncement) => void;
   telegramForm: { botUsername: string; webAppUrl: string };
   telegramSaving: boolean;
   onTelegramFormChange: (patch: Partial<{ botUsername: string; webAppUrl: string }>) => void;
@@ -85,6 +88,7 @@ const SYSTEM_CATEGORIES: {
     links: [
       { view: 'stats', label: 'Статистика' },
       { view: 'news', label: 'Новости' },
+      { view: 'announcement', label: 'Объявление на главной' },
       { view: 'backup', label: 'Резервные копии' },
       { view: 'theme', label: 'Тема сайта' },
       { view: 'telegram', label: 'Telegram-бот' },
@@ -109,6 +113,7 @@ const VIEW_TITLES: Record<Exclude<SystemView, 'hub'>, string> = {
   'game-rooms': 'Комнаты мафии',
   'chat-rooms': 'Комнаты чата',
   news: 'Новости',
+  announcement: 'Объявление на главной',
   violations: 'Журнал модерации',
   stats: 'Статистика',
   telegram: 'Telegram-бот',
@@ -130,6 +135,7 @@ export default function AdminSystemSection({
   themeSaving,
   onThemeChange,
   onBrandingChange,
+  onAnnouncementChange,
   telegramForm,
   telegramSaving,
   onTelegramFormChange,
@@ -154,7 +160,7 @@ export default function AdminSystemSection({
 
   const badgeFor = (categoryId: CategoryId) => {
     if (categoryId === 'users') return usersCount + banListCount + violationsCount;
-    if (categoryId === 'system') return 6;
+    if (categoryId === 'system') return 7;
     return gameRoomsCount + chatRoomsCount + 1;
   };
 
@@ -196,6 +202,11 @@ export default function AdminSystemSection({
           <div className="admin-system-detail-panel admin-system-wide">{panels.chatRooms}</div>
         )}
         {view === 'news' && <div className="admin-system-detail-panel admin-system-wide">{panels.news}</div>}
+        {view === 'announcement' && (
+          <div className="admin-system-detail-panel admin-system-wide">
+            <AdminLobbyAnnouncementEditor onAnnouncementChange={onAnnouncementChange} />
+          </div>
+        )}
         {view === 'violations' && (
           <div className="admin-system-detail-panel admin-system-wide">{panels.violations}</div>
         )}

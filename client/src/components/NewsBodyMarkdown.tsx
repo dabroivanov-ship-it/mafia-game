@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { avatarUrl } from '../api';
-
+import { isSafePublicUrl } from '../utils/safeUrl';
 function renderInline(text: string): ReactNode[] {
   const parts: ReactNode[] = [];
   const re =
@@ -30,7 +30,7 @@ function renderInline(text: string): ReactNode[] {
       );
     } else if (token.startsWith('![')) {
       const imgMatch = token.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
-      if (imgMatch) {
+      if (imgMatch && isSafePublicUrl(imgMatch[2])) {
         const src = avatarUrl(imgMatch[2]) ?? imgMatch[2];
         parts.push(
           <figure key={key++} className="news-inline-figure">
@@ -41,7 +41,7 @@ function renderInline(text: string): ReactNode[] {
       }
     } else if (token.startsWith('[')) {
       const linkMatch = token.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
-      if (linkMatch) {
+      if (linkMatch && isSafePublicUrl(linkMatch[2])) {
         parts.push(
           <a key={key++} href={linkMatch[2]} target="_blank" rel="noreferrer noopener">
             {linkMatch[1]}

@@ -87,12 +87,16 @@ import { ensureNewsUploadsDir } from './upload/newsImage.js';
 import { ensureSiteBrandingUploadsDir } from './upload/siteLogo.js';
 import { ensureSupportUploadsDir } from './upload/supportImage.js';
 import { initAllQuizRooms, initQuizRoom, handleQuizAnswer, isQuizRoom, setQuizBroadcaster } from './quiz/index.js';
+import { buildRobotsTxt, buildSitemapXml } from './seo/siteSeo.js';
 
 assertProductionEnv();
 
 const corsOrigin = process.env.CORS_ORIGIN?.split(',').map((s) => s.trim()).filter(Boolean);
 
 const app = express();
+if (process.env.TRUST_PROXY === '1') {
+  app.set('trust proxy', 1);
+}
 app.use(securityHeadersMiddleware);
 app.use(corsOrigin?.length ? cors({ origin: corsOrigin, credentials: true }) : cors());
 app.use(express.json({ limit: '256kb' }));
@@ -202,6 +206,16 @@ function syncUserProfileInRooms(userId: number, user: PublicUser | null): void {
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true });
+});
+
+app.get('/robots.txt', (_req, res) => {
+  res.type('text/plain; charset=utf-8');
+  res.send(buildRobotsTxt());
+});
+
+app.get('/sitemap.xml', (_req, res) => {
+  res.type('application/xml; charset=utf-8');
+  res.send(buildSitemapXml());
 });
 
 app.use('/api/auth', authRoutes);
@@ -687,12 +701,14 @@ setInterval(() => {
 }, 1000);
 
 function getClientIp(socket: Socket): string {
-  const forwarded = socket.handshake.headers['x-forwarded-for'];
-  if (typeof forwarded === 'string' && forwarded.trim()) {
-    return forwarded.split(',')[0].trim();
-  }
-  if (Array.isArray(forwarded) && forwarded[0]) {
-    return forwarded[0].split(',')[0].trim();
+  if (process.env.TRUST_PROXY === '1') {
+    const forwarded = socket.handshake.headers['x-forwarded-for'];
+    if (typeof forwarded === 'string' && forwarded.trim()) {
+      return forwarded.split(',')[0].trim();
+    }
+    if (Array.isArray(forwarded) && forwarded[0]) {
+      return String(forwarded[0]).split(',')[0].trim();
+    }
   }
   return socket.handshake.address || '';
 }

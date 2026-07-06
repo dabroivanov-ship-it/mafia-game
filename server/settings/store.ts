@@ -19,6 +19,7 @@ const SITE_LOGO_URL_KEY = 'site_logo_url';
 const SITE_LOGO_TEXT_KEY = 'site_logo_text';
 const SITE_LOGO_MARK_KEY = 'site_logo_mark';
 const SITE_FOOTER_TEXT_KEY = 'site_footer_text';
+const LOBBY_ANNOUNCEMENT_KEY = 'lobby_announcement';
 const LEGACY_METRIKA_ID = 109982503;
 
 const DEFAULT_LOGO_TEXT = 'Mafia';
@@ -30,6 +31,16 @@ export interface SiteBranding {
   logoMark: string;
   footerText: string;
 }
+
+export interface LobbyAnnouncement {
+  enabled: boolean;
+  text: string;
+}
+
+const DEFAULT_LOBBY_ANNOUNCEMENT: LobbyAnnouncement = {
+  enabled: false,
+  text: '',
+};
 export function isValidYandexMetrikaId(value: unknown): value is number {
   const id = typeof value === 'number' ? value : Number(value);
   return Number.isInteger(id) && id >= 10_000 && id <= 999_999_999_999;
@@ -146,4 +157,27 @@ export function setSiteLogoUrl(logoUrl: string | null): SiteBranding {
   if (current && current !== logoUrl) deleteSiteLogoFile(current);
   writeSetting(SITE_LOGO_URL_KEY, logoUrl || '');
   return getSiteBranding();
+}
+
+export function getLobbyAnnouncement(): LobbyAnnouncement {
+  const raw = readSetting(LOBBY_ANNOUNCEMENT_KEY);
+  if (!raw) return { ...DEFAULT_LOBBY_ANNOUNCEMENT };
+  try {
+    const parsed = JSON.parse(raw) as Partial<LobbyAnnouncement>;
+    return {
+      enabled: Boolean(parsed.enabled),
+      text: String(parsed.text ?? '').trim().slice(0, 500),
+    };
+  } catch {
+    return { ...DEFAULT_LOBBY_ANNOUNCEMENT };
+  }
+}
+
+export function setLobbyAnnouncement(input: LobbyAnnouncement): LobbyAnnouncement {
+  const next: LobbyAnnouncement = {
+    enabled: Boolean(input.enabled),
+    text: String(input.text ?? '').trim().slice(0, 500),
+  };
+  writeSetting(LOBBY_ANNOUNCEMENT_KEY, JSON.stringify(next));
+  return next;
 }

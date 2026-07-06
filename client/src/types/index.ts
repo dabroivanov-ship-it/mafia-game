@@ -20,6 +20,11 @@ export interface SiteBranding {
   footerText: string;
 }
 
+export interface LobbyAnnouncement {
+  enabled: boolean;
+  text: string;
+}
+
 export type NotificationType = 'mail' | 'reputation_up' | 'reputation_down' | 'system';
 
 export type UserGender = 'male' | 'female' | '';

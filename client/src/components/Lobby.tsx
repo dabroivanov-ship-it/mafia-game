@@ -1,4 +1,4 @@
-import type { GamePhase, LobbyRoom } from '../types';
+import type { GamePhase, LobbyRoom, LobbyAnnouncement } from '../types';
 
 function mailNoticeLabel(count: number): string {
   if (count === 1) return 'У вас 1 новое сообщение';
@@ -33,6 +33,7 @@ export type LobbyScreen =
 interface LobbyProps {
   rooms: LobbyRoom[];
   siteOnlineCount?: number;
+  announcement?: LobbyAnnouncement | null;
   onJoin: (roomId: number) => void;
   unreadMailCount?: number;
   onOpenMessages?: () => void;
@@ -75,6 +76,7 @@ function RoomCard({
 export default function Lobby({
   rooms,
   siteOnlineCount = 0,
+  announcement = null,
   onJoin,
   unreadMailCount = 0,
   onOpenMessages,
@@ -91,6 +93,15 @@ export default function Lobby({
           <p>Выберите комнату для игры</p>
         </div>
       </header>
+
+      {announcement?.enabled && announcement.text.trim() && (
+        <div className="lobby-announcement" role="status">
+          <span className="lobby-announcement-icon" aria-hidden="true">
+            📢
+          </span>
+          <p>{announcement.text}</p>
+        </div>
+      )}
 
       {unreadMailCount > 0 && (
         <button type="button" className="lobby-mail-notice" onClick={onOpenMessages}>

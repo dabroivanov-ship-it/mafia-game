@@ -124,10 +124,12 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
   });
 
   router.get('/overview', requireAdminPermission('view_users'), (_req, res) => {
+    const { usersRegisteredToday } = getAdminSiteStats();
     res.json({
       ...handlers.getModerationData(),
       users: listAllUsers(),
       gameEvents: handlers.getGameEvents?.() || [],
+      usersRegisteredToday,
     });
   });
 

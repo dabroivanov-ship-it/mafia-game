@@ -1,4 +1,4 @@
-import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, NewsPoll, NewsPollInput, NewsComment, MailConversation, RoomKind, ThemeId, ViolationLogEntry, UserSearchHit, UserPresence, FriendUser, LeaderboardEntry, QuizLeaderboardEntry, SiteBranding, UserStatisticsResponse, UserNotification } from './types';
+import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, NewsPoll, NewsPollInput, NewsComment, MailConversation, RoomKind, ThemeId, ViolationLogEntry, UserSearchHit, UserPresence, FriendUser, LeaderboardEntry, QuizLeaderboardEntry, SiteBranding, LobbyAnnouncement, UserStatisticsResponse, UserNotification } from './types';
 import type { AdminPermission } from './adminPermissions';
 
 const API_BASE =
@@ -166,6 +166,7 @@ export async function fetchThemeSettings(): Promise<{
   defaultTheme: ThemeId;
   themes: { id: ThemeId; name: string }[];
   branding: SiteBranding;
+  lobbyAnnouncement: LobbyAnnouncement;
 }> {
   return apiRequest('/api/settings/theme');
 }
@@ -203,6 +204,15 @@ export async function adminSetMetrikaSettings(payload: {
   metrikaId: number | null;
 }): Promise<{ metrikaId: number | null }> {
   return apiRequest('/api/settings/metrika', {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function adminSetLobbyAnnouncement(payload: LobbyAnnouncement): Promise<{
+  lobbyAnnouncement: LobbyAnnouncement;
+}> {
+  return apiRequest('/api/settings/lobby-announcement', {
     method: 'PUT',
     body: JSON.stringify(payload),
   });
@@ -582,6 +592,7 @@ export async function fetchAdminOverview(): Promise<{
   messages: AdminMessage[];
   gameEvents: AdminGameEvent[];
   rooms: AdminRoom[];
+  usersRegisteredToday: number;
 }> {
   return apiRequest('/api/admin/overview');
 }

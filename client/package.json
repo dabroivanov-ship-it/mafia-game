@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "prebuild": "node scripts/generate-icons.mjs",
+    "prebuild": "node scripts/generate-icons.mjs && node scripts/generate-seo-files.mjs",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "icons": "node scripts/generate-icons.mjs"

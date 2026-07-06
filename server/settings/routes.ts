@@ -1,13 +1,16 @@
 import { Router } from 'express';
 import { authMiddleware, adminMiddleware } from '../auth/jwt.js';
+import { hasAdminPermission } from '../admin/permissions.js';
 import {
   getDefaultTheme,
   getSiteBranding,
+  getLobbyAnnouncement,
   getTelegramSettings,
   getYandexMetrikaId,
   setDefaultTheme,
   setSiteBrandingFields,
   setSiteLogoUrl,
+  setLobbyAnnouncement,
   setTelegramSettings,
   setYandexMetrikaId,
   isValidYandexMetrikaId,
@@ -23,6 +26,7 @@ router.get('/theme', (_req, res) => {
     defaultTheme: getDefaultTheme(),
     themes: listThemesPublic(),
     branding: getSiteBranding(),
+    lobbyAnnouncement: getLobbyAnnouncement(),
   });
 });
 
@@ -99,6 +103,19 @@ router.post('/branding/logo', authMiddleware, adminMiddleware, (req, res) => {
 
 router.delete('/branding/logo', authMiddleware, adminMiddleware, (_req, res) => {
   res.json({ branding: setSiteLogoUrl(null) });
+});
+
+router.put('/lobby-announcement', authMiddleware, (req, res) => {
+  if (!hasAdminPermission(req.user, 'manage_news')) {
+    return res.status(403).json({ error: 'Нет прав для редактирования объявлений' });
+  }
+  const enabled = Boolean(req.body?.enabled);
+  const text = String(req.body?.text ?? '').trim();
+  if (enabled && !text) {
+    return res.status(400).json({ error: 'Укажите текст объявления или отключите показ' });
+  }
+  const lobbyAnnouncement = setLobbyAnnouncement({ enabled, text });
+  res.json({ lobbyAnnouncement });
 });
 
 export default router;

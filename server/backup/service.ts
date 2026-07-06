@@ -17,6 +17,22 @@ function getBackupsDir(): string {
   return dir;
 }
 
+/** Matches ids from createBackup: ISO time with colons/dots replaced by dashes. */
+const BACKUP_ID_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z$/;
+
+function resolveBackupDir(backupId: string): string {
+  const id = String(backupId || '').trim();
+  if (!BACKUP_ID_PATTERN.test(id)) {
+    throw new Error('Некорректный идентификатор резервной копии');
+  }
+  const root = path.resolve(getBackupsDir());
+  const dir = path.resolve(getBackupsDir(), id);
+  if (dir !== root && !dir.startsWith(`${root}${path.sep}`)) {
+    throw new Error('Некорректный идентификатор резервной копии');
+  }
+  return dir;
+}
+
 function readManifest(dir: string): { createdAt?: string; includeUploads?: boolean } {
   const manifestPath = path.join(dir, 'manifest.json');
   if (!fs.existsSync(manifestPath)) return {};
@@ -44,7 +60,7 @@ export function listBackups(): BackupInfo[] {
   const root = getBackupsDir();
   return fs
     .readdirSync(root, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
+    .filter((entry) => entry.isDirectory() && BACKUP_ID_PATTERN.test(entry.name))
     .map((entry) => {
       const dir = path.join(root, entry.name);
       const manifest = readManifest(dir);
@@ -91,7 +107,7 @@ export async function createBackup(includeUploads = true): Promise<BackupInfo> {
 }
 
 export async function restoreBackup(backupId: string): Promise<void> {
-  const dir = path.join(getBackupsDir(), backupId);
+  const dir = resolveBackupDir(backupId);
   const backupDbPath = path.join(dir, 'mafia.db');
   if (!fs.existsSync(backupDbPath)) {
     throw new Error('Резервная копия не найдена');
@@ -112,7 +128,7 @@ export async function restoreBackup(backupId: string): Promise<void> {
 }
 
 export function deleteBackup(backupId: string): void {
-  const dir = path.join(getBackupsDir(), backupId);
+  const dir = resolveBackupDir(backupId);
   if (!fs.existsSync(dir)) {
     throw new Error('Резервная копия не найдена');
   }

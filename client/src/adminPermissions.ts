@@ -42,6 +42,7 @@ export const SYSTEM_VIEW_PERMISSIONS: Record<string, AdminPermission> = {
   violations: 'view_violations',
   stats: 'view_stats',
   news: 'manage_news',
+  announcement: 'manage_news',
   backup: 'manage_backups',
   theme: 'manage_theme',
   telegram: 'manage_telegram',

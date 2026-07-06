@@ -3867,6 +3867,35 @@ html.telegram-webapp .app-body {
   text-align: left;
 }
 
+.lobby-announcement {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  margin: 0 0 18px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-card));
+  color: var(--text);
+}
+
+.lobby-announcement p {
+  margin: 0;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.lobby-announcement-preview {
+  margin-top: 4px;
+}
+
+.lobby-announcement-icon {
+  font-size: 1.4rem;
+  line-height: 1.2;
+  flex-shrink: 0;
+}
+
 .lobby-mail-notice-icon {
   font-size: 1.4rem;
 }
