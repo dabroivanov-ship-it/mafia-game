@@ -9,7 +9,7 @@ export function securityHeadersMiddleware(_req: Request, res: Response, next: Ne
     'Content-Security-Policy',
     [
       "default-src 'self'",
-      "script-src 'self' https://oauth.telegram.org https://mc.yandex.ru https://yastatic.net",
+      "script-src 'self' https://telegram.org https://oauth.telegram.org https://mc.yandex.ru https://yastatic.net",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https: https://mc.yandex.ru",
       "connect-src 'self' wss: ws: https://oauth.telegram.org https://mc.yandex.ru https://yandex.ru https://*.yandex.ru https://log.strm.yandex.ru",

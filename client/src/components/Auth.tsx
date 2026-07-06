@@ -11,7 +11,7 @@ import {
 } from '../api';
 import type { User } from '../types';
 import { USER_GENDER_LABELS } from '../gender';
-import { getTelegramWebApp, isTelegramWebApp } from '../telegramWebApp';
+import { isTelegramWebApp, waitForTelegramWebApp } from '../telegramWebApp';
 import TelegramLoginWidget from './TelegramLoginWidget';
 import SiteLogo from './SiteLogo';
 import SiteFooter from './SiteFooter';
@@ -119,16 +119,15 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
   useEffect(() => {
     let cancelled = false;
 
-    const tryWebAppLogin = () => {
-      const webApp = getTelegramWebApp();
-      if (!isTelegramWebApp() || !webApp) return false;
+    void waitForTelegramWebApp().then((webApp) => {
+      if (cancelled || !webApp || !isTelegramWebApp()) return;
 
       setTelegramWebAppMode(true);
       setTelegramLoading(true);
       setError('');
 
       void telegramWebAppLogin(webApp.initData, true)
-        .then(({ token, user }: { token: string; user: User;}) => {
+        .then(({ token, user }: { token: string; user: User }) => {
           if (cancelled) return;
           const username =
             webApp.initDataUnsafe.user?.username || String(webApp.initDataUnsafe.user?.id || '');
@@ -141,27 +140,10 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
         .finally(() => {
           if (!cancelled) setTelegramLoading(false);
         });
-
-      return true;
-    };
-
-    if (tryWebAppLogin()) {
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    const intervalId = window.setInterval(() => {
-      if (cancelled) return;
-      if (tryWebAppLogin()) window.clearInterval(intervalId);
-    }, 150);
-
-    const timeoutId = window.setTimeout(() => window.clearInterval(intervalId), 5000);
+    });
 
     return () => {
       cancelled = true;
-      window.clearInterval(intervalId);
-      window.clearTimeout(timeoutId);
     };
   }, [completeAuth]);
 

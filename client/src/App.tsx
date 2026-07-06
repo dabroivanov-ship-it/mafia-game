@@ -20,7 +20,8 @@ import {
   type RoomScreen,
 } from './roomRouting';
 import { DEFAULT_PAGE_META, updatePageMeta } from './seo';
-import { clearSession, fetchMe, fetchUnreadMailCount, fetchUnreadNewsCount, fetchThemeSettings, fetchNotifications, markNotificationRead, markAllNotificationsRead, saveSession, loadStoredPlayerId, saveStoredPlayerId, clearStoredPlayerIds } from './api';
+import { clearSession, fetchMe, fetchUnreadMailCount, fetchUnreadNewsCount, fetchThemeSettings, fetchNotifications, markNotificationRead, markAllNotificationsRead, saveSession, loadStoredPlayerId, saveStoredPlayerId, clearStoredPlayerIds, telegramWebAppLogin } from './api';
+import { waitForTelegramWebApp } from './telegramWebApp';
 import type { LobbyRoom, RoomState, User, ThemeId, LobbyUpdate, SiteBranding, UserNotification } from './types';
 import { applyTheme, resolveTheme, DEFAULT_THEME } from './themes';
 import { DEFAULT_SITE_BRANDING } from './siteBranding';
@@ -102,6 +103,23 @@ export default function App() {
           setSiteBranding(branding);
         })
         .catch(() => {});
+
+      const webApp = await waitForTelegramWebApp();
+      if (webApp?.initData) {
+        try {
+          const { token: tgToken, user: tgUser } = await telegramWebAppLogin(webApp.initData, true);
+          saveSession(tgToken, tgUser);
+          setToken(tgToken);
+          setUser(tgUser);
+          await themePromise;
+          setAuthLoading(false);
+          return;
+        } catch {
+          clearSession();
+          setToken(null);
+          setUser(null);
+        }
+      }
 
       if (!token) {
         await themePromise;

@@ -58,6 +58,28 @@ export function getTelegramWebApp(): TelegramWebApp | null {
   return webApp;
 }
 
+export function waitForTelegramWebApp(timeoutMs = 5000, intervalMs = 150): Promise<TelegramWebApp | null> {
+  const existing = getTelegramWebApp();
+  if (existing) return Promise.resolve(existing);
+  if (!window.Telegram?.WebApp) return Promise.resolve(null);
+
+  return new Promise((resolve) => {
+    const intervalId = window.setInterval(() => {
+      const webApp = getTelegramWebApp();
+      if (webApp) {
+        window.clearInterval(intervalId);
+        window.clearTimeout(timeoutId);
+        resolve(webApp);
+      }
+    }, intervalMs);
+
+    const timeoutId = window.setTimeout(() => {
+      window.clearInterval(intervalId);
+      resolve(getTelegramWebApp());
+    }, timeoutMs);
+  });
+}
+
 export function initTelegramWebApp(): boolean {
   const webApp = getTelegramWebApp();
   if (!webApp) return false;
