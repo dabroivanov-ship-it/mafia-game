@@ -180,14 +180,16 @@ textarea:focus {
     font-weight: 600;
     border-radius: 14px;
     padding: 11px 14px;
-    border-color: transparent;
+    border: 1px solid transparent;
     background: transparent;
+    color: var(--text-muted);
     justify-content: flex-start;
     width: 100%;
   }
 
   .menu-item:hover:not(.active) {
     background: var(--bg-hover);
+    color: var(--text);
   }
 
   .menu-item.active {
@@ -243,6 +245,7 @@ textarea:focus {
     min-width: 0;
     border: 1px solid transparent;
     background: transparent;
+    color: var(--text-muted);
     font-size: 0.62rem;
     border-radius: 12px;
   }
@@ -277,6 +280,14 @@ textarea:focus {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .menu-label-full {
+    display: none;
+  }
+
+  .menu-label-short {
+    display: inline;
   }
 }
 

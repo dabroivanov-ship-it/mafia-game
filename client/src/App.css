@@ -3316,7 +3316,7 @@ html.telegram-webapp .app-body {
   min-height: 44px;
   border: 1px solid transparent;
   background: transparent;
-  color: var(--text);
+  color: var(--text-muted);
   border-radius: 999px;
   cursor: pointer;
   font-family: inherit;
@@ -3344,6 +3344,14 @@ html.telegram-webapp .app-body {
 
 .menu-label {
   line-height: 1.2;
+}
+
+.menu-label-short {
+  display: none;
+}
+
+.menu-item:not(.active):not(.logout) {
+  color: var(--text-muted);
 }
 
 .menu-item.active {
@@ -5365,6 +5373,7 @@ html.telegram-webapp .app-body {
     min-height: 44px;
     border: 1px solid transparent;
     background: transparent;
+    color: var(--text-muted);
     font-size: 0.62rem;
     border-radius: var(--radius-sm);
   }
@@ -5396,6 +5405,14 @@ html.telegram-webapp .app-body {
 
   .menu-label {
     font-weight: 500;
+  }
+
+  .menu-label-full {
+    display: none;
+  }
+
+  .menu-label-short {
+    display: inline;
   }
 
   .menu-avatar,

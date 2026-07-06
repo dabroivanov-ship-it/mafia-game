@@ -9,7 +9,6 @@ interface CabinetHubProps {
   onOpenMessages: () => void;
   onOpenSupport: () => void;
   onOpenUserSearch: () => void;
-  onOpenInfo?: () => void;
   onOpenStatistics?: () => void;
   onLogout: () => void;
   onBack: () => void;
@@ -21,7 +20,6 @@ const HUB_ITEMS = [
   { icon: '🔍', title: 'Поиск пользователей', desc: 'Найти игрока по логину, имени или городу', action: 'search' as const },
   { icon: '👤', title: 'Личные настройки', desc: 'Имя, город, аватар, лимит чата', action: 'profile' as const },
   { icon: '🎨', title: 'Оформление сайта', desc: 'Цветовая тема интерфейса', action: 'theme' as const },
-  { icon: 'ℹ️', title: 'Информация', desc: 'Правила, роли, рейтинг и FAQ', action: 'info' as const },
 ];
 
 export default function CabinetHub({
@@ -32,7 +30,6 @@ export default function CabinetHub({
   onOpenMessages,
   onOpenSupport,
   onOpenUserSearch,
-  onOpenInfo,
   onOpenStatistics,
   onLogout,
   onBack,
@@ -43,10 +40,7 @@ export default function CabinetHub({
     search: onOpenUserSearch,
     profile: onOpenProfileSettings,
     theme: onOpenSiteSettings,
-    info: () => onOpenInfo?.(),
   };
-
-  const hubItems = HUB_ITEMS.filter((item) => item.action !== 'info' || onOpenInfo);
 
   return (
     <div className="cabinet-hub-page">
@@ -81,11 +75,11 @@ export default function CabinetHub({
       </div>
 
       <div className="info-hub">
-        {hubItems.map((item) => (
+        {HUB_ITEMS.map((item) => (
           <button
             key={item.action}
             type="button"
-            className={`info-hub-card${item.action === 'info' ? ' cabinet-hub-item-mobile-only' : ''}`}
+            className="info-hub-card"
             onClick={handlers[item.action]}
           >
             <span className="info-hub-icon" aria-hidden="true">

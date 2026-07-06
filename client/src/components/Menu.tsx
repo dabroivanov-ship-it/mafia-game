@@ -8,6 +8,7 @@ interface MenuItem {
   id: MenuView;
   icon: string;
   label: string;
+  mobileLabel?: string;
   mobileBottom?: boolean;
   desktopOnly?: boolean;
 }
@@ -15,8 +16,8 @@ interface MenuItem {
 const ITEMS: MenuItem[] = [
   { id: 'lobby', icon: '', label: 'Комнаты', mobileBottom: true },
   { id: 'news', icon: '', label: 'Новости', mobileBottom: true },
-  { id: 'cabinet', icon: '', label: 'Кабинет', mobileBottom: true },
-  { id: 'info', icon: '', label: 'Информация', mobileBottom: true, desktopOnly: true },
+  { id: 'cabinet', icon: '', label: 'Кабинет', mobileLabel: 'Кабинет', mobileBottom: true },
+  { id: 'info', icon: '', label: 'Информация', mobileLabel: 'Инфо', mobileBottom: true },
 ];
 
 interface MenuProps {
@@ -52,7 +53,8 @@ export default function Menu({
             onClick={() => onNavigate(item.id)}
           >
             <span className="menu-icon">{item.icon}</span>
-            <span className="menu-label">{item.label}</span>
+            <span className="menu-label menu-label-full">{item.label}</span>
+            <span className="menu-label menu-label-short">{item.mobileLabel ?? item.label}</span>
             {item.id === 'cabinet' && unreadMailCount > 0 && (
               <span className="menu-badge">{unreadMailCount > 99 ? '99+' : unreadMailCount}</span>
             )}
