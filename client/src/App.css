@@ -3347,15 +3347,16 @@ html.telegram-webapp .app-body {
 }
 
 .menu-item.active {
-  background: var(--accent);
+  background: transparent;
   border-color: var(--accent);
-  color: #fff;
-  box-shadow: 0 4px 16px var(--accent-glow);
+  color: var(--accent);
+  box-shadow: none;
 }
 
 .menu-item.admin.active {
-  background: #c0392b;
+  background: transparent;
   border-color: #c0392b;
+  color: #e57373;
   box-shadow: none;
 }
 
@@ -5362,22 +5363,23 @@ html.telegram-webapp .app-body {
     gap: 1px;
     padding: 4px 2px;
     min-height: 44px;
-    border: none;
+    border: 1px solid transparent;
     background: transparent;
     font-size: 0.62rem;
     border-radius: var(--radius-sm);
   }
 
   .menu-item.active {
-    background: rgba(124, 108, 240, 0.2);
+    background: transparent;
     color: var(--accent);
     box-shadow: none;
-    border: none;
+    border-color: var(--accent);
   }
 
   .menu-item.admin.active {
-    background: rgba(192, 57, 43, 0.2);
+    background: transparent;
     color: #e57373;
+    border-color: #c0392b;
   }
 
   .menu-item.logout {

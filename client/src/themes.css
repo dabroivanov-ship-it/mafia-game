@@ -108,9 +108,10 @@ html[data-theme='crimson'] .main-menu {
 }
 
 html[data-theme='crimson'] .menu-item.active {
+  background: transparent;
   color: var(--accent);
   border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
-  box-shadow: 0 0 24px rgba(0, 200, 255, 0.16);
+  box-shadow: none;
 }
 
 [data-theme='aurora'] {
