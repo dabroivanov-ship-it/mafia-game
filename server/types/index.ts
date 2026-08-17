@@ -136,6 +136,7 @@ export interface GamePlayer {
   silencedUntil?: number | null;
   silenceReason?: string | null;
   mutedChat?: ChatMessage[];
+  isBot?: boolean;
 }
 
 export interface GameRoom {
@@ -170,6 +171,10 @@ export interface GameRoom {
   sessionId: number | null;
   historyLoaded: boolean;
   nightAtmosphereSent?: Record<string, boolean>;
+  aiEnabled?: boolean;
+  aiCount?: number;
+  aiHandledPhases?: Set<string>;
+  votingRound?: number;
 }
 
 export interface RoomStatePlayer {
@@ -267,6 +272,8 @@ export interface LobbyRoom {
   spectatorCount: number;
   maxPlayers: number;
   phase: GamePhase;
+  aiEnabled?: boolean;
+  aiCount?: number;
 }
 
 export type NightAction =

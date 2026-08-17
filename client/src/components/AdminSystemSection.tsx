@@ -21,6 +21,7 @@ export type SystemView =
   | 'stats'
   | 'telegram'
   | 'metrika'
+  | 'deepseek'
   | 'theme'
   | 'phrases'
   | 'backup';
@@ -55,6 +56,17 @@ interface AdminSystemSectionProps {
   onMetrikaIdChange: (value: string) => void;
   onMetrikaDisabledChange: (disabled: boolean) => void;
   onSaveMetrika: (e: FormEvent) => void;
+  deepseekEnabled: boolean;
+  deepseekModel: string;
+  deepseekApiKey: string;
+  deepseekApiKeyPreview: string | null;
+  deepseekSaving: boolean;
+  deepseekTesting: boolean;
+  onDeepseekEnabledChange: (enabled: boolean) => void;
+  onDeepseekModelChange: (model: string) => void;
+  onDeepseekApiKeyChange: (key: string) => void;
+  onSaveDeepseek: (e: FormEvent) => void;
+  onTestDeepseek: () => void;
   panels: {
     users: ReactNode;
     banlist: ReactNode;
@@ -93,6 +105,7 @@ const SYSTEM_CATEGORIES: {
       { view: 'theme', label: 'Тема сайта' },
       { view: 'telegram', label: 'Telegram-бот' },
       { view: 'metrika', label: 'Яндекс.Метрика' },
+      { view: 'deepseek', label: 'DeepSeek (ИИ)' },
     ],
   },
   {
@@ -118,6 +131,7 @@ const VIEW_TITLES: Record<Exclude<SystemView, 'hub'>, string> = {
   stats: 'Статистика',
   telegram: 'Telegram-бот',
   metrika: 'Яндекс.Метрика',
+  deepseek: 'DeepSeek (ИИ)',
   theme: 'Тема сайта',
   phrases: 'Фразы ведущего',
   backup: 'Резервные копии',
@@ -147,6 +161,17 @@ export default function AdminSystemSection({
   onMetrikaIdChange,
   onMetrikaDisabledChange,
   onSaveMetrika,
+  deepseekEnabled,
+  deepseekModel,
+  deepseekApiKey,
+  deepseekApiKeyPreview,
+  deepseekSaving,
+  deepseekTesting,
+  onDeepseekEnabledChange,
+  onDeepseekModelChange,
+  onDeepseekApiKeyChange,
+  onSaveDeepseek,
+  onTestDeepseek,
   permissions,
   panels,
 }: AdminSystemSectionProps) {
@@ -287,6 +312,57 @@ export default function AdminSystemSection({
             <div className="profile-actions">
               <button type="submit" className="btn btn-primary" disabled={metrikaSaving}>
                 {metrikaSaving ? 'Сохранение...' : 'Сохранить Метрику'}
+              </button>
+            </div>
+          </form>
+        )}
+        {view === 'deepseek' && (
+          <form className="admin-system-detail-panel theme-settings-block admin-theme-block" onSubmit={onSaveDeepseek}>
+            <h4>DeepSeek — ИИ-игроки</h4>
+            <p className="theme-settings-hint">
+              API-ключ DeepSeek для ботов в игровых комнатах. Без ключа боты играют по простым правилам без нейросети.
+            </p>
+            <label className="theme-use-default">
+              <input
+                type="checkbox"
+                checked={deepseekEnabled}
+                onChange={(e) => onDeepseekEnabledChange(e.target.checked)}
+                disabled={deepseekSaving}
+              />
+              <span>Включить DeepSeek для ИИ-игроков</span>
+            </label>
+            <label>
+              Модель
+              <input
+                value={deepseekModel}
+                onChange={(e) => onDeepseekModelChange(e.target.value)}
+                placeholder="deepseek-chat"
+                maxLength={64}
+                disabled={deepseekSaving}
+              />
+            </label>
+            <label>
+              API Key
+              <input
+                type="password"
+                value={deepseekApiKey}
+                onChange={(e) => onDeepseekApiKeyChange(e.target.value)}
+                placeholder={deepseekApiKeyPreview ? `Текущий: ${deepseekApiKeyPreview}` : 'sk-...'}
+                autoComplete="off"
+                disabled={deepseekSaving}
+              />
+            </label>
+            <div className="profile-actions">
+              <button type="submit" className="btn btn-primary" disabled={deepseekSaving}>
+                {deepseekSaving ? 'Сохранение...' : 'Сохранить DeepSeek'}
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                disabled={deepseekSaving || deepseekTesting}
+                onClick={onTestDeepseek}
+              >
+                {deepseekTesting ? 'Проверка...' : 'Проверить подключение'}
               </button>
             </div>
           </form>

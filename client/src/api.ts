@@ -227,6 +227,32 @@ export async function adminSetMetrikaSettings(payload: {
   });
 }
 
+export interface DeepSeekSettings {
+  enabled: boolean;
+  model: string;
+  apiKeyConfigured: boolean;
+  apiKeyPreview: string | null;
+}
+
+export async function fetchDeepSeekSettings(): Promise<DeepSeekSettings> {
+  return apiRequest('/api/settings/deepseek');
+}
+
+export async function adminSetDeepSeekSettings(payload: {
+  enabled?: boolean;
+  model?: string;
+  apiKey?: string | null;
+}): Promise<DeepSeekSettings> {
+  return apiRequest('/api/settings/deepseek', {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function adminTestDeepSeekConnection(): Promise<{ ok: boolean }> {
+  return apiRequest('/api/settings/deepseek/test', { method: 'POST' });
+}
+
 export async function adminSetLobbyAnnouncement(payload: LobbyAnnouncement): Promise<{
   lobbyAnnouncement: LobbyAnnouncement;
 }> {
@@ -771,10 +797,23 @@ export async function adminCreateChatRoom(name: string): Promise<void> {
   });
 }
 
-export async function adminCreateGameRoom(name: string): Promise<void> {
+export async function adminCreateGameRoom(
+  name: string,
+  options: { aiEnabled?: boolean; aiCount?: number } = {}
+): Promise<void> {
   return apiRequest('/api/admin/game-rooms', {
     method: 'POST',
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name, ...options }),
+  });
+}
+
+export async function adminUpdateGameRoomAi(
+  roomId: number,
+  payload: { aiEnabled: boolean; aiCount: number }
+): Promise<void> {
+  return apiRequest(`/api/admin/game-rooms/${roomId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
   });
 }
 

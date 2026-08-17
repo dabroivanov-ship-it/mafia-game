@@ -83,6 +83,8 @@ export interface LobbyRoom {
   spectatorCount: number;
   maxPlayers: number;
   phase: GamePhase;
+  aiEnabled?: boolean;
+  aiCount?: number;
 }
 
 export type ChatChannel = 'public' | 'mafia' | 'dead' | 'spectator' | 'private';

@@ -18,6 +18,12 @@ function ensureRoomsConfigSchema(): void {
     db.exec(`ALTER TABLE rooms_config ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0`);
     backfillSortOrder();
   }
+  if (!cols.some((c) => c.name === 'ai_enabled')) {
+    db.exec(`ALTER TABLE rooms_config ADD COLUMN ai_enabled INTEGER NOT NULL DEFAULT 0`);
+  }
+  if (!cols.some((c) => c.name === 'ai_count')) {
+    db.exec(`ALTER TABLE rooms_config ADD COLUMN ai_count INTEGER NOT NULL DEFAULT 0`);
+  }
 }
 
 function backfillSortOrder(): void {
@@ -37,14 +43,18 @@ export interface RoomConfig {
   name: string;
   kind: RoomKind;
   sortOrder: number;
+  aiEnabled: boolean;
+  aiCount: number;
 }
 
 export function loadRoomConfigs(): Map<number, RoomConfig> {
-  const rows = db.prepare('SELECT room_id, name, kind, sort_order FROM rooms_config').all() as {
+  const rows = db.prepare('SELECT room_id, name, kind, sort_order, ai_enabled, ai_count FROM rooms_config').all() as {
     room_id: number;
     name: string;
     kind: string | null;
     sort_order: number | null;
+    ai_enabled: number | null;
+    ai_count: number | null;
   }[];
   const map = new Map<number, RoomConfig>();
   for (const row of rows) {
@@ -53,6 +63,8 @@ export function loadRoomConfigs(): Map<number, RoomConfig> {
       name: row.name,
       kind: row.kind === 'chat' ? 'chat' : 'game',
       sortOrder: row.sort_order ?? row.room_id,
+      aiEnabled: !!row.ai_enabled,
+      aiCount: Math.max(0, row.ai_count ?? 0),
     });
   }
   return map;
@@ -87,18 +99,23 @@ export function saveRoomConfig(
   roomId: number,
   name: string,
   kind: RoomKind,
-  sortOrder?: number
+  sortOrder?: number,
+  ai?: { aiEnabled?: boolean; aiCount?: number }
 ): void {
   ensureRoomsConfigSchema();
   const existing = loadRoomConfigs().get(roomId);
   const order = sortOrder ?? existing?.sortOrder ?? getNextSortOrder(kind);
+  const aiEnabled = ai?.aiEnabled ?? existing?.aiEnabled ?? false;
+  const aiCount = ai?.aiCount ?? existing?.aiCount ?? 0;
   db.prepare(
-    `INSERT INTO rooms_config (room_id, name, kind, sort_order) VALUES (?, ?, ?, ?)
+    `INSERT INTO rooms_config (room_id, name, kind, sort_order, ai_enabled, ai_count) VALUES (?, ?, ?, ?, ?, ?)
      ON CONFLICT(room_id) DO UPDATE SET
        name = excluded.name,
        kind = excluded.kind,
-       sort_order = excluded.sort_order`
-  ).run(roomId, name, kind, order);
+       sort_order = excluded.sort_order,
+       ai_enabled = excluded.ai_enabled,
+       ai_count = excluded.ai_count`
+  ).run(roomId, name, kind, order, aiEnabled ? 1 : 0, aiCount);
 }
 
 export function saveRoomName(roomId: number, name: string, kind: RoomKind = 'game'): void {

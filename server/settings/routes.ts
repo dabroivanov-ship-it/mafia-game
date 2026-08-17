@@ -19,6 +19,11 @@ import {
 import { isValidThemeId, listThemesPublic } from './themes.js';
 import { isValidWebAppUrl } from '../security/validate.js';
 import { siteLogoPublicPath, siteLogoUpload } from '../upload/siteLogo.js';
+import {
+  getDeepSeekSettings,
+  setDeepSeekSettings,
+} from './deepseekStore.js';
+import { testDeepSeekConnection } from '../game/ai/deepseekClient.js';
 
 const router = Router();
 
@@ -121,6 +126,41 @@ router.put('/lobby-announcement', authMiddleware, (req, res) => {
   }
   const lobbyAnnouncement = setLobbyAnnouncement({ enabled, text });
   res.json({ lobbyAnnouncement });
+});
+
+router.get('/deepseek', authMiddleware, adminMiddleware, (_req, res) => {
+  if (!hasAdminPermission(_req.user, 'manage_deepseek')) {
+    return res.status(403).json({ error: 'Нет прав для управления DeepSeek' });
+  }
+  res.json(getDeepSeekSettings());
+});
+
+router.put('/deepseek', authMiddleware, adminMiddleware, (req, res) => {
+  if (!hasAdminPermission(req.user, 'manage_deepseek')) {
+    return res.status(403).json({ error: 'Нет прав для управления DeepSeek' });
+  }
+  const enabled = req.body?.enabled;
+  const model = req.body?.model;
+  const apiKey = req.body?.apiKey;
+  const payload: { enabled?: boolean; model?: string; apiKey?: string | null } = {};
+  if (enabled !== undefined) payload.enabled = Boolean(enabled);
+  if (model !== undefined) payload.model = String(model);
+  if (apiKey !== undefined) {
+    payload.apiKey = apiKey === '' || apiKey === null ? null : String(apiKey);
+  }
+  res.json(setDeepSeekSettings(payload));
+});
+
+router.post('/deepseek/test', authMiddleware, adminMiddleware, async (_req, res) => {
+  if (!hasAdminPermission(_req.user, 'manage_deepseek')) {
+    return res.status(403).json({ error: 'Нет прав для управления DeepSeek' });
+  }
+  try {
+    await testDeepSeekConnection();
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(400).json({ error: err instanceof Error ? err.message : 'Ошибка DeepSeek' });
+  }
 });
 
 export default router;

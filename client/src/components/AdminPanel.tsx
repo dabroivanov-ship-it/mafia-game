@@ -9,6 +9,7 @@ import {
   adminRenameRoom,
   adminCreateChatRoom,
   adminCreateGameRoom,
+  adminUpdateGameRoomAi,
   adminDeleteChatRoom,
   fetchAdminBanList,
   adminUnsilenceUser,
@@ -28,6 +29,9 @@ import {
   adminSetTelegramSettings,
   fetchMetrikaSettings,
   adminSetMetrikaSettings,
+  fetchDeepSeekSettings,
+  adminSetDeepSeekSettings,
+  adminTestDeepSeekConnection,
   fetchAdminPermissions,
   type AdminRoom,
   type SilencedPlayerEntry,
@@ -144,6 +148,9 @@ export default function AdminPanel({
   });
   const [newChatRoomName, setNewChatRoomName] = useState('');
   const [newGameRoomName, setNewGameRoomName] = useState('');
+  const [newGameRoomAiEnabled, setNewGameRoomAiEnabled] = useState(false);
+  const [newGameRoomAiCount, setNewGameRoomAiCount] = useState(3);
+  const [roomAiEdits, setRoomAiEdits] = useState<Record<number, { aiEnabled: boolean; aiCount: number }>>({});
   const [bannedUsers, setBannedUsers] = useState<User[]>([]);
   const [silencedPlayers, setSilencedPlayers] = useState<SilencedPlayerEntry[]>([]);
   const [banListLoading, setBanListLoading] = useState(false);
@@ -165,6 +172,12 @@ export default function AdminPanel({
   const [metrikaId, setMetrikaId] = useState('');
   const [metrikaDisabled, setMetrikaDisabled] = useState(false);
   const [metrikaSaving, setMetrikaSaving] = useState(false);
+  const [deepseekEnabled, setDeepseekEnabled] = useState(true);
+  const [deepseekModel, setDeepseekModel] = useState('deepseek-chat');
+  const [deepseekApiKey, setDeepseekApiKey] = useState('');
+  const [deepseekApiKeyPreview, setDeepseekApiKeyPreview] = useState<string | null>(null);
+  const [deepseekSaving, setDeepseekSaving] = useState(false);
+  const [deepseekTesting, setDeepseekTesting] = useState(false);
   const [permissions, setPermissions] = useState<AdminPermission[]>([]);
   const [panelRole, setPanelRole] = useState<UserRole>('user');
 
@@ -185,6 +198,17 @@ export default function AdminPanel({
         setRoomEdits(edits);
         dirtyRoomsRef.current.clear();
         roomEditsInitializedRef.current = true;
+
+        const aiEdits: Record<number, { aiEnabled: boolean; aiCount: number }> = {};
+        (data.rooms || []).forEach((r) => {
+          if (r.kind !== 'chat') {
+            aiEdits[r.id] = {
+              aiEnabled: !!r.aiEnabled,
+              aiCount: r.aiCount ?? 0,
+            };
+          }
+        });
+        setRoomAiEdits(aiEdits);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка загрузки');
@@ -221,6 +245,13 @@ export default function AdminPanel({
       .then(({ metrikaId: id }) => {
         setMetrikaDisabled(id === null);
         setMetrikaId(id === null ? '' : String(id));
+      })
+      .catch(() => {});
+    fetchDeepSeekSettings()
+      .then((settings) => {
+        setDeepseekEnabled(settings.enabled);
+        setDeepseekModel(settings.model);
+        setDeepseekApiKeyPreview(settings.apiKeyPreview);
       })
       .catch(() => {});
   }, []);
@@ -273,6 +304,40 @@ export default function AdminPanel({
       setError(err instanceof Error ? err.message : 'Ошибка сохранения настроек Метрики');
     } finally {
       setMetrikaSaving(false);
+    }
+  };
+
+  const handleSaveDeepseekSettings = async (e: FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setDeepseekSaving(true);
+    try {
+      const payload: { enabled: boolean; model: string; apiKey?: string | null } = {
+        enabled: deepseekEnabled,
+        model: deepseekModel.trim() || 'deepseek-chat',
+      };
+      if (deepseekApiKey.trim()) payload.apiKey = deepseekApiKey.trim();
+      const saved = await adminSetDeepSeekSettings(payload);
+      setDeepseekEnabled(saved.enabled);
+      setDeepseekModel(saved.model);
+      setDeepseekApiKeyPreview(saved.apiKeyPreview);
+      setDeepseekApiKey('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка сохранения DeepSeek');
+    } finally {
+      setDeepseekSaving(false);
+    }
+  };
+
+  const handleTestDeepseek = async () => {
+    setError('');
+    setDeepseekTesting(true);
+    try {
+      await adminTestDeepSeekConnection();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'DeepSeek недоступен');
+    } finally {
+      setDeepseekTesting(false);
     }
   };
 
@@ -439,11 +504,27 @@ export default function AdminPanel({
     e.preventDefault();
     if (!newGameRoomName.trim()) return;
     try {
-      await adminCreateGameRoom(newGameRoomName.trim());
+      await adminCreateGameRoom(newGameRoomName.trim(), {
+        aiEnabled: newGameRoomAiEnabled,
+        aiCount: newGameRoomAiEnabled ? newGameRoomAiCount : 0,
+      });
       setNewGameRoomName('');
-      await load();
+      setNewGameRoomAiEnabled(false);
+      setNewGameRoomAiCount(3);
+      await load({ syncRoomNames: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка создания');
+    }
+  };
+
+  const handleSaveRoomAi = async (roomId: number) => {
+    const edit = roomAiEdits[roomId];
+    if (!edit) return;
+    try {
+      await adminUpdateGameRoomAi(roomId, edit);
+      await load({ syncRoomNames: true });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка сохранения ИИ');
     }
   };
 
@@ -693,6 +774,17 @@ export default function AdminPanel({
         onMetrikaIdChange={(value) => setMetrikaId(value.replace(/\D/g, ''))}
         onMetrikaDisabledChange={setMetrikaDisabled}
         onSaveMetrika={(e) => void handleSaveMetrikaSettings(e)}
+        deepseekEnabled={deepseekEnabled}
+        deepseekModel={deepseekModel}
+        deepseekApiKey={deepseekApiKey}
+        deepseekApiKeyPreview={deepseekApiKeyPreview}
+        deepseekSaving={deepseekSaving}
+        deepseekTesting={deepseekTesting}
+        onDeepseekEnabledChange={setDeepseekEnabled}
+        onDeepseekModelChange={setDeepseekModel}
+        onDeepseekApiKeyChange={setDeepseekApiKey}
+        onSaveDeepseek={(e) => void handleSaveDeepseekSettings(e)}
+        onTestDeepseek={() => void handleTestDeepseek()}
         panels={{
           users: (
             <section className="admin-section admin-section-embedded">
@@ -885,9 +977,51 @@ export default function AdminPanel({
                       )}
                       <span className="muted room-meta">
                         {r.playerCount} · {r.phase}
+                        {r.aiEnabled ? ` · ИИ: ${r.aiCount ?? 0}` : ''}
                       </span>
                       {canManageGameRooms && (
                         <>
+                          <label className="admin-ai-toggle">
+                            <input
+                              type="checkbox"
+                              checked={roomAiEdits[r.id]?.aiEnabled ?? !!r.aiEnabled}
+                              onChange={(e) =>
+                                setRoomAiEdits((prev) => ({
+                                  ...prev,
+                                  [r.id]: {
+                                    aiEnabled: e.target.checked,
+                                    aiCount: prev[r.id]?.aiCount ?? r.aiCount ?? 3,
+                                  },
+                                }))
+                              }
+                            />
+                            <span>ИИ</span>
+                          </label>
+                          {(roomAiEdits[r.id]?.aiEnabled ?? !!r.aiEnabled) && (
+                            <input
+                              type="number"
+                              className="admin-ai-count"
+                              min={1}
+                              max={10}
+                              value={roomAiEdits[r.id]?.aiCount ?? r.aiCount ?? 3}
+                              onChange={(e) =>
+                                setRoomAiEdits((prev) => ({
+                                  ...prev,
+                                  [r.id]: {
+                                    aiEnabled: prev[r.id]?.aiEnabled ?? !!r.aiEnabled,
+                                    aiCount: Number(e.target.value) || 1,
+                                  },
+                                }))
+                              }
+                            />
+                          )}
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-ghost"
+                            onClick={() => void handleSaveRoomAi(r.id)}
+                          >
+                            ИИ ✓
+                          </button>
                           <button type="button" className="btn btn-sm btn-primary" onClick={() => void handleRenameRoom(r.id)}>
                             Сохранить
                           </button>
@@ -913,6 +1047,25 @@ export default function AdminPanel({
                   onChange={(e) => setNewGameRoomName(e.target.value)}
                   maxLength={50}
                 />
+                <label className="admin-ai-toggle">
+                  <input
+                    type="checkbox"
+                    checked={newGameRoomAiEnabled}
+                    onChange={(e) => setNewGameRoomAiEnabled(e.target.checked)}
+                  />
+                  <span>ИИ-игроки</span>
+                </label>
+                {newGameRoomAiEnabled && (
+                  <input
+                    type="number"
+                    className="admin-ai-count"
+                    min={1}
+                    max={10}
+                    value={newGameRoomAiCount}
+                    onChange={(e) => setNewGameRoomAiCount(Number(e.target.value) || 1)}
+                    title="Количество ИИ-игроков"
+                  />
+                )}
                 <button type="submit" className="btn btn-primary">+ Создать комнату мафии</button>
               </form>
               )}

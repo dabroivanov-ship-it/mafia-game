@@ -32,6 +32,7 @@ import {
   hydrateRoomHistory,
 } from '../history/store.js';
 import { loadRoomConfigs, saveRoomConfig, deleteRoomConfig, nextRoomId, getRoomSortOrders, reorderRooms } from '../rooms/store.js';
+import { clampAiCount, ensureAiBots, removeAiBots } from './ai/bots.js';
 import { findUserById } from '../auth/db.js';
 import { normalizeGender } from '../auth/gender.js';
 import type {
@@ -51,6 +52,26 @@ import type {
 } from '../types/index.js';
 
 let nextPlayerId = 1;
+
+const phaseChangeListeners: Array<(room: GameRoom) => void> = [];
+
+export function onRoomPhaseChange(listener: (room: GameRoom) => void): void {
+  phaseChangeListeners.push(listener);
+}
+
+function emitRoomPhaseChange(room: GameRoom): void {
+  for (const listener of phaseChangeListeners) {
+    try {
+      listener(room);
+    } catch (err) {
+      console.error('[engine] phase change listener:', err);
+    }
+  }
+}
+
+function allocatePlayerId(): number {
+  return nextPlayerId++;
+}
 
 export const SYSTEM_SENDER_NAME = 'Система';
 export const HOST_SENDER_NAME = 'Ведущий';
@@ -98,6 +119,8 @@ export function createInitialRooms(): Map<number, GameRoom> {
     if (config.kind === 'game') {
       const room = createRoom(id, 'game');
       room.name = config.name;
+      room.aiEnabled = config.aiEnabled;
+      room.aiCount = config.aiCount;
       rooms.set(id, room);
     }
   }
@@ -179,6 +202,10 @@ function createRoom(id: number, kind: RoomKind = 'game'): GameRoom {
     statsSynced: false,
     sessionId: null,
     historyLoaded: false,
+    aiEnabled: false,
+    aiCount: 0,
+    aiHandledPhases: new Set(),
+    votingRound: 0,
   };
 }
 
@@ -224,6 +251,8 @@ export function getLobbySnapshot(rooms: Map<number, GameRoom>): LobbyRoom[] {
       spectatorCount: gameRunning ? room.players.filter((p) => p.connected && !p.inGame).length : 0,
       maxPlayers: room.maxPlayers,
       phase: room.phase,
+      aiEnabled: !!room.aiEnabled,
+      aiCount: room.aiCount ?? 0,
     };
   });
 }
@@ -263,11 +292,39 @@ export function renameRoom(rooms: Map<number, GameRoom>, roomId: number, name: s
   const trimmed = String(name || '').trim().slice(0, 50);
   if (!trimmed) throw new Error('Название не может быть пустым');
   room.name = trimmed;
-  saveRoomConfig(room.id, trimmed, room.kind);
+  saveRoomConfig(room.id, trimmed, room.kind, undefined, {
+    aiEnabled: !!room.aiEnabled,
+    aiCount: room.aiCount ?? 0,
+  });
   return room;
 }
 
-export function addGameRoom(rooms: Map<number, GameRoom>, name: string): GameRoom {
+export function updateGameRoomAi(
+  rooms: Map<number, GameRoom>,
+  roomId: number,
+  aiEnabled: boolean,
+  aiCount: number
+): GameRoom {
+  const room = rooms.get(Number(roomId));
+  if (!room || room.kind !== 'game') throw new Error('Комната не найдена');
+  if (isActiveGamePhase(room.phase)) {
+    throw new Error('Нельзя менять настройки ИИ во время игры');
+  }
+  room.aiEnabled = aiEnabled;
+  room.aiCount = aiEnabled ? clampAiCount(aiCount) : 0;
+  saveRoomConfig(room.id, room.name, room.kind, undefined, {
+    aiEnabled: room.aiEnabled,
+    aiCount: room.aiCount,
+  });
+  removeAiBots(room);
+  return room;
+}
+
+export function addGameRoom(
+  rooms: Map<number, GameRoom>,
+  name: string,
+  options: { aiEnabled?: boolean; aiCount?: number } = {}
+): GameRoom {
   const trimmed = String(name || '').trim().slice(0, 50);
   if (!trimmed) {
     throw new Error('Укажите название комнаты');
@@ -275,9 +332,14 @@ export function addGameRoom(rooms: Map<number, GameRoom>, name: string): GameRoo
   const id = nextRoomId(rooms.keys());
   const room = createRoom(id, 'game');
   room.name = trimmed;
+  room.aiEnabled = !!options.aiEnabled;
+  room.aiCount = room.aiEnabled ? clampAiCount(options.aiCount ?? 0) : 0;
   addSystemMessage(room, `💬 Добро пожаловать в «${room.name}».`);
   rooms.set(id, room);
-  saveRoomConfig(id, room.name, 'game');
+  saveRoomConfig(id, room.name, 'game', undefined, {
+    aiEnabled: room.aiEnabled,
+    aiCount: room.aiCount,
+  });
   return room;
 }
 
@@ -459,7 +521,7 @@ export function finalizePlayerLeave(room: GameRoom, playerId: number): boolean {
 
 export function removePlayer(room: GameRoom, socketId: string, applyPenalty = true): GamePlayer | null {
   const player = room.players.find((p) => p.socketId === socketId);
-  if (!player) return null;
+  if (!player || player.isBot) return null;
 
   const gameActive = !isLobbyPhase(room.phase);
 
@@ -517,10 +579,17 @@ export function startRegistration(room: GameRoom, _starterPlayerId: number | nul
   if (room.phase === PHASE.ENDED) {
     resetRoom(room);
   }
+  removeAiBots(room);
+  room.aiHandledPhases = new Set();
   for (const p of room.players) {
     p.inGame = false;
     p.role = null;
     p.joinGameAvailableAt = 0;
+  }
+
+  const addedBots = ensureAiBots(room, allocatePlayerId);
+  for (const bot of addedBots) {
+    addSystemMessage(room, `${bot.username} (ИИ) присоединяется к игре!`);
   }
 
   room.phase = PHASE.REGISTRATION;
@@ -534,6 +603,7 @@ export function startRegistration(room: GameRoom, _starterPlayerId: number | nul
     'Регистрация открыта! Нажмите «Вступить в игру», чтобы участвовать.'
   );
   setTimer(room, CONFIG.REGISTRATION_SEC * 1000, 'registration');
+  emitRoomPhaseChange(room);
 }
 
 export function joinGame(room: GameRoom, playerId: number): { player: GamePlayer; privateNotes: PrivateNote[] } {
@@ -677,6 +747,7 @@ function beginGame(room: GameRoom): PrivateNote[] {
   addHostMessage(room, getRolesRevealSystemMessage(participants.length));
   room.phase = PHASE.ROLES;
   setTimer(room, CONFIG.ROLE_REVEAL_SEC * 1000, 'roles');
+  emitRoomPhaseChange(room);
   return buildRoleRevealNotes(room);
 }
 
@@ -684,11 +755,13 @@ export function startDayPhase(room: GameRoom): PrivateNote[] {
   room.phase = PHASE.DAY;
   room.votes = {};
   room.votingStarted = false;
+  room.votingRound = 0;
   room.players.forEach((p) => {
     p.hasVoted = false;
   });
   addHostMessage(room, getDayDiscussionMessage(room.nightNumber + 1));
   setTimer(room, CONFIG.DAY_DISCUSSION_SEC * 1000, 'day');
+  emitRoomPhaseChange(room);
   return buildDayDiscussionNotes(room);
 }
 
@@ -696,12 +769,14 @@ export function startVoting(room: GameRoom): PrivateNote[] {
   if (room.phase !== PHASE.DAY) return [];
   room.phase = PHASE.VOTING;
   room.votingStarted = true;
+  room.votingRound = (room.votingRound ?? 0) + 1;
   clearTimer(room);
   room.votes = {};
   room.players.forEach((p) => {
     p.hasVoted = false;
   });
   addHostMessage(room, getVotingStartMessage());
+  emitRoomPhaseChange(room);
   return buildVotingReminderNotes(room);
 }
 
@@ -739,10 +814,12 @@ export function castDayVote(
 
 function restartVotingSelection(room: GameRoom): PrivateNote[] {
   room.votes = {};
+  room.votingRound = (room.votingRound ?? 0) + 1;
   room.players.forEach((p) => {
     p.hasVoted = false;
   });
   addHostMessage(room, getVotingRestartMessage());
+  emitRoomPhaseChange(room);
   return buildVotingReminderNotes(room);
 }
 
@@ -824,6 +901,7 @@ export function startNightPhase(room: GameRoom): PrivateNote[] {
   addHostMessage(room, getNightFallMessage());
 
   setTimer(room, CONFIG.NIGHT_ACTIONS_SEC * 1000, 'night');
+  emitRoomPhaseChange(room);
   return buildNightReminderNotes(room);
 }
 
@@ -1205,9 +1283,13 @@ export function resetRoom(room: GameRoom): void {
   const spectatorChat = room.spectatorChat;
   const privateChat = room.privateChat;
   const historyLoaded = room.historyLoaded;
-  const connectedPlayers = room.players.filter((p) => p.connected);
+  const aiEnabled = room.aiEnabled;
+  const aiCount = room.aiCount;
+  const connectedPlayers = room.players.filter((p) => p.connected && !p.isBot);
   Object.assign(room, createRoom(id, kind));
   room.name = name;
+  room.aiEnabled = aiEnabled;
+  room.aiCount = aiCount;
   room.chat = chat;
   room.mafiaChat = mafiaChat;
   room.deadChat = deadChat;

@@ -64,6 +64,8 @@ import {
   reorderRoomsInMemory,
   addChatRoom,
   addGameRoom,
+  updateGameRoomAi,
+  onRoomPhaseChange,
   clearUserSilenceInAllRooms,
   listSilencedPlayers,
   removeRoom,
@@ -87,6 +89,7 @@ import { ensureNewsUploadsDir } from './upload/newsImage.js';
 import { ensureSiteBrandingUploadsDir } from './upload/siteLogo.js';
 import { ensureSupportUploadsDir } from './upload/supportImage.js';
 import { initAllQuizRooms, initQuizRoom, handleQuizAnswer, isQuizRoom, setQuizBroadcaster } from './quiz/index.js';
+import { initGameAiRunner, triggerGameAi } from './game/ai/runner.js';
 import { buildRobotsTxt, buildSitemapXml } from './seo/siteSeo.js';
 
 assertProductionEnv();
@@ -415,7 +418,9 @@ app.use(
       if (isQuizRoom(room)) initQuizRoom(room);
       return room;
     },
-    addGameRoom: (name) => addGameRoom(rooms, name),
+    addGameRoom: (name, options) => addGameRoom(rooms, name, options),
+    updateGameRoomAi: (roomId, aiEnabled, aiCount) =>
+      updateGameRoomAi(rooms, roomId, aiEnabled, aiCount),
     deleteChatRoom: (id) => adminDeleteRoom(id),
     listSilencedPlayers: () => listSilencedPlayers(rooms),
     clearUserSilence: (userId) => clearUserSilenceInAllRooms(rooms, userId),
@@ -653,6 +658,8 @@ function broadcastRoom(roomId: number): void {
 }
 
 setQuizBroadcaster((roomId) => broadcastRoom(roomId));
+initGameAiRunner((roomId) => broadcastRoom(roomId));
+onRoomPhaseChange((room) => triggerGameAi(room));
 initAllQuizRooms(rooms.values());
 
 function deliverHostNotes(room: GameRoom, privateNotes: PrivateNote[] = []): void {

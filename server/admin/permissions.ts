@@ -21,6 +21,7 @@ export type AdminPermission =
   | 'manage_theme'
   | 'manage_telegram'
   | 'manage_metrika'
+  | 'manage_deepseek'
   | 'manage_backups';
 
 const WATCHER_PERMISSIONS: AdminPermission[] = [
@@ -52,6 +53,7 @@ const ADMIN_PERMISSIONS: AdminPermission[] = [
   'manage_theme',
   'manage_telegram',
   'manage_metrika',
+  'manage_deepseek',
   'manage_backups',
 ];
 

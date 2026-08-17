@@ -71,7 +71,8 @@ export interface AdminRouterHandlers {
   renameRoom: (id: number, name: string) => GameRoom;
   reorderRooms: (kind: 'game' | 'chat', roomIds: number[]) => void;
   addChatRoom: (name: string) => GameRoom;
-  addGameRoom: (name: string) => GameRoom;
+  addGameRoom: (name: string, options?: { aiEnabled?: boolean; aiCount?: number }) => GameRoom;
+  updateGameRoomAi: (roomId: number, aiEnabled: boolean, aiCount: number) => GameRoom;
   deleteChatRoom: (id: number) => void;
   listSilencedPlayers: () => import('../game/engine.js').SilencedPlayerEntry[];
   clearUserSilence: (userId: number) => number;
@@ -182,12 +183,50 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
       if (!name) {
         return res.status(400).json({ error: 'Укажите название комнаты' });
       }
-      const room = handlers.addGameRoom(name);
+      const aiEnabled = !!req.body?.aiEnabled;
+      const aiCount = aiEnabled ? Number(req.body?.aiCount ?? 0) : 0;
+      if (aiEnabled && (!Number.isFinite(aiCount) || aiCount < 1 || aiCount > 10)) {
+        return res.status(400).json({ error: 'Количество ИИ-игроков должно быть от 1 до 10' });
+      }
+      const room = handlers.addGameRoom(name, { aiEnabled, aiCount });
       handlers.onRoomsChanged(room.id);
-      res.status(201).json({ room: { id: room.id, name: room.name, kind: room.kind } });
+      res.status(201).json({
+        room: {
+          id: room.id,
+          name: room.name,
+          kind: room.kind,
+          aiEnabled: !!room.aiEnabled,
+          aiCount: room.aiCount ?? 0,
+        },
+      });
     } catch (e) {
       const err = e as Error;
       res.status(400).json({ error: err.message || 'Не удалось создать комнату' });
+    }
+  });
+
+  router.put('/game-rooms/:roomId', requireAdminPermission('manage_game_rooms'), (req, res) => {
+    try {
+      const roomId = Number(req.params.roomId);
+      const aiEnabled = !!req.body?.aiEnabled;
+      const aiCount = aiEnabled ? Number(req.body?.aiCount ?? 0) : 0;
+      if (aiEnabled && (!Number.isFinite(aiCount) || aiCount < 1 || aiCount > 10)) {
+        return res.status(400).json({ error: 'Количество ИИ-игроков должно быть от 1 до 10' });
+      }
+      const room = handlers.updateGameRoomAi(roomId, aiEnabled, aiCount);
+      handlers.onRoomsChanged(room.id);
+      res.json({
+        room: {
+          id: room.id,
+          name: room.name,
+          kind: room.kind,
+          aiEnabled: !!room.aiEnabled,
+          aiCount: room.aiCount ?? 0,
+        },
+      });
+    } catch (e) {
+      const err = e as Error;
+      res.status(400).json({ error: err.message || 'Не удалось обновить комнату' });
     }
   });
 
