@@ -10,7 +10,6 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
   const [clownStep, setClownStep] = useState<'first' | 'second' | null>(null);
   const [clownFirst, setClownFirst] = useState<number | null>(null);
   const [commissarMode, setCommissarMode] = useState<'check' | 'kill' | null>(null);
-  const [voteTargetId, setVoteTargetId] = useState<number | null>(null);
   const [voteSubmitting, setVoteSubmitting] = useState(false);
 
   const me = state.myPlayer;
@@ -19,17 +18,13 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
 
   useEffect(() => {
     if (state.phase !== 'voting') {
-      setVoteTargetId(null);
       setVoteSubmitting(false);
     }
   }, [state.phase]);
 
   useEffect(() => {
-    if (state.phase === 'voting' && !hasVoted) {
-      setVoteTargetId(null);
-      setVoteSubmitting(false);
-    }
-  }, [state.phase, hasVoted]);
+    setVoteSubmitting(false);
+  }, [state.votingStage, state.accusedId]);
 
   const alive = me?.alive ?? meInList?.alive;
   if (!state.isInGame || !alive || !state.myRole) return null;
@@ -60,42 +55,32 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
   );
 
   if (state.phase === 'day') {
-    return (
-      <div className="action-panel">
-        <h3>Дневные действия</h3>
-        <button type="button" className="btn btn-action btn-lg" onClick={() => emit('game:startVoting')}>
-          Начать голосование
-        </button>
-      </div>
-    );
+    return null;
   }
 
   if (state.phase === 'voting') {
-    if (hasVoted) {
-      const waitingOthers = state.players.some(
-        (p) => p.alive && p.inGame && p.id !== state.myId && !p.hasVoted
-      );
-      return (
-        <div className="action-panel">
-          <p className="muted">Вы подтвердили казнь ✓</p>
-          {waitingOthers && (
+    const votingStage = state.votingStage ?? 'nominate';
+    const hasNominated = hasVoted;
+    const hasHangVoted = state.hasHangVoted ?? me?.hasHangVoted ?? false;
+    const accusedName = state.accusedName;
+
+    if (votingStage === 'confirm') {
+      if (hasHangVoted) {
+        return (
+          <div className="action-panel">
+            <p className="muted">Вы проголосовали ✓</p>
             <p className="muted" style={{ marginTop: 8 }}>
-              Ожидание остальных игроков...
+              Ожидание остальных: казнить {accusedName || 'кандидата'}?
             </p>
-          )}
-        </div>
-      );
-    }
-
-    const voteTarget = voteTargetId != null ? aliveOthers.find((p) => p.id === voteTargetId) : null;
-
-    if (voteTarget) {
-      const targetName = voteTarget.username || voteTarget.name;
+          </div>
+        );
+      }
       return (
         <div className="action-panel">
-          <h3>🗳️ Подтверждение</h3>
-          <p style={{ marginBottom: 16 }}>
-            Вы уверены, что хотите казнить <strong>{targetName}</strong>?
+          <h3>🗳️ Казнить {accusedName || 'кандидата'}?</h3>
+          <p className="muted" style={{ marginBottom: 16 }}>
+            Половина выдвинула этого игрока. «Да» — казнить, «Нет» — оправдать. Если больше половины
+            нажмут «нет», кандидат оправдан и можно выдвинуть другого.
           </p>
           <div className="action-row">
             <button
@@ -104,13 +89,9 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
               disabled={voteSubmitting}
               onClick={() => {
                 setVoteSubmitting(true);
-                void emit('game:vote', { targetId: voteTarget.id, confirmed: true })
+                void emit('game:hangVote', { yes: true })
                   .then((res) => {
-                    if (res?.error) {
-                      setVoteSubmitting(false);
-                      return;
-                    }
-                    setVoteTargetId(null);
+                    if (res?.error) setVoteSubmitting(false);
                   })
                   .catch(() => setVoteSubmitting(false));
               }}
@@ -121,23 +102,51 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
               type="button"
               className="btn btn-ghost"
               disabled={voteSubmitting}
-              onClick={() => setVoteTargetId(null)}
+              onClick={() => {
+                setVoteSubmitting(true);
+                void emit('game:hangVote', { yes: false })
+                  .then((res) => {
+                    if (res?.error) setVoteSubmitting(false);
+                  })
+                  .catch(() => setVoteSubmitting(false));
+              }}
             >
-              Нет — выбрать другого
+              Нет — пощадить
             </button>
           </div>
         </div>
       );
     }
 
+    if (hasNominated) {
+      const waitingOthers = state.players.some(
+        (p) => p.alive && p.inGame && p.id !== state.myId && !p.hasVoted
+      );
+      return (
+        <div className="action-panel">
+          <p className="muted">Вы выдвинули кандидата ✓</p>
+          {waitingOthers && (
+            <p className="muted" style={{ marginTop: 8 }}>
+              Ждём остальных. Кнопки «да» / «нет» появятся, когда одного выберут не меньше половины.
+            </p>
+          )}
+        </div>
+      );
+    }
+
     return (
       <div className="action-panel">
-        <h3>🗳️ Этап отбора — кого казнить?</h3>
+        <h3>🗳️ Выдвиньте кандидата</h3>
         <p className="muted" style={{ marginBottom: 12, fontSize: '0.9rem' }}>
-          Выберите игрока, затем подтвердите или откажитесь и выберите заново.
+          Выберите, кого выдвинуть на казнь. «Да» или «нет» появятся, когда одного игрока выберут не
+          меньше половины.
         </p>
         <div className="target-grid">
-          {aliveOthers.map((p) => targetBtn(p, (id) => setVoteTargetId(id)))}
+          {aliveOthers.map((p) =>
+            targetBtn(p, (id) => {
+              void emit('game:vote', { targetId: id });
+            })
+          )}
         </div>
       </div>
     );

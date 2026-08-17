@@ -22,7 +22,7 @@ export type RoleId =
 
 export type ChatChannel = 'public' | 'mafia' | 'dead' | 'spectator' | 'private';
 
-export type TimerReason = 'registration' | 'roles' | 'day' | 'night';
+export type TimerReason = 'registration' | 'roles' | 'day' | 'voting' | 'night';
 
 export type WinnerTeam = 'town' | 'mafia' | 'draw' | null;
 
@@ -129,6 +129,7 @@ export interface GamePlayer {
   connected: boolean;
   isDon: boolean;
   hasVoted: boolean;
+  hasHangVoted?: boolean;
   nightActionDone: boolean;
   leftEarly?: boolean;
   joinGameAvailableAt?: number;
@@ -156,6 +157,9 @@ export interface GameRoom {
   timerEnd: number | null;
   timerReason: TimerReason | null;
   votes: Record<number, number>;
+  hangVotes: Record<number, boolean>;
+  accusedId: number | null;
+  votingStage: 'nominate' | 'confirm';
   nightActions: Record<number, NightAction>;
   seducedPlayerId: number | null;
   commissarAlive: boolean;
@@ -234,6 +238,7 @@ export interface RoomState {
     connected: boolean;
     alive: boolean;
     hasVoted: boolean;
+    hasHangVoted?: boolean;
     silenced?: boolean;
   } | null;
   myRole: RoleId | null;
@@ -253,6 +258,10 @@ export interface RoomState {
   clownAvailable: boolean;
   votingStarted: boolean;
   myVote: number | null;
+  votingStage: 'nominate' | 'confirm';
+  accusedId: number | null;
+  accusedName: string | null;
+  hasHangVoted: boolean;
   nightActionDone: boolean;
   isAdmin: boolean;
   canModerate: boolean;

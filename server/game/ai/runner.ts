@@ -3,6 +3,7 @@ import { getRoleLabel, isMafiaTeam } from '../roles.js';
 import {
   addChatMessage,
   castDayVote,
+  castHangVote,
   submitNightAction,
   isPlayerSilenced,
 } from '../engine.js';
@@ -27,7 +28,7 @@ export function initGameAiRunner(broadcast: (roomId: number) => void): void {
 function phaseKey(room: GameRoom): string | null {
   if (room.phase === PHASE.DAY) return `day:${room.sessionId}:${room.nightNumber}`;
   if (room.phase === PHASE.VOTING) {
-    return `voting:${room.sessionId}:${room.nightNumber}:${room.votingRound ?? 0}`;
+    return `voting:${room.sessionId}:${room.nightNumber}:${room.votingRound ?? 0}:${room.votingStage ?? 'nominate'}`;
   }
   if (room.phase === PHASE.NIGHT) return `night:${room.sessionId}:${room.nightNumber}`;
   return null;
@@ -355,9 +356,14 @@ async function runDayChat(room: GameRoom): Promise<void> {
 }
 
 async function runVoting(room: GameRoom): Promise<void> {
+  if (room.votingStage === 'confirm') {
+    await runHangConfirm(room);
+    return;
+  }
+
   const bots = aliveBots(room).filter((p) => !p.hasVoted);
   for (const bot of bots) {
-    if (room.phase !== PHASE.VOTING) return;
+    if (room.phase !== PHASE.VOTING || room.votingStage === 'confirm') return;
     await sleep(BOT_DELAY_MS + Math.random() * 1200);
 
     const targets = aliveTargets(room, bot.id);
@@ -367,14 +373,38 @@ async function runVoting(room: GameRoom): Promise<void> {
     const response = await askDeepSeek<{ targetId?: number | null }>(
       bot,
       room,
-      `Выбери, за кого голосовать на дневном голосовании в ЭТОЙ партии. Учитывай переписку, голоса и сообщения ведущего.${bot.isDon ? ' Ты главарь — голосуй вместе с городом или против угроз, не выделяйся.' : ''} Доступные id: ${targets.map((p) => p.id).join(', ')}. JSON: {"targetId":число}`
+      `Выдвини кандидата на казнь в ЭТОЙ партии. Это ещё не казнь, а только выдвижение. Учитывай переписку и сообщения ведущего.${bot.isDon ? ' Ты главарь — не выделяйся.' : ''} Доступные id: ${targets.map((p) => p.id).join(', ')}. JSON: {"targetId":число}`
     );
     const targetId = targets.find((p) => p.id === Number(response?.targetId))?.id ?? fallback.id;
 
     try {
-      castDayVote(room, bot.id, targetId, true);
+      castDayVote(room, bot.id, targetId);
     } catch (err) {
       console.error(`[ai] vote bot ${bot.id}:`, err);
+    }
+    broadcastRoom(room.id);
+  }
+}
+
+async function runHangConfirm(room: GameRoom): Promise<void> {
+  const accused = room.players.find((p) => p.id === room.accusedId);
+  const accusedName = accused?.username || accused?.name || 'кандидат';
+  const bots = aliveBots(room).filter((p) => !p.hasHangVoted);
+  for (const bot of bots) {
+    if (room.phase !== PHASE.VOTING || room.votingStage !== 'confirm') return;
+    await sleep(BOT_DELAY_MS + Math.random() * 900);
+
+    const response = await askDeepSeek<{ yes?: boolean }>(
+      bot,
+      room,
+      `На голосовании кандидат ${accusedName} (id ${room.accusedId}). Реши: казнить (yes:true) или пощадить (yes:false).${bot.isDon ? ' Ты главарь — голосуй вместе с городом, не выделяйся.' : ''} JSON: {"yes":true|false}`
+    );
+    const yes = response?.yes !== false;
+
+    try {
+      castHangVote(room, bot.id, yes);
+    } catch (err) {
+      console.error(`[ai] hang vote bot ${bot.id}:`, err);
     }
     broadcastRoom(room.id);
   }

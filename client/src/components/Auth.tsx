@@ -503,22 +503,27 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
         )}
 
         {!vkSetup && mode === 'login' && !telegramWebAppMode && (
-          <>
-            <TelegramLoginWidget
-              loginReady={telegramLoginReady}
-              oidcRedirectUri={telegramOidcRedirectUri}
-              remember={rememberMe}
-              loading={telegramLoading || vkLoading}
-              onError={setError}
-            />
-            <VkLoginWidget
-              loginReady={vkLoginReady}
-              redirectUri={vkRedirectUri}
-              remember={rememberMe}
-              loading={telegramLoading || vkLoading}
-              onError={setError}
-            />
-          </>
+          <div className="auth-social">
+            <p className="auth-social-or">
+              <span>или</span>
+            </p>
+            <div className="auth-social-row">
+              <TelegramLoginWidget
+                loginReady={telegramLoginReady}
+                oidcRedirectUri={telegramOidcRedirectUri}
+                remember={rememberMe}
+                loading={telegramLoading || vkLoading}
+                onError={setError}
+              />
+              <VkLoginWidget
+                loginReady={vkLoginReady}
+                redirectUri={vkRedirectUri}
+                remember={rememberMe}
+                loading={telegramLoading || vkLoading}
+                onError={setError}
+              />
+            </div>
+          </div>
         )}
 
 

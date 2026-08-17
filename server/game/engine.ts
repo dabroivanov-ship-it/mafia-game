@@ -17,11 +17,14 @@ import {
   getScoreSummaryMessage,
   getDayDiscussionMessage,
   getVotingStartMessage,
+  getVotingTimeoutMessage,
   getVotingCastMessage,
   getHangVerdictMessage,
   getVotingTieMessage,
   getVotingCountMessage,
   getVotingMajorityMessage,
+  getHangChoiceMessage,
+  getVotingSparedMessage,
   getVotingRestartMessage,
   playerNick,
   type NightReport,
@@ -189,6 +192,9 @@ function createRoom(id: number, kind: RoomKind = 'game'): GameRoom {
     timerEnd: null,
     timerReason: null,
     votes: {},
+    hangVotes: {},
+    accusedId: null,
+    votingStage: 'nominate',
     nightActions: {},
     seducedPlayerId: null,
     commissarAlive: true,
@@ -446,6 +452,7 @@ export function addPlayerToRoom(
     connected: true,
     isDon: false,
     hasVoted: false,
+    hasHangVoted: false,
     nightActionDone: false,
     leftEarly: false,
   };
@@ -737,6 +744,7 @@ function beginGame(room: GameRoom): PrivateNote[] {
     p.score = 0;
     p.isDon = false;
     p.hasVoted = false;
+    p.hasHangVoted = false;
     p.nightActionDone = false;
     p.leftEarly = false;
   });
@@ -778,15 +786,19 @@ function beginGame(room: GameRoom): PrivateNote[] {
 export function startDayPhase(room: GameRoom): PrivateNote[] {
   room.phase = PHASE.DAY;
   room.votes = {};
+  room.hangVotes = {};
+  room.accusedId = null;
+  room.votingStage = 'nominate';
   room.votingStarted = false;
   room.votingRound = 0;
   room.players.forEach((p) => {
     p.hasVoted = false;
+    p.hasHangVoted = false;
   });
   addHostMessage(room, getDayDiscussionMessage(room.nightNumber + 1));
-  setTimer(room, CONFIG.DAY_DISCUSSION_SEC * 1000, 'day');
-  emitRoomPhaseChange(room);
-  return buildDayDiscussionNotes(room);
+  const notes = startVoting(room);
+  notes.push(...buildDayDiscussionNotes(room));
+  return notes;
 }
 
 export function startVoting(room: GameRoom): PrivateNote[] {
@@ -794,14 +806,28 @@ export function startVoting(room: GameRoom): PrivateNote[] {
   room.phase = PHASE.VOTING;
   room.votingStarted = true;
   room.votingRound = (room.votingRound ?? 0) + 1;
-  clearTimer(room);
+  room.votingStage = 'nominate';
+  room.accusedId = null;
   room.votes = {};
+  room.hangVotes = {};
   room.players.forEach((p) => {
     p.hasVoted = false;
+    p.hasHangVoted = false;
   });
   addHostMessage(room, getVotingStartMessage());
+  setTimer(room, CONFIG.VOTING_SEC * 1000, 'voting');
   emitRoomPhaseChange(room);
   return buildVotingReminderNotes(room);
+}
+
+export function onVotingTimerEnd(room: GameRoom): PrivateNote[] {
+  if (room.phase !== PHASE.VOTING) return [];
+  if (room.votingStage === 'confirm') {
+    return resolveHangVote(room, true);
+  }
+  addHostMessage(room, getVotingTimeoutMessage());
+  if (checkWin(room)) return [];
+  return startNightPhase(room);
 }
 
 export function onDayTimerEnd(room: GameRoom): PrivateNote[] {
@@ -813,33 +839,64 @@ export function castDayVote(
   room: GameRoom,
   voterId: number,
   targetId: number,
-  confirmed = false
+  _confirmed = false
 ): PrivateNote[] {
   if (room.phase !== PHASE.VOTING) throw new Error('Сейчас не время голосования');
-  if (!confirmed) throw new Error('Подтвердите голос: «Да» или «Нет»');
+  if (room.votingStage === 'confirm') {
+    throw new Error('Кандидат уже выбран — голосуйте да или нет');
+  }
 
   const voter = room.players.find((p) => p.id === voterId);
   const target = room.players.find((p) => p.id === targetId);
   if (!voter?.inGame || !voter.role) throw new Error('Вы не участвуете в игре');
   if (!voter?.alive || !target?.alive) throw new Error('Недопустимый голос');
   if (voterId === targetId) throw new Error('Нельзя голосовать за себя');
-  if (voter.hasVoted) throw new Error('Вы уже проголосовали');
+  if (voter.hasVoted) throw new Error('Вы уже выдвинули кандидата');
 
   room.votes[voterId] = targetId;
   voter.hasVoted = true;
   addHostMessage(room, getVotingCastMessage(voter, target));
 
   const eligibleVoters = getEligibleVoters(room);
-  const majorityTarget = findMajorityTarget(room, eligibleVoters.length);
-  if (majorityTarget != null) {
-    const votesForTarget = Object.values(room.votes).filter((id) => id === majorityTarget).length;
-    addHostMessage(room, getVotingMajorityMessage(votesForTarget, eligibleVoters.length));
-    return hangFromVoting(room, majorityTarget);
+  const nominated = findNominateTarget(room, eligibleVoters.length);
+  if (nominated != null) {
+    return beginHangConfirm(room, nominated);
   }
 
   if (eligibleVoters.every((p) => p.hasVoted)) {
     addHostMessage(room, getVotingCountMessage());
-    return resolveDayVote(room);
+    return resolveNominations(room);
+  }
+  return [];
+}
+
+export function castHangVote(room: GameRoom, voterId: number, yes: boolean): PrivateNote[] {
+  if (room.phase !== PHASE.VOTING) throw new Error('Сейчас не время голосования');
+  if (room.votingStage !== 'confirm' || room.accusedId == null) {
+    throw new Error('Сначала нужно выдвинуть кандидата');
+  }
+
+  const voter = room.players.find((p) => p.id === voterId);
+  if (!voter?.inGame || !voter.role || !voter.alive) throw new Error('Вы не участвуете в игре');
+  if (voter.hasHangVoted) throw new Error('Вы уже проголосовали');
+
+  room.hangVotes[voterId] = yes;
+  voter.hasHangVoted = true;
+  addHostMessage(room, getHangChoiceMessage(voter, yes));
+
+  const eligibleVoters = getEligibleVoters(room);
+  const threshold = getHangVoteThreshold(eligibleVoters.length);
+  const yesCount = Object.values(room.hangVotes).filter(Boolean).length;
+  const noCount = Object.values(room.hangVotes).filter((vote) => !vote).length;
+  if (yesCount >= threshold) {
+    return hangFromVoting(room, room.accusedId);
+  }
+  if (noCount >= threshold) {
+    return acquitAndRenominate(room);
+  }
+
+  if (eligibleVoters.every((p) => p.hasHangVoted)) {
+    return resolveHangVote(room, false);
   }
   return [];
 }
@@ -852,9 +909,13 @@ function getHangVoteThreshold(eligibleCount: number): number {
   return Math.floor(eligibleCount / 2) + 1;
 }
 
-function findMajorityTarget(room: GameRoom, eligibleCount: number): number | null {
+function getNominateThreshold(eligibleCount: number): number {
+  return Math.ceil(eligibleCount / 2);
+}
+
+function findNominateTarget(room: GameRoom, eligibleCount: number): number | null {
   if (eligibleCount <= 0) return null;
-  const threshold = getHangVoteThreshold(eligibleCount);
+  const threshold = getNominateThreshold(eligibleCount);
   const tally: Record<number, number> = {};
   for (const targetId of Object.values(room.votes)) {
     tally[targetId] = (tally[targetId] || 0) + 1;
@@ -863,6 +924,23 @@ function findMajorityTarget(room: GameRoom, eligibleCount: number): number | nul
     if (count >= threshold) return Number(id);
   }
   return null;
+}
+
+function beginHangConfirm(room: GameRoom, accusedId: number): PrivateNote[] {
+  const accused = room.players.find((p) => p.id === accusedId);
+  if (!accused) return [];
+  const eligible = getEligibleVoters(room);
+  const votesFor = Object.values(room.votes).filter((id) => id === accusedId).length;
+  room.votingStage = 'confirm';
+  room.accusedId = accusedId;
+  room.hangVotes = {};
+  room.votingRound = (room.votingRound ?? 0) + 1;
+  room.players.forEach((p) => {
+    p.hasHangVoted = false;
+  });
+  addHostMessage(room, getVotingMajorityMessage(votesFor, eligible.length, playerNick(accused)));
+  emitRoomPhaseChange(room);
+  return [];
 }
 
 function hangFromVoting(room: GameRoom, playerId: number): PrivateNote[] {
@@ -877,44 +955,69 @@ function hangFromVoting(room: GameRoom, playerId: number): PrivateNote[] {
   return notes;
 }
 
-function restartVotingSelection(room: GameRoom): PrivateNote[] {
+function acquitAndRenominate(room: GameRoom): PrivateNote[] {
+  const accused = room.accusedId != null ? room.players.find((p) => p.id === room.accusedId) : null;
+  if (accused) addHostMessage(room, getVotingSparedMessage(accused));
   room.votes = {};
+  room.hangVotes = {};
+  room.accusedId = null;
+  room.votingStage = 'nominate';
   room.votingRound = (room.votingRound ?? 0) + 1;
   room.players.forEach((p) => {
     p.hasVoted = false;
+    p.hasHangVoted = false;
   });
   addHostMessage(room, getVotingRestartMessage());
   emitRoomPhaseChange(room);
   return buildVotingReminderNotes(room);
 }
 
-function resolveDayVote(room: GameRoom): PrivateNote[] {
-  const tally: Record<number, number> = {};
-  for (const targetId of Object.values(room.votes)) {
-    tally[targetId] = (tally[targetId] || 0) + 1;
-  }
+function restartVotingSelection(room: GameRoom): PrivateNote[] {
+  room.votes = {};
+  room.hangVotes = {};
+  room.accusedId = null;
+  room.votingStage = 'nominate';
+  room.votingRound = (room.votingRound ?? 0) + 1;
+  room.players.forEach((p) => {
+    p.hasVoted = false;
+    p.hasHangVoted = false;
+  });
+  addHostMessage(room, getVotingRestartMessage());
+  setTimer(room, CONFIG.VOTING_SEC * 1000, 'voting');
+  emitRoomPhaseChange(room);
+  return buildVotingReminderNotes(room);
+}
 
-  let maxVotes = 0;
-  let candidates: number[] = [];
-  for (const [id, count] of Object.entries(tally)) {
-    if (count > maxVotes) {
-      maxVotes = count;
-      candidates = [Number(id)];
-    } else if (count === maxVotes) {
-      candidates.push(Number(id));
-    }
+function resolveNominations(room: GameRoom): PrivateNote[] {
+  const nominated = findNominateTarget(room, getEligibleVoters(room).length);
+  if (nominated != null) {
+    return beginHangConfirm(room, nominated);
   }
-
-  if (candidates.length === 1 && maxVotes > 0) {
-    const threshold = getHangVoteThreshold(getEligibleVoters(room).length);
-    if (maxVotes >= threshold) {
-      return hangFromVoting(room, candidates[0]);
-    }
-  }
-
   addHostMessage(room, getVotingTieMessage());
   if (checkWin(room)) return [];
   return restartVotingSelection(room);
+}
+
+function resolveHangVote(room: GameRoom, timedOut: boolean): PrivateNote[] {
+  const accusedId = room.accusedId;
+  const accused = accusedId != null ? room.players.find((p) => p.id === accusedId) : null;
+  const eligibleVoters = getEligibleVoters(room);
+  const threshold = getHangVoteThreshold(eligibleVoters.length);
+  const yesCount = Object.values(room.hangVotes).filter(Boolean).length;
+  const noCount = Object.values(room.hangVotes).filter((vote) => !vote).length;
+  if (accused && yesCount >= threshold) {
+    return hangFromVoting(room, accused.id);
+  }
+  if (!timedOut && accused && noCount >= threshold) {
+    return acquitAndRenominate(room);
+  }
+  if (!timedOut) {
+    return acquitAndRenominate(room);
+  }
+  if (accused) addHostMessage(room, getVotingTimeoutMessage());
+  else addHostMessage(room, getVotingTimeoutMessage());
+  if (checkWin(room)) return [];
+  return startNightPhase(room);
 }
 
 function transferMafiaDon(room: GameRoom, deadPlayer: GamePlayer): PrivateNote[] {
@@ -1327,8 +1430,8 @@ function endGame(room: GameRoom, team: 'town' | 'mafia' | 'draw', message: strin
   room.phase = PHASE.ENDED;
   room.winnerTeam = team;
   clearTimer(room);
-  addHostMessage(room, `🏁 ${message}`);
-  addHostMessage(room, getGameEndRolesMessage(room));
+  const rolesMsg = getGameEndRolesMessage(room);
+  addHostMessage(room, rolesMsg ? `🏁 ${message} ${rolesMsg}` : `🏁 ${message}`);
   const scoreMsg = getScoreSummaryMessage(room);
   if (scoreMsg) addHostMessage(room, scoreMsg);
   saveGameEvent(room.id, room.sessionId, 'game_end', {
@@ -1384,6 +1487,7 @@ export function resetRoom(room: GameRoom): void {
     score: 0,
     isDon: false,
     hasVoted: false,
+    hasHangVoted: false,
     nightActionDone: false,
     leftEarly: false,
     silencedUntil: null,
@@ -2077,6 +2181,7 @@ export function serializeRoomForPlayer(
             connected: me.connected,
             alive: true,
             hasVoted: false,
+            hasHangVoted: false,
             silenced: isPlayerSilenced(me),
           }
         : null,
@@ -2097,6 +2202,10 @@ export function serializeRoomForPlayer(
       clownAvailable: false,
       votingStarted: false,
       myVote: null,
+      votingStage: 'nominate',
+      accusedId: null,
+      accusedName: null,
+      hasHangVoted: false,
       nightActionDone: false,
       isAdmin,
       canModerate,
@@ -2152,6 +2261,7 @@ export function serializeRoomForPlayer(
           connected: me.connected,
           alive: me.alive,
           hasVoted: me.hasVoted,
+          hasHangVoted: !!me.hasHangVoted,
           silenced: isPlayerSilenced(me),
         }
       : null,
@@ -2183,6 +2293,15 @@ export function serializeRoomForPlayer(
     clownAvailable: me?.role === 'clown' && !room.clownUsed,
     votingStarted: room.votingStarted,
     myVote: room.votes[playerId] || null,
+    votingStage: room.votingStage || 'nominate',
+    accusedId: room.accusedId ?? null,
+    accusedName:
+      room.accusedId != null
+        ? room.players.find((p) => p.id === room.accusedId)?.username ||
+          room.players.find((p) => p.id === room.accusedId)?.name ||
+          null
+        : null,
+    hasHangVoted: !!me?.hasHangVoted,
     nightActionDone: me?.nightActionDone || false,
     isAdmin,
     canModerate,

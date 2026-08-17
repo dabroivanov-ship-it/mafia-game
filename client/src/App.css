@@ -439,26 +439,77 @@ html.telegram-webapp .app-body {
   cursor: pointer;
 }
 
+.auth-social {
+  margin-top: 16px;
+}
+
+.auth-social-or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 12px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.auth-social-or::before,
+.auth-social-or::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.auth-social-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.auth-social-btn {
+  flex: 1;
+  min-width: 4.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 4px;
+  min-height: 58px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-hover) 80%, transparent);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.auth-social-btn:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+  background: var(--bg-hover);
+}
+
+.auth-social-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.auth-social-btn-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
 .auth-telegram-block {
-  margin-top: 12px;
-  margin-bottom: 8px;
+  flex: 1;
+  margin: 0;
   padding: 0;
   border: none;
   background: none;
-}
-
-.auth-telegram-btn {
-  width: 100%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 8px 12px;
-  font-size: 0.9rem;
-  min-height: 38px;
-  background: #229ed9;
-  border-color: #229ed9;
-  color: #fff;
 }
 
 .auth-telegram-hint,
@@ -469,15 +520,10 @@ html.telegram-webapp .app-body {
   background: var(--bg-hover);
 }
 
-.auth-telegram-btn:hover:not(:disabled) {
-  background: #1e8fc7;
-  border-color: #1e8fc7;
-}
-
 .auth-telegram-btn-icon {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  color: #229ed9;
 }
 
 .auth-telegram-loading {
@@ -496,9 +542,14 @@ html.telegram-webapp .app-body {
   font-size: 0.85em;
 }
 
+.auth-social-row .auth-telegram-hint,
+.auth-social-row .auth-vk-hint {
+  flex: 1 1 100%;
+}
+
 .auth-vk-block {
-  margin-top: 8px;
-  margin-bottom: 4px;
+  flex: 1;
+  margin: 0;
   padding: 0;
   border: none;
   background: none;
@@ -510,9 +561,6 @@ html.telegram-webapp .app-body {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 8px 12px;
-  font-size: 0.9rem;
-  min-height: 38px;
   background: #0077ff;
   border-color: #0077ff;
   color: #fff;
@@ -524,9 +572,10 @@ html.telegram-webapp .app-body {
 }
 
 .auth-vk-btn-icon {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
+  color: #0077ff;
 }
 
 .auth-vk-hint {

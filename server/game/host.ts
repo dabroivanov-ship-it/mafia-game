@@ -616,9 +616,31 @@ export function getVotingCountMessage(): string {
 
 
 
-export function getVotingMajorityMessage(votes: number, total: number): string {
+export function getVotingMajorityMessage(votes: number, total: number, name: string): string {
 
-  return getPhraseText('voting.majority', { votes, total });
+  return getPhraseText('voting.majority', { votes, total, name });
+
+}
+
+
+
+export function getHangChoiceMessage(voter: GamePlayer, yes: boolean): string {
+
+  return getPhraseText('voting.hang_choice', {
+
+    voter: playerNick(voter),
+
+    choice: yes ? 'да, казнить' : 'нет, пощадить',
+
+  });
+
+}
+
+
+
+export function getVotingSparedMessage(player: GamePlayer): string {
+
+  return getPhraseText('voting.spared', { name: playerNick(player) });
 
 }
 
@@ -643,6 +665,14 @@ export function getDayDiscussionMessage(dayNumber: number): string {
 export function getVotingStartMessage(): string {
 
   return getPhraseText('voting.start');
+
+}
+
+
+
+export function getVotingTimeoutMessage(): string {
+
+  return getPhraseText('voting.timeout');
 
 }
 
@@ -778,15 +808,12 @@ export function getMorningIntroMessage(killed: GamePlayer[]): string {
 
 
 export function getGameEndRolesMessage(room: GameRoom): string {
-
   const donId =
     room.players.find((p) => p.inGame && p.role === 'mafia' && p.isDon)?.id ??
     room.mafiaDonId;
 
   const lines = room.players
-
-    .filter((p) => p.inGame && p.role)
-
+    .filter((p) => p.inGame && p.alive && p.role)
     .map((p) => {
       const role = getRoleLabel(p.role);
       if (p.role === 'mafia' && p.id === donId) {
@@ -795,8 +822,8 @@ export function getGameEndRolesMessage(room: GameRoom): string {
       return `${playerNick(p)} — ${role}`;
     });
 
+  if (!lines.length) return '';
   return `А роли были такие: ${lines.join(', ')}`;
-
 }
 
 

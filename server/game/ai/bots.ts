@@ -63,6 +63,7 @@ export function createBotPlayer(room: GameRoom, playerId: number): GamePlayer {
     connected: true,
     isDon: false,
     hasVoted: false,
+    hasHangVoted: false,
     nightActionDone: false,
     isBot: true,
     leftEarly: false,

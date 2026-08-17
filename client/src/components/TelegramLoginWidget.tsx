@@ -44,16 +44,15 @@ export default function TelegramLoginWidget({
   }
 
   return (
-    <div className="auth-telegram-block">
-      <button
-        type="button"
-        className="btn btn-primary auth-telegram-btn"
-        onClick={handleLogin}
-        disabled={loading}
-      >
-        <TelegramIcon className="auth-telegram-btn-icon" />
-        {loading ? 'Входим через Telegram...' : 'Войти через Telegram'}
-      </button>
-    </div>
+    <button
+      type="button"
+      className="auth-social-btn"
+      onClick={handleLogin}
+      disabled={loading}
+      title={loading ? 'Входим через Telegram...' : 'Войти через Telegram'}
+    >
+      <TelegramIcon className="auth-social-btn-icon auth-telegram-btn-icon" />
+      <span>Telegram</span>
+    </button>
   );
 }

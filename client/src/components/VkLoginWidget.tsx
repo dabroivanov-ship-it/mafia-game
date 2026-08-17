@@ -47,16 +47,15 @@ export default function VkLoginWidget({
   }
 
   return (
-    <div className="auth-vk-block">
-      <button
-        type="button"
-        className="btn auth-vk-btn"
-        onClick={handleLogin}
-        disabled={loading}
-      >
-        <VkIcon className="auth-vk-btn-icon" />
-        {loading ? 'Входим через VK...' : 'Войти через VK'}
-      </button>
-    </div>
+    <button
+      type="button"
+      className="auth-social-btn"
+      onClick={handleLogin}
+      disabled={loading}
+      title={loading ? 'Входим через VK...' : 'Войти через VK'}
+    >
+      <VkIcon className="auth-social-btn-icon auth-vk-btn-icon" />
+      <span>VK</span>
+    </button>
   );
 }

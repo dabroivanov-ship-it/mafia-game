@@ -174,6 +174,7 @@ export interface MyPlayer {
   connected: boolean;
   alive?: boolean;
   hasVoted?: boolean;
+  hasHangVoted?: boolean;
   silenced?: boolean;
 }
 
@@ -212,6 +213,10 @@ export interface RoomState {
   clownAvailable: boolean;
   votingStarted: boolean;
   myVote: number | null;
+  votingStage?: 'nominate' | 'confirm';
+  accusedId?: number | null;
+  accusedName?: string | null;
+  hasHangVoted?: boolean;
   nightActionDone: boolean;
   isAdmin: boolean;
   canModerate: boolean;

@@ -47,9 +47,11 @@ import {
   onRegistrationTimerEnd,
   onRolesTimerEnd,
   onDayTimerEnd,
+  onVotingTimerEnd,
   onNightTimerEnd,
   startVoting,
   castDayVote,
+  castHangVote,
   submitNightAction,
   addChatMessage,
   addPrivateChatMessage,
@@ -711,6 +713,8 @@ setInterval(() => {
       privateNotes = onRolesTimerEnd(room);
     } else if (reason === 'day') {
       privateNotes = onDayTimerEnd(room);
+    } else if (reason === 'voting') {
+      privateNotes = onVotingTimerEnd(room);
     } else if (reason === 'night') {
       const result = onNightTimerEnd(room);
       if (result?.privateNotes) privateNotes = result.privateNotes;
@@ -1058,7 +1062,25 @@ io.on('connection', (socket) => {
     if (!ctx) return;
     const { session, room } = ctx;
     try {
-      const notes = castDayVote(room, session.playerId, targetId, confirmed === true);
+      const notes =
+        room.votingStage === 'confirm'
+          ? castHangVote(room, session.playerId, confirmed === true)
+          : castDayVote(room, session.playerId, targetId, confirmed === true);
+      deliverHostNotes(room, notes);
+      broadcastRoom(room.id);
+      cb?.({ ok: true });
+    } catch (e) {
+      const err = e as Error;
+      cb?.({ error: err.message });
+    }
+  });
+
+  socket.on('game:hangVote', ({ yes }, cb) => {
+    const ctx = requireRoomPlayer(socket, cb);
+    if (!ctx) return;
+    const { session, room } = ctx;
+    try {
+      const notes = castHangVote(room, session.playerId, yes === true);
       deliverHostNotes(room, notes);
       broadcastRoom(room.id);
       cb?.({ ok: true });
