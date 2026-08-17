@@ -105,7 +105,6 @@ const SYSTEM_CATEGORIES: {
       { view: 'theme', label: 'Тема сайта' },
       { view: 'telegram', label: 'Telegram-бот' },
       { view: 'metrika', label: 'Яндекс.Метрика' },
-      { view: 'deepseek', label: 'DeepSeek (ИИ)' },
     ],
   },
   {
@@ -115,6 +114,7 @@ const SYSTEM_CATEGORIES: {
     links: [
       { view: 'phrases', label: 'Фразы ведущего' },
       { view: 'game-rooms', label: 'Комнаты мафии' },
+      { view: 'deepseek', label: 'DeepSeek (ИИ)' },
       { view: 'chat-rooms', label: 'Комнаты чата' },
     ],
   },

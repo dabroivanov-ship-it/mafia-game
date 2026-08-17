@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authMiddleware, adminMiddleware } from '../auth/jwt.js';
+import { authMiddleware, adminMiddleware, panelMiddleware } from '../auth/jwt.js';
 import { hasAdminPermission } from '../admin/permissions.js';
 import {
   getDefaultTheme,
@@ -128,15 +128,15 @@ router.put('/lobby-announcement', authMiddleware, (req, res) => {
   res.json({ lobbyAnnouncement });
 });
 
-router.get('/deepseek', authMiddleware, adminMiddleware, (_req, res) => {
-  if (!hasAdminPermission(_req.user, 'manage_deepseek')) {
+router.get('/deepseek', authMiddleware, panelMiddleware, (req, res) => {
+  if (!hasAdminPermission(req.user, 'manage_game_rooms')) {
     return res.status(403).json({ error: 'Нет прав для управления DeepSeek' });
   }
   res.json(getDeepSeekSettings());
 });
 
-router.put('/deepseek', authMiddleware, adminMiddleware, (req, res) => {
-  if (!hasAdminPermission(req.user, 'manage_deepseek')) {
+router.put('/deepseek', authMiddleware, panelMiddleware, (req, res) => {
+  if (!hasAdminPermission(req.user, 'manage_game_rooms')) {
     return res.status(403).json({ error: 'Нет прав для управления DeepSeek' });
   }
   const enabled = req.body?.enabled;
@@ -151,8 +151,8 @@ router.put('/deepseek', authMiddleware, adminMiddleware, (req, res) => {
   res.json(setDeepSeekSettings(payload));
 });
 
-router.post('/deepseek/test', authMiddleware, adminMiddleware, async (_req, res) => {
-  if (!hasAdminPermission(_req.user, 'manage_deepseek')) {
+router.post('/deepseek/test', authMiddleware, panelMiddleware, async (req, res) => {
+  if (!hasAdminPermission(req.user, 'manage_game_rooms')) {
     return res.status(403).json({ error: 'Нет прав для управления DeepSeek' });
   }
   try {

@@ -42,6 +42,7 @@ const MODERATOR_PERMISSIONS: AdminPermission[] = [
   'manage_news',
   'manage_game_rooms',
   'manage_chat_rooms',
+  'manage_deepseek',
 ];
 
 const ADMIN_PERMISSIONS: AdminPermission[] = [
@@ -53,7 +54,6 @@ const ADMIN_PERMISSIONS: AdminPermission[] = [
   'manage_theme',
   'manage_telegram',
   'manage_metrika',
-  'manage_deepseek',
   'manage_backups',
 ];
 
