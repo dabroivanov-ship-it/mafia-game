@@ -1,5 +1,5 @@
 # robots.txt — Мафия онлайн
-# https://24vpsbro.ru
+# https://realmafia.online
 
 User-agent: *
 Disallow: /api/
@@ -20,7 +20,7 @@ Disallow: /api/
 Disallow: /socket.io/
 Disallow: /uploads/
 Disallow: /profile/
-Host: 24vpsbro.ru
+Host: realmafia.online
 Clean-param: tg_token&tg_error /
 
-Sitemap: https://24vpsbro.ru/sitemap.xml
+Sitemap: https://realmafia.online/sitemap.xml

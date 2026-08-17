@@ -20,7 +20,7 @@ export function getSiteOrigin(): string {
   if (typeof window !== 'undefined' && window.location.origin) {
     return window.location.origin;
   }
-  return 'https://24vpsbro.ru';
+  return 'https://realmafia.online';
 }
 
 function upsertMeta(name: string, content: string, attr: 'name' | 'property' = 'name') {

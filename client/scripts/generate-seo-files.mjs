@@ -9,7 +9,7 @@ const origin =
   process.env.SITE_URL?.replace(/\/+$/, '') ||
   process.env.VITE_SITE_URL?.replace(/\/+$/, '') ||
   process.env.CORS_ORIGIN?.split(',')[0]?.trim().replace(/\/+$/, '') ||
-  'https://24vpsbro.ru';
+  'https://realmafia.online';
 
 const host = origin.replace(/^https?:\/\//, '');
 

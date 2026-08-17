@@ -23,7 +23,7 @@ export function getPublicSiteOrigin(): string {
     process.env.CORS_ORIGIN?.split(',')[0]?.trim() ||
     process.env.VITE_SITE_URL?.trim();
   if (fromEnv) return fromEnv.replace(/\/+$/, '');
-  return 'https://24vpsbro.ru';
+  return 'https://realmafia.online';
 }
 
 export function buildRobotsTxt(origin = getPublicSiteOrigin()): string {
