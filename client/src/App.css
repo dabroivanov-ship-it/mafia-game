@@ -3504,6 +3504,13 @@ html.telegram-webapp .app-body {
   max-width: 1180px;
   margin: 0 auto;
   padding: 24px 16px;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.admin-header-sub {
+  line-height: 1.45;
+  word-break: break-word;
 }
 
 .page-header {
@@ -4989,6 +4996,9 @@ html.telegram-webapp .app-body {
 }
 
 .admin-room-row-draggable {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -5182,6 +5192,22 @@ html.telegram-webapp .app-body {
 .admin-system-detail-panel {
   margin-top: 4px;
   max-width: 640px;
+  min-width: 0;
+}
+
+.admin-system-section.admin-system-detail {
+  min-width: 0;
+}
+
+.admin-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-table-wrap .admin-table {
+  min-width: 520px;
 }
 
 .admin-system-detail-panel.admin-system-wide {
@@ -5330,6 +5356,33 @@ html.telegram-webapp .app-body {
 }
 
 .admin-room-row {
+  min-width: 0;
+}
+
+.admin-room-row-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.admin-room-row-primary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  min-width: 0;
+}
+
+.admin-room-row-primary input[type='text'],
+.admin-room-row-primary .admin-room-name {
+  flex: 1 1 160px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.admin-room-row-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -5337,18 +5390,91 @@ html.telegram-webapp .app-body {
 }
 
 .admin-room-row input {
-  flex: 1;
-  min-width: 160px;
   padding: 8px 12px;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text);
+  box-sizing: border-box;
+}
+
+.admin-ai-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.88rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.admin-ai-count {
+  width: 4.5rem;
+  min-width: 4.5rem;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  box-sizing: border-box;
 }
 
 .room-meta {
   font-size: 0.85rem;
-  white-space: nowrap;
+  line-height: 1.35;
+  white-space: normal;
+  word-break: break-word;
+  flex: 1 1 100%;
+}
+
+.admin-add-room {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: stretch;
+  margin-top: 4px;
+}
+
+.admin-add-room input[type='text'],
+.admin-add-room input[type='number'] {
+  flex: 1 1 180px;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  box-sizing: border-box;
+}
+
+.admin-add-room .btn-primary {
+  flex: 1 1 100%;
+}
+
+@media (min-width: 720px) {
+  .admin-room-row-body {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .admin-room-row-primary {
+    flex: 1 1 240px;
+  }
+
+  .admin-room-row-actions {
+    flex: 1 1 260px;
+    justify-content: flex-end;
+  }
+
+  .room-meta {
+    flex: 0 1 auto;
+  }
+
+  .admin-add-room .btn-primary {
+    flex: 0 1 auto;
+  }
 }
 
 .admin-banlist-section .admin-subsection-title:first-of-type {
@@ -5359,20 +5485,34 @@ html.telegram-webapp .app-body {
   font-size: 1rem;
 }
 
-.admin-add-room {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.admin-system-detail-panel.theme-settings-block label {
+  display: block;
+  margin-bottom: 14px;
+  color: var(--text-muted);
 }
 
-.admin-add-room input {
-  flex: 1;
-  min-width: 180px;
+.admin-system-detail-panel.theme-settings-block label input {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin-top: 6px;
   padding: 10px 12px;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text);
+  box-sizing: border-box;
+}
+
+.admin-system-detail-panel .profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-system-detail-panel .profile-actions .btn {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .modal label textarea {
@@ -5647,8 +5787,7 @@ html.telegram-webapp .app-body {
   }
 
   .admin-table-wrap {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+    margin: 0 -2px;
   }
 
   .admin-layout {
@@ -5675,24 +5814,61 @@ html.telegram-webapp .app-body {
     grid-template-columns: 1fr;
   }
 
-  .admin-room-row {
-    flex-direction: column;
-    align-items: stretch;
+  .admin-room-row-body {
+    gap: 12px;
   }
 
-  .admin-room-row input {
+  .admin-room-row-primary input[type='text'],
+  .admin-room-row-primary .admin-room-name {
+    flex: 1 1 100%;
     width: 100%;
     min-height: 44px;
     font-size: 16px;
+  }
+
+  .admin-room-row-actions {
+    width: 100%;
+  }
+
+  .admin-room-row-actions .btn {
+    flex: 1 1 calc(50% - 4px);
+    min-width: 0;
+    min-height: 44px;
+  }
+
+  .admin-room-row-actions .btn-ghost:only-child,
+  .admin-room-row-actions .btn-primary:only-child {
+    flex: 1 1 100%;
   }
 
   .admin-add-room {
     flex-direction: column;
   }
 
-  .admin-add-room input,
-  .admin-add-room .btn {
+  .admin-add-room input[type='text'],
+  .admin-add-room input[type='number'],
+  .admin-add-room .btn,
+  .admin-add-room .admin-ai-toggle {
     width: 100%;
+    min-height: 44px;
+  }
+
+  .admin-ai-count {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .admin-system-detail-panel.theme-settings-block label input {
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  .admin-system-detail-panel .profile-actions .btn {
+    flex: 1 1 100%;
+    min-height: 44px;
+  }
+
+  .admin-dash-links button {
     min-height: 44px;
   }
 

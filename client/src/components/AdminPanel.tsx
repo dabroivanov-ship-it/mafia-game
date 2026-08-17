@@ -975,23 +975,25 @@ export default function AdminPanel({
                   onReordered={() => load({ silent: true, syncRoomNames: true })}
                   renderRow={(r) => (
                     <>
-                      {canManageGameRooms ? (
-                        <input
-                          type="text"
-                          value={roomEdits[r.id] ?? r.name}
-                          onChange={(e) => handleRoomNameChange(r.id, e.target.value)}
-                          onKeyDown={(e) => handleRoomNameKeyDown(e, r.id)}
-                          maxLength={50}
-                        />
-                      ) : (
-                        <strong>{r.name}</strong>
-                      )}
-                      <span className="muted room-meta">
-                        {r.playerCount} · {r.phase}
-                        {r.aiEnabled ? ` · ИИ: ${r.aiCount ?? 0}` : ''}
-                      </span>
+                      <div className="admin-room-row-primary">
+                        {canManageGameRooms ? (
+                          <input
+                            type="text"
+                            value={roomEdits[r.id] ?? r.name}
+                            onChange={(e) => handleRoomNameChange(r.id, e.target.value)}
+                            onKeyDown={(e) => handleRoomNameKeyDown(e, r.id)}
+                            maxLength={50}
+                          />
+                        ) : (
+                          <strong className="admin-room-name">{r.name}</strong>
+                        )}
+                        <span className="muted room-meta">
+                          {r.playerCount} · {r.phase}
+                          {r.aiEnabled ? ` · ИИ: ${r.aiCount ?? 0}` : ''}
+                        </span>
+                      </div>
                       {canManageGameRooms && (
-                        <>
+                        <div className="admin-room-row-actions">
                           <label className="admin-ai-toggle">
                             <input
                               type="checkbox"
@@ -1024,6 +1026,7 @@ export default function AdminPanel({
                                   },
                                 }))
                               }
+                              aria-label="Количество ИИ-игроков"
                             />
                           )}
                           <button
@@ -1043,7 +1046,7 @@ export default function AdminPanel({
                           >
                             Очистить чат
                           </button>
-                        </>
+                        </div>
                       )}
                     </>
                   )}
@@ -1095,22 +1098,22 @@ export default function AdminPanel({
                   onReordered={() => load({ silent: true, syncRoomNames: true })}
                   renderRow={(r) => (
                     <>
-                      {canManageChatRooms ? (
-                        <input
-                          type="text"
-                          value={roomEdits[r.id] ?? r.name}
-                          onChange={(e) => handleRoomNameChange(r.id, e.target.value)}
-                          onKeyDown={(e) => handleRoomNameKeyDown(e, r.id)}
-                          maxLength={50}
-                        />
-                      ) : (
-                        <strong>{r.name}</strong>
-                      )}
-                      <span className="muted room-meta">
-                        {r.playerCount}
-                      </span>
+                      <div className="admin-room-row-primary">
+                        {canManageChatRooms ? (
+                          <input
+                            type="text"
+                            value={roomEdits[r.id] ?? r.name}
+                            onChange={(e) => handleRoomNameChange(r.id, e.target.value)}
+                            onKeyDown={(e) => handleRoomNameKeyDown(e, r.id)}
+                            maxLength={50}
+                          />
+                        ) : (
+                          <strong className="admin-room-name">{r.name}</strong>
+                        )}
+                        <span className="muted room-meta">{r.playerCount}</span>
+                      </div>
                       {canManageChatRooms && (
-                        <>
+                        <div className="admin-room-row-actions">
                           <button type="button" className="btn btn-sm btn-primary" onClick={() => void handleRenameRoom(r.id)}>
                             Сохранить
                           </button>
@@ -1128,7 +1131,7 @@ export default function AdminPanel({
                           >
                             Удалить
                           </button>
-                        </>
+                        </div>
                       )}
                     </>
                   )}

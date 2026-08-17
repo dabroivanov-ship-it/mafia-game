@@ -76,7 +76,7 @@ export default function AdminRoomOrderList({
       <div className="admin-room-list">
         {items.map((room) => (
           <div key={room.id} className="admin-room-row">
-            {renderRow(room)}
+            <div className="admin-room-row-body">{renderRow(room)}</div>
           </div>
         ))}
       </div>
@@ -108,7 +108,7 @@ export default function AdminRoomOrderList({
           >
             ☰
           </button>
-          {renderRow(room)}
+          <div className="admin-room-row-body">{renderRow(room)}</div>
         </div>
       ))}
     </div>
