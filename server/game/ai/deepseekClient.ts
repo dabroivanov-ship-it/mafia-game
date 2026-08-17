@@ -1,6 +1,8 @@
-import { getDeepSeekApiKey, getDeepSeekSettings } from '../../settings/deepseekStore.js';
-
-const API_URL = 'https://api.deepseek.com/chat/completions';
+import {
+  getDeepSeekApiKey,
+  getDeepSeekChatUrl,
+  getDeepSeekSettings,
+} from '../../settings/deepseekStore.js';
 
 export type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
 
@@ -17,7 +19,7 @@ export async function deepSeekJsonChat<T>(
   const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? 25_000);
 
   try {
-    const res = await fetch(API_URL, {
+    const res = await fetch(getDeepSeekChatUrl(), {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,

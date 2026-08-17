@@ -58,12 +58,14 @@ interface AdminSystemSectionProps {
   onSaveMetrika: (e: FormEvent) => void;
   deepseekEnabled: boolean;
   deepseekModel: string;
+  deepseekBaseUrl: string;
   deepseekApiKey: string;
   deepseekApiKeyPreview: string | null;
   deepseekSaving: boolean;
   deepseekTesting: boolean;
   onDeepseekEnabledChange: (enabled: boolean) => void;
   onDeepseekModelChange: (model: string) => void;
+  onDeepseekBaseUrlChange: (baseUrl: string) => void;
   onDeepseekApiKeyChange: (key: string) => void;
   onSaveDeepseek: (e: FormEvent) => void;
   onTestDeepseek: () => void;
@@ -163,12 +165,14 @@ export default function AdminSystemSection({
   onSaveMetrika,
   deepseekEnabled,
   deepseekModel,
+  deepseekBaseUrl,
   deepseekApiKey,
   deepseekApiKeyPreview,
   deepseekSaving,
   deepseekTesting,
   onDeepseekEnabledChange,
   onDeepseekModelChange,
+  onDeepseekBaseUrlChange,
   onDeepseekApiKeyChange,
   onSaveDeepseek,
   onTestDeepseek,
@@ -320,7 +324,9 @@ export default function AdminSystemSection({
           <form className="admin-system-detail-panel theme-settings-block admin-theme-block" onSubmit={onSaveDeepseek}>
             <h4>DeepSeek — ИИ-игроки</h4>
             <p className="theme-settings-hint">
-              API-ключ DeepSeek для ботов в игровых комнатах. Без ключа боты играют по простым правилам без нейросети.
+              API для ботов в игровых комнатах. Официальный DeepSeek: ключ с platform.deepseek.com и URL
+              https://api.deepseek.com. Для стороннего прокси (OpenAI Compatible) укажите Base URL и Model ID из
+              инструкции продавца ключа.
             </p>
             <label className="theme-use-default">
               <input
@@ -332,7 +338,17 @@ export default function AdminSystemSection({
               <span>Включить DeepSeek для ИИ-игроков</span>
             </label>
             <label>
-              Модель
+              Base URL
+              <input
+                value={deepseekBaseUrl}
+                onChange={(e) => onDeepseekBaseUrlChange(e.target.value)}
+                placeholder="https://api.deepseek.com"
+                maxLength={300}
+                disabled={deepseekSaving}
+              />
+            </label>
+            <label>
+              Модель (Model ID)
               <input
                 value={deepseekModel}
                 onChange={(e) => onDeepseekModelChange(e.target.value)}

@@ -230,6 +230,7 @@ export async function adminSetMetrikaSettings(payload: {
 export interface DeepSeekSettings {
   enabled: boolean;
   model: string;
+  baseUrl: string;
   apiKeyConfigured: boolean;
   apiKeyPreview: string | null;
 }
@@ -241,6 +242,7 @@ export async function fetchDeepSeekSettings(): Promise<DeepSeekSettings> {
 export async function adminSetDeepSeekSettings(payload: {
   enabled?: boolean;
   model?: string;
+  baseUrl?: string;
   apiKey?: string | null;
 }): Promise<DeepSeekSettings> {
   return apiRequest('/api/settings/deepseek', {

@@ -141,10 +141,17 @@ router.put('/deepseek', authMiddleware, panelMiddleware, (req, res) => {
   }
   const enabled = req.body?.enabled;
   const model = req.body?.model;
+  const baseUrl = req.body?.baseUrl;
   const apiKey = req.body?.apiKey;
-  const payload: { enabled?: boolean; model?: string; apiKey?: string | null } = {};
+  const payload: {
+    enabled?: boolean;
+    model?: string;
+    baseUrl?: string;
+    apiKey?: string | null;
+  } = {};
   if (enabled !== undefined) payload.enabled = Boolean(enabled);
   if (model !== undefined) payload.model = String(model);
+  if (baseUrl !== undefined) payload.baseUrl = String(baseUrl);
   if (apiKey !== undefined) {
     payload.apiKey = apiKey === '' || apiKey === null ? null : String(apiKey);
   }

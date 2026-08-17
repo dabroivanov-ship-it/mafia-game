@@ -174,6 +174,7 @@ export default function AdminPanel({
   const [metrikaSaving, setMetrikaSaving] = useState(false);
   const [deepseekEnabled, setDeepseekEnabled] = useState(true);
   const [deepseekModel, setDeepseekModel] = useState('deepseek-chat');
+  const [deepseekBaseUrl, setDeepseekBaseUrl] = useState('https://api.deepseek.com');
   const [deepseekApiKey, setDeepseekApiKey] = useState('');
   const [deepseekApiKeyPreview, setDeepseekApiKeyPreview] = useState<string | null>(null);
   const [deepseekSaving, setDeepseekSaving] = useState(false);
@@ -251,6 +252,7 @@ export default function AdminPanel({
       .then((settings) => {
         setDeepseekEnabled(settings.enabled);
         setDeepseekModel(settings.model);
+        setDeepseekBaseUrl(settings.baseUrl || 'https://api.deepseek.com');
         setDeepseekApiKeyPreview(settings.apiKeyPreview);
       })
       .catch(() => {});
@@ -312,14 +314,21 @@ export default function AdminPanel({
     setError('');
     setDeepseekSaving(true);
     try {
-      const payload: { enabled: boolean; model: string; apiKey?: string | null } = {
+      const payload: {
+        enabled: boolean;
+        model: string;
+        baseUrl: string;
+        apiKey?: string | null;
+      } = {
         enabled: deepseekEnabled,
         model: deepseekModel.trim() || 'deepseek-chat',
+        baseUrl: deepseekBaseUrl.trim() || 'https://api.deepseek.com',
       };
       if (deepseekApiKey.trim()) payload.apiKey = deepseekApiKey.trim();
       const saved = await adminSetDeepSeekSettings(payload);
       setDeepseekEnabled(saved.enabled);
       setDeepseekModel(saved.model);
+      setDeepseekBaseUrl(saved.baseUrl || 'https://api.deepseek.com');
       setDeepseekApiKeyPreview(saved.apiKeyPreview);
       setDeepseekApiKey('');
     } catch (err) {
@@ -776,12 +785,14 @@ export default function AdminPanel({
         onSaveMetrika={(e) => void handleSaveMetrikaSettings(e)}
         deepseekEnabled={deepseekEnabled}
         deepseekModel={deepseekModel}
+        deepseekBaseUrl={deepseekBaseUrl}
         deepseekApiKey={deepseekApiKey}
         deepseekApiKeyPreview={deepseekApiKeyPreview}
         deepseekSaving={deepseekSaving}
         deepseekTesting={deepseekTesting}
         onDeepseekEnabledChange={setDeepseekEnabled}
         onDeepseekModelChange={setDeepseekModel}
+        onDeepseekBaseUrlChange={setDeepseekBaseUrl}
         onDeepseekApiKeyChange={setDeepseekApiKey}
         onSaveDeepseek={(e) => void handleSaveDeepseekSettings(e)}
         onTestDeepseek={() => void handleTestDeepseek()}
