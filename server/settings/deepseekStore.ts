@@ -49,8 +49,8 @@ export function getDeepSeekBaseUrl(): string {
   return fromEnv ? normalizeBaseUrl(fromEnv) : DEFAULT_BASE_URL;
 }
 
-export function getDeepSeekChatUrl(): string {
-  const base = getDeepSeekBaseUrl();
+export function getDeepSeekChatUrl(baseUrl = getDeepSeekBaseUrl()): string {
+  const base = normalizeBaseUrl(baseUrl);
   if (base.endsWith('/chat/completions')) return base;
   if (base.endsWith('/v1')) return `${base}/chat/completions`;
   return `${base}/chat/completions`;

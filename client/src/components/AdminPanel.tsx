@@ -179,6 +179,10 @@ export default function AdminPanel({
   const [deepseekApiKeyPreview, setDeepseekApiKeyPreview] = useState<string | null>(null);
   const [deepseekSaving, setDeepseekSaving] = useState(false);
   const [deepseekTesting, setDeepseekTesting] = useState(false);
+  const [deepseekStatus, setDeepseekStatus] = useState('');
+  const [deepseekStatusError, setDeepseekStatusError] = useState(false);
+  const [roomAiSavingId, setRoomAiSavingId] = useState<number | null>(null);
+  const [roomAiStatus, setRoomAiStatus] = useState('');
   const [permissions, setPermissions] = useState<AdminPermission[]>([]);
   const [panelRole, setPanelRole] = useState<UserRole>('user');
 
@@ -312,6 +316,7 @@ export default function AdminPanel({
   const handleSaveDeepseekSettings = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
+    setDeepseekStatus('');
     setDeepseekSaving(true);
     try {
       const payload: {
@@ -331,8 +336,13 @@ export default function AdminPanel({
       setDeepseekBaseUrl(saved.baseUrl || 'https://api.deepseek.com');
       setDeepseekApiKeyPreview(saved.apiKeyPreview);
       setDeepseekApiKey('');
+      setDeepseekStatusError(false);
+      setDeepseekStatus('Настройки сохранены.');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка сохранения DeepSeek');
+      const message = err instanceof Error ? err.message : 'Ошибка сохранения DeepSeek';
+      setError(message);
+      setDeepseekStatusError(true);
+      setDeepseekStatus(message);
     } finally {
       setDeepseekSaving(false);
     }
@@ -340,11 +350,22 @@ export default function AdminPanel({
 
   const handleTestDeepseek = async () => {
     setError('');
+    setDeepseekStatus('Проверяем API...');
+    setDeepseekStatusError(false);
     setDeepseekTesting(true);
     try {
-      await adminTestDeepSeekConnection();
+      const result = await adminTestDeepSeekConnection({
+        model: deepseekModel.trim() || undefined,
+        baseUrl: deepseekBaseUrl.trim() || undefined,
+        apiKey: deepseekApiKey.trim() || undefined,
+      });
+      setDeepseekStatusError(false);
+      setDeepseekStatus(`Подключение успешно. Модель: ${result.model || deepseekModel}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'DeepSeek недоступен');
+      const message = err instanceof Error ? err.message : 'DeepSeek недоступен';
+      setError(message);
+      setDeepseekStatusError(true);
+      setDeepseekStatus(message);
     } finally {
       setDeepseekTesting(false);
     }
@@ -527,16 +548,30 @@ export default function AdminPanel({
   };
 
   const handleSaveRoomAi = async (roomId: number) => {
-    const edit = roomAiEdits[roomId];
-    if (!edit) return;
+    const room = rooms.find((r) => r.id === roomId);
+    const edit = roomAiEdits[roomId] ?? {
+      aiEnabled: !!room?.aiEnabled,
+      aiCount: room?.aiCount ?? 3,
+    };
+    setRoomAiStatus('');
+    setRoomAiSavingId(roomId);
     try {
       await adminUpdateGameRoomAi(roomId, {
         aiEnabled: edit.aiEnabled,
         aiCount: edit.aiEnabled ? Math.max(1, edit.aiCount || 3) : 0,
       });
       await load({ syncRoomNames: true });
+      setRoomAiStatus(
+        edit.aiEnabled
+          ? `ИИ сохранён: ${Math.max(1, edit.aiCount || 3)} ботов в комнате.`
+          : 'ИИ в комнате выключен.'
+      );
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка сохранения ИИ');
+      const message = err instanceof Error ? err.message : 'Ошибка сохранения ИИ';
+      setError(message);
+      setRoomAiStatus(message);
+    } finally {
+      setRoomAiSavingId(null);
     }
   };
 
@@ -799,6 +834,8 @@ export default function AdminPanel({
         onDeepseekApiKeyChange={setDeepseekApiKey}
         onSaveDeepseek={(e) => void handleSaveDeepseekSettings(e)}
         onTestDeepseek={() => void handleTestDeepseek()}
+        deepseekStatus={deepseekStatus}
+        deepseekStatusError={deepseekStatusError}
         panels={{
           users: (
             <section className="admin-section admin-section-embedded">
@@ -1039,9 +1076,10 @@ export default function AdminPanel({
                           <button
                             type="button"
                             className="btn btn-sm btn-ghost"
+                            disabled={roomAiSavingId === r.id}
                             onClick={() => void handleSaveRoomAi(r.id)}
                           >
-                            ИИ ✓
+                            {roomAiSavingId === r.id ? 'Сохраняю...' : 'ИИ ✓'}
                           </button>
                           <button type="button" className="btn btn-sm btn-primary" onClick={() => void handleRenameRoom(r.id)}>
                             Сохранить
@@ -1059,6 +1097,7 @@ export default function AdminPanel({
                   )}
                 />
               )}
+              {roomAiStatus && <p className="theme-settings-hint">{roomAiStatus}</p>}
               {canManageGameRooms && (
               <form className="admin-add-room" onSubmit={handleCreateGameRoom}>
                 <input

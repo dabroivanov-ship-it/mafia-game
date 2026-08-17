@@ -69,6 +69,8 @@ interface AdminSystemSectionProps {
   onDeepseekApiKeyChange: (key: string) => void;
   onSaveDeepseek: (e: FormEvent) => void;
   onTestDeepseek: () => void;
+  deepseekStatus: string;
+  deepseekStatusError: boolean;
   panels: {
     users: ReactNode;
     banlist: ReactNode;
@@ -176,6 +178,8 @@ export default function AdminSystemSection({
   onDeepseekApiKeyChange,
   onSaveDeepseek,
   onTestDeepseek,
+  deepseekStatus,
+  deepseekStatusError,
   permissions,
   panels,
 }: AdminSystemSectionProps) {
@@ -378,9 +382,12 @@ export default function AdminSystemSection({
                 disabled={deepseekSaving || deepseekTesting}
                 onClick={onTestDeepseek}
               >
-                {deepseekTesting ? 'Проверка...' : 'Проверить подключение'}
+                {deepseekTesting ? 'Проверка... подождите до 20 сек' : 'Проверить подключение'}
               </button>
             </div>
+            {deepseekStatus && (
+              <p className={deepseekStatusError ? 'auth-error' : 'theme-settings-hint'}>{deepseekStatus}</p>
+            )}
           </form>
         )}
         {view === 'theme' && (

@@ -163,8 +163,12 @@ router.post('/deepseek/test', authMiddleware, panelMiddleware, async (req, res) 
     return res.status(403).json({ error: 'Нет прав для управления DeepSeek' });
   }
   try {
-    await testDeepSeekConnection();
-    res.json({ ok: true });
+    const result = await testDeepSeekConnection({
+      model: typeof req.body?.model === 'string' ? req.body.model : undefined,
+      baseUrl: typeof req.body?.baseUrl === 'string' ? req.body.baseUrl : undefined,
+      apiKey: typeof req.body?.apiKey === 'string' ? req.body.apiKey : undefined,
+    });
+    res.json({ ok: true, model: result.model });
   } catch (err) {
     res.status(400).json({ error: err instanceof Error ? err.message : 'Ошибка DeepSeek' });
   }

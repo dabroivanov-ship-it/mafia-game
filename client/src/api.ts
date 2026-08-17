@@ -251,8 +251,15 @@ export async function adminSetDeepSeekSettings(payload: {
   });
 }
 
-export async function adminTestDeepSeekConnection(): Promise<{ ok: boolean }> {
-  return apiRequest('/api/settings/deepseek/test', { method: 'POST' });
+export async function adminTestDeepSeekConnection(payload: {
+  model?: string;
+  baseUrl?: string;
+  apiKey?: string;
+} = {}): Promise<{ ok: boolean; model?: string }> {
+  return apiRequest('/api/settings/deepseek/test', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function adminSetLobbyAnnouncement(payload: LobbyAnnouncement): Promise<{
