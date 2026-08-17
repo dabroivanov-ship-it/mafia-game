@@ -670,6 +670,8 @@ export interface AdminRoom {
   playerCount: number;
   maxPlayers: number;
   phase: string;
+  aiEnabled?: boolean;
+  aiCount?: number;
 }
 
 export async function fetchAdminUsers(): Promise<{ users: User[] }> {
