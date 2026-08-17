@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import Rules from './Rules';
 import Roles from './Roles';
+import AiAgents from './AiAgents';
 import ChatRules from './ChatRules';
 import Staff from './Staff';
 import PlayerRating from './PlayerRating';
@@ -13,6 +14,7 @@ import {
 } from '../infoRouting';
 import { INFO_PAGE_META, updatePageMeta } from '../seo';
 import { ROLES_INTRO } from '../content/rolesContent';
+import { AI_AGENTS_INTRO } from '../content/aiAgentsContent';
 
 import type { User } from '../types';
 
@@ -27,6 +29,7 @@ type InfoHubItem = {
 const INFO_HUB_ITEMS: InfoHubItem[] = [
   { icon: '🎭', section: 'roles', title: 'Игровые роли', desc: 'Мафия, город, маньяк — все способности' },
   { icon: '📜', section: 'rules', title: 'Правила игры', desc: 'Как начать, фазы, победа и очки' },
+  { icon: '🤖', section: 'aiAgents', title: 'Игры с AI-агентами', desc: 'Боты за столом: чат, роли и голоса' },
   { icon: '❓', section: 'faq', title: 'Частые вопросы', desc: 'Как начать, роли и ведущий' },
   { icon: '💬', section: 'chatRules', title: 'Правила чата', desc: 'Общение, профили и модерация' },
   { icon: '🏆', section: 'rating', title: 'Рейтинг игроков', desc: 'Топ по очкам, играм и репутации' },
@@ -106,6 +109,19 @@ export default function Info({
           <p className="roles-intro muted">{ROLES_INTRO}</p>
         </header>
         <Roles embedded />
+      </div>
+    );
+  }
+
+  if (section === 'aiAgents') {
+    return (
+      <div className="info-page">
+        {backNav('hub', 'Информация')}
+        <header className="page-header">
+          <h1>🤖 Игры с AI-агентами</h1>
+          <p className="muted">{AI_AGENTS_INTRO}</p>
+        </header>
+        <AiAgents embedded />
       </div>
     );
   }
@@ -190,7 +206,7 @@ export default function Info({
 
       <header className="page-header">
         <h1>ℹ️ Информация</h1>
-        <p className="muted">Правила, роли, чат, рейтинг и команда проекта</p>
+        <p className="muted">Правила, роли, AI-агенты, чат, рейтинг и команда проекта</p>
       </header>
 
       <div className="info-hub">

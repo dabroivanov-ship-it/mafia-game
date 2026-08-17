@@ -235,7 +235,7 @@ export const BOT_PHRASE_DEFINITIONS: BotPhraseDefinition[] = [
     label: 'Большинство за казнь',
     type: 'text',
     placeholders: ['{votes}', '{total}'],
-    defaultValue: '🗳️ Большинство ({votes} из {total}) проголосовало за казнь — решение принято.',
+    defaultValue: '🗳️ Более половины ({votes} из {total}) проголосовало за казнь — решение принято.',
   },
   {
     key: 'voting.restart',

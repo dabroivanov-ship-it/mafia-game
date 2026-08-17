@@ -47,7 +47,7 @@ export default function TelegramLoginWidget({
     <div className="auth-telegram-block">
       <button
         type="button"
-        className="btn btn-primary btn-lg auth-telegram-btn"
+        className="btn btn-primary auth-telegram-btn"
         onClick={handleLogin}
         disabled={loading}
       >

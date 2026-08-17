@@ -113,6 +113,7 @@ export interface ChatMessage {
   isPrivate?: boolean;
   toPlayerId?: number | null;
   toPlayerName?: string | null;
+  isBot?: boolean;
 }
 
 export interface GamePlayer {
@@ -191,6 +192,7 @@ export interface RoomStatePlayer {
   roleLabel: string | null;
   isDon: boolean;
   isMafiaAlly?: boolean;
+  isBot?: boolean;
   silenced?: boolean;
 }
 

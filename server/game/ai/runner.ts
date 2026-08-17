@@ -11,9 +11,10 @@ import { isDeepSeekEnabled } from '../../settings/deepseekStore.js';
 import { deepSeekJsonChat } from './deepseekClient.js';
 
 const BOT_DELAY_MS = 600;
-const REPLY_DELAY_MS = 1800;
-const REPLY_COOLDOWN_MS = 3500;
-const MAX_REPLIES_PER_MINUTE = 10;
+const REPLY_DELAY_MS = 1500;
+const REPLY_COOLDOWN_MS = 2500;
+const MAX_REPLIES_PER_MINUTE = 15;
+const DAY_OPENING_MESSAGES = 2;
 
 let broadcastRoom: (roomId: number) => void = () => {};
 const replyTimestampsByRoom = new Map<number, number[]>();
@@ -259,9 +260,11 @@ function pickRespondingBot(
     lower.includes('как ') ||
     lower.includes('думаешь') ||
     lower.includes('соглас') ||
-    text.trim().length >= 12;
+    lower.includes('голос') ||
+    lower.includes('маф') ||
+    text.trim().length >= 6;
 
-  const replyChance = isEngaging ? 0.82 : 0.45;
+  const replyChance = isEngaging ? 0.92 : 0.68;
   if (Math.random() > replyChance) return null;
 
   return pickRandom(bots);
@@ -325,28 +328,30 @@ async function runBotChatReply(
 
 async function runDayChat(room: GameRoom): Promise<void> {
   const bots = aliveBots(room).filter((p) => !isPlayerSilenced(p));
-  const bot = pickRandom(bots);
-  if (!bot) return;
+  if (!bots.length) return;
 
-  if (room.phase !== PHASE.DAY) return;
-  await sleep(2000 + Math.random() * 2500);
+  const speakers = [...bots].sort(() => Math.random() - 0.5).slice(0, DAY_OPENING_MESSAGES);
+  for (const bot of speakers) {
+    if (room.phase !== PHASE.DAY) return;
+    await sleep(1800 + Math.random() * 2200);
 
-  const dayNumber = room.nightNumber + 1;
-  const response = await askDeepSeek<{ message?: string }>(
-    bot,
-    room,
-    `Начался день ${dayNumber}. Напиши одно короткое сообщение в чат (до 180 символов): прокомментируй итог прошлой ночи или подозрения по фактам ЭТОЙ партии. JSON: {"message":"..."}`
-  );
-  let text = response?.message?.trim().slice(0, 180) ?? '';
-  if (!text) {
-    const targets = aliveTargets(room, bot.id);
-    const suspect = pickRandom(targets);
-    text = suspect
-      ? `День ${dayNumber}. Мне кажется, стоит присмотреться к ${suspect.username} — по этой игре есть вопросы.`
-      : `День ${dayNumber}. Давайте разбираться по фактам — кто вёл себя странно?`;
+    const dayNumber = room.nightNumber + 1;
+    const response = await askDeepSeek<{ message?: string }>(
+      bot,
+      room,
+      `Начался день ${dayNumber}. Напиши одно короткое сообщение в чат (до 180 символов): прокомментируй итог прошлой ночи или подозрения по фактам ЭТОЙ партии. JSON: {"message":"..."}`
+    );
+    let text = response?.message?.trim().slice(0, 180) ?? '';
+    if (!text) {
+      const targets = aliveTargets(room, bot.id);
+      const suspect = pickRandom(targets);
+      text = suspect
+        ? `День ${dayNumber}. Мне кажется, стоит присмотреться к ${suspect.username} — по этой игре есть вопросы.`
+        : `День ${dayNumber}. Давайте разбираться по фактам — кто вёл себя странно?`;
+    }
+    addChatMessage(room, bot.id, text, 'public');
+    broadcastRoom(room.id);
   }
-  addChatMessage(room, bot.id, text, 'public');
-  broadcastRoom(room.id);
 }
 
 async function runVoting(room: GameRoom): Promise<void> {

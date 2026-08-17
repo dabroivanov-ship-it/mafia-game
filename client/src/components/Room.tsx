@@ -3,6 +3,7 @@ import { Socket } from 'socket.io-client';
 import Chat from './Chat';
 import ActionPanel from './ActionPanel';
 import UserProfileModal from './UserProfileModal';
+import AiPlayerModal from './AiPlayerModal';
 import type { GamePhase, RoomState, ChatReplyTarget, ChatChannel, ViolationType } from '../types';
 
 const PHASE_LABELS: Record<GamePhase, string> = {
@@ -104,6 +105,11 @@ export default function Room({
     });
 
   const openPlayerPage = (target: ChatReplyTarget) => {
+    if (target.isBot) {
+      if (target.playerId === state.myId) return;
+      setProfileTarget(target);
+      return;
+    }
     if (!target.userId || target.userId === currentUserId) return;
     setProfileTarget({
       userId: target.userId,
@@ -376,7 +382,28 @@ export default function Room({
         </footer>
       )}
 
-      {profileTarget?.userId && (
+      {profileTarget?.isBot && (
+        <AiPlayerModal
+          playerName={profileTarget.playerName}
+          roleLabel={
+            state.players.find((p) => p.id === profileTarget.playerId)?.roleLabel ?? null
+          }
+          alive={state.players.find((p) => p.id === profileTarget.playerId)?.alive}
+          inGame={state.players.find((p) => p.id === profileTarget.playerId)?.inGame}
+          canWrite={state.canChat && !state.isSpectator}
+          onWriteMessage={() => {
+            setChatReplyTo({
+              playerId: profileTarget.playerId,
+              playerName: profileTarget.playerName,
+              isBot: true,
+            });
+            setProfileTarget(null);
+          }}
+          onClose={() => setProfileTarget(null)}
+        />
+      )}
+
+      {profileTarget?.userId && !profileTarget.isBot && (
         <UserProfileModal
           userId={profileTarget.userId}
           currentUserId={currentUserId}

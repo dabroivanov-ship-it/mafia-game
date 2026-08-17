@@ -103,12 +103,14 @@ export interface ChatMessage {
   isPrivate?: boolean;
   toPlayerId?: number | null;
   toPlayerName?: string | null;
+  isBot?: boolean;
 }
 
 export interface ChatReplyTarget {
   playerId?: number;
   playerName: string;
-  userId: number;
+  userId?: number;
+  isBot?: boolean;
 }
 
 export type GameRole =
@@ -139,6 +141,7 @@ export interface RoomPlayer {
   roleLabel: string | null;
   isDon: boolean;
   isMafiaAlly?: boolean;
+  isBot?: boolean;
   silenced?: boolean;
 }
 

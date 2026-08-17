@@ -596,7 +596,7 @@ export function startRegistration(room: GameRoom, _starterPlayerId: number | nul
 
   const addedBots = ensureAiBots(room, allocatePlayerId);
   for (const bot of addedBots) {
-    addSystemMessage(room, `${bot.username} (ИИ) присоединяется к игре!`);
+    addSystemMessage(room, `${bot.username} (AI) присоединяется к игре!`);
   }
 
   room.phase = PHASE.REGISTRATION;
@@ -848,9 +848,13 @@ function getEligibleVoters(room: GameRoom): GamePlayer[] {
   return room.players.filter((p) => p.alive && p.inGame && p.role && p.connected);
 }
 
+function getHangVoteThreshold(eligibleCount: number): number {
+  return Math.floor(eligibleCount / 2) + 1;
+}
+
 function findMajorityTarget(room: GameRoom, eligibleCount: number): number | null {
   if (eligibleCount <= 0) return null;
-  const threshold = Math.ceil(eligibleCount / 2);
+  const threshold = getHangVoteThreshold(eligibleCount);
   const tally: Record<number, number> = {};
   for (const targetId of Object.values(room.votes)) {
     tally[targetId] = (tally[targetId] || 0) + 1;
@@ -902,7 +906,10 @@ function resolveDayVote(room: GameRoom): PrivateNote[] {
   }
 
   if (candidates.length === 1 && maxVotes > 0) {
-    return hangFromVoting(room, candidates[0]);
+    const threshold = getHangVoteThreshold(getEligibleVoters(room).length);
+    if (maxVotes >= threshold) {
+      return hangFromVoting(room, candidates[0]);
+    }
   }
 
   addHostMessage(room, getVotingTieMessage());
@@ -1875,6 +1882,7 @@ function enrichChatMessage(room: GameRoom, msg: ChatMessage): ChatMessage {
     playerId: author.id,
     playerName: author.username || author.name || msg.playerName,
     authorGender: authorGender || undefined,
+    isBot: author.isBot || undefined,
   };
 }
 
@@ -2020,6 +2028,7 @@ function mapPlayerPublic(
       viewerSeesMafiaTeam && p.alive && p.inGame && isMafiaTeam(p.role) && p.id !== playerId
         ? true
         : undefined,
+    isBot: p.isBot || undefined,
     silenced: viewerCanModerate ? isPlayerSilenced(p) : undefined,
   };
 }

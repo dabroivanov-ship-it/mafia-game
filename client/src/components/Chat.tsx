@@ -114,28 +114,35 @@ export default function Chat({
   };
 
   const canOpenAuthorProfile = (msg: ChatMessage): boolean =>
-    !!msg.userId && !msg.system && !isOwnMessage(msg) && !!onOpenPlayerPage;
+    !msg.system && !isOwnMessage(msg) && !!onOpenPlayerPage && (!!msg.userId || !!msg.isBot);
 
   const canOpenHostProfile = (msg: ChatMessage): boolean =>
     !!msg.system && isHostSender(msg.playerName);
 
   const handleAuthorClick = (msg: ChatMessage) => {
-    if (!canOpenAuthorProfile(msg) || !msg.userId) return;
+    if (!canOpenAuthorProfile(msg)) return;
     onOpenPlayerPage?.({
-      userId: msg.userId,
+      userId: msg.userId ?? undefined,
       playerId: msg.playerId ?? undefined,
       playerName: msg.playerName,
+      isBot: msg.isBot,
     });
   };
+
+  const isReplyTarget = (msg: ChatMessage): boolean =>
+    !!replyTo &&
+    replyTo.playerId != null &&
+    msg.playerId != null &&
+    replyTo.playerId === msg.playerId;
 
   const renderAuthor = (msg: ChatMessage) => {
     if (canOpenAuthorProfile(msg)) {
       return (
         <button
           type="button"
-          className={`chat-author-btn ${replyTo?.userId === msg.userId ? 'selected' : ''}`}
+          className={`chat-author-btn ${msg.isBot ? 'chat-bot-btn' : ''} ${isReplyTarget(msg) ? 'selected' : ''}`}
           onClick={() => handleAuthorClick(msg)}
-          title="Открыть профиль и написать"
+          title={msg.isBot ? 'AI игрок' : 'Открыть профиль и написать'}
         >
           {msg.playerName}:
         </button>

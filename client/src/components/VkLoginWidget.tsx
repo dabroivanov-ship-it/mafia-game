@@ -50,7 +50,7 @@ export default function VkLoginWidget({
     <div className="auth-vk-block">
       <button
         type="button"
-        className="btn btn-lg auth-vk-btn"
+        className="btn auth-vk-btn"
         onClick={handleLogin}
         disabled={loading}
       >
