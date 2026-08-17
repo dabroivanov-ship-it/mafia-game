@@ -21,7 +21,9 @@ import {
   isVkAuthConfigured,
   createVkAuthorizationUrl,
   completeVkAuthorization,
+  completeVkUsernameSetup,
   buildVkSuccessRedirect,
+  buildVkUsernameRedirect,
   buildVkErrorRedirect,
 } from './vk.js';
 import { createRateLimitMiddleware, authRateLimiter } from '../security/rateLimit.js';
@@ -156,13 +158,48 @@ router.get('/vk/start', (req, res) => {
 
 router.get('/vk/callback', async (req, res) => {
   try {
-    const { user, remember } = await completeVkAuthorization(req);
-    const token = signToken(user, remember);
-    void publicUser(user);
+    const result = await completeVkAuthorization(req);
+    if (result.status === 'need_username') {
+      return res.redirect(
+        buildVkUsernameRedirect(
+          {
+            setupToken: result.setupToken,
+            suggestedUsername: result.suggestedUsername,
+            displayName: result.displayName,
+            takenUsername: result.takenUsername,
+          },
+          req
+        )
+      );
+    }
+    const token = signToken(result.user, result.remember);
+    void publicUser(result.user);
     res.redirect(buildVkSuccessRedirect(token, req));
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Ошибка VK входа';
     res.redirect(buildVkErrorRedirect(message, req));
+  }
+});
+
+router.post('/vk/complete', authRateLimit, async (req, res) => {
+  try {
+    const setupToken = String(req.body?.setupToken || '').trim();
+    const username = String(req.body?.username || '').trim();
+    if (!setupToken || !username) {
+      return res.status(400).json({ error: 'Укажите логин' });
+    }
+    const { user, remember } = await completeVkUsernameSetup(setupToken, username);
+    const token = signToken(user, remember);
+    res.status(201).json({ token, user: publicUser(user) });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Ошибка регистрации через VK';
+    const status =
+      message.includes('занят') || message.includes('зарезервирован') || message.includes('Логин')
+        ? 409
+        : message.includes('истекла')
+          ? 401
+          : 400;
+    res.status(status).json({ error: message });
   }
 });
 

@@ -50,7 +50,7 @@ Disallow: /socket.io/
 Disallow: /uploads/
 Disallow: /profile/
 Host: ${host}
-Clean-param: tg_token&tg_error&vk_token&vk_error /
+Clean-param: tg_token&tg_error&vk_token&vk_error&vk_setup&vk_suggested&vk_display&vk_taken /
 
 Sitemap: ${origin}/sitemap.xml
 `;

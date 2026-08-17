@@ -7,6 +7,7 @@ import {
   saveRememberedLogin,
   fetchTelegramSettings,
   fetchVkSettings,
+  completeVkUsernameSetup,
   telegramWebAppLogin,
   fetchMe,
 } from '../api';
@@ -39,6 +40,13 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
   const [vkRedirectUri, setVkRedirectUri] = useState<string | null>(null);
   const [vkLoginReady, setVkLoginReady] = useState(false);
   const [vkLoading, setVkLoading] = useState(false);
+  const [vkSetup, setVkSetup] = useState<{
+    setupToken: string;
+    suggestedUsername: string;
+    displayName: string;
+    takenUsername: string;
+  } | null>(null);
+  const [vkUsername, setVkUsername] = useState('');
 
   const [loginForm, setLoginForm] = useState({ login: '', password: '' });
   const [regForm, setRegForm] = useState({
@@ -99,9 +107,31 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
     const tgToken = params.get('tg_token');
     const vkError = params.get('vk_error');
     const vkToken = params.get('vk_token');
+    const vkSetupToken = params.get('vk_setup');
 
     if (tgError || vkError) {
       setError(tgError || vkError || '');
+      window.history.replaceState(null, '', window.location.pathname);
+      return;
+    }
+
+    if (vkSetupToken) {
+      const suggested = params.get('vk_suggested') || '';
+      const displayName = params.get('vk_display') || '';
+      const taken = params.get('vk_taken') || suggested;
+      setVkSetup({
+        setupToken: vkSetupToken,
+        suggestedUsername: suggested,
+        displayName,
+        takenUsername: taken,
+      });
+      setVkUsername('');
+      setError(
+        taken
+          ? `Ник «${taken}» уже занят. Придумайте другой логин.`
+          : 'Придумайте логин для входа.'
+      );
+      setMode('login');
       window.history.replaceState(null, '', window.location.pathname);
       return;
     }
@@ -193,6 +223,25 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
     }
   };
 
+  const handleVkUsernameSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!vkSetup) return;
+    setError('');
+    setVkLoading(true);
+    try {
+      const { token, user } = await completeVkUsernameSetup({
+        setupToken: vkSetup.setupToken,
+        username: vkUsername.trim(),
+      });
+      setVkSetup(null);
+      completeAuth(user, token, user.username);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка регистрации через VK');
+    } finally {
+      setVkLoading(false);
+    }
+  };
+
   const handleRegister = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
@@ -268,6 +317,7 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
               setMode('login');
               setError('');
             }}
+            disabled={!!vkSetup}
           >
             Вход
           </button>
@@ -278,6 +328,7 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
               setMode('register');
               setError('');
             }}
+            disabled={!!vkSetup}
           >
             Регистрация
           </button>
@@ -292,7 +343,37 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
           </p>
         )}
 
-        {!(mode === 'login' && telegramWebAppMode && telegramLoading) &&
+        {vkSetup ? (
+          <form className="auth-form auth-vk-setup" onSubmit={handleVkUsernameSubmit}>
+            <p className="muted auth-vk-setup-name">
+              Имя из VK: <strong>{vkSetup.displayName || '—'}</strong>
+            </p>
+            <label>
+              Придумайте логин
+              <input
+                type="text"
+                value={vkUsername}
+                onChange={(e) => setVkUsername(e.target.value)}
+                placeholder={vkSetup.suggestedUsername || 'username'}
+                required
+                minLength={3}
+                maxLength={20}
+                pattern="[A-Za-z0-9_]+"
+                title="Только латинские буквы, цифры и _"
+                autoComplete="username"
+                autoFocus
+              />
+            </label>
+            <p className="muted auth-vk-setup-hint">
+              3–20 символов: латиница, цифры и _. Отображаемое имя останется «
+              {vkSetup.displayName || 'из VK'}».
+            </p>
+            <button type="submit" className="btn btn-lg auth-vk-btn" disabled={vkLoading}>
+              {vkLoading ? 'Сохраняем...' : 'Продолжить'}
+            </button>
+          </form>
+        ) : (
+          !(mode === 'login' && telegramWebAppMode && telegramLoading) &&
           (mode === 'login' ? (
             <form className="auth-form" onSubmit={handleLogin}>
               <label>
@@ -418,11 +499,10 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
 
             </form>
 
-          ))}
+          ))
+        )}
 
-
-
-        {mode === 'login' && !telegramWebAppMode && (
+        {!vkSetup && mode === 'login' && !telegramWebAppMode && (
           <>
             <TelegramLoginWidget
               loginReady={telegramLoginReady}

@@ -204,6 +204,16 @@ export async function fetchVkSettings(): Promise<{
   return apiRequest('/api/settings/vk');
 }
 
+export async function completeVkUsernameSetup(payload: {
+  setupToken: string;
+  username: string;
+}): Promise<{ token: string; user: User }> {
+  return apiRequest('/api/auth/vk/complete', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function fetchMetrikaSettings(): Promise<{ metrikaId: number | null }> {
   return apiRequest('/api/settings/metrika');
 }

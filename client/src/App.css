@@ -525,6 +525,15 @@ html.telegram-webapp .app-body {
   color: #0077ff;
 }
 
+.auth-vk-setup-name {
+  margin: 0 0 12px;
+}
+
+.auth-vk-setup-hint {
+  margin: -4px 0 12px;
+  font-size: 0.9rem;
+}
+
 .auth-form select {
   padding: 12px 14px;
   border-radius: var(--radius);
