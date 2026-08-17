@@ -191,6 +191,11 @@ function buildGameContextForBot(
   return parts.filter(Boolean).join('\n\n');
 }
 
+function buildDonDayHint(bot: GamePlayer, room: GameRoom): string {
+  if (!bot.isDon || (room.phase !== PHASE.DAY && room.phase !== PHASE.VOTING)) return '';
+  return 'Ты главарь мафии. Днём веди себя как мирный: не раскрывай роль, вводи город в заблуждение, голосуй вместе с большинством или против явных угроз, но не выделяйся.';
+}
+
 async function askDeepSeek<T>(
   bot: GamePlayer,
   room: GameRoom,
@@ -199,6 +204,7 @@ async function askDeepSeek<T>(
 ): Promise<T | null> {
   if (!isDeepSeekEnabled()) return null;
   const mafiaHint = buildMafiaHintForBot(bot, room);
+  const donHint = buildDonDayHint(bot, room);
   try {
     return await deepSeekJsonChat<T>(
       [
@@ -209,7 +215,7 @@ async function askDeepSeek<T>(
         },
         {
           role: 'user',
-          content: `${buildGameContextForBot(room, bot, trigger)}${mafiaHint ? `\n\n${mafiaHint}` : ''}\n\n${instruction}`,
+          content: `${buildGameContextForBot(room, bot, trigger)}${mafiaHint ? `\n\n${mafiaHint}` : ''}${donHint ? `\n\n${donHint}` : ''}\n\n${instruction}`,
         },
       ],
       { timeoutMs: 20_000 }
@@ -356,7 +362,7 @@ async function runVoting(room: GameRoom): Promise<void> {
     const response = await askDeepSeek<{ targetId?: number | null }>(
       bot,
       room,
-      `Выбери, за кого голосовать на дневном голосовании в ЭТОЙ партии. Учитывай переписку, голоса и сообщения ведущего. Доступные id: ${targets.map((p) => p.id).join(', ')}. JSON: {"targetId":число}`
+      `Выбери, за кого голосовать на дневном голосовании в ЭТОЙ партии. Учитывай переписку, голоса и сообщения ведущего.${bot.isDon ? ' Ты главарь — голосуй вместе с городом или против угроз, не выделяйся.' : ''} Доступные id: ${targets.map((p) => p.id).join(', ')}. JSON: {"targetId":число}`
     );
     const targetId = targets.find((p) => p.id === Number(response?.targetId))?.id ?? fallback.id;
 
@@ -370,34 +376,59 @@ async function runVoting(room: GameRoom): Promise<void> {
 }
 
 function fallbackNightAction(bot: GamePlayer, room: GameRoom): NightAction | null {
-  const targets = aliveTargets(room, bot.id);
-  const target = pickRandom(targets);
-  if (!target || !bot.role) return null;
+  const allTargets = aliveTargets(room, bot.id);
+  const killTargets = allTargets.filter((p) => !isMafiaTeam(p.role));
+  const target = pickRandom(killTargets);
+  if (!bot.role) return null;
 
   switch (bot.role) {
     case 'mafia':
-    case 'maniac':
+      if (!bot.isDon || !target) return null;
       return { type: 'kill', targetId: target.id };
-    case 'commissar':
+    case 'maniac': {
+      const maniacTarget = pickRandom(allTargets);
+      if (!maniacTarget) return null;
+      return { type: 'kill', targetId: maniacTarget.id };
+    }
+    case 'commissar': {
+      const commissarTarget = pickRandom(allTargets);
+      if (!commissarTarget) return null;
       return room.nightNumber <= 1
-        ? { type: 'check', targetId: target.id }
-        : { type: 'kill', targetId: target.id };
-    case 'doctor':
-      return { type: 'heal', targetId: target.id };
-    case 'prostitute':
-      return { type: 'seduce', targetId: target.id };
-    case 'homeless':
-      return { type: 'check', targetId: target.id };
-    case 'advocate':
-      return { type: 'cover', targetId: target.id };
+        ? { type: 'check', targetId: commissarTarget.id }
+        : { type: 'kill', targetId: commissarTarget.id };
+    }
+    case 'doctor': {
+      const healTarget = pickRandom(allTargets);
+      if (!healTarget) return null;
+      return { type: 'heal', targetId: healTarget.id };
+    }
+    case 'prostitute': {
+      const seduceTarget = pickRandom(allTargets);
+      if (!seduceTarget) return null;
+      return { type: 'seduce', targetId: seduceTarget.id };
+    }
+    case 'homeless': {
+      const checkTarget = pickRandom(allTargets);
+      if (!checkTarget) return null;
+      return { type: 'check', targetId: checkTarget.id };
+    }
+    case 'advocate': {
+      const coverTarget = pickRandom(allTargets.filter((p) => p.id !== bot.id));
+      if (!coverTarget) return null;
+      return { type: 'cover', targetId: coverTarget.id };
+    }
     case 'clown': {
-      const second = pickRandom(targets.filter((p) => p.id !== target.id));
+      const first = pickRandom(allTargets);
+      if (!first) return null;
+      const second = pickRandom(allTargets.filter((p) => p.id !== first.id));
       if (!second) return null;
-      return { type: 'swap', targetId: target.id, targetId2: second.id };
+      return { type: 'swap', targetId: first.id, targetId2: second.id };
     }
     case 'commissar_wife':
       if (room.wifeRevengeAvailable && !room.wifeRevengeUsed) {
-        return { type: 'revenge', targetId: target.id };
+        const revengeTarget = pickRandom(allTargets);
+        if (!revengeTarget) return null;
+        return { type: 'revenge', targetId: revengeTarget.id };
       }
       return null;
     default:
@@ -405,11 +436,12 @@ function fallbackNightAction(bot: GamePlayer, room: GameRoom): NightAction | nul
   }
 }
 
-function nightInstruction(role: RoleId | null): string {
-  if (!role) return '';
-  switch (role) {
+function nightInstruction(bot: GamePlayer): string {
+  if (!bot.role) return '';
+  if (bot.role === 'mafia' && !bot.isDon) return '';
+  switch (bot.role) {
     case 'mafia':
-      return 'Выбери жертву для убийства. JSON: {"action":"kill","targetId":число}';
+      return 'Ты главарь мафии. Выбери жертву (не атакуй союзников). JSON: {"action":"kill","targetId":число}';
     case 'commissar':
       return 'Проверь или убей игрока. JSON: {"action":"check"|"kill","targetId":число}';
     case 'doctor':
@@ -437,13 +469,16 @@ function parseNightAction(
   raw: { action?: string; targetId?: number; targetId2?: number } | null
 ): NightAction | null {
   if (!raw?.action || !bot.role) return fallbackNightAction(bot, room);
-  const targets = aliveTargets(room, bot.id);
+  const targets = aliveTargets(room, bot.id).filter((p) => !isMafiaTeam(p.role));
   const target = targets.find((p) => p.id === Number(raw.targetId));
   if (!target) return fallbackNightAction(bot, room);
 
   switch (raw.action) {
     case 'kill':
-      if (bot.role === 'mafia' || bot.role === 'commissar' || bot.role === 'maniac') {
+      if (bot.role === 'mafia' && bot.isDon) {
+        return { type: 'kill', targetId: target.id };
+      }
+      if (bot.role === 'commissar' || bot.role === 'maniac') {
         return { type: 'kill', targetId: target.id };
       }
       break;
@@ -478,13 +513,13 @@ function parseNightAction(
 }
 
 async function runNightActions(room: GameRoom): Promise<void> {
-  const bots = aliveBots(room).filter((p) => !p.nightActionDone && nightInstruction(p.role));
+  const bots = aliveBots(room).filter((p) => !p.nightActionDone && nightInstruction(p));
   for (const bot of bots) {
     if (room.phase !== PHASE.NIGHT) return;
     await sleep(BOT_DELAY_MS + Math.random() * 1500);
 
-    const targets = aliveTargets(room, bot.id);
-    const instruction = `${nightInstruction(bot.role)}\nДоступные id: ${targets.map((p) => p.id).join(', ')}`;
+    const targets = aliveTargets(room, bot.id).filter((p) => !isMafiaTeam(p.role));
+    const instruction = `${nightInstruction(bot)}\nДоступные id: ${targets.map((p) => p.id).join(', ')}`;
     const response = await askDeepSeek<{ action?: string; targetId?: number; targetId2?: number }>(
       bot,
       room,

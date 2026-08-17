@@ -510,19 +510,9 @@ export function finalizePlayerLeave(room: GameRoom, playerId: number): boolean {
     }
   }
 
-  if (player.role === 'mafia' && player.isDon) {
-    const nextMafia = room.players.find((p) => p.alive && p.role === 'mafia');
-    room.players.forEach((p) => {
-      p.isDon = false;
-    });
-    if (nextMafia) {
-      nextMafia.isDon = true;
-      room.mafiaDonId = nextMafia.id;
-      addHostMessage(room, `🎩 ${playerNick(nextMafia)} стал(а) главным мафиози.`);
-    } else {
-      room.mafiaDonId = null;
-    }
-  }
+  transferMafiaDon(room, player).forEach((note) => {
+    addHostPrivateMessage(room, note.playerId, note.message);
+  });
 
   return true;
 }
@@ -873,12 +863,14 @@ function findMajorityTarget(room: GameRoom, eligibleCount: number): number | nul
 
 function hangFromVoting(room: GameRoom, playerId: number): PrivateNote[] {
   const hanged = room.players.find((p) => p.id === playerId);
+  const notes: PrivateNote[] = [];
   if (hanged) {
     addHostMessage(room, getHangVerdictMessage(hanged));
-    eliminatePlayer(room, playerId, { silent: true });
+    notes.push(...eliminatePlayer(room, playerId, { silent: true }));
   }
-  if (checkWin(room)) return [];
-  return startNightPhase(room);
+  if (checkWin(room)) return notes;
+  notes.push(...startNightPhase(room));
+  return notes;
 }
 
 function restartVotingSelection(room: GameRoom): PrivateNote[] {
@@ -918,9 +910,33 @@ function resolveDayVote(room: GameRoom): PrivateNote[] {
   return restartVotingSelection(room);
 }
 
-function eliminatePlayer(room: GameRoom, playerId: number, opts: { silent?: boolean } = {}): void {
+function transferMafiaDon(room: GameRoom, deadPlayer: GamePlayer): PrivateNote[] {
+  if (deadPlayer.role !== 'mafia' || !deadPlayer.isDon) return [];
+
+  const nextMafia = room.players.find((p) => p.alive && p.role === 'mafia');
+  room.players.forEach((p) => {
+    p.isDon = false;
+  });
+
+  if (!nextMafia) {
+    room.mafiaDonId = deadPlayer.id;
+    return [];
+  }
+
+  nextMafia.isDon = true;
+  room.mafiaDonId = nextMafia.id;
+
+  const text = `🎩 ${playerNick(nextMafia)} стал(а) главным мафиози.`;
+  addMafiaHostMessage(room, text);
+
+  return room.players
+    .filter((p) => p.alive && p.inGame && isMafiaTeam(p.role))
+    .map((p) => ({ playerId: p.id, message: text }));
+}
+
+function eliminatePlayer(room: GameRoom, playerId: number, opts: { silent?: boolean } = {}): PrivateNote[] {
   const player = room.players.find((p) => p.id === playerId);
-  if (!player?.alive) return;
+  if (!player?.alive) return [];
 
   player.alive = false;
   if (!opts.silent) {
@@ -936,19 +952,7 @@ function eliminatePlayer(room: GameRoom, playerId: number, opts: { silent?: bool
     }
   }
 
-  if (player.role === 'mafia' && player.isDon) {
-    const nextMafia = room.players.find((p) => p.alive && p.role === 'mafia');
-    room.players.forEach((p) => {
-      p.isDon = false;
-    });
-    if (nextMafia) {
-      nextMafia.isDon = true;
-      room.mafiaDonId = nextMafia.id;
-      addHostMessage(room, `🎩 ${playerNick(nextMafia)} стал(а) главным мафиози.`);
-    } else {
-      room.mafiaDonId = null;
-    }
-  }
+  return transferMafiaDon(room, player);
 }
 
 export function startNightPhase(room: GameRoom): PrivateNote[] {
@@ -1032,6 +1036,18 @@ export function submitNightAction(
     throw new Error('Адвокат не может защищать себя');
   }
 
+  if (player.role === 'mafia') {
+    if (!player.isDon) {
+      throw new Error('Только главарь мафии выбирает жертву');
+    }
+    if (action.type === 'kill') {
+      const target = room.players.find((p) => p.id === action.targetId);
+      if (target && isMafiaTeam(target.role)) {
+        throw new Error('Нельзя атаковать союзника');
+      }
+    }
+  }
+
   room.nightActions[playerId] = action;
   player.nightActionDone = true;
   emitNightAtmosphereForAction(room, player, action);
@@ -1048,7 +1064,7 @@ function getPlayersNeedingNightAction(room: GameRoom): GamePlayer[] {
   return room.players.filter((p) => {
     if (!p.alive || !p.connected) return false;
     if (p.role === 'prostitute') return true;
-    if (p.role === 'mafia') return true;
+    if (p.role === 'mafia') return p.isDon;
     if (p.role === 'commissar') return true;
     if (p.role === 'maniac') return true;
     if (p.role === 'doctor') return true;
@@ -1086,25 +1102,17 @@ export function resolveNight(room: GameRoom): NightResolveResult {
     return room.seducedPlayerId === playerId;
   };
 
-  const mafiaVotes: Record<number, number> = {};
-  room.players
-    .filter((p) => p.alive && p.role === 'mafia')
-    .forEach((m) => {
-      const act = actions[m.id];
-      if (act?.type === 'kill' && !isSeduced(m.id)) {
-        mafiaVotes[act.targetId] = (mafiaVotes[act.targetId] || 0) + 1;
-      }
-    });
-
+  const mafiaDon = room.players.find((p) => p.alive && p.role === 'mafia' && p.isDon);
   let mafiaTarget: number | null = null;
-  const entries = Object.entries(mafiaVotes);
-  if (entries.length > 0) {
-    entries.sort((a, b) => b[1] - a[1]);
-    const top = entries.filter(([, c]) => c === entries[0][1]);
-    if (top.length === 1) {
-      mafiaTarget = Number(top[0][0]);
+  if (mafiaDon && !isSeduced(mafiaDon.id)) {
+    const act = actions[mafiaDon.id];
+    if (act?.type === 'kill') {
+      const target = room.players.find((p) => p.id === act.targetId);
+      if (target?.alive && !isMafiaTeam(target.role)) {
+        mafiaTarget = act.targetId;
+      }
     } else {
-      report.mafiaTied = true;
+      report.mafiaNoDecision = true;
     }
   }
 
@@ -1268,7 +1276,9 @@ export function resolveNight(room: GameRoom): NightResolveResult {
   }
 
   if (killedTonight.length > 0) {
-    killedTonight.forEach((p) => eliminatePlayer(room, p.id, { silent: true }));
+    killedTonight.forEach((p) => {
+      privateNotes.push(...eliminatePlayer(room, p.id, { silent: true }));
+    });
   }
 
   room.nightActions = {};
@@ -1784,6 +1794,22 @@ export function addHostMessage(room: GameRoom, text: string): void {
   addBotChatMessage(room, text, HOST_SENDER_NAME);
 }
 
+function addMafiaHostMessage(room: GameRoom, text: string): void {
+  const time = new Date().toISOString();
+  const msg: ChatMessage = {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    playerId: null,
+    playerName: HOST_SENDER_NAME,
+    text,
+    time,
+    system: true,
+    deleted: false,
+    userId: null,
+  };
+  room.mafiaChat.push(msg);
+  saveChatMessage(room.id, room.sessionId, msg, 'mafia');
+}
+
 export function addQuizBotMessage(room: GameRoom, text: string): void {
   addBotChatMessage(room, text, QUIZ_BOT_NAME);
 }
@@ -1970,10 +1996,13 @@ function mapRoomPresence(p: GamePlayer, viewerId: number): RoomPresence {
 
 function mapPlayerPublic(
   p: GamePlayer,
-  _room: GameRoom,
+  room: GameRoom,
   playerId: number,
-  viewerCanModerate = false
+  viewerCanModerate = false,
+  viewer?: GamePlayer | null
 ): RoomStatePlayer {
+  const viewerSeesMafiaTeam =
+    !!viewer?.role && isMafiaTeam(viewer.role) && viewer.inGame && viewer.alive;
   return {
     id: p.id,
     userId: p.userId || null,
@@ -1986,7 +2015,11 @@ function mapPlayerPublic(
     hasVoted: p.hasVoted,
     role: !p.alive || p.id === playerId ? p.role : null,
     roleLabel: !p.alive || p.id === playerId ? getRoleLabel(p.role) : null,
-    isDon: p.isDon && p.id === playerId,
+    isDon: viewerSeesMafiaTeam ? p.isDon : p.isDon && p.id === playerId,
+    isMafiaAlly:
+      viewerSeesMafiaTeam && p.alive && p.inGame && isMafiaTeam(p.role) && p.id !== playerId
+        ? true
+        : undefined,
     silenced: viewerCanModerate ? isPlayerSilenced(p) : undefined,
   };
 }
@@ -2041,7 +2074,7 @@ export function serializeRoomForPlayer(
       myRole: null,
       myRoleLabel: null,
       isDon: false,
-      players: connectedUsers.map((p) => mapPlayerPublic(p, room, playerId, seesModerationInfo)),
+      players: connectedUsers.map((p) => mapPlayerPublic(p, room, playerId, seesModerationInfo, me)),
       spectators: [],
       presence: connectedUsers.map((p) => mapRoomPresence(p, playerId)),
       chat: chatView.messages,
@@ -2116,7 +2149,7 @@ export function serializeRoomForPlayer(
     myRole: me?.inGame ? me.role || null : null,
     myRoleLabel: me?.inGame && me.role ? getRoleLabel(me.role) : null,
     isDon: me?.isDon || false,
-    players: visiblePlayers.map((p) => mapPlayerPublic(p, room, playerId, seesModerationInfo)),
+    players: visiblePlayers.map((p) => mapPlayerPublic(p, room, playerId, seesModerationInfo, me)),
     spectators: visibleSpectators.map((p) => ({
       id: p.id,
       userId: p.userId || null,
@@ -2147,5 +2180,15 @@ export function serializeRoomForPlayer(
     canSilence,
     aiEnabled: !!room.aiEnabled,
     aiCount: room.aiCount ?? 0,
+    mafiaTeam:
+      me?.role && isMafiaTeam(me.role) && me.alive && me.inGame
+        ? room.players
+            .filter((p) => p.alive && p.inGame && isMafiaTeam(p.role))
+            .map((p) => ({
+              id: p.id,
+              username: p.username || p.name,
+              isDon: p.isDon,
+            }))
+        : [],
   };
 }

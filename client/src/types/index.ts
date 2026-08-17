@@ -138,6 +138,7 @@ export interface RoomPlayer {
   role: GameRole;
   roleLabel: string | null;
   isDon: boolean;
+  isMafiaAlly?: boolean;
   silenced?: boolean;
 }
 
@@ -215,6 +216,7 @@ export interface RoomState {
   isQuizRoom?: boolean;
   aiEnabled?: boolean;
   aiCount?: number;
+  mafiaTeam?: { id: number; username: string; isDon: boolean }[];
 }
 
 export interface ApiError {

@@ -223,6 +223,13 @@ export const BOT_PHRASE_DEFINITIONS: BotPhraseDefinition[] = [
     defaultValue: '🗳️ Все проголосовали. Подсчёт голосов...',
   },
   {
+    key: 'report.mafia_no_decision',
+    group: 'Ночь',
+    label: 'Главарь не выбрал жертву',
+    type: 'text',
+    defaultValue: 'Главарь мафии не определился с жертвой — от рук мафии никто не пострадал.',
+  },
+  {
     key: 'voting.majority',
     group: 'Голосование',
     label: 'Большинство за казнь',
@@ -287,14 +294,21 @@ export const BOT_PHRASE_DEFINITIONS: BotPhraseDefinition[] = [
     group: 'Подсказки ролей',
     label: 'Мафия: дон',
     type: 'text',
-    defaultValue: 'Вы — главарь мафии. Выберите жертву в панели действий (ваш голос решающий).',
+    defaultValue: 'Вы — главарь мафии. Выберите жертву в панели действий — только ваш выбор решает.',
   },
   {
     key: 'prompt.mafia',
     group: 'Подсказки ролей',
     label: 'Мафия',
     type: 'text',
-    defaultValue: 'Выберите жертву вместе с мафией в панели действий.',
+    defaultValue: 'Жертву выбирает главарь мафии. Если он погибнет — главой станете вы.',
+  },
+  {
+    key: 'prompt.mafia.wait',
+    group: 'Подсказки ролей',
+    label: 'Мафия: ожидание главаря',
+    type: 'text',
+    defaultValue: 'Главарь мафии выбирает жертву. Дождитесь его решения — при его гибели вы станете новым главарём.',
   },
   {
     key: 'prompt.commissar',

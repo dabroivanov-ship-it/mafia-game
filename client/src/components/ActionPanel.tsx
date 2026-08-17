@@ -41,14 +41,21 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
     return null;
   }
 
-  const targetBtn = (player: RoomPlayer, onClick: (id: number) => void, selected = false) => (
+  const targetBtn = (
+    player: RoomPlayer,
+    onClick: (id: number) => void,
+    selected = false,
+    opts?: { disabled?: boolean; hint?: string }
+  ) => (
     <button
       key={player.id}
       type="button"
-      className={`btn btn-target ${selected ? 'selected' : ''}`}
+      className={`btn btn-target ${selected ? 'selected' : ''}${opts?.disabled ? ' disabled-target' : ''}`}
+      disabled={opts?.disabled}
       onClick={() => onClick(player.id)}
     >
       {player.username || player.name}
+      {opts?.hint ? <span className="target-hint"> {opts.hint}</span> : null}
     </button>
   );
 
@@ -163,14 +170,51 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
     }
 
     if (role === 'mafia') {
+      if (!state.isDon) {
+        return (
+          <div className="action-panel">
+            <h3>🎩 Мафия</h3>
+            <p className="muted" style={{ marginBottom: 12 }}>
+              Жертву выбирает главарь. Если он погибнет — главой станете вы.
+            </p>
+            {state.mafiaTeam && state.mafiaTeam.length > 0 && (
+              <p className="muted">
+                Союзники:{' '}
+                {state.mafiaTeam
+                  .map((m) => `${m.username}${m.isDon ? ' (главарь)' : ''}`)
+                  .join(', ')}
+              </p>
+            )}
+          </div>
+        );
+      }
+
+      const mafiaAllyIds = new Set(
+        state.players.filter((p) => p.isMafiaAlly).map((p) => p.id)
+      );
+
       return (
         <div className="action-panel">
-          <h3>🔫 Выберите жертву {state.isDon ? '(вы главный маф)' : ''}</h3>
+          <h3>🔫 Выберите жертву (вы главарь мафии)</h3>
+          {state.mafiaTeam && state.mafiaTeam.length > 1 && (
+            <p className="muted" style={{ marginBottom: 12, fontSize: '0.9rem' }}>
+              Союзники:{' '}
+              {state.mafiaTeam
+                .filter((m) => m.id !== state.myId)
+                .map((m) => m.username)
+                .join(', ')}
+            </p>
+          )}
           <div className="target-grid">
             {aliveOthers.map((p) =>
-              targetBtn(p, (id) => {
-                void emit('game:nightAction', { type: 'kill', targetId: id });
-              })
+              targetBtn(
+                p,
+                (id) => {
+                  void emit('game:nightAction', { type: 'kill', targetId: id });
+                },
+                false,
+                mafiaAllyIds.has(p.id) ? { disabled: true, hint: '· союзник' } : undefined
+              )
             )}
           </div>
         </div>

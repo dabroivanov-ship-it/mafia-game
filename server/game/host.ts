@@ -98,7 +98,7 @@ function nightActionPrompt(player: GamePlayer, room: GameRoom): string {
 
         ? getPhraseText('prompt.mafia.don')
 
-        : getPhraseText('prompt.mafia');
+        : getPhraseText('prompt.mafia.wait');
 
       break;
 
@@ -234,7 +234,7 @@ export function buildNightReminderNotes(room: GameRoom): PrivateNote[] {
 
     const needsAction =
 
-      player.role === 'mafia' ||
+      (player.role === 'mafia' && player.isDon) ||
 
       player.role === 'advocate' ||
 
@@ -253,6 +253,14 @@ export function buildNightReminderNotes(room: GameRoom): PrivateNote[] {
       (player.role === 'commissar_wife' && room.wifeRevengeAvailable && !room.wifeRevengeUsed);
 
 
+
+    if (player.role === 'mafia' && !player.isDon) {
+      notes.push({
+        playerId: player.id,
+        message: getPhraseText('prompt.mafia.wait'),
+      });
+      continue;
+    }
 
     if (!needsAction) continue;
 
@@ -356,7 +364,7 @@ export interface NightReport {
 
   mafiaKilled?: GamePlayer;
 
-  mafiaTied?: boolean;
+  mafiaNoDecision?: boolean;
 
   highlanderAttacked?: GamePlayer;
 
@@ -474,9 +482,9 @@ export function buildMorningReportMessage(
 
 
 
-  if (report.mafiaTied) {
+  if (report.mafiaNoDecision) {
 
-    parts.push('Мафия не договорилась о жертве — от их рук никто не пострадал.');
+    parts.push(getPhraseText('report.mafia_no_decision'));
 
   } else if (report.mafiaAttacked) {
 
@@ -771,11 +779,21 @@ export function getMorningIntroMessage(killed: GamePlayer[]): string {
 
 export function getGameEndRolesMessage(room: GameRoom): string {
 
+  const donId =
+    room.players.find((p) => p.inGame && p.role === 'mafia' && p.isDon)?.id ??
+    room.mafiaDonId;
+
   const lines = room.players
 
     .filter((p) => p.inGame && p.role)
 
-    .map((p) => `${playerNick(p)} — ${getRoleLabel(p.role)}`);
+    .map((p) => {
+      const role = getRoleLabel(p.role);
+      if (p.role === 'mafia' && p.id === donId) {
+        return `${playerNick(p)} — ${role} (главарь)`;
+      }
+      return `${playerNick(p)} — ${role}`;
+    });
 
   return `А роли были такие: ${lines.join(', ')}`;
 
