@@ -64,7 +64,7 @@ function RoomCard({
             )}
             <span className="room-count">{room.playerCount}</span>
             {room.aiEnabled && (room.aiCount ?? 0) > 0 && (
-              <span className="room-status">ИИ {room.aiCount}</span>
+              <span className="room-status">AI {room.aiCount}</span>
             )}
           </div>
         </div>

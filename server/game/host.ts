@@ -22,7 +22,7 @@ export function playerNick(p: Pick<GamePlayer, 'username' | 'name'>): string {
 
 /** Роль жертвы в винительном падеже для сводки ночи: «мафия убила комиссара nick». */
 const KILL_TARGET_ROLE: Record<RoleId, string> = {
-  mafia: 'мафиозi',
+  mafia: 'мафиози',
   commissar: 'комиссара Катани',
   doctor: 'доктора',
   homeless: 'бомжа',
@@ -526,7 +526,7 @@ export function buildMorningReportMessage(
     parts.push(getMorningIntroMessage(report.killed));
   }
 
-  return parts.join('\n');
+  return parts.join(' ');
 
 }
 

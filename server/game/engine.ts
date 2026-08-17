@@ -627,11 +627,6 @@ export function startRegistration(room: GameRoom, _starterPlayerId: number | nul
           ? `В игру записалось ${count} AI игрока.`
           : `В игру записалось ${count} AI игроков.`;
     addHostMessage(room, aiPlayersMessage);
-  } else {
-    addHostMessage(
-      room,
-      'ИИ в этой комнате выключен. Включите в админке: Комнаты мафии → галочка «ИИ», число ботов, кнопка «Сохранить».'
-    );
   }
   setTimer(room, CONFIG.REGISTRATION_SEC * 1000, 'registration');
   emitRoomPhaseChange(room);
