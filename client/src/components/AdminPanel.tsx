@@ -11,6 +11,7 @@ import {
   adminCreateGameRoom,
   adminUpdateGameRoomAi,
   adminDeleteChatRoom,
+  adminDeleteGameRoom,
   fetchAdminBanList,
   adminUnsilenceUser,
   adminUpdateUser,
@@ -585,6 +586,16 @@ export default function AdminPanel({
     }
   };
 
+  const handleDeleteGameRoom = async (roomId: number, name: string) => {
+    if (!confirm(`Удалить комнату мафии «${name}»? Участники будут выгнаны.`)) return;
+    try {
+      await adminDeleteGameRoom(roomId);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка удаления');
+    }
+  };
+
   const handleBan = async () => {
     if (!banTarget) return;
     try {
@@ -1090,6 +1101,13 @@ export default function AdminPanel({
                             onClick={() => void handleClearRoomMessages(r.id, r.name)}
                           >
                             Очистить чат
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-sm danger"
+                            onClick={() => void handleDeleteGameRoom(r.id, r.name)}
+                          >
+                            Удалить
                           </button>
                         </div>
                       )}

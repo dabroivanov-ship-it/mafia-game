@@ -74,6 +74,7 @@ export interface AdminRouterHandlers {
   addGameRoom: (name: string, options?: { aiEnabled?: boolean; aiCount?: number }) => GameRoom;
   updateGameRoomAi: (roomId: number, aiEnabled: boolean, aiCount: number) => GameRoom;
   deleteChatRoom: (id: number) => void;
+  deleteGameRoom: (id: number) => void;
   listSilencedPlayers: () => import('../game/engine.js').SilencedPlayerEntry[];
   clearUserSilence: (userId: number) => number;
   onRoomsChanged: (changedRoomId?: number | null) => void;
@@ -202,6 +203,17 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     } catch (e) {
       const err = e as Error;
       res.status(400).json({ error: err.message || 'Не удалось создать комнату' });
+    }
+  });
+
+  router.delete('/game-rooms/:roomId', requireAdminPermission('manage_game_rooms'), (req, res) => {
+    try {
+      handlers.deleteGameRoom(Number(req.params.roomId));
+      handlers.onRoomsChanged();
+      res.json({ ok: true });
+    } catch (e) {
+      const err = e as Error;
+      res.status(400).json({ error: err.message });
     }
   });
 

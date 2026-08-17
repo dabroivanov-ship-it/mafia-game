@@ -17,6 +17,7 @@ import {
   getScoreSummaryMessage,
   getDayDiscussionMessage,
   getVotingStartMessage,
+  getVotingCastMessage,
   getHangVerdictMessage,
   getVotingTieMessage,
   getVotingCountMessage,
@@ -369,7 +370,13 @@ export function removeRoom(rooms: Map<number, GameRoom>, roomId: number): GameRo
   if (!rooms.has(id)) throw new Error('Комната не найдена');
   const room = rooms.get(id)!;
   if (room.kind === 'game') {
-    throw new Error('Нельзя удалить игровую комнату');
+    if (isActiveGamePhase(room.phase)) {
+      throw new Error('Нельзя удалить комнату во время активной игры');
+    }
+    const gameRoomCount = Array.from(rooms.values()).filter((r) => r.kind === 'game').length;
+    if (gameRoomCount <= 1) {
+      throw new Error('Должна остаться хотя бы одна игровая комната');
+    }
   }
   rooms.delete(id);
   deleteRoomConfig(id);
@@ -823,6 +830,7 @@ export function castDayVote(
 
   room.votes[voterId] = targetId;
   voter.hasVoted = true;
+  addHostMessage(room, getVotingCastMessage(voter, target));
 
   const alive = room.players.filter((p) => p.alive && p.inGame && p.role && p.connected);
   if (alive.every((p) => p.hasVoted)) {

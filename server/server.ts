@@ -372,9 +372,22 @@ function onRoomsChanged(changedRoomId: number | null = null): void {
   }
 }
 
-function adminDeleteRoom(roomId: number): void {
+function adminDeleteRoom(roomId: number, expectedKind: 'game' | 'chat'): void {
   const room = rooms.get(roomId);
   if (!room) throw new Error('Комната не найдена');
+  if (room.kind !== expectedKind) {
+    throw new Error(
+      expectedKind === 'chat'
+        ? 'Это игровая комната — используйте удаление в разделе «Комнаты мафии»'
+        : 'Это чат-комната — используйте удаление в разделе «Чат-комнаты»'
+    );
+  }
+  const existing = pendingRoomClears.get(roomId);
+  if (existing) {
+    clearTimeout(existing.warningTimer);
+    clearTimeout(existing.clearTimer);
+    pendingRoomClears.delete(roomId);
+  }
   kickPlayersFromRoom(room);
   removeRoom(rooms, roomId);
 }
@@ -421,7 +434,8 @@ app.use(
     addGameRoom: (name, options) => addGameRoom(rooms, name, options),
     updateGameRoomAi: (roomId, aiEnabled, aiCount) =>
       updateGameRoomAi(rooms, roomId, aiEnabled, aiCount),
-    deleteChatRoom: (id) => adminDeleteRoom(id),
+    deleteChatRoom: (id) => adminDeleteRoom(id, 'chat'),
+    deleteGameRoom: (id) => adminDeleteRoom(id, 'game'),
     listSilencedPlayers: () => listSilencedPlayers(rooms),
     clearUserSilence: (userId) => clearUserSilenceInAllRooms(rooms, userId),
     onRoomsChanged,

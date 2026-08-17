@@ -855,6 +855,10 @@ export async function adminDeleteChatRoom(roomId: number): Promise<void> {
   return apiRequest(`/api/admin/chat-rooms/${roomId}`, { method: 'DELETE' });
 }
 
+export async function adminDeleteGameRoom(roomId: number): Promise<void> {
+  return apiRequest(`/api/admin/game-rooms/${roomId}`, { method: 'DELETE' });
+}
+
 /** @deprecated Use adminCreateChatRoom */
 export async function adminCreateRoom(name: string): Promise<void> {
   return adminCreateChatRoom(name);

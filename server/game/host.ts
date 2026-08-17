@@ -632,6 +632,20 @@ export function getVotingStartMessage(): string {
 
 
 
+export function getVotingCastMessage(voter: GamePlayer, target: GamePlayer): string {
+
+  return getPhraseText('voting.cast', {
+
+    voter: playerNick(voter),
+
+    target: playerNick(target),
+
+  });
+
+}
+
+
+
 export function getRolesRevealSystemMessage(_playerCount: number): string {
 
   return getPhraseText('game.roles_reveal', { seconds: CONFIG.ROLE_REVEAL_SEC });

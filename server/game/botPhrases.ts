@@ -201,6 +201,14 @@ export const BOT_PHRASE_DEFINITIONS: BotPhraseDefinition[] = [
     defaultValue: '🗳️ Голосование началось! Выберите, кого повесить.',
   },
   {
+    key: 'voting.cast',
+    group: 'Голосование',
+    label: 'Игрок отдал голос',
+    type: 'text',
+    placeholders: ['{voter}', '{target}'],
+    defaultValue: '🗳️ {voter} голосует за {target}.',
+  },
+  {
     key: 'voting.tie',
     group: 'Голосование',
     label: 'Ничья при голосовании',
