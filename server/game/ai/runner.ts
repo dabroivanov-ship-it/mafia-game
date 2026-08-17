@@ -361,6 +361,10 @@ async function runVoting(room: GameRoom): Promise<void> {
     return;
   }
 
+  await runNominations(room);
+}
+
+async function runNominations(room: GameRoom): Promise<void> {
   const bots = aliveBots(room).filter((p) => !p.hasVoted);
   for (const bot of bots) {
     if (room.phase !== PHASE.VOTING || room.votingStage === 'confirm') return;
