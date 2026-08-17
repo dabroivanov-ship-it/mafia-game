@@ -213,6 +213,8 @@ export interface RoomState {
   canModerate: boolean;
   canSilence: boolean;
   isQuizRoom?: boolean;
+  aiEnabled?: boolean;
+  aiCount?: number;
 }
 
 export interface ApiError {

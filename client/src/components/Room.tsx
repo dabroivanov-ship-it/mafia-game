@@ -170,6 +170,7 @@ export default function Room({
                 {state.phase === 'registration' && (
                   <span className="registration-count">
                     {state.registeredCount}/{state.maxPlayers} в игре
+                    {state.aiEnabled && (state.aiCount ?? 0) > 0 ? ` · ИИ ${state.aiCount}` : ''}
                   </span>
                 )}
                 {state.phase === 'roles' && (

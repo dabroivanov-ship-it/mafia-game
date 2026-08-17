@@ -63,6 +63,9 @@ function RoomCard({
               <span className="room-status">{PHASE_LABELS[room.phase] || room.phase}</span>
             )}
             <span className="room-count">{room.playerCount}</span>
+            {room.aiEnabled && (room.aiCount ?? 0) > 0 && (
+              <span className="room-status">ИИ {room.aiCount}</span>
+            )}
           </div>
         </div>
         <button type="button" className="btn btn-primary" onClick={() => onJoin(room.id)}>

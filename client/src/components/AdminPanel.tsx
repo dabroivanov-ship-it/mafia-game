@@ -530,7 +530,10 @@ export default function AdminPanel({
     const edit = roomAiEdits[roomId];
     if (!edit) return;
     try {
-      await adminUpdateGameRoomAi(roomId, edit);
+      await adminUpdateGameRoomAi(roomId, {
+        aiEnabled: edit.aiEnabled,
+        aiCount: edit.aiEnabled ? Math.max(1, edit.aiCount || 3) : 0,
+      });
       await load({ syncRoomNames: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка сохранения ИИ');
@@ -1003,7 +1006,11 @@ export default function AdminPanel({
                                   ...prev,
                                   [r.id]: {
                                     aiEnabled: e.target.checked,
-                                    aiCount: prev[r.id]?.aiCount ?? r.aiCount ?? 3,
+                                    aiCount: (() => {
+                                      const current = prev[r.id]?.aiCount ?? r.aiCount ?? 0;
+                                      if (e.target.checked && current < 1) return 3;
+                                      return current;
+                                    })(),
                                   },
                                 }))
                               }

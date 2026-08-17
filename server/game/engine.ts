@@ -569,6 +569,14 @@ export function reconnectPlayer(
   return { player, privateNotes: [] };
 }
 
+function applySavedAiSettings(room: GameRoom): void {
+  if (room.kind !== 'game') return;
+  const config = loadRoomConfigs().get(room.id);
+  if (!config) return;
+  room.aiEnabled = config.aiEnabled;
+  room.aiCount = config.aiCount;
+}
+
 export function startRegistration(room: GameRoom, _starterPlayerId: number | null = null): void {
   if (isChatRoom(room)) {
     throw new Error('В чат-комнате нельзя запустить игру');
@@ -579,6 +587,7 @@ export function startRegistration(room: GameRoom, _starterPlayerId: number | nul
   if (room.phase === PHASE.ENDED) {
     resetRoom(room);
   }
+  applySavedAiSettings(room);
   removeAiBots(room);
   room.aiHandledPhases = new Set();
   for (const p of room.players) {
@@ -602,6 +611,17 @@ export function startRegistration(room: GameRoom, _starterPlayerId: number | nul
     room,
     'Регистрация открыта! Нажмите «Вступить в игру», чтобы участвовать.'
   );
+  if (addedBots.length > 0) {
+    addHostMessage(
+      room,
+      `ИИ: в игру записались ${addedBots.length} ботов.`
+    );
+  } else {
+    addHostMessage(
+      room,
+      'ИИ в этой комнате выключен. Включите в админке: Комнаты мафии → галочка «ИИ», число ботов, кнопка «ИИ ✓».'
+    );
+  }
   setTimer(room, CONFIG.REGISTRATION_SEC * 1000, 'registration');
   emitRoomPhaseChange(room);
 }
@@ -1996,6 +2016,8 @@ export function serializeRoomForPlayer(
       isAdmin,
       canModerate,
       canSilence,
+      aiEnabled: false,
+      aiCount: 0,
     };
   }
 
@@ -2080,5 +2102,7 @@ export function serializeRoomForPlayer(
     isAdmin,
     canModerate,
     canSilence,
+    aiEnabled: !!room.aiEnabled,
+    aiCount: room.aiCount ?? 0,
   };
 }
