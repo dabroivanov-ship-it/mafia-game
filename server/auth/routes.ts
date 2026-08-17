@@ -17,6 +17,13 @@ import {
   getOrCreateUserFromTelegram,
 } from './telegram.js';
 import { isTelegramOidcConfigured, verifyTelegramOidcIdToken, createTelegramOidcAuthorizationUrl, completeTelegramOidcAuthorization, buildTelegramOidcSuccessRedirect, buildTelegramOidcErrorRedirect } from './telegramOidc.js';
+import {
+  isVkAuthConfigured,
+  createVkAuthorizationUrl,
+  completeVkAuthorization,
+  buildVkSuccessRedirect,
+  buildVkErrorRedirect,
+} from './vk.js';
 import { createRateLimitMiddleware, authRateLimiter } from '../security/rateLimit.js';
 import { MAX_PASSWORD_LENGTH } from '../security/constants.js';
 import { recordSiteVisit } from '../stats/siteStats.js';
@@ -135,6 +142,27 @@ router.get('/telegram/oidc/callback', async (req, res) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Ошибка Telegram входа';
     res.redirect(buildTelegramOidcErrorRedirect(message, req));
+  }
+});
+
+router.get('/vk/start', (req, res) => {
+  if (!isVkAuthConfigured()) {
+    return res.redirect(buildVkErrorRedirect('Вход через VK не настроен на сервере', req));
+  }
+  const remember = req.query.remember !== '0';
+  const url = createVkAuthorizationUrl(remember, req);
+  res.redirect(url);
+});
+
+router.get('/vk/callback', async (req, res) => {
+  try {
+    const { user, remember } = await completeVkAuthorization(req);
+    const token = signToken(user, remember);
+    void publicUser(user);
+    res.redirect(buildVkSuccessRedirect(token, req));
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Ошибка VK входа';
+    res.redirect(buildVkErrorRedirect(message, req));
   }
 });
 

@@ -59,6 +59,8 @@ function migrateColumns(): void {
   if (!cols.includes('theme')) add('ALTER TABLE users ADD COLUMN theme TEXT DEFAULT NULL');
   if (!cols.includes('telegram_id')) add('ALTER TABLE users ADD COLUMN telegram_id TEXT DEFAULT NULL');
   if (!cols.includes('telegram_username')) add('ALTER TABLE users ADD COLUMN telegram_username TEXT DEFAULT NULL');
+  if (!cols.includes('vk_id')) add('ALTER TABLE users ADD COLUMN vk_id TEXT DEFAULT NULL');
+  if (!cols.includes('vk_username')) add('ALTER TABLE users ADD COLUMN vk_username TEXT DEFAULT NULL');
   if (!cols.includes('last_seen_at')) add('ALTER TABLE users ADD COLUMN last_seen_at TEXT DEFAULT NULL');
   if (!cols.includes('games_played')) add('ALTER TABLE users ADD COLUMN games_played INTEGER NOT NULL DEFAULT 0');
   if (!cols.includes('reputation')) add('ALTER TABLE users ADD COLUMN reputation INTEGER NOT NULL DEFAULT 0');
@@ -67,6 +69,7 @@ function migrateColumns(): void {
   }
   if (!cols.includes('gender')) add('ALTER TABLE users ADD COLUMN gender TEXT NOT NULL DEFAULT ""');
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_telegram_id ON users(telegram_id)');
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_vk_id ON users(vk_id)');
 }
 
 migrateColumns();
@@ -156,13 +159,22 @@ export function isTelegramPlaceholderEmail(email: string | null | undefined): bo
   return !!email && /@telegram\.local$/i.test(email.trim());
 }
 
+export function isVkPlaceholderEmail(email: string | null | undefined): boolean {
+  return !!email && /@vk\.local$/i.test(email.trim());
+}
+
+export function isSocialPlaceholderEmail(email: string | null | undefined): boolean {
+  return isTelegramPlaceholderEmail(email) || isVkPlaceholderEmail(email);
+}
+
 export function userNeedsEmailLink(user: User | null | undefined): boolean {
-  return !!(user?.telegram_id && isTelegramPlaceholderEmail(user.email));
+  if (!user || !isSocialPlaceholderEmail(user.email)) return false;
+  return !!(user.telegram_id || user.vk_id);
 }
 
 export function publicUser(user: User | null | undefined): PublicUser | null {
   if (!user) return null;
-  const placeholderEmail = isTelegramPlaceholderEmail(user.email);
+  const placeholderEmail = isSocialPlaceholderEmail(user.email);
   return {
     id: user.id,
     username: user.username,
@@ -191,6 +203,7 @@ export function publicUser(user: User | null | undefined): PublicUser | null {
     theme: user.theme && user.theme.trim() ? user.theme.trim() : null,
     telegramUsername:
       user.telegram_username && user.telegram_username.trim() ? user.telegram_username.trim() : null,
+    vkUsername: user.vk_username && user.vk_username.trim() ? user.vk_username.trim() : null,
     needsEmailLink: userNeedsEmailLink(user),
   };
 }
@@ -205,6 +218,10 @@ export function findUserByEmail(email: string): User | undefined {
 
 export function findUserByTelegramId(telegramId: string): User | undefined {
   return db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(telegramId) as User | undefined;
+}
+
+export function findUserByVkId(vkId: string): User | undefined {
+  return db.prepare('SELECT * FROM users WHERE vk_id = ?').get(vkId) as User | undefined;
 }
 
 export function findUserById(id: number): User | undefined {
@@ -224,6 +241,8 @@ export function createUser({
   gender,
   telegramId,
   telegramUsername,
+  vkId,
+  vkUsername,
 }: {
   username: string;
   email: string;
@@ -232,14 +251,16 @@ export function createUser({
   gender?: UserGender;
   telegramId?: string | null;
   telegramUsername?: string | null;
+  vkId?: string | null;
+  vkUsername?: string | null;
 }): User | undefined {
   const role = 'user';
 
   const result = db
     .prepare(
       `INSERT INTO users
-      (username, email, password_hash, display_name, gender, role, telegram_id, telegram_username)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      (username, email, password_hash, display_name, gender, role, telegram_id, telegram_username, vk_id, vk_username)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       username,
@@ -249,7 +270,9 @@ export function createUser({
       normalizeGender(gender),
       role,
       telegramId || null,
-      telegramUsername || null
+      telegramUsername || null,
+      vkId || null,
+      vkUsername || null
     );
   return findUserById(Number(result.lastInsertRowid));
 }
@@ -317,8 +340,8 @@ export function linkTelegramUserEmail(
 ): PublicUser | null {
   const user = findUserById(userId);
   if (!user) return null;
-  if (!user.telegram_id) {
-    throw new Error('Привязка email доступна только для входа через Telegram');
+  if (!user.telegram_id && !user.vk_id) {
+    throw new Error('Привязка email доступна только для входа через соцсеть');
   }
   if (!userNeedsEmailLink(user)) {
     throw new Error('Email уже привязан');
@@ -327,7 +350,7 @@ export function linkTelegramUserEmail(
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
     throw new Error('Некорректный email');
   }
-  if (isTelegramPlaceholderEmail(normalizedEmail)) {
+  if (isSocialPlaceholderEmail(normalizedEmail)) {
     throw new Error('Некорректный email');
   }
   const existing = findUserByEmail(normalizedEmail);

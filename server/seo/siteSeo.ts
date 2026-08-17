@@ -51,7 +51,7 @@ Disallow: /socket.io/
 Disallow: /uploads/
 Disallow: /profile/
 Host: ${host}
-Clean-param: tg_token&tg_error /
+Clean-param: tg_token&tg_error&vk_token&vk_error /
 
 Sitemap: ${origin}/sitemap.xml
 `;

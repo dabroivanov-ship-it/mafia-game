@@ -4,6 +4,7 @@ import path from 'path';
 import { getSiteBrandingUploadsDir } from '../paths.js';
 import { DEFAULT_THEME, isValidThemeId, type ThemeId } from './themes.js';
 import { isTelegramOidcConfigured, getTelegramOidcRedirectUri } from '../auth/telegramOidc.js';
+import { isVkAuthConfigured, getVkRedirectUri } from '../auth/vk.js';
 db.exec(`
   CREATE TABLE IF NOT EXISTS app_settings (
     key TEXT PRIMARY KEY,
@@ -99,6 +100,17 @@ export function getTelegramSettings(): {
   const loginReady = isTelegramOidcConfigured();
   const oidcRedirectUri = oidcClientId ? getTelegramOidcRedirectUri() : null;
   return { botUsername, webAppUrl, oidcClientId, oidcRedirectUri, loginReady };
+}
+
+export function getVkSettings(): {
+  clientId: string | null;
+  redirectUri: string | null;
+  loginReady: boolean;
+} {
+  const clientId = process.env.VK_CLIENT_ID?.trim() || null;
+  const loginReady = isVkAuthConfigured();
+  const redirectUri = clientId ? getVkRedirectUri() : null;
+  return { clientId, redirectUri, loginReady };
 }
 
 export function setTelegramSettings(botUsername: string, webAppUrl: string): void {

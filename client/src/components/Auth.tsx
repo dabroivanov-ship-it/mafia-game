@@ -6,6 +6,7 @@ import {
   loadRememberedLogin,
   saveRememberedLogin,
   fetchTelegramSettings,
+  fetchVkSettings,
   telegramWebAppLogin,
   fetchMe,
 } from '../api';
@@ -14,6 +15,7 @@ import { USER_GENDER_LABELS } from '../gender';
 import { isTelegramWebApp, waitForTelegramWebApp } from '../telegramWebApp';
 import TelegramLoginWidget from './TelegramLoginWidget';
 import TelegramIcon from './TelegramIcon';
+import VkLoginWidget from './VkLoginWidget';
 import SiteLogo from './SiteLogo';
 import SiteFooter from './SiteFooter';
 import { DEFAULT_PAGE_META, updatePageMeta } from '../seo';
@@ -34,6 +36,9 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
   const [telegramLoginReady, setTelegramLoginReady] = useState(false);
   const [telegramLoading, setTelegramLoading] = useState(false);
   const [telegramWebAppMode, setTelegramWebAppMode] = useState(false);
+  const [vkRedirectUri, setVkRedirectUri] = useState<string | null>(null);
+  const [vkLoginReady, setVkLoginReady] = useState(false);
+  const [vkLoading, setVkLoading] = useState(false);
 
   const [loginForm, setLoginForm] = useState({ login: '', password: '' });
   const [regForm, setRegForm] = useState({
@@ -76,40 +81,64 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
         setTelegramOidcRedirectUri(null);
         setTelegramLoginReady(false);
       });
+
+    fetchVkSettings()
+      .then(({ redirectUri, loginReady }) => {
+        setVkRedirectUri(redirectUri);
+        setVkLoginReady(loginReady);
+      })
+      .catch(() => {
+        setVkRedirectUri(null);
+        setVkLoginReady(false);
+      });
   }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tgError = params.get('tg_error');
     const tgToken = params.get('tg_token');
+    const vkError = params.get('vk_error');
+    const vkToken = params.get('vk_token');
 
-    if (tgError) {
-      setError(tgError);
+    if (tgError || vkError) {
+      setError(tgError || vkError || '');
       window.history.replaceState(null, '', window.location.pathname);
       return;
     }
 
-    if (!tgToken) return;
+    const oauthToken = tgToken || vkToken;
+    if (!oauthToken) return;
 
     let cancelled = false;
-    setTelegramLoading(true);
+    if (tgToken) setTelegramLoading(true);
+    if (vkToken) setVkLoading(true);
     setError('');
-    localStorage.setItem('mafia_token', tgToken);
+    localStorage.setItem('mafia_token', oauthToken);
     window.history.replaceState(null, '', window.location.pathname);
 
     void fetchMe()
       .then(({ user }) => {
         if (cancelled) return;
-        const loginName = user.telegramUsername || user.username || String(user.id);
-        completeAuth(user, tgToken, loginName);
+        const loginName =
+          user.telegramUsername || user.vkUsername || user.username || String(user.id);
+        completeAuth(user, oauthToken, loginName);
       })
       .catch((err: unknown) => {
         if (cancelled) return;
         localStorage.removeItem('mafia_token');
-        setError(err instanceof Error ? err.message : 'Ошибка Telegram входа');
+        setError(
+          err instanceof Error
+            ? err.message
+            : tgToken
+              ? 'Ошибка Telegram входа'
+              : 'Ошибка VK входа'
+        );
       })
       .finally(() => {
-        if (!cancelled) setTelegramLoading(false);
+        if (!cancelled) {
+          setTelegramLoading(false);
+          setVkLoading(false);
+        }
       });
 
     return () => {
@@ -394,13 +423,22 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
 
 
         {mode === 'login' && !telegramWebAppMode && (
-          <TelegramLoginWidget
-            loginReady={telegramLoginReady}
-            oidcRedirectUri={telegramOidcRedirectUri}
-            remember={rememberMe}
-            loading={telegramLoading}
-            onError={setError}
-          />
+          <>
+            <TelegramLoginWidget
+              loginReady={telegramLoginReady}
+              oidcRedirectUri={telegramOidcRedirectUri}
+              remember={rememberMe}
+              loading={telegramLoading || vkLoading}
+              onError={setError}
+            />
+            <VkLoginWidget
+              loginReady={vkLoginReady}
+              redirectUri={vkRedirectUri}
+              remember={rememberMe}
+              loading={telegramLoading || vkLoading}
+              onError={setError}
+            />
+          </>
         )}
 
 

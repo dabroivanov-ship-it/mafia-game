@@ -196,6 +196,14 @@ export async function fetchTelegramSettings(): Promise<{
   return apiRequest('/api/settings/telegram');
 }
 
+export async function fetchVkSettings(): Promise<{
+  clientId: string | null;
+  redirectUri: string | null;
+  loginReady: boolean;
+}> {
+  return apiRequest('/api/settings/vk');
+}
+
 export async function fetchMetrikaSettings(): Promise<{ metrikaId: number | null }> {
   return apiRequest('/api/settings/metrika');
 }

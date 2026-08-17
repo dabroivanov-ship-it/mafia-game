@@ -159,6 +159,7 @@ export default function CabinetProfileSettings({
         <div className="profile-stats">
           <span>@{user.username}</span>
           {user.telegramUsername && <span>📱 Telegram @{user.telegramUsername}</span>}
+          {user.vkUsername && <span>VK {user.vkUsername}</span>}
           {user.email && !user.needsEmailLink && <span>✉️ {user.email}</span>}
           {onOpenStatistics ? (
             <button type="button" className="cabinet-hub-mmr-link" onClick={onOpenStatistics}>

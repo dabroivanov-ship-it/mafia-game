@@ -486,6 +486,45 @@ html.telegram-webapp .app-body {
   font-size: 0.85em;
 }
 
+.auth-vk-block {
+  margin-top: 12px;
+  margin-bottom: 14px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-hover);
+}
+
+.auth-vk-btn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #0077ff;
+  border-color: #0077ff;
+  color: #fff;
+}
+
+.auth-vk-btn:hover:not(:disabled) {
+  background: #0066dd;
+  border-color: #0066dd;
+}
+
+.auth-vk-btn-icon {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.auth-vk-hint code {
+  font-size: 0.85em;
+}
+
+.auth-vk-hint a {
+  color: #0077ff;
+}
+
 .auth-form select {
   padding: 12px 14px;
   border-radius: var(--radius);

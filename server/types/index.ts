@@ -37,6 +37,8 @@ export interface User {
   password_hash: string;
   telegram_id?: string | null;
   telegram_username?: string | null;
+  vk_id?: string | null;
+  vk_username?: string | null;
   display_name: string;
   gender: UserGender;
   city: string;
@@ -92,6 +94,7 @@ export interface PublicUser {
   chatLimit: number;
   theme: string | null;
   telegramUsername?: string | null;
+  vkUsername?: string | null;
   needsEmailLink?: boolean;
 }
 

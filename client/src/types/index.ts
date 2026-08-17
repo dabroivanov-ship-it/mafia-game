@@ -66,6 +66,7 @@ export interface User {
   chatLimit: number;
   theme: string | null;
   telegramUsername?: string | null;
+  vkUsername?: string | null;
   needsEmailLink?: boolean;
 }
 

@@ -6,6 +6,7 @@ import {
   getSiteBranding,
   getLobbyAnnouncement,
   getTelegramSettings,
+  getVkSettings,
   getYandexMetrikaId,
   setDefaultTheme,
   setSiteBrandingFields,
@@ -41,6 +42,10 @@ router.put('/theme', authMiddleware, adminMiddleware, (req, res) => {
 
 router.get('/telegram', (_req, res) => {
   res.json(getTelegramSettings());
+});
+
+router.get('/vk', (_req, res) => {
+  res.json(getVkSettings());
 });
 
 router.put('/telegram', authMiddleware, adminMiddleware, (req, res) => {
