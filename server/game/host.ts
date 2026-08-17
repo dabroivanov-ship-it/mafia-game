@@ -608,6 +608,14 @@ export function getVotingCountMessage(): string {
 
 
 
+export function getVotingMajorityMessage(votes: number, total: number): string {
+
+  return getPhraseText('voting.majority', { votes, total });
+
+}
+
+
+
 export function getVotingRestartMessage(): string {
 
   return getPhraseText('voting.restart');

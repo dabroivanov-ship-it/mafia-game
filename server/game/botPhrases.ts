@@ -223,6 +223,14 @@ export const BOT_PHRASE_DEFINITIONS: BotPhraseDefinition[] = [
     defaultValue: '🗳️ Все проголосовали. Подсчёт голосов...',
   },
   {
+    key: 'voting.majority',
+    group: 'Голосование',
+    label: 'Большинство за казнь',
+    type: 'text',
+    placeholders: ['{votes}', '{total}'],
+    defaultValue: '🗳️ Большинство ({votes} из {total}) проголосовало за казнь — решение принято.',
+  },
+  {
     key: 'voting.restart',
     group: 'Голосование',
     label: 'Новый этап отбора',

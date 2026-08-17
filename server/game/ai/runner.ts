@@ -6,14 +6,18 @@ import {
   submitNightAction,
   isPlayerSilenced,
 } from '../engine.js';
-import type { GamePlayer, GameRoom, NightAction, RoleId } from '../../types/index.js';
+import type { ChatMessage, GamePhase, GamePlayer, GameRoom, NightAction, RoleId } from '../../types/index.js';
 import { isDeepSeekEnabled } from '../../settings/deepseekStore.js';
 import { deepSeekJsonChat } from './deepseekClient.js';
 
 const BOT_DELAY_MS = 600;
-const DAY_CHAT_MESSAGES = 2;
+const REPLY_DELAY_MS = 1800;
+const REPLY_COOLDOWN_MS = 3500;
+const MAX_REPLIES_PER_MINUTE = 10;
 
 let broadcastRoom: (roomId: number) => void = () => {};
+const replyTimestampsByRoom = new Map<number, number[]>();
+const replyInFlightByRoom = new Set<number>();
 
 export function initGameAiRunner(broadcast: (roomId: number) => void): void {
   broadcastRoom = broadcast;
@@ -46,6 +50,22 @@ export function triggerGameAi(room: GameRoom): void {
     .finally(() => broadcastRoom(room.id));
 }
 
+/** Вызывается, когда живой игрок пишет в общий чат — бот может ответить. */
+export function triggerBotChatResponse(
+  room: GameRoom,
+  author: GamePlayer,
+  text: string,
+  msg?: ChatMessage | null
+): void {
+  if (!room.aiEnabled || (room.aiCount ?? 0) <= 0) return;
+  if (author.isBot) return;
+  if (room.phase !== PHASE.DAY && room.phase !== PHASE.VOTING) return;
+
+  void runBotChatReply(room, author, text, msg).catch((err) =>
+    console.error(`[ai] chat reply room ${room.id}:`, err)
+  );
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -65,37 +85,118 @@ function pickRandom<T>(items: T[]): T | null {
   return items[Math.floor(Math.random() * items.length)] ?? null;
 }
 
-function buildPublicState(room: GameRoom, bot: GamePlayer): string {
-  const players = room.players
+function phaseLabel(phase: GamePhase): string {
+  switch (phase) {
+    case PHASE.DAY:
+      return 'дневное обсуждение';
+    case PHASE.VOTING:
+      return 'голосование';
+    case PHASE.NIGHT:
+      return 'ночь';
+    case PHASE.REGISTRATION:
+      return 'регистрация';
+    case PHASE.ROLES:
+      return 'раздача ролей';
+    case PHASE.ENDED:
+      return 'игра окончена';
+    default:
+      return 'ожидание';
+  }
+}
+
+function canReplyNow(roomId: number): boolean {
+  const now = Date.now();
+  const recent = (replyTimestampsByRoom.get(roomId) ?? []).filter((t) => now - t < 60_000);
+  replyTimestampsByRoom.set(roomId, recent);
+  if (recent.length >= MAX_REPLIES_PER_MINUTE) return false;
+  const last = recent[recent.length - 1];
+  if (last != null && now - last < REPLY_COOLDOWN_MS) return false;
+  return true;
+}
+
+function markReply(roomId: number): void {
+  const now = Date.now();
+  const recent = (replyTimestampsByRoom.get(roomId) ?? []).filter((t) => now - t < 60_000);
+  recent.push(now);
+  replyTimestampsByRoom.set(roomId, recent);
+}
+
+function buildGameContextForBot(
+  room: GameRoom,
+  bot: GamePlayer,
+  trigger?: { authorName: string; authorId: number; text: string; toPlayerId?: number | null }
+): string {
+  const dayNumber = room.nightNumber + 1;
+
+  const playerLines = room.players
     .filter((p) => p.inGame && p.role)
     .map((p) => {
-      const knownRole =
-        p.id === bot.id || !p.alive
-          ? getRoleLabel(p.role)
-          : 'неизвестно';
-      return `#${p.id} ${p.username} — ${p.alive ? 'жив' : 'мёртв'}, роль: ${knownRole}`;
+      if (p.id === bot.id) {
+        return `#${p.id} ${p.username} — жив, это ты, роль: ${getRoleLabel(p.role)}`;
+      }
+      if (!p.alive) {
+        return `#${p.id} ${p.username} — мёртв (роль могла быть названа ведущим)`;
+      }
+      return `#${p.id} ${p.username} — жив, роль неизвестна`;
     })
     .join('\n');
 
-  const recentChat = room.chat
-    .filter((m) => !m.deleted && !m.system)
+  const hostEvents = room.chat
+    .filter((m) => m.system && !m.deleted)
     .slice(-12)
-    .map((m) => `${m.playerName}: ${m.text}`)
+    .map((m) => `[${m.playerName}] ${m.text}`)
     .join('\n');
 
-  return [
+  const playerChat = room.chat
+    .filter((m) => !m.deleted && !m.system && m.playerId != null)
+    .slice(-25)
+    .map((m) => {
+      const to = m.toPlayerName ? ` → ${m.toPlayerName}` : '';
+      return `${m.playerName}${to}: ${m.text}`;
+    })
+    .join('\n');
+
+  let votingInfo = '';
+  if (room.phase === PHASE.VOTING && Object.keys(room.votes).length > 0) {
+    votingInfo = Object.entries(room.votes)
+      .map(([voterId, targetId]) => {
+        const voter = room.players.find((p) => p.id === Number(voterId));
+        const target = room.players.find((p) => p.id === targetId);
+        return `${voter?.username ?? voterId} голосует за ${target?.username ?? targetId}`;
+      })
+      .join('\n');
+  }
+
+  const parts = [
+    `=== Текущая партия (сессия ${room.sessionId ?? '?'}) ===`,
     `Комната: ${room.name}`,
-    `Фаза: ${room.phase}, ночь №${room.nightNumber}`,
+    `Фаза: ${phaseLabel(room.phase)}, день ${dayNumber}, прошло ночей: ${room.nightNumber}`,
     `Твоя роль: ${getRoleLabel(bot.role)}`,
     bot.isDon ? 'Ты главный мафиози (дон).' : '',
-    `Игроки:\n${players}`,
-    recentChat ? `Недавний чат:\n${recentChat}` : 'Чат пока пуст.',
-  ]
-    .filter(Boolean)
-    .join('\n\n');
+    `Участники:\n${playerLines}`,
+    hostEvents ? `Сообщения ведущего (официальные факты этой игры):\n${hostEvents}` : '',
+    votingInfo ? `Текущие голоса:\n${votingInfo}` : '',
+    playerChat ? `Переписка в этой партии:\n${playerChat}` : 'Переписки пока нет.',
+  ];
+
+  if (trigger) {
+    parts.push(
+      `\n=== Сообщение игрока ===\n${trigger.authorName} (#${trigger.authorId}): «${trigger.text}»`
+    );
+    if (trigger.toPlayerId === bot.id) {
+      parts.push('Это сообщение обращено лично к тебе — ответь по делу.');
+    }
+  }
+
+  return parts.filter(Boolean).join('\n\n');
 }
 
-async function askDeepSeek<T>(bot: GamePlayer, room: GameRoom, instruction: string): Promise<T | null> {
+async function askDeepSeek<T>(
+  bot: GamePlayer,
+  room: GameRoom,
+  instruction: string,
+  trigger?: { authorName: string; authorId: number; text: string; toPlayerId?: number | null }
+): Promise<T | null> {
   if (!isDeepSeekEnabled()) return null;
   const mafiaHint = buildMafiaHintForBot(bot, room);
   try {
@@ -104,11 +205,11 @@ async function askDeepSeek<T>(bot: GamePlayer, room: GameRoom, instruction: stri
         {
           role: 'system',
           content:
-            'Ты играешь в онлайн-мафию. Отвечай только валидным JSON на русском. Не раскрывай, что ты ИИ.',
+            'Ты играешь роль живого игрока в онлайн-мафию. Анализируй только факты ЭТОЙ партии из контекста: сообщения ведущего, кто жив/мёртв, переписку, голоса. Не выдумывай события и роли. Отвечай только валидным JSON на русском. Не раскрывай, что ты ИИ. Играй в соответствии со своей ролью (мафия может врать, мирный ищет мафию).',
         },
         {
           role: 'user',
-          content: `${buildPublicState(room, bot)}${mafiaHint ? `\n\n${mafiaHint}` : ''}\n\n${instruction}`,
+          content: `${buildGameContextForBot(room, bot, trigger)}${mafiaHint ? `\n\n${mafiaHint}` : ''}\n\n${instruction}`,
         },
       ],
       { timeoutMs: 20_000 }
@@ -119,31 +220,127 @@ async function askDeepSeek<T>(bot: GamePlayer, room: GameRoom, instruction: stri
   }
 }
 
-async function runDayChat(room: GameRoom): Promise<void> {
-  const bots = aliveBots(room).filter((p) => !isPlayerSilenced(p));
-  if (!bots.length) return;
+function messageMentionsBot(text: string, bot: GamePlayer): boolean {
+  const lower = text.toLowerCase();
+  return (
+    lower.includes(bot.username.toLowerCase()) ||
+    lower.includes(bot.name.toLowerCase())
+  );
+}
 
-  const speakers = [...bots].sort(() => Math.random() - 0.5).slice(0, DAY_CHAT_MESSAGES);
-  for (const bot of speakers) {
-    if (room.phase !== PHASE.DAY) return;
-    await sleep(1500 + Math.random() * 4000);
+function pickRespondingBot(
+  room: GameRoom,
+  author: GamePlayer,
+  text: string,
+  msg?: ChatMessage | null
+): GamePlayer | null {
+  const bots = aliveBots(room).filter((p) => !isPlayerSilenced(p) && p.id !== author.id);
+  if (!bots.length) return null;
 
-    const response = await askDeepSeek<{ message?: string }>(
+  if (msg?.toPlayerId != null) {
+    const targeted = bots.find((b) => b.id === msg.toPlayerId);
+    if (targeted) return targeted;
+  }
+
+  const mentioned = bots.find((b) => messageMentionsBot(text, b));
+  if (mentioned) return mentioned;
+
+  const lower = text.toLowerCase();
+  const isEngaging =
+    lower.includes('?') ||
+    lower.includes('кто ') ||
+    lower.includes('почему') ||
+    lower.includes('как ') ||
+    lower.includes('думаешь') ||
+    lower.includes('соглас') ||
+    text.trim().length >= 12;
+
+  const replyChance = isEngaging ? 0.82 : 0.45;
+  if (Math.random() > replyChance) return null;
+
+  return pickRandom(bots);
+}
+
+function buildFallbackReply(bot: GamePlayer, author: GamePlayer, text: string): string {
+  const lower = text.toLowerCase();
+  if (lower.includes('?')) {
+    return `${author.username}, хороший вопрос — я бы смотрел на поведение в этой партии, не только на слова.`;
+  }
+  if (messageMentionsBot(text, bot)) {
+    return `${author.username}, я здесь. Давай разбираться по фактам — кто молчал и кто давил на голосовании.`;
+  }
+  return `${author.username}, понимаю. По этой игре мне тоже кажется, что стоит присмотреться к голосам.`;
+}
+
+async function runBotChatReply(
+  room: GameRoom,
+  author: GamePlayer,
+  text: string,
+  msg?: ChatMessage | null
+): Promise<void> {
+  if (replyInFlightByRoom.has(room.id) || !canReplyNow(room.id)) return;
+
+  const bot = pickRespondingBot(room, author, text, msg);
+  if (!bot) return;
+
+  replyInFlightByRoom.add(room.id);
+  try {
+    await sleep(REPLY_DELAY_MS + Math.random() * 2200);
+    if (room.phase !== PHASE.DAY && room.phase !== PHASE.VOTING) return;
+
+    const trigger = {
+      authorName: author.username || author.name,
+      authorId: author.id,
+      text,
+      toPlayerId: msg?.toPlayerId ?? null,
+    };
+
+    const response = await askDeepSeek<{ shouldReply?: boolean; message?: string }>(
       bot,
       room,
-      'Напиши одно короткое сообщение в дневной чат (до 180 символов). JSON: {"message":"..."}'
+      `Игрок написал в чат. Реши, нужен ли ответ в контексте ЭТОЙ партии. Если сообщение не требует ответа (спам, смайлик, «ок»), верни {"shouldReply":false}. Иначе ответь игроку коротко (до 180 символов), ссылаясь на события этой игры. JSON: {"shouldReply":true,"message":"..."}`,
+      trigger
     );
-    let text = response?.message?.trim().slice(0, 180) ?? '';
-    if (!text) {
-      const targets = aliveTargets(room, bot.id);
-      const suspect = pickRandom(targets);
-      text = suspect
-        ? `Мне кажется, ${suspect.username} ведёт себя подозрительно.`
-        : 'Пока сложно сказать, кто мафия — посмотрим на голосование.';
+
+    if (response?.shouldReply === false) return;
+
+    let replyText = response?.message?.trim().slice(0, 180) ?? '';
+    if (!replyText) {
+      replyText = buildFallbackReply(bot, author, text);
     }
-    addChatMessage(room, bot.id, text, 'public');
+
+    addChatMessage(room, bot.id, replyText, 'public', { toPlayerId: author.id });
+    markReply(room.id);
     broadcastRoom(room.id);
+  } finally {
+    replyInFlightByRoom.delete(room.id);
   }
+}
+
+async function runDayChat(room: GameRoom): Promise<void> {
+  const bots = aliveBots(room).filter((p) => !isPlayerSilenced(p));
+  const bot = pickRandom(bots);
+  if (!bot) return;
+
+  if (room.phase !== PHASE.DAY) return;
+  await sleep(2000 + Math.random() * 2500);
+
+  const dayNumber = room.nightNumber + 1;
+  const response = await askDeepSeek<{ message?: string }>(
+    bot,
+    room,
+    `Начался день ${dayNumber}. Напиши одно короткое сообщение в чат (до 180 символов): прокомментируй итог прошлой ночи или подозрения по фактам ЭТОЙ партии. JSON: {"message":"..."}`
+  );
+  let text = response?.message?.trim().slice(0, 180) ?? '';
+  if (!text) {
+    const targets = aliveTargets(room, bot.id);
+    const suspect = pickRandom(targets);
+    text = suspect
+      ? `День ${dayNumber}. Мне кажется, стоит присмотреться к ${suspect.username} — по этой игре есть вопросы.`
+      : `День ${dayNumber}. Давайте разбираться по фактам — кто вёл себя странно?`;
+  }
+  addChatMessage(room, bot.id, text, 'public');
+  broadcastRoom(room.id);
 }
 
 async function runVoting(room: GameRoom): Promise<void> {
@@ -159,15 +356,12 @@ async function runVoting(room: GameRoom): Promise<void> {
     const response = await askDeepSeek<{ targetId?: number | null }>(
       bot,
       room,
-      `Выбери, за кого голосовать на дневном голосовании. Доступные id: ${targets.map((p) => p.id).join(', ')}. JSON: {"targetId":число}`
+      `Выбери, за кого голосовать на дневном голосовании в ЭТОЙ партии. Учитывай переписку, голоса и сообщения ведущего. Доступные id: ${targets.map((p) => p.id).join(', ')}. JSON: {"targetId":число}`
     );
     const targetId = targets.find((p) => p.id === Number(response?.targetId))?.id ?? fallback.id;
 
     try {
-      const notes = castDayVote(room, bot.id, targetId, true);
-      if (notes.length) {
-        // Host notes are delivered by server timer path; voting may resolve game state.
-      }
+      castDayVote(room, bot.id, targetId, true);
     } catch (err) {
       console.error(`[ai] vote bot ${bot.id}:`, err);
     }

@@ -21,6 +21,7 @@ import {
   getHangVerdictMessage,
   getVotingTieMessage,
   getVotingCountMessage,
+  getVotingMajorityMessage,
   getVotingRestartMessage,
   playerNick,
   type NightReport,
@@ -619,14 +620,20 @@ export function startRegistration(room: GameRoom, _starterPlayerId: number | nul
     'Регистрация открыта! Нажмите «Вступить в игру», чтобы участвовать.'
   );
   if (addedBots.length > 0) {
-    addHostMessage(
-      room,
-      `ИИ: в игру записались ${addedBots.length} ботов.`
-    );
+    const count = addedBots.length;
+    const mod10 = count % 10;
+    const mod100 = count % 100;
+    const aiPlayersMessage =
+      mod10 === 1 && mod100 !== 11
+        ? `В игру записался ${count} AI игрок.`
+        : mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)
+          ? `В игру записалось ${count} AI игрока.`
+          : `В игру записалось ${count} AI игроков.`;
+    addHostMessage(room, aiPlayersMessage);
   } else {
     addHostMessage(
       room,
-      'ИИ в этой комнате выключен. Включите в админке: Комнаты мафии → галочка «ИИ», число ботов, кнопка «ИИ ✓».'
+      'ИИ в этой комнате выключен. Включите в админке: Комнаты мафии → галочка «ИИ», число ботов, кнопка «Сохранить».'
     );
   }
   setTimer(room, CONFIG.REGISTRATION_SEC * 1000, 'registration');
@@ -832,12 +839,46 @@ export function castDayVote(
   voter.hasVoted = true;
   addHostMessage(room, getVotingCastMessage(voter, target));
 
-  const alive = room.players.filter((p) => p.alive && p.inGame && p.role && p.connected);
-  if (alive.every((p) => p.hasVoted)) {
+  const eligibleVoters = getEligibleVoters(room);
+  const majorityTarget = findMajorityTarget(room, eligibleVoters.length);
+  if (majorityTarget != null) {
+    const votesForTarget = Object.values(room.votes).filter((id) => id === majorityTarget).length;
+    addHostMessage(room, getVotingMajorityMessage(votesForTarget, eligibleVoters.length));
+    return hangFromVoting(room, majorityTarget);
+  }
+
+  if (eligibleVoters.every((p) => p.hasVoted)) {
     addHostMessage(room, getVotingCountMessage());
     return resolveDayVote(room);
   }
   return [];
+}
+
+function getEligibleVoters(room: GameRoom): GamePlayer[] {
+  return room.players.filter((p) => p.alive && p.inGame && p.role && p.connected);
+}
+
+function findMajorityTarget(room: GameRoom, eligibleCount: number): number | null {
+  if (eligibleCount <= 0) return null;
+  const threshold = Math.ceil(eligibleCount / 2);
+  const tally: Record<number, number> = {};
+  for (const targetId of Object.values(room.votes)) {
+    tally[targetId] = (tally[targetId] || 0) + 1;
+  }
+  for (const [id, count] of Object.entries(tally)) {
+    if (count >= threshold) return Number(id);
+  }
+  return null;
+}
+
+function hangFromVoting(room: GameRoom, playerId: number): PrivateNote[] {
+  const hanged = room.players.find((p) => p.id === playerId);
+  if (hanged) {
+    addHostMessage(room, getHangVerdictMessage(hanged));
+    eliminatePlayer(room, playerId, { silent: true });
+  }
+  if (checkWin(room)) return [];
+  return startNightPhase(room);
 }
 
 function restartVotingSelection(room: GameRoom): PrivateNote[] {
@@ -869,13 +910,7 @@ function resolveDayVote(room: GameRoom): PrivateNote[] {
   }
 
   if (candidates.length === 1 && maxVotes > 0) {
-    const hanged = room.players.find((p) => p.id === candidates[0]);
-    if (hanged) {
-      addHostMessage(room, getHangVerdictMessage(hanged));
-      eliminatePlayer(room, candidates[0], { silent: true });
-    }
-    if (checkWin(room)) return [];
-    return startNightPhase(room);
+    return hangFromVoting(room, candidates[0]);
   }
 
   addHostMessage(room, getVotingTieMessage());
@@ -1252,15 +1287,15 @@ function isCommissarMafiaDraw(alive: GamePlayer[]): boolean {
 
 export function checkWin(room: GameRoom): boolean {
   const alive = room.players.filter((p) => p.alive && p.inGame && p.role);
-  const mafiaTeamAlive = alive.filter((p) => isMafiaTeam(p.role)).length;
+  const mafiaAlive = alive.filter((p) => p.role === 'mafia').length;
   const maniacAlive = alive.filter((p) => p.role === 'maniac').length;
   const townAlive = alive.filter((p) => isTown(p.role)).length;
 
-  if (mafiaTeamAlive === 0 && maniacAlive === 0) {
+  if (mafiaAlive === 0 && maniacAlive === 0) {
     endGame(room, 'town', 'Мирные победили!');
     return true;
   }
-  if (mafiaTeamAlive > 0 && mafiaTeamAlive >= townAlive) {
+  if (mafiaAlive > 0 && mafiaAlive >= townAlive) {
     if (isCommissarMafiaDraw(alive)) {
       endGame(room, 'draw', 'Ничья! Катани и мафия остались один на один.');
       return true;

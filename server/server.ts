@@ -89,7 +89,7 @@ import { ensureNewsUploadsDir } from './upload/newsImage.js';
 import { ensureSiteBrandingUploadsDir } from './upload/siteLogo.js';
 import { ensureSupportUploadsDir } from './upload/supportImage.js';
 import { initAllQuizRooms, initQuizRoom, handleQuizAnswer, isQuizRoom, setQuizBroadcaster } from './quiz/index.js';
-import { initGameAiRunner, triggerGameAi } from './game/ai/runner.js';
+import { initGameAiRunner, triggerGameAi, triggerBotChatResponse } from './game/ai/runner.js';
 import { buildRobotsTxt, buildSitemapXml } from './seo/siteSeo.js';
 
 assertProductionEnv();
@@ -997,6 +997,18 @@ io.on('connection', (socket) => {
 
     if (isQuizRoom(room)) {
       handleQuizAnswer(room, me.userId ?? null, me.username || me.name, trimmed);
+    }
+
+    if (
+      channel === 'public' &&
+      !isChatRoom(room) &&
+      room.aiEnabled &&
+      me.inGame &&
+      me.alive &&
+      !me.isBot &&
+      (room.phase === PHASE.DAY || room.phase === PHASE.VOTING)
+    ) {
+      triggerBotChatResponse(room, me, trimmed, msg);
     }
 
     broadcastRoom(room.id);

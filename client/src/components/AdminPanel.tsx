@@ -512,10 +512,18 @@ export default function AdminPanel({
     dirtyRoomsRef.current.add(roomId);
   };
 
-  const handleRoomNameKeyDown = (e: KeyboardEvent<HTMLInputElement>, roomId: number) => {
+  const handleRoomNameKeyDown = (
+    e: KeyboardEvent<HTMLInputElement>,
+    roomId: number,
+    kind: 'game' | 'chat' = 'chat'
+  ) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      void handleRenameRoom(roomId);
+      if (kind === 'game') {
+        void handleSaveGameRoom(roomId);
+      } else {
+        void handleRenameRoom(roomId);
+      }
     }
   };
 
@@ -548,27 +556,44 @@ export default function AdminPanel({
     }
   };
 
-  const handleSaveRoomAi = async (roomId: number) => {
+  const handleSaveGameRoom = async (roomId: number) => {
     const room = rooms.find((r) => r.id === roomId);
+    const name = roomEdits[roomId]?.trim();
+    if (!name) {
+      setError('Название не может быть пустым');
+      return;
+    }
     const edit = roomAiEdits[roomId] ?? {
       aiEnabled: !!room?.aiEnabled,
       aiCount: room?.aiCount ?? 3,
     };
+    const aiCount = edit.aiEnabled ? Math.max(1, edit.aiCount || 3) : 0;
+
     setRoomAiStatus('');
+    setError('');
     setRoomAiSavingId(roomId);
     try {
+      if (name !== room?.name) {
+        const { room: updated } = await adminRenameRoom(roomId, name);
+        dirtyRoomsRef.current.delete(roomId);
+        setRoomEdits((prev) => ({ ...prev, [roomId]: updated.name }));
+        setRooms((prev) =>
+          prev.map((r) => (r.id === roomId ? { ...r, name: updated.name } : r))
+        );
+      }
+
       await adminUpdateGameRoomAi(roomId, {
         aiEnabled: edit.aiEnabled,
-        aiCount: edit.aiEnabled ? Math.max(1, edit.aiCount || 3) : 0,
+        aiCount,
       });
       await load({ syncRoomNames: true });
       setRoomAiStatus(
         edit.aiEnabled
-          ? `ИИ сохранён: ${Math.max(1, edit.aiCount || 3)} ботов в комнате.`
-          : 'ИИ в комнате выключен.'
+          ? `Сохранено: «${name}», ИИ — ${aiCount} бот(ов).`
+          : `Сохранено: «${name}», ИИ выключен.`
       );
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Ошибка сохранения ИИ';
+      const message = err instanceof Error ? err.message : 'Ошибка сохранения комнаты';
       setError(message);
       setRoomAiStatus(message);
     } finally {
@@ -1032,7 +1057,7 @@ export default function AdminPanel({
                             type="text"
                             value={roomEdits[r.id] ?? r.name}
                             onChange={(e) => handleRoomNameChange(r.id, e.target.value)}
-                            onKeyDown={(e) => handleRoomNameKeyDown(e, r.id)}
+                            onKeyDown={(e) => handleRoomNameKeyDown(e, r.id, 'game')}
                             maxLength={50}
                           />
                         ) : (
@@ -1086,14 +1111,11 @@ export default function AdminPanel({
                           )}
                           <button
                             type="button"
-                            className="btn btn-sm btn-ghost"
+                            className="btn btn-sm btn-primary"
                             disabled={roomAiSavingId === r.id}
-                            onClick={() => void handleSaveRoomAi(r.id)}
+                            onClick={() => void handleSaveGameRoom(r.id)}
                           >
-                            {roomAiSavingId === r.id ? 'Сохраняю...' : 'ИИ ✓'}
-                          </button>
-                          <button type="button" className="btn btn-sm btn-primary" onClick={() => void handleRenameRoom(r.id)}>
-                            Сохранить
+                            {roomAiSavingId === r.id ? 'Сохраняю...' : 'Сохранить'}
                           </button>
                           <button
                             type="button"
