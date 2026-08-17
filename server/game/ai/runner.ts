@@ -34,7 +34,7 @@ function ensureHandledSet(room: GameRoom): Set<string> {
 }
 
 export function triggerGameAi(room: GameRoom): void {
-  if (!room.aiEnabled || room.aiCount <= 0) return;
+  if (!room.aiEnabled || (room.aiCount ?? 0) <= 0) return;
   const key = phaseKey(room);
   if (!key) return;
   const handled = ensureHandledSet(room);

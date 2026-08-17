@@ -79,11 +79,12 @@ export function removeAiBots(room: GameRoom): void {
 }
 
 export function ensureAiBots(room: GameRoom, allocatePlayerId: () => number): GamePlayer[] {
-  if (!room.aiEnabled || room.aiCount <= 0) return [];
+  const aiCount = room.aiCount ?? 0;
+  if (!room.aiEnabled || aiCount <= 0) return [];
 
   const added: GamePlayer[] = [];
   const currentBots = room.players.filter((p) => p.isBot).length;
-  const toAdd = Math.min(room.aiCount - currentBots, room.maxPlayers - room.players.length);
+  const toAdd = Math.min(aiCount - currentBots, room.maxPlayers - room.players.length);
   for (let i = 0; i < toAdd; i++) {
     const bot = createBotPlayer(room, allocatePlayerId());
     room.players.push(bot);
