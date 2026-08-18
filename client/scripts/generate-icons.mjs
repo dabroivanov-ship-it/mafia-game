@@ -21,3 +21,26 @@ for (const { name, size } of sizes) {
 }
 
 await sharp(svg).resize(32, 32).png().toFile(path.join(publicDir, 'favicon.ico'));
+
+const ogWidth = 1200;
+const ogHeight = 630;
+const ogIconSize = 280;
+const ogIcon = await sharp(svg).resize(ogIconSize, ogIconSize).png().toBuffer();
+await sharp({
+  create: {
+    width: ogWidth,
+    height: ogHeight,
+    channels: 3,
+    background: { r: 15, g: 17, b: 23 },
+  },
+})
+  .composite([
+    {
+      input: ogIcon,
+      top: Math.round((ogHeight - ogIconSize) / 2),
+      left: Math.round((ogWidth - ogIconSize) / 2),
+    },
+  ])
+  .png()
+  .toFile(path.join(publicDir, 'og-image.png'));
+console.log('Created og-image.png');

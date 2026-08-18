@@ -7,9 +7,10 @@ import {
   publicUser,
   isUserBanned,
   isAdminReservedUsername,
+  findUserById,
 } from './db.js';
 import { isValidRegistrationGender, normalizeGender } from './gender.js';
-import { signToken, authMiddleware } from './jwt.js';
+import { signToken, authMiddleware, verifyToken } from './jwt.js';
 import {
   verifyTelegramWebAppInitData,
   parseTelegramWebAppUser,
@@ -29,6 +30,7 @@ import {
 import { createRateLimitMiddleware, authRateLimiter } from '../security/rateLimit.js';
 import { MAX_PASSWORD_LENGTH } from '../security/constants.js';
 import { recordSiteVisit } from '../stats/siteStats.js';
+import { consumeOauthLoginTicket } from './oauthTicket.js';
 
 const router = Router();
 const authRateLimit = createRateLimitMiddleware(authRateLimiter);
@@ -115,6 +117,30 @@ router.post('/login', authRateLimit, async (req, res) => {
   }
 });
 
+router.post('/oauth/complete', authRateLimit, (req, res) => {
+  const ticket = String(req.body?.ticket || '').trim();
+  if (!ticket) {
+    return res.status(400).json({ error: 'Нет кода входа' });
+  }
+  const token = consumeOauthLoginTicket(ticket);
+  if (!token) {
+    return res.status(401).json({ error: 'Код входа истёк, войдите снова' });
+  }
+  try {
+    const payload = verifyToken(token);
+    const user = findUserById(payload.sub);
+    if (!user) {
+      return res.status(401).json({ error: 'Пользователь не найден' });
+    }
+    if (isUserBanned(user)) {
+      return res.status(403).json({ error: `Аккаунт заблокирован: ${user.ban_reason || ''}` });
+    }
+    res.json({ token, user: publicUser(user) });
+  } catch {
+    res.status(401).json({ error: 'Сессия недействительна' });
+  }
+});
+
 router.get('/telegram/oidc/start', (req, res) => {
   if (!isTelegramOidcConfigured()) {
     return res.redirect(buildTelegramOidcErrorRedirect('Telegram OIDC не настроен на сервере', req));
@@ -139,7 +165,6 @@ router.get('/telegram/oidc/callback', async (req, res) => {
 
     const { user, remember } = await completeTelegramOidcAuthorization(code, state, req);
     const token = signToken(user, remember);
-    void publicUser(user);
     res.redirect(buildTelegramOidcSuccessRedirect(token, req));
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Ошибка Telegram входа';
@@ -173,7 +198,6 @@ router.get('/vk/callback', async (req, res) => {
       );
     }
     const token = signToken(result.user, result.remember);
-    void publicUser(result.user);
     res.redirect(buildVkSuccessRedirect(token, req));
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Ошибка VK входа';

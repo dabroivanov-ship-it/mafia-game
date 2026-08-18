@@ -27,6 +27,8 @@ export interface LobbyAnnouncement {
 
 export type NotificationType = 'mail' | 'reputation_up' | 'reputation_down' | 'system';
 
+export type AuthProvider = 'telegram' | 'vk' | 'email';
+
 export type UserGender = 'male' | 'female' | '';
 
 export interface UserNotification {
@@ -68,6 +70,7 @@ export interface User {
   telegramUsername?: string | null;
   vkUsername?: string | null;
   needsEmailLink?: boolean;
+  authProviders?: AuthProvider[];
 }
 
 export interface PublicUser extends User {
@@ -195,6 +198,7 @@ export interface RoomState {
   canJoinGame: boolean;
   joinGameCooldownSec: number;
   canLeaveGame: boolean;
+  leaveGameCooldownSec?: number;
   myPlayer: MyPlayer | null;
   myRole: GameRole;
   myRoleLabel: string | null;

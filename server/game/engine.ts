@@ -603,7 +603,7 @@ export function startRegistration(room: GameRoom, _starterPlayerId: number | nul
 
   const addedBots = ensureAiBots(room, allocatePlayerId);
   for (const bot of addedBots) {
-    addSystemMessage(room, `${bot.username} (AI) присоединяется к игре!`);
+    addSystemMessage(room, `${bot.username} присоединяется к игре!`);
   }
 
   room.phase = PHASE.REGISTRATION;
@@ -659,6 +659,7 @@ export function joinGame(room: GameRoom, playerId: number): { player: GamePlayer
   }
 
   player.inGame = true;
+  player.joinGameAvailableAt = Date.now() + CONFIG.JOIN_GAME_COOLDOWN_SEC * 1000;
   addSystemMessage(room, `${player.username || player.name} присоединяется к игре!`);
   const privateNotes = tryStartGameAfterRegistration(room);
   return { player, privateNotes };
@@ -674,6 +675,12 @@ export function leaveGame(room: GameRoom, playerId: number): GamePlayer {
   const player = room.players.find((p) => p.id === playerId);
   if (!player?.connected) throw new Error('Игрок не найден');
   if (!player.inGame) throw new Error('Вы не в игре');
+
+  const now = Date.now();
+  if (player.joinGameAvailableAt && now < player.joinGameAvailableAt) {
+    const sec = Math.ceil((player.joinGameAvailableAt - now) / 1000);
+    throw new Error(`Подождите ${sec} сек. перед выходом из игры`);
+  }
 
   player.inGame = false;
   player.joinGameAvailableAt = Date.now() + CONFIG.JOIN_GAME_COOLDOWN_SEC * 1000;
@@ -1245,6 +1252,13 @@ export function resolveNight(room: GameRoom): NightResolveResult {
         const covered = checkCovers.has(target.id) && isMafia(target.role);
         commissar.score += 5;
         report.commissarChecked = target;
+        commissar.lastNightCheck = {
+          nightNumber: room.nightNumber,
+          targetId: target.id,
+          targetName: target.username || target.name,
+          isThreat: !covered && isEvil(target.role),
+          seenAs: covered || !isEvil(target.role) ? 'мирный' : 'мафия',
+        };
         if (covered) advocate!.score += 15;
         privateNotes.push({
           playerId: commissar.id,
@@ -1302,6 +1316,13 @@ export function resolveNight(room: GameRoom): NightResolveResult {
       if (target) {
         homeless.score += 5;
         report.homelessChecked = target;
+        homeless.lastNightCheck = {
+          nightNumber: room.nightNumber,
+          targetId: target.id,
+          targetName: target.username || target.name,
+          isThreat: isMafia(target.role) || isMafiaTeam(target.role) || target.role === 'maniac',
+          seenAs: getRoleLabel(target.role),
+        };
         privateNotes.push({
           playerId: homeless.id,
           message: getHomelessCheckResultMessage(target),
@@ -1488,6 +1509,7 @@ export function resetRoom(room: GameRoom): void {
     silencedUntil: null,
     silenceReason: null,
     mutedChat: [],
+    lastNightCheck: null,
   }));
 }
 
@@ -2166,6 +2188,7 @@ export function serializeRoomForPlayer(
       canJoinGame: false,
       joinGameCooldownSec: 0,
       canLeaveGame: false,
+      leaveGameCooldownSec: 0,
       myPlayer: me
         ? {
             id: me.id,
@@ -2245,7 +2268,8 @@ export function serializeRoomForPlayer(
       slotsAvailable &&
       joinGameCooldownSec === 0,
     joinGameCooldownSec,
-    canLeaveGame: false,
+    canLeaveGame: room.phase === PHASE.REGISTRATION && !!me?.inGame,
+    leaveGameCooldownSec: me?.inGame ? joinGameCooldownSec : 0,
     myPlayer: me
       ? {
           id: me.id,

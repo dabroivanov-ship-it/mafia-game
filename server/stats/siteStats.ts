@@ -10,6 +10,14 @@ db.exec(`
   );
 `);
 
+export interface NewUserPreview {
+  id: number;
+  username: string;
+  displayName: string;
+  createdAt: string;
+  authProviders: Array<'telegram' | 'vk' | 'email'>;
+}
+
 export interface AdminSiteStats {
   usersTotal: number;
   usersOnline: number;
@@ -20,6 +28,7 @@ export interface AdminSiteStats {
   usersActiveWeek: number;
   usersRegisteredToday: number;
   usersRegisteredWeek: number;
+  usersNewLast24h: NewUserPreview[];
   gamesPlayedTotal: number;
   gamesFinishedTotal: number;
   newsPublished: number;
@@ -85,16 +94,47 @@ export function getAdminSiteStats(): AdminSiteStats {
       .prepare("SELECT COUNT(*) AS c FROM users WHERE last_seen_at >= datetime('now', '-7 days')")
       .get() as { c: number }
   ).c;
+  const registeredSinceSql = `datetime(replace(substr(created_at, 1, 19), 'T', ' ')) >= datetime('now', '-1 day')`;
   const usersRegisteredToday = (
-    db
-      .prepare("SELECT COUNT(*) AS c FROM users WHERE date(created_at) = date('now')")
-      .get() as { c: number }
+    db.prepare(`SELECT COUNT(*) AS c FROM users WHERE ${registeredSinceSql}`).get() as { c: number }
   ).c;
   const usersRegisteredWeek = (
     db
       .prepare("SELECT COUNT(*) AS c FROM users WHERE created_at >= datetime('now', '-7 days')")
       .get() as { c: number }
   ).c;
+  const usersNewLast24h = (
+    db
+      .prepare(
+        `SELECT id, username, display_name, created_at, telegram_id, vk_id
+         FROM users
+         WHERE datetime(replace(substr(created_at, 1, 19), 'T', ' ')) >= datetime('now', '-1 day')
+         ORDER BY created_at DESC, id DESC
+         LIMIT 50`
+      )
+      .all() as {
+        id: number;
+        username: string;
+        display_name: string;
+        created_at: string;
+        telegram_id: string | null;
+        vk_id: string | null;
+      }[]
+  ).map((row) => {
+    const authProviders: Array<'telegram' | 'vk' | 'email'> = [];
+    if (row.telegram_id) authProviders.push('telegram');
+    if (row.vk_id) authProviders.push('vk');
+    if (!authProviders.length) authProviders.push('email');
+    return {
+      id: row.id,
+      username: row.username,
+      displayName: row.display_name,
+      createdAt: row.created_at.includes('T')
+        ? row.created_at
+        : `${row.created_at.replace(' ', 'T')}Z`,
+      authProviders,
+    };
+  });
   const gamesPlayedTotal = (
     db.prepare('SELECT COALESCE(SUM(games_played), 0) AS s FROM users').get() as { s: number }
   ).s;
@@ -112,6 +152,7 @@ export function getAdminSiteStats(): AdminSiteStats {
     usersActiveWeek,
     usersRegisteredToday,
     usersRegisteredWeek,
+    usersNewLast24h,
     gamesPlayedTotal,
     gamesFinishedTotal,
     newsPublished: countPublishedNews(),

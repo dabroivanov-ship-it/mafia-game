@@ -21,7 +21,7 @@ import {
 } from './roomRouting';
 import { DEFAULT_PAGE_META, updatePageMeta } from './seo';
 import { clearSession, fetchMe, fetchUnreadMailCount, fetchUnreadNewsCount, fetchThemeSettings, fetchNotifications, markNotificationRead, markAllNotificationsRead, saveSession, loadStoredPlayerId, saveStoredPlayerId, clearStoredPlayerIds, telegramWebAppLogin } from './api';
-import { waitForTelegramWebApp } from './telegramWebApp';
+import { isLikelyTelegramWebApp, waitForTelegramWebApp } from './telegramWebApp';
 import type { LobbyRoom, RoomState, User, ThemeId, LobbyUpdate, SiteBranding, UserNotification, LobbyAnnouncement } from './types';
 import { applyTheme, resolveTheme, DEFAULT_THEME } from './themes';
 import { DEFAULT_SITE_BRANDING } from './siteBranding';
@@ -611,7 +611,7 @@ export default function App() {
     };
   }, [socket, currentRoomId, user]);
 
-  if (authLoading) {
+  if (authLoading && (token || isLikelyTelegramWebApp())) {
     return (
       <div className="app loading-screen">
         <PageLoader label="Подключаемся…" />

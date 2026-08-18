@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
-import type { PublicUser, User, StaffMember, UserGender } from '../types/index.js';
+import type { AuthProvider, PublicUser, User, StaffMember, UserGender } from '../types/index.js';
 import { normalizeGender } from './gender.js';
 import { getDataDir, getDbPath, getUploadsDir } from '../paths.js';
 
@@ -172,6 +172,14 @@ export function userNeedsEmailLink(user: User | null | undefined): boolean {
   return !!(user.telegram_id || user.vk_id);
 }
 
+export function userAuthProviders(user: User | null | undefined): AuthProvider[] {
+  const providers: AuthProvider[] = [];
+  if (user?.telegram_id) providers.push('telegram');
+  if (user?.vk_id) providers.push('vk');
+  if (!providers.length) providers.push('email');
+  return providers;
+}
+
 export function publicUser(user: User | null | undefined): PublicUser | null {
   if (!user) return null;
   const placeholderEmail = isSocialPlaceholderEmail(user.email);
@@ -205,6 +213,7 @@ export function publicUser(user: User | null | undefined): PublicUser | null {
       user.telegram_username && user.telegram_username.trim() ? user.telegram_username.trim() : null,
     vkUsername: user.vk_username && user.vk_username.trim() ? user.vk_username.trim() : null,
     needsEmailLink: userNeedsEmailLink(user),
+    authProviders: userAuthProviders(user),
   };
 }
 
@@ -522,7 +531,7 @@ export function countLeaderboard(): number {
 export function listAllUsers(): PublicUser[] {
   const rows = db
     .prepare(
-      `SELECT id, username, email, display_name, city, bio, avatar, role, is_banned, ban_reason, banned_until, total_score, created_at
+      `SELECT id, username, email, display_name, city, bio, avatar, role, is_banned, ban_reason, banned_until, total_score, created_at, telegram_id, vk_id, telegram_username, vk_username
        FROM users ORDER BY created_at DESC`
     )
     .all() as User[];

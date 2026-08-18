@@ -10,6 +10,7 @@ import {
   isUserBanned,
 } from './db.js';
 import { getSiteOrigin } from './telegramOidc.js';
+import { createOauthLoginTicket } from './oauthTicket.js';
 import type { User } from '../types/index.js';
 
 const VK_AUTHORIZE_URL = 'https://id.vk.ru/authorize';
@@ -474,7 +475,8 @@ export async function completeVkAuthorization(req: Request): Promise<VkAuthResul
 
 export function buildVkSuccessRedirect(token: string, req?: Request): string {
   const origin = getSiteOrigin(req);
-  return `${origin}/?vk_token=${encodeURIComponent(token)}`;
+  const ticket = createOauthLoginTicket(token);
+  return `${origin}/#vk_login=${encodeURIComponent(ticket)}`;
 }
 
 export function buildVkUsernameRedirect(

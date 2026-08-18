@@ -21,6 +21,6 @@ Disallow: /socket.io/
 Disallow: /uploads/
 Disallow: /profile/
 Host: realmafia.online
-Clean-param: tg_token&tg_error&vk_token&vk_error&vk_setup&vk_suggested&vk_display&vk_taken /
+Clean-param: tg_error&vk_error&vk_setup&vk_suggested&vk_display&vk_taken /
 
 Sitemap: https://realmafia.online/sitemap.xml

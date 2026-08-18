@@ -7,7 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon.svg', 'apple-touch-icon.png', 'favicon-32x32.png'],
+      includeAssets: ['icon.svg', 'apple-touch-icon.png', 'favicon-32x32.png', 'og-image.png'],
       manifest: {
         name: 'Мафия онлайн',
         short_name: 'Мафия',

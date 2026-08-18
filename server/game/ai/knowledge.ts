@@ -27,7 +27,7 @@ export const MAFIA_RULES_PROMPT = `Ты живой игрок за столом 
 
 КАК ДУМАТЬ:
 - Опирайся на сводку ведущего, переписку ЭТОЙ партии, голоса, свои личные проверки.
-- Не раскрывай свою роль без крайней нужды. Мафия и адвокат врут. Город ищет чёрных.
+- Если ты Катани или бомж и ночная проверка показала мафию/зло — утром ОБЯЗАТЕЛЬНО напиши это в общий чат и зови вешать. Мирные проверки в чат не выкрикивай.
 - Не повторяй одни и те же фразы. Говори коротко, по делу, как за столом.`;
 
 export function phaseLabel(phase: GamePhase): string {
@@ -120,7 +120,7 @@ export function buildRoleStrategy(bot: GamePlayer, room: GameRoom): string {
       'СТРАТЕГИЯ КАТАНИ:',
       'Первые ночи обычно проверяй, не стреляй вслепую — ошибка казнит мирного.',
       'Не проверяй повторно того, кого уже проверял (смотри личные результаты).',
-      'Если проверка показала зло — либо стреляй ночью, либо аккуратно выводи на голосование, не свети роль без нужды.',
+      'Если проверка показала мафию/зло — утром сразу напиши это в общий чат (назови игрока) и голосуй за него. Мирный результат в чат не кричи.',
       'Помни: адвокат может показать мафиози как «мирного».',
     ].join('\n');
   }
@@ -129,7 +129,7 @@ export function buildRoleStrategy(bot: GamePlayer, room: GameRoom): string {
     return [
       'СТРАТЕГИЯ БОМЖА:',
       'Проверяй тех, кого ещё не проверял. Результат роли — только тебе.',
-      'Днём используй знание осторожно, не выдавай, что ты бомж, если это опасно.',
+      'Если ночью увидел мафию, адвоката или маньяка — утром сразу скажи это столу и голосуй за него.',
     ].join('\n');
   }
 
@@ -200,10 +200,13 @@ export function buildGameContextForBot(
   const hangNeed = Math.floor(n / 2) + 1;
 
   const playerLines = room.players
-    .filter((p) => p.inGame && p.role)
+    .filter((p) => p.inGame && (room.phase === PHASE.REGISTRATION || p.role))
     .map((p) => {
       const you = p.id === bot.id ? ', это ты' : '';
       const don = p.id === bot.id && bot.isDon ? ', ты дон' : '';
+      if (room.phase === PHASE.REGISTRATION) {
+        return `#${p.id} ${p.username}${you} — за столом, роли ещё нет`;
+      }
       if (p.id === bot.id) {
         return `#${p.id} ${p.username} — жив${you}, роль: ${getRoleLabel(p.role)}${don}`;
       }
@@ -296,7 +299,9 @@ export function buildGameContextForBot(
   const parts = [
     `=== Партия, комната «${room.name}» ===`,
     counts.join(' '),
-    `Твоя роль: ${getRoleLabel(bot.role)}${bot.isDon ? ' (дон)' : ''}.`,
+    bot.role
+      ? `Твоя роль: ${getRoleLabel(bot.role)}${bot.isDon ? ' (дон)' : ''}.`
+      : 'Роли ещё не разданы — сейчас регистрация. Общайся как живой игрок за столом. Не признавайся, что ты ИИ.',
     `Игроки:\n${playerLines}`,
     hostEvents ? `Ведущий (факты этой игры):\n${hostEvents}` : '',
     privateNotes ? `Личные сообщения ведущего только тебе (проверки и подсказки):\n${privateNotes}` : '',
@@ -329,6 +334,14 @@ export function heuristicNominateTarget(
   targets: GamePlayer[]
 ): GamePlayer | null {
   if (!targets.length) return null;
+  const checked = bot.lastNightCheck;
+  if (
+    checked?.isThreat &&
+    checked.nightNumber === room.nightNumber
+  ) {
+    const marked = targets.find((p) => p.id === checked.targetId);
+    if (marked) return marked;
+  }
   const enemies = targets.filter((p) => !isBotAlly(bot, p));
   const pool = enemies.length ? enemies : targets;
 
@@ -347,6 +360,13 @@ export function heuristicHangYes(bot: GamePlayer, room: GameRoom): boolean {
   if (!accused) return false;
   if (accused.id === bot.id) return false;
   if (isBotAlly(bot, accused)) return false;
+  if (
+    bot.lastNightCheck?.isThreat &&
+    bot.lastNightCheck.nightNumber === room.nightNumber &&
+    accused.id === bot.lastNightCheck.targetId
+  ) {
+    return true;
+  }
   if (isMafiaTeam(bot.role)) return true;
   if (isTown(bot.role)) {
     const yes = Object.values(room.hangVotes).filter(Boolean).length;
@@ -381,7 +401,8 @@ function noteSaysEvil(bot: GamePlayer, room: GameRoom, player: GamePlayer): bool
     const about = m.text.includes(player.username) || m.text.includes(player.name);
     if (!about) return false;
     const lower = m.text.toLowerCase();
-    return lower.includes('мафия') || lower.includes('зло');
+    if (lower.includes('не мафия')) return false;
+    return lower.includes('мафия') || lower.includes('зло') || lower.includes('маньяк') || lower.includes('адвокат');
   });
 }
 

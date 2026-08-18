@@ -129,14 +129,14 @@ router.put('/lobby-announcement', authMiddleware, (req, res) => {
 });
 
 router.get('/deepseek', authMiddleware, panelMiddleware, (req, res) => {
-  if (!hasAdminPermission(req.user, 'manage_game_rooms')) {
+  if (!hasAdminPermission(req.user, 'manage_deepseek')) {
     return res.status(403).json({ error: 'Нет прав для управления DeepSeek' });
   }
   res.json(getDeepSeekSettings());
 });
 
 router.put('/deepseek', authMiddleware, panelMiddleware, (req, res) => {
-  if (!hasAdminPermission(req.user, 'manage_game_rooms')) {
+  if (!hasAdminPermission(req.user, 'manage_deepseek')) {
     return res.status(403).json({ error: 'Нет прав для управления DeepSeek' });
   }
   const enabled = req.body?.enabled;
@@ -159,7 +159,7 @@ router.put('/deepseek', authMiddleware, panelMiddleware, (req, res) => {
 });
 
 router.post('/deepseek/test', authMiddleware, panelMiddleware, async (req, res) => {
-  if (!hasAdminPermission(req.user, 'manage_game_rooms')) {
+  if (!hasAdminPermission(req.user, 'manage_deepseek')) {
     return res.status(403).json({ error: 'Нет прав для управления DeepSeek' });
   }
   try {

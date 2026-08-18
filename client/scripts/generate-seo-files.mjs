@@ -16,8 +16,10 @@ const host = origin.replace(/^https?:\/\//, '');
 const sitemapEntries = [
   { path: '/', changefreq: 'daily', priority: 1.0 },
   { path: '/info', changefreq: 'weekly', priority: 0.9 },
+  { path: '/info/about', changefreq: 'monthly', priority: 0.85 },
   { path: '/info/rules', changefreq: 'weekly', priority: 0.9 },
   { path: '/info/roles', changefreq: 'weekly', priority: 0.9 },
+  { path: '/info/ai', changefreq: 'weekly', priority: 0.85 },
   { path: '/info/chat', changefreq: 'monthly', priority: 0.8 },
   { path: '/info/rating', changefreq: 'daily', priority: 0.85 },
   { path: '/info/faq', changefreq: 'monthly', priority: 0.8 },
@@ -50,7 +52,7 @@ Disallow: /socket.io/
 Disallow: /uploads/
 Disallow: /profile/
 Host: ${host}
-Clean-param: tg_token&tg_error&vk_token&vk_error&vk_setup&vk_suggested&vk_display&vk_taken /
+Clean-param: tg_error&vk_error&vk_setup&vk_suggested&vk_display&vk_taken /
 
 Sitemap: ${origin}/sitemap.xml
 `;

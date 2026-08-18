@@ -22,10 +22,27 @@ import {
 } from './knowledge.js';
 
 const BOT_DELAY_MS = 600;
-const REPLY_DELAY_MS = 1500;
-const REPLY_COOLDOWN_MS = 2500;
-const MAX_REPLIES_PER_MINUTE = 15;
+const REPLY_DELAY_MS = 900;
+const REPLY_COOLDOWN_MS = 1200;
+const MAX_REPLIES_PER_MINUTE = 20;
 const DAY_OPENING_MESSAGES = 2;
+const CHAT_TIMEOUT_MS = 8000;
+
+const REGISTRATION_LINES = [
+  'Всем привет!',
+  'Я за столом.',
+  'Ну что, кто ещё зайдёт?',
+  'Готов играть.',
+  'Давайте наберёмся и стартуем.',
+];
+
+const TABLE_TALK_LINES = [
+  'Давайте по фактам, не по эмоциям.',
+  'Кто молчит — того бы я первым и смотрел.',
+  'Предлагаю смотреть, кто давит на голосовании.',
+  'Мне по этой партии пока не всё ясно.',
+  'Давайте не торопиться — лучше спокойно разобрать ночь.',
+];
 
 let broadcastRoom: (roomId: number) => void = () => {};
 const replyTimestampsByRoom = new Map<number, number[]>();
@@ -36,12 +53,21 @@ export function initGameAiRunner(broadcast: (roomId: number) => void): void {
 }
 
 function phaseKey(room: GameRoom): string | null {
+  if (room.phase === PHASE.REGISTRATION) return `registration:${room.sessionId}`;
   if (room.phase === PHASE.DAY) return `day:${room.sessionId}:${room.nightNumber}`;
   if (room.phase === PHASE.VOTING) {
     return `voting:${room.sessionId}:${room.nightNumber}:${room.votingRound ?? 0}:${room.votingStage ?? 'nominate'}`;
   }
   if (room.phase === PHASE.NIGHT) return `night:${room.sessionId}:${room.nightNumber}`;
   return null;
+}
+
+function isBotChatPhase(room: GameRoom): boolean {
+  return (
+    room.phase === PHASE.REGISTRATION ||
+    room.phase === PHASE.DAY ||
+    room.phase === PHASE.VOTING
+  );
 }
 
 function ensureHandledSet(room: GameRoom): Set<string> {
@@ -71,7 +97,7 @@ export function triggerBotChatResponse(
 ): void {
   if (!room.aiEnabled || (room.aiCount ?? 0) <= 0) return;
   if (author.isBot) return;
-  if (room.phase !== PHASE.DAY && room.phase !== PHASE.VOTING) return;
+  if (!isBotChatPhase(room)) return;
 
   void runBotChatReply(room, author, text, msg).catch((err) =>
     console.error(`[ai] chat reply room ${room.id}:`, err)
@@ -80,6 +106,14 @@ export function triggerBotChatResponse(
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function talkingBots(room: GameRoom): GamePlayer[] {
+  return room.players.filter((p) => {
+    if (!p.isBot || !p.connected || !p.inGame || isPlayerSilenced(p)) return false;
+    if (room.phase === PHASE.REGISTRATION) return true;
+    return p.alive && !!p.role;
+  });
 }
 
 function aliveBots(room: GameRoom): GamePlayer[] {
@@ -117,7 +151,8 @@ async function askDeepSeek<T>(
   room: GameRoom,
   instruction: string,
   trigger?: { authorName: string; authorId: number; text: string; toPlayerId?: number | null },
-  temperature = 0.45
+  temperature = 0.45,
+  timeoutMs = 22_000
 ): Promise<T | null> {
   if (!isDeepSeekEnabled()) return null;
   try {
@@ -132,7 +167,7 @@ async function askDeepSeek<T>(
           content: `${buildGameContextForBot(room, bot, trigger)}\n\n${instruction}`,
         },
       ],
-      { timeoutMs: 22_000, temperature }
+      { timeoutMs, temperature }
     );
   } catch (err) {
     console.error(`[ai] DeepSeek for bot ${bot.id}:`, err);
@@ -154,7 +189,7 @@ function pickRespondingBot(
   text: string,
   msg?: ChatMessage | null
 ): GamePlayer | null {
-  const bots = aliveBots(room).filter((p) => !isPlayerSilenced(p) && p.id !== author.id);
+  const bots = talkingBots(room).filter((p) => p.id !== author.id);
   if (!bots.length) return null;
 
   if (msg?.toPlayerId != null) {
@@ -166,6 +201,9 @@ function pickRespondingBot(
   if (mentioned) return mentioned;
 
   const lower = text.toLowerCase();
+  const isShort = text.trim().length < 3;
+  if (isShort && Math.random() > 0.35) return null;
+
   const isEngaging =
     lower.includes('?') ||
     lower.includes('кто ') ||
@@ -175,23 +213,34 @@ function pickRespondingBot(
     lower.includes('соглас') ||
     lower.includes('голос') ||
     lower.includes('маф') ||
-    text.trim().length >= 6;
+    text.trim().length >= 4;
 
-  const replyChance = isEngaging ? 0.92 : 0.68;
+  const replyChance = isEngaging ? 1 : 0.85;
   if (Math.random() > replyChance) return null;
 
   return pickRandom(bots);
 }
 
-function buildFallbackReply(bot: GamePlayer, author: GamePlayer, text: string): string {
+function buildFallbackReply(
+  bot: GamePlayer,
+  author: GamePlayer,
+  text: string,
+  room: GameRoom
+): string {
+  const name = author.username || author.name;
   const lower = text.toLowerCase();
+  if (room.phase === PHASE.REGISTRATION) {
+    if (lower.includes('?')) return `${name}, давайте дождёмся старта — я уже за столом.`;
+    if (messageMentionsBot(text, bot)) return `${name}, я здесь, можно начинать.`;
+    return `${name}, ок, жду остальную компанию.`;
+  }
   if (lower.includes('?')) {
-    return `${author.username}, хороший вопрос — я бы смотрел на поведение в этой партии, не только на слова.`;
+    return `${name}, хороший вопрос — я бы смотрел на поведение в этой партии, не только на слова.`;
   }
   if (messageMentionsBot(text, bot)) {
-    return `${author.username}, я здесь. Давай разбираться по фактам — кто молчал и кто давил на голосовании.`;
+    return `${name}, я здесь. Давай разбираться по фактам — кто молчал и кто давил на голосовании.`;
   }
-  return `${author.username}, понимаю. По этой игре мне тоже кажется, что стоит присмотреться к голосам.`;
+  return `${name}, понимаю. По этой игре мне тоже кажется, что стоит присмотреться к голосам.`;
 }
 
 async function runBotChatReply(
@@ -207,8 +256,8 @@ async function runBotChatReply(
 
   replyInFlightByRoom.add(room.id);
   try {
-    await sleep(REPLY_DELAY_MS + Math.random() * 2200);
-    if (room.phase !== PHASE.DAY && room.phase !== PHASE.VOTING) return;
+    await sleep(REPLY_DELAY_MS + Math.random() * 1400);
+    if (!isBotChatPhase(room)) return;
 
     const trigger = {
       authorName: author.username || author.name,
@@ -217,22 +266,27 @@ async function runBotChatReply(
       toPlayerId: msg?.toPlayerId ?? null,
     };
 
+    const addressed =
+      msg?.toPlayerId === bot.id || messageMentionsBot(text, bot);
     const response = await askDeepSeek<{ shouldReply?: boolean; message?: string }>(
       bot,
       room,
-      `Игрок написал в чат. Реши, нужен ли ответ по ходу ЭТОЙ партии. Если спам, смайлик, «ок» — {"shouldReply":false}. Иначе коротко (до 180 символов) ответь по фактам, голосам и сводке, без раскрытия своей роли без нужды. JSON: {"shouldReply":true,"message":"..."}`,
+      room.phase === PHASE.REGISTRATION
+        ? `Игрок написал в чат на регистрации. Коротко ответь как живой игрок за столом (до 140 символов), без мета-речи про ИИ. JSON: {"shouldReply":true,"message":"..."}`
+        : `Игрок написал в чат. Реши, нужен ли ответ по ходу ЭТОЙ партии. Если спам, смайлик, «ок» — {"shouldReply":false}. Иначе коротко (до 180 символов) ответь по фактам, голосам и сводке, без раскрытия своей роли без нужды. JSON: {"shouldReply":true,"message":"..."}`,
       trigger,
-      0.7
+      0.7,
+      CHAT_TIMEOUT_MS
     );
 
-    if (response?.shouldReply === false) return;
+    if (response?.shouldReply === false && !addressed) return;
 
     let replyText = response?.message?.trim().slice(0, 180) ?? '';
     if (!replyText) {
-      replyText = buildFallbackReply(bot, author, text);
+      replyText = buildFallbackReply(bot, author, text, room);
     }
 
-    addChatMessage(room, bot.id, replyText, 'public', { toPlayerId: author.id });
+    addChatMessage(room, bot.id, replyText, 'public');
     markReply(room.id);
     broadcastRoom(room.id);
   } finally {
@@ -240,31 +294,84 @@ async function runBotChatReply(
   }
 }
 
-async function runDayChat(room: GameRoom): Promise<void> {
-  const bots = aliveBots(room).filter((p) => !isPlayerSilenced(p));
+function fallbackTableTalk(bot: GamePlayer, room: GameRoom): string {
+  if (room.phase === PHASE.REGISTRATION) {
+    return pickRandom(REGISTRATION_LINES) || 'Всем привет!';
+  }
+  const targets = aliveTargets(room, bot.id);
+  const suspect = pickRandom(targets);
+  if (suspect) {
+    return `Мне кажется, стоит присмотреться к ${suspect.username}.`;
+  }
+  return pickRandom(TABLE_TALK_LINES) || 'Давайте разбираться по фактам.';
+}
+
+function tableTalkInstruction(room: GameRoom): string {
+  if (room.phase === PHASE.REGISTRATION) {
+    return 'Регистрация в комнате. Одно короткое сообщение (до 120 символов) как живой игрок: приветствие или «готов играть». Не признавайся, что ты ИИ. JSON: {"message":"..."}';
+  }
+  const dayNumber = room.nightNumber + 1;
+  return `Начался день ${dayNumber} / голосование. Одно короткое сообщение (до 180 символов): прокомментируй сводку ночи, голосование или подозрения по фактам ЭТОЙ партии. Не раскрывай роль. JSON: {"message":"..."}`;
+}
+
+function inspectorRevealBots(room: GameRoom): GamePlayer[] {
+  return talkingBots(room).filter((p) => {
+    const check = p.lastNightCheck;
+    if (!check?.isThreat || check.nightNumber !== room.nightNumber) return false;
+    return p.role === 'commissar' || p.role === 'homeless';
+  });
+}
+
+function inspectorRevealText(bot: GamePlayer): string {
+  const check = bot.lastNightCheck;
+  const name = check?.targetName || 'игрок';
+  if (bot.role === 'homeless') {
+    return `Я бомж. Ночью проверил ${name} — это ${check?.seenAs || 'мафия'}. Предлагаю вешать.`;
+  }
+  return `Я Катани. Ночью проверил ${name} — это мафия. Предлагаю вешать.`;
+}
+
+async function runInspectorReveals(room: GameRoom): Promise<void> {
+  if (room.phase !== PHASE.DAY && room.phase !== PHASE.VOTING) return;
+  const handled = ensureHandledSet(room);
+  const key = `check-reveal:${room.sessionId}:${room.nightNumber}`;
+  if (handled.has(key)) return;
+  handled.add(key);
+
+  const bots = inspectorRevealBots(room);
+  for (const bot of bots) {
+    if (room.phase !== PHASE.DAY && room.phase !== PHASE.VOTING) return;
+    await sleep(400 + Math.random() * 700);
+    addChatMessage(room, bot.id, inspectorRevealText(bot), 'public');
+    broadcastRoom(room.id);
+  }
+}
+
+async function runTableTalk(room: GameRoom): Promise<void> {
+  const revealIds = new Set(inspectorRevealBots(room).map((p) => p.id));
+  const bots = talkingBots(room).filter((p) => !revealIds.has(p.id));
   if (!bots.length) return;
 
-  const speakers = [...bots].sort(() => Math.random() - 0.5).slice(0, DAY_OPENING_MESSAGES);
+  const count =
+    room.phase === PHASE.REGISTRATION
+      ? Math.min(2, bots.length)
+      : Math.min(DAY_OPENING_MESSAGES, bots.length);
+  const speakers = [...bots].sort(() => Math.random() - 0.5).slice(0, count);
   for (const bot of speakers) {
-    if (room.phase !== PHASE.DAY) return;
-    await sleep(1800 + Math.random() * 2200);
+    if (!isBotChatPhase(room)) return;
+    await sleep(800 + Math.random() * 1600);
+    if (!isBotChatPhase(room)) return;
 
-    const dayNumber = room.nightNumber + 1;
     const response = await askDeepSeek<{ message?: string }>(
       bot,
       room,
-      `Начался день ${dayNumber}. Одно короткое сообщение (до 180 символов): прокомментируй сводку ночи, голосование или подозрения по фактам ЭТОЙ партии. Не раскрывай роль. JSON: {"message":"..."}`,
+      tableTalkInstruction(room),
       undefined,
-      0.7
+      0.75,
+      CHAT_TIMEOUT_MS
     );
     let text = response?.message?.trim().slice(0, 180) ?? '';
-    if (!text) {
-      const targets = aliveTargets(room, bot.id);
-      const suspect = pickRandom(targets);
-      text = suspect
-        ? `День ${dayNumber}. Мне кажется, стоит присмотреться к ${suspect.username} — по этой игре есть вопросы.`
-        : `День ${dayNumber}. Давайте разбираться по фактам — кто вёл себя странно?`;
-    }
+    if (!text) text = fallbackTableTalk(bot, room);
     addChatMessage(room, bot.id, text, 'public');
     broadcastRoom(room.id);
   }
@@ -292,14 +399,19 @@ async function runNominations(room: GameRoom): Promise<void> {
     const response = await askDeepSeek<{ targetId?: number | null }>(
       bot,
       room,
-      `Выдвижение на казнь. Выбери id из списка: ${targets.map((p) => p.id).join(', ')}. Учитывай сводку, чат, текущий счёт голосов и свою роль: мафия не сдаёт союзников, город ищет чёрных. Это ещё не казнь. JSON: {"targetId":число,"reason":"..."}`,
+      `Выдвижение на казнь. Выбери id из списка: ${targets.map((p) => p.id).join(', ')}. Если ночью твоя проверка показала мафию/зло — обязательно голосуй за этого игрока. Учитывай сводку, чат и свою роль: мафия не сдаёт союзников. Это ещё не казнь. JSON: {"targetId":число,"reason":"..."}`,
       undefined,
       0.35
     );
     const chosen = targets.find((p) => p.id === Number(response?.targetId));
     const safeChosen =
       chosen && !(isMafiaTeam(bot.role) && isMafiaTeam(chosen.role)) ? chosen : null;
-    const targetId = safeChosen?.id ?? fallback.id;
+    const checkedId =
+      bot.lastNightCheck?.isThreat && bot.lastNightCheck.nightNumber === room.nightNumber
+        ? bot.lastNightCheck.targetId
+        : null;
+    const forced = checkedId != null ? targets.find((p) => p.id === checkedId) : null;
+    const targetId = forced?.id ?? safeChosen?.id ?? fallback.id;
 
     try {
       castDayVote(room, bot.id, targetId);
@@ -329,6 +441,14 @@ async function runHangConfirm(room: GameRoom): Promise<void> {
       typeof response?.yes === 'boolean' ? response.yes : heuristicHangYes(bot, room);
     if (accused && isMafiaTeam(bot.role) && isMafiaTeam(accused.role)) yes = false;
     if (accused?.id === bot.id) yes = false;
+    if (
+      accused &&
+      bot.lastNightCheck?.isThreat &&
+      bot.lastNightCheck.nightNumber === room.nightNumber &&
+      accused.id === bot.lastNightCheck.targetId
+    ) {
+      yes = true;
+    }
 
     try {
       castHangVote(room, bot.id, yes);
@@ -426,11 +546,21 @@ async function runNightActions(room: GameRoom): Promise<void> {
 }
 
 async function runAiForRoom(room: GameRoom): Promise<void> {
+  if (room.phase === PHASE.REGISTRATION) {
+    await runTableTalk(room);
+    return;
+  }
   if (room.phase === PHASE.DAY) {
-    await runDayChat(room);
-  } else if (room.phase === PHASE.VOTING) {
-    await runVoting(room);
-  } else if (room.phase === PHASE.NIGHT) {
+    await runInspectorReveals(room);
+    await runTableTalk(room);
+    return;
+  }
+  if (room.phase === PHASE.VOTING) {
+    await runInspectorReveals(room);
+    await Promise.all([runTableTalk(room), runVoting(room)]);
+    return;
+  }
+  if (room.phase === PHASE.NIGHT) {
     await runNightActions(room);
   }
 }

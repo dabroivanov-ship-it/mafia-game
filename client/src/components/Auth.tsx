@@ -9,7 +9,7 @@ import {
   fetchVkSettings,
   completeVkUsernameSetup,
   telegramWebAppLogin,
-  fetchMe,
+  completeOauthLogin,
 } from '../api';
 import type { User } from '../types';
 import { USER_GENDER_LABELS } from '../gender';
@@ -101,23 +101,28 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
   }, []);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const tgError = params.get('tg_error');
-    const tgToken = params.get('tg_token');
-    const vkError = params.get('vk_error');
-    const vkToken = params.get('vk_token');
-    const vkSetupToken = params.get('vk_setup');
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    const queryParams = new URLSearchParams(window.location.search);
+    const tgError = hashParams.get('tg_error') || queryParams.get('tg_error');
+    const vkError = hashParams.get('vk_error') || queryParams.get('vk_error');
+    const tgLogin = hashParams.get('tg_login');
+    const vkLogin = hashParams.get('vk_login');
+    const vkSetupToken = queryParams.get('vk_setup');
+
+    const clearCallbackUrl = () => {
+      window.history.replaceState(null, '', window.location.pathname);
+    };
 
     if (tgError || vkError) {
       setError(tgError || vkError || '');
-      window.history.replaceState(null, '', window.location.pathname);
+      clearCallbackUrl();
       return;
     }
 
     if (vkSetupToken) {
-      const suggested = params.get('vk_suggested') || '';
-      const displayName = params.get('vk_display') || '';
-      const taken = params.get('vk_taken') || suggested;
+      const suggested = queryParams.get('vk_suggested') || '';
+      const displayName = queryParams.get('vk_display') || '';
+      const taken = queryParams.get('vk_taken') || suggested;
       setVkSetup({
         setupToken: vkSetupToken,
         suggestedUsername: suggested,
@@ -131,34 +136,32 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
           : 'Придумайте логин для входа.'
       );
       setMode('login');
-      window.history.replaceState(null, '', window.location.pathname);
+      clearCallbackUrl();
       return;
     }
 
-    const oauthToken = tgToken || vkToken;
-    if (!oauthToken) return;
+    const oauthTicket = tgLogin || vkLogin;
+    if (!oauthTicket) return;
 
     let cancelled = false;
-    if (tgToken) setTelegramLoading(true);
-    if (vkToken) setVkLoading(true);
+    if (tgLogin) setTelegramLoading(true);
+    if (vkLogin) setVkLoading(true);
     setError('');
-    localStorage.setItem('mafia_token', oauthToken);
-    window.history.replaceState(null, '', window.location.pathname);
+    clearCallbackUrl();
 
-    void fetchMe()
-      .then(({ user }) => {
+    void completeOauthLogin(oauthTicket)
+      .then(({ token, user }) => {
         if (cancelled) return;
         const loginName =
           user.telegramUsername || user.vkUsername || user.username || String(user.id);
-        completeAuth(user, oauthToken, loginName);
+        completeAuth(user, token, loginName);
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        localStorage.removeItem('mafia_token');
         setError(
           err instanceof Error
             ? err.message
-            : tgToken
+            : tgLogin
               ? 'Ошибка Telegram входа'
               : 'Ошибка VK входа'
         );

@@ -2,8 +2,9 @@ import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import type { Request } from 'express';
 import { getOrCreateUserFromTelegram } from './telegram.js';
-import { findUserById, isUserBanned, publicUser } from './db.js';
+import { isUserBanned } from './db.js';
 import type { User } from '../types/index.js';
+import { createOauthLoginTicket } from './oauthTicket.js';
 
 const JWKS_URL = 'https://oauth.telegram.org/.well-known/jwks.json';
 const ISSUER = 'https://oauth.telegram.org';
@@ -173,7 +174,8 @@ export async function completeTelegramOidcAuthorization(
 
 export function buildTelegramOidcSuccessRedirect(token: string, req?: Request): string {
   const origin = getSiteOrigin(req);
-  return `${origin}/?tg_token=${encodeURIComponent(token)}`;
+  const ticket = createOauthLoginTicket(token);
+  return `${origin}/#tg_login=${encodeURIComponent(ticket)}`;
 }
 
 export function buildTelegramOidcErrorRedirect(message: string, req?: Request): string {

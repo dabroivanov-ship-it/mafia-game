@@ -80,6 +80,7 @@ export default function Room({
 
   const timerLeft = useTimer(state?.timerEnd ?? null);
   const joinCooldown = useCountdown(state?.joinGameCooldownSec || 0);
+  const leaveCooldown = useCountdown(state?.leaveGameCooldownSec || 0);
 
   if (!state) {
     return (
@@ -242,11 +243,25 @@ export default function Room({
       )}
 
       {!isChatRoom && state.isInGame && state.phase === 'registration' && (
-        <div className="join-game-banner">
+        <div className="join-game-banner leave-game-banner">
           <p>
             Вы зарегистрированы ({state.registeredCount}/{state.maxPlayers}). Ожидайте других или
             таймера.
           </p>
+          <button
+            type="button"
+            className="btn btn-ghost btn-lg btn-block"
+            disabled={leaveCooldown > 0 || !state.canLeaveGame}
+            onClick={async () => {
+              const res = await emit('room:leaveGame');
+              if (res?.error) alert(res.error);
+              else if (res?.state) onStateUpdate?.(res.state);
+            }}
+          >
+            {leaveCooldown > 0
+              ? `Выйти можно через ${leaveCooldown} сек.`
+              : 'Выйти из игры'}
+          </button>
         </div>
       )}
 

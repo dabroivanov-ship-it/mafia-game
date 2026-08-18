@@ -38,6 +38,7 @@ import {
   type SilencedPlayerEntry,
 } from '../api';
 import type { User, NewsPost, ThemeId, ViolationLogEntry, ViolationType, SiteBranding, LobbyAnnouncement, UserRole } from '../types';
+import { AuthProviderBadges } from './AuthProviderBadges';
 import { USER_GENDER_LABELS } from '../gender';
 import {
   adminPanelRoleLabel,
@@ -807,16 +808,9 @@ export default function AdminPanel({
             <p className="admin-header-sub">
               {adminPanelRoleLabel(panelRole)}
               {' · '}
-              Пользователей:{' '}
-              <strong title={usersRegisteredToday > 0 ? 'Всего и зарегистрировались сегодня' : undefined}>
-                {users.length}
-                {usersRegisteredToday > 0 && (
-                  <>
-                    {' '}
-                    + <span className="admin-header-today">{usersRegisteredToday}</span>
-                  </>
-                )}
-              </strong>
+              Пользователей: <strong>{users.length}</strong>
+              {' · '}
+              Новых за сутки: <strong>{usersRegisteredToday}</strong>
               {' · '}
               Комнат: <strong>{rooms.length}</strong>
             </p>
@@ -897,12 +891,18 @@ export default function AdminPanel({
                       )}
                       <span className="admin-users-list-name">
                         <strong>{u.displayName}</strong>
-                        <span className="muted">@{u.username}</span>
+                        <span className="admin-users-list-nick">
+                          <span className="muted">@{u.username}</span>
+                          <AuthProviderBadges providers={u.authProviders} />
+                        </span>
                       </span>
                       {u.isAdmin && <span className="admin-badge">admin</span>}
                       {u.isModerator && <span className="mod-badge">mod</span>}
                       {u.isWatcher && <span className="watcher-badge">watch</span>}
                       {u.isBanned && <span className="status-banned">бан</span>}
+                      {Date.now() - new Date(u.createdAt).getTime() < 24 * 60 * 60 * 1000 && (
+                        <span className="admin-new-user-badge">новый</span>
+                      )}
                     </button>
                   </li>
                 ))}
@@ -971,7 +971,10 @@ export default function AdminPanel({
                               )}
                               <div>
                                 <strong>{u.displayName}</strong>
-                                <span className="muted">@{u.username}</span>
+                                <span className="admin-users-list-nick">
+                                  <span className="muted">@{u.username}</span>
+                                  <AuthProviderBadges providers={u.authProviders} />
+                                </span>
                               </div>
                             </div>
                           </td>
@@ -1380,7 +1383,8 @@ export default function AdminPanel({
         <div className="modal-overlay" onClick={() => setEditUser(null)}>
           <div className="modal modal-wide" onClick={(e) => e.stopPropagation()}>
             <h3>
-              {canEditUsers ? 'Редактировать' : 'Профиль'}: {editUser.username}
+              {canEditUsers ? 'Редактировать' : 'Профиль'}: {editUser.username}{' '}
+              <AuthProviderBadges providers={editUser.authProviders} />
             </h3>
 
             {canEditUsers && (

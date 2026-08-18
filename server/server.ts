@@ -92,18 +92,20 @@ import { ensureSiteBrandingUploadsDir } from './upload/siteLogo.js';
 import { ensureSupportUploadsDir } from './upload/supportImage.js';
 import { initAllQuizRooms, initQuizRoom, handleQuizAnswer, isQuizRoom, setQuizBroadcaster } from './quiz/index.js';
 import { initGameAiRunner, triggerGameAi, triggerBotChatResponse } from './game/ai/runner.js';
-import { buildRobotsTxt, buildSitemapXml } from './seo/siteSeo.js';
+import { buildRobotsTxt, buildSecurityTxt, buildSitemapXml } from './seo/siteSeo.js';
+import { sendSpaIndex } from './seo/spaHtml.js';
 
 assertProductionEnv();
 
 const corsOrigin = process.env.CORS_ORIGIN?.split(',').map((s) => s.trim()).filter(Boolean);
 
 const app = express();
+app.disable('x-powered-by');
 if (process.env.TRUST_PROXY === '1') {
   app.set('trust proxy', 1);
 }
 app.use(securityHeadersMiddleware);
-app.use(corsOrigin?.length ? cors({ origin: corsOrigin, credentials: true }) : cors());
+app.use('/api', corsOrigin?.length ? cors({ origin: corsOrigin, credentials: true }) : cors());
 app.use(express.json({ limit: '256kb' }));
 
 const httpServer = createServer(app);
@@ -221,6 +223,12 @@ app.get('/robots.txt', (_req, res) => {
 app.get('/sitemap.xml', (_req, res) => {
   res.type('application/xml; charset=utf-8');
   res.send(buildSitemapXml());
+});
+
+app.get(['/.well-known/security.txt', '/security.txt'], (_req, res) => {
+  res.type('text/plain; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.send(buildSecurityTxt());
 });
 
 app.use('/api/auth', authRoutes);
@@ -900,7 +908,10 @@ io.on('connection', (socket) => {
     try {
       leaveGame(room, session.playerId);
       broadcastRoom(room.id);
-      cb?.({ ok: true });
+      cb?.({
+        ok: true,
+        state: serializeForSocketUser(room, session.playerId, socket.userId, socket.id),
+      });
     } catch (e) {
       const err = e as Error;
       cb?.({ error: err.message });
@@ -1010,10 +1021,10 @@ io.on('connection', (socket) => {
       channel === 'public' &&
       !isChatRoom(room) &&
       room.aiEnabled &&
-      me.inGame &&
-      me.alive &&
       !me.isBot &&
-      (room.phase === PHASE.DAY || room.phase === PHASE.VOTING)
+      (room.phase === PHASE.REGISTRATION ||
+        room.phase === PHASE.DAY ||
+        room.phase === PHASE.VOTING)
     ) {
       triggerBotChatResponse(room, me, trimmed, msg);
     }
@@ -1243,14 +1254,25 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const serverRoot = __dirname.endsWith(`${path.sep}dist`) ? path.join(__dirname, '..') : __dirname;
 const clientDist = path.join(serverRoot, '..', 'client', 'dist');
 
-app.use(express.static(clientDist));
+app.use(
+  express.static(clientDist, {
+    setHeaders(res, filePath) {
+      const relative = path.relative(clientDist, filePath).replace(/\\/g, '/');
+      if (relative.startsWith('assets/')) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      } else if (relative.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'no-cache');
+      } else {
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+      }
+    },
+  })
+);
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api') || req.path.startsWith('/socket.io') || req.path.startsWith('/uploads')) {
     return next();
   }
-  res.sendFile(path.join(clientDist, 'index.html'), (err) => {
-    if (err) res.status(404).send('Клиент не собран. Выполните: cd client && npm install && npm run build');
-  });
+  sendSpaIndex(req, res, clientDist);
 });
 
 const PORT = process.env.PORT || 3001;

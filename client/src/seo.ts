@@ -70,6 +70,10 @@ export function updatePageMeta(meta: PageMeta) {
   upsertMeta('twitter:card', 'summary_large_image');
   upsertMeta('twitter:title', fullTitle);
   upsertMeta('twitter:description', meta.description);
+  upsertMeta('og:image', `${origin}/og-image.png`, 'property');
+  upsertMeta('og:image:width', '1200', 'property');
+  upsertMeta('og:image:height', '630', 'property');
+  upsertMeta('twitter:image', `${origin}/og-image.png`);
   upsertLink('canonical', url);
   trackPageView(path);
 }

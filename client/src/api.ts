@@ -117,6 +117,13 @@ export async function register(payload: {
   });
 }
 
+export async function completeOauthLogin(ticket: string): Promise<{ token: string; user: User }> {
+  return apiRequest('/api/auth/oauth/complete', {
+    method: 'POST',
+    body: JSON.stringify({ ticket }),
+  });
+}
+
 export async function login(payload: {
   login: string;
   password: string;
@@ -687,6 +694,14 @@ export async function fetchAdminUsers(): Promise<{ users: User[] }> {
   return apiRequest('/api/admin/users');
 }
 
+export interface AdminNewUserPreview {
+  id: number;
+  username: string;
+  displayName: string;
+  createdAt: string;
+  authProviders?: Array<'telegram' | 'vk' | 'email'>;
+}
+
 export interface AdminSiteStats {
   usersTotal: number;
   usersOnline: number;
@@ -697,6 +712,7 @@ export interface AdminSiteStats {
   usersActiveWeek: number;
   usersRegisteredToday: number;
   usersRegisteredWeek: number;
+  usersNewLast24h: AdminNewUserPreview[];
   gamesPlayedTotal: number;
   gamesFinishedTotal: number;
   newsPublished: number;

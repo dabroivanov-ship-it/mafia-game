@@ -48,7 +48,7 @@ export const SYSTEM_VIEW_PERMISSIONS: Record<string, AdminPermission> = {
   theme: 'manage_theme',
   telegram: 'manage_telegram',
   metrika: 'manage_metrika',
-  deepseek: 'manage_game_rooms',
+  deepseek: 'manage_deepseek',
   phrases: 'manage_phrases',
   'game-rooms': 'view_rooms',
   'chat-rooms': 'view_rooms',

@@ -30,6 +30,8 @@ export type RoomKind = 'game' | 'chat';
 
 export type UserGender = 'male' | 'female' | '';
 
+export type AuthProvider = 'telegram' | 'vk' | 'email';
+
 export interface User {
   id: number;
   username: string;
@@ -96,6 +98,7 @@ export interface PublicUser {
   telegramUsername?: string | null;
   vkUsername?: string | null;
   needsEmailLink?: boolean;
+  authProviders: AuthProvider[];
 }
 
 export interface ChatMessage {
@@ -139,6 +142,13 @@ export interface GamePlayer {
   silenceReason?: string | null;
   mutedChat?: ChatMessage[];
   isBot?: boolean;
+  lastNightCheck?: {
+    nightNumber: number;
+    targetId: number;
+    targetName: string;
+    isThreat: boolean;
+    seenAs: string;
+  } | null;
 }
 
 export interface GameRoom {
@@ -229,6 +239,7 @@ export interface RoomState {
   canJoinGame: boolean;
   joinGameCooldownSec: number;
   canLeaveGame: boolean;
+  leaveGameCooldownSec: number;
   myPlayer: {
     id: number;
     userId: number | null;

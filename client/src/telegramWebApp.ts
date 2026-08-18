@@ -58,10 +58,19 @@ export function getTelegramWebApp(): TelegramWebApp | null {
   return webApp;
 }
 
-export function waitForTelegramWebApp(timeoutMs = 5000, intervalMs = 150): Promise<TelegramWebApp | null> {
+export function isLikelyTelegramWebApp(): boolean {
+  if (typeof window === 'undefined') return false;
+  if (getTelegramWebApp()) return true;
+  if (typeof window.location.hash === 'string' && window.location.hash.includes('tgWebAppData')) {
+    return true;
+  }
+  return /Telegram/i.test(navigator.userAgent || '');
+}
+
+export function waitForTelegramWebApp(timeoutMs = 1500, intervalMs = 50): Promise<TelegramWebApp | null> {
   const existing = getTelegramWebApp();
   if (existing) return Promise.resolve(existing);
-  if (!window.Telegram?.WebApp) return Promise.resolve(null);
+  if (!isLikelyTelegramWebApp()) return Promise.resolve(null);
 
   return new Promise((resolve) => {
     const intervalId = window.setInterval(() => {
