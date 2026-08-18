@@ -8,9 +8,15 @@
   </url>
   <url>
     <loc>https://realmafia.online/info</loc>
-    <lastmod>2026-07-06</lastmod>
+    <lastmod>2026-08-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.90</priority>
+  </url>
+  <url>
+    <loc>https://realmafia.online/info/about</loc>
+    <lastmod>2026-08-18</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
   </url>
   <url>
     <loc>https://realmafia.online/info/rules</loc>

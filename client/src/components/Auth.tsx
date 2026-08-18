@@ -282,30 +282,28 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
 
   return (
     <div className="auth-page">
-      <div className="auth-top-links home-quick-links">
-        <a href="/info/rules" className="home-quick-link">
-          <span className="home-quick-link-icon" aria-hidden="true">
-            📜
-          </span>
-          <strong>Правила</strong>
+      <div className="auth-page-bar">
+        <a href="/" className="auth-brand" aria-label={branding.logoText || 'Mafia'}>
+          <SiteLogo branding={branding} className="auth-brand-logo" />
         </a>
-        <a href="/info/rating" className="home-quick-link">
-          <span className="home-quick-link-icon" aria-hidden="true">
-            🏆
-          </span>
-          <strong>Лидеры</strong>
-        </a>
-        <a href="/info/faq" className="home-quick-link">
-          <span className="home-quick-link-icon" aria-hidden="true">
-            ❓
-          </span>
-          <strong>FAQ</strong>
-        </a>
+        <nav className="auth-top-links home-quick-links" aria-label="О сайте">
+          <a href="/info/rules" className="home-quick-link">
+            Правила
+          </a>
+          <a href="/info/rating" className="home-quick-link">
+            Лидеры
+          </a>
+          <a href="/info/faq" className="home-quick-link">
+            FAQ
+          </a>
+          <a href="/info/about" className="home-quick-link">
+            Об игре
+          </a>
+        </nav>
       </div>
 
       <div className="auth-card">
         <header className="auth-header">
-          <SiteLogo branding={branding} className="auth-header-logo" />
           <p>Войдите или зарегистрируйтесь, чтобы играть</p>
         </header>
 

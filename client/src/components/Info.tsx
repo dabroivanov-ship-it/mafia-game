@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import AboutGame from './AboutGame';
 import Rules from './Rules';
 import Roles from './Roles';
 import AiAgents from './AiAgents';
@@ -13,6 +14,7 @@ import {
   pathForInfoSection,
 } from '../infoRouting';
 import { INFO_PAGE_META, updatePageMeta } from '../seo';
+import { ABOUT_GAME_INTRO } from '../content/aboutGameContent';
 import { ROLES_INTRO } from '../content/rolesContent';
 import { AI_AGENTS_INTRO } from '../content/aiAgentsContent';
 
@@ -27,6 +29,7 @@ type InfoHubItem = {
 };
 
 const INFO_HUB_ITEMS: InfoHubItem[] = [
+  { icon: '📖', section: 'about', title: 'Об игре', desc: 'История Мафии: от МГУ до онлайн-комнат' },
   { icon: '🎭', section: 'roles', title: 'Игровые роли', desc: 'Мафия, город, маньяк — все способности' },
   { icon: '📜', section: 'rules', title: 'Правила игры', desc: 'Как начать, фазы, победа и очки' },
   { icon: '🤖', section: 'aiAgents', title: 'Игры с AI-агентами', desc: 'Боты за столом: чат, роли и голоса' },
@@ -86,6 +89,19 @@ export default function Info({
       </button>
     </nav>
   );
+
+  if (section === 'about') {
+    return (
+      <div className="info-page">
+        {backNav('hub', 'Информация')}
+        <header className="page-header">
+          <h1>История Мафии</h1>
+          <p className="muted">{ABOUT_GAME_INTRO}</p>
+        </header>
+        <AboutGame embedded />
+      </div>
+    );
+  }
 
   if (section === 'rules') {
     return (
@@ -206,7 +222,7 @@ export default function Info({
 
       <header className="page-header">
         <h1>ℹ️ Информация</h1>
-        <p className="muted">Правила, роли, AI-агенты, чат, рейтинг и команда проекта</p>
+        <p className="muted">История, правила, роли, AI-агенты, чат, рейтинг и команда проекта</p>
       </header>
 
       <div className="info-hub">

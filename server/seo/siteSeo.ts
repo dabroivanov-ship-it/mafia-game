@@ -8,6 +8,7 @@ export interface SitemapEntry {
 export const SITEMAP_ENTRIES: SitemapEntry[] = [
   { path: '/', changefreq: 'daily', priority: 1.0 },
   { path: '/info', changefreq: 'weekly', priority: 0.9 },
+  { path: '/info/about', changefreq: 'monthly', priority: 0.85 },
   { path: '/info/rules', changefreq: 'weekly', priority: 0.9 },
   { path: '/info/roles', changefreq: 'weekly', priority: 0.9 },
   { path: '/info/ai', changefreq: 'weekly', priority: 0.85 },

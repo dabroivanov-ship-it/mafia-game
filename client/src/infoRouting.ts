@@ -1,5 +1,6 @@
 export type InfoSection =
   | 'hub'
+  | 'about'
   | 'rules'
   | 'roles'
   | 'aiAgents'
@@ -11,6 +12,7 @@ export type InfoSection =
 
 export const INFO_PATHS: Record<InfoSection, string> = {
   hub: '/info',
+  about: '/info/about',
   rules: '/info/rules',
   roles: '/info/roles',
   aiAgents: '/info/ai',
@@ -23,6 +25,7 @@ export const INFO_PATHS: Record<InfoSection, string> = {
 
 export function infoSectionFromPath(path: string): InfoSection {
   const normalized = path.replace(/\/+$/, '') || '/';
+  if (normalized.startsWith('/info/about')) return 'about';
   if (normalized.startsWith('/info/roles')) return 'roles';
   if (normalized.startsWith('/info/rules')) return 'rules';
   if (normalized.startsWith('/info/ai')) return 'aiAgents';

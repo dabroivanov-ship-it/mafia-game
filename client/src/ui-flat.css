@@ -131,11 +131,13 @@ textarea:focus {
 .home-quick-link,
 .auth-info-card {
   border-radius: var(--radius);
+}
+
+.auth-info-card {
   background: var(--surface-card);
   box-shadow: var(--shadow-soft);
 }
 
-.home-quick-link:hover,
 .auth-info-card:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-soft), 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent);
@@ -889,13 +891,20 @@ html[data-theme='crimson'] .menu-items {
     padding: 16px;
   }
 
-  .auth-top-links.home-quick-links {
-    grid-template-columns: 1fr;
+  .auth-page-bar {
+    align-items: flex-start;
+    flex-direction: column;
     gap: 8px;
   }
 
+  .auth-page-bar .home-quick-links,
+  .auth-top-links.home-quick-links {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
   .home-quick-links {
-    grid-template-columns: 1fr;
+    justify-content: flex-start;
   }
 
   .lobby-header {
