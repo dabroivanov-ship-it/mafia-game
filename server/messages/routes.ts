@@ -24,9 +24,10 @@ export interface MessagesRouterOptions {
     unreadCount: number;
   }) => void;
   onMessageRead?: (userId: number, unreadCount: number) => void;
+  onOutgoingRead?: (senderId: number, payload: { readerId: number; messageIds: number[] }) => void;
 }
 
-export function createMessagesRouter({ onMessageSent, onMessageRead }: MessagesRouterOptions = {}) {
+export function createMessagesRouter({ onMessageSent, onMessageRead, onOutgoingRead }: MessagesRouterOptions = {}) {
   const router = Router();
   router.use(authMiddleware);
   const pmRateLimit = createRateLimitMiddleware(pmRateLimiter, (req) => String(req.userId || 'anon'));
@@ -55,9 +56,12 @@ export function createMessagesRouter({ onMessageSent, onMessageRead }: MessagesR
     if (!otherUserId) return res.status(400).json({ error: 'Некорректный пользователь' });
     const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 100);
     const beforeId = req.query.beforeId ? Number(req.query.beforeId) : undefined;
-    markThreadRead(req.userId!, otherUserId);
+    const markedIds = markThreadRead(req.userId!, otherUserId);
     const unreadCount = getUnreadCount(req.userId!);
     onMessageRead?.(req.userId!, unreadCount);
+    if (markedIds.length > 0) {
+      onOutgoingRead?.(otherUserId, { readerId: req.userId!, messageIds: markedIds });
+    }
     const page = listThread(req.userId!, otherUserId, {
       limit,
       beforeId: beforeId && !Number.isNaN(beforeId) ? beforeId : undefined,
@@ -100,10 +104,11 @@ export function createMessagesRouter({ onMessageSent, onMessageRead }: MessagesR
   });
 
   router.post('/:messageId/read', (req, res) => {
-    const ok = markMessageRead(Number(req.params.messageId), req.userId!);
-    if (!ok) return res.status(404).json({ error: 'Сообщение не найдено' });
+    const marked = markMessageRead(Number(req.params.messageId), req.userId!);
+    if (!marked) return res.status(404).json({ error: 'Сообщение не найдено' });
     const unreadCount = getUnreadCount(req.userId!);
     onMessageRead?.(req.userId!, unreadCount);
+    onOutgoingRead?.(marked.senderId, { readerId: req.userId!, messageIds: [marked.id] });
     res.json({ ok: true, unreadCount });
   });
 

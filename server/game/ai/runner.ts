@@ -1,5 +1,5 @@
 import { PHASE } from '../config.js';
-import { getRoleLabel, isMafiaTeam } from '../roles.js';
+import { isMafiaTeam } from '../roles.js';
 import {
   addChatMessage,
   castDayVote,
@@ -7,9 +7,19 @@ import {
   submitNightAction,
   isPlayerSilenced,
 } from '../engine.js';
-import type { ChatMessage, GamePhase, GamePlayer, GameRoom, NightAction, RoleId } from '../../types/index.js';
+import type { ChatMessage, GamePlayer, GameRoom, NightAction } from '../../types/index.js';
 import { isDeepSeekEnabled } from '../../settings/deepseekStore.js';
 import { deepSeekJsonChat } from './deepseekClient.js';
+import {
+  MAFIA_RULES_PROMPT,
+  alivePlayers,
+  buildGameContextForBot,
+  heuristicHangYes,
+  heuristicNightAction,
+  heuristicNominateTarget,
+  nightInstruction,
+  nightTargetsForBot,
+} from './knowledge.js';
 
 const BOT_DELAY_MS = 600;
 const REPLY_DELAY_MS = 1500;
@@ -77,33 +87,12 @@ function aliveBots(room: GameRoom): GamePlayer[] {
 }
 
 function aliveTargets(room: GameRoom, excludeId: number): GamePlayer[] {
-  return room.players.filter(
-    (p) => p.alive && p.inGame && p.role && p.connected && p.id !== excludeId
-  );
+  return alivePlayers(room, { excludeId });
 }
 
 function pickRandom<T>(items: T[]): T | null {
   if (!items.length) return null;
   return items[Math.floor(Math.random() * items.length)] ?? null;
-}
-
-function phaseLabel(phase: GamePhase): string {
-  switch (phase) {
-    case PHASE.DAY:
-      return 'дневное обсуждение';
-    case PHASE.VOTING:
-      return 'голосование';
-    case PHASE.NIGHT:
-      return 'ночь';
-    case PHASE.REGISTRATION:
-      return 'регистрация';
-    case PHASE.ROLES:
-      return 'раздача ролей';
-    case PHASE.ENDED:
-      return 'игра окончена';
-    default:
-      return 'ожидание';
-  }
 }
 
 function canReplyNow(roomId: number): boolean {
@@ -123,104 +112,27 @@ function markReply(roomId: number): void {
   replyTimestampsByRoom.set(roomId, recent);
 }
 
-function buildGameContextForBot(
-  room: GameRoom,
-  bot: GamePlayer,
-  trigger?: { authorName: string; authorId: number; text: string; toPlayerId?: number | null }
-): string {
-  const dayNumber = room.nightNumber + 1;
-
-  const playerLines = room.players
-    .filter((p) => p.inGame && p.role)
-    .map((p) => {
-      if (p.id === bot.id) {
-        return `#${p.id} ${p.username} — жив, это ты, роль: ${getRoleLabel(p.role)}`;
-      }
-      if (!p.alive) {
-        return `#${p.id} ${p.username} — мёртв (роль могла быть названа ведущим)`;
-      }
-      return `#${p.id} ${p.username} — жив, роль неизвестна`;
-    })
-    .join('\n');
-
-  const hostEvents = room.chat
-    .filter((m) => m.system && !m.deleted)
-    .slice(-12)
-    .map((m) => `[${m.playerName}] ${m.text}`)
-    .join('\n');
-
-  const playerChat = room.chat
-    .filter((m) => !m.deleted && !m.system && m.playerId != null)
-    .slice(-25)
-    .map((m) => {
-      const to = m.toPlayerName ? ` → ${m.toPlayerName}` : '';
-      return `${m.playerName}${to}: ${m.text}`;
-    })
-    .join('\n');
-
-  let votingInfo = '';
-  if (room.phase === PHASE.VOTING && Object.keys(room.votes).length > 0) {
-    votingInfo = Object.entries(room.votes)
-      .map(([voterId, targetId]) => {
-        const voter = room.players.find((p) => p.id === Number(voterId));
-        const target = room.players.find((p) => p.id === targetId);
-        return `${voter?.username ?? voterId} голосует за ${target?.username ?? targetId}`;
-      })
-      .join('\n');
-  }
-
-  const parts = [
-    `=== Текущая партия (сессия ${room.sessionId ?? '?'}) ===`,
-    `Комната: ${room.name}`,
-    `Фаза: ${phaseLabel(room.phase)}, день ${dayNumber}, прошло ночей: ${room.nightNumber}`,
-    `Твоя роль: ${getRoleLabel(bot.role)}`,
-    bot.isDon ? 'Ты главный мафиози (дон).' : '',
-    `Участники:\n${playerLines}`,
-    hostEvents ? `Сообщения ведущего (официальные факты этой игры):\n${hostEvents}` : '',
-    votingInfo ? `Текущие голоса:\n${votingInfo}` : '',
-    playerChat ? `Переписка в этой партии:\n${playerChat}` : 'Переписки пока нет.',
-  ];
-
-  if (trigger) {
-    parts.push(
-      `\n=== Сообщение игрока ===\n${trigger.authorName} (#${trigger.authorId}): «${trigger.text}»`
-    );
-    if (trigger.toPlayerId === bot.id) {
-      parts.push('Это сообщение обращено лично к тебе — ответь по делу.');
-    }
-  }
-
-  return parts.filter(Boolean).join('\n\n');
-}
-
-function buildDonDayHint(bot: GamePlayer, room: GameRoom): string {
-  if (!bot.isDon || (room.phase !== PHASE.DAY && room.phase !== PHASE.VOTING)) return '';
-  return 'Ты главарь мафии. Днём веди себя как мирный: не раскрывай роль, вводи город в заблуждение, голосуй вместе с большинством или против явных угроз, но не выделяйся.';
-}
-
 async function askDeepSeek<T>(
   bot: GamePlayer,
   room: GameRoom,
   instruction: string,
-  trigger?: { authorName: string; authorId: number; text: string; toPlayerId?: number | null }
+  trigger?: { authorName: string; authorId: number; text: string; toPlayerId?: number | null },
+  temperature = 0.45
 ): Promise<T | null> {
   if (!isDeepSeekEnabled()) return null;
-  const mafiaHint = buildMafiaHintForBot(bot, room);
-  const donHint = buildDonDayHint(bot, room);
   try {
     return await deepSeekJsonChat<T>(
       [
         {
           role: 'system',
-          content:
-            'Ты играешь роль живого игрока в онлайн-мафию. Анализируй только факты ЭТОЙ партии из контекста: сообщения ведущего, кто жив/мёртв, переписку, голоса. Не выдумывай события и роли. Отвечай только валидным JSON на русском. Не раскрывай, что ты ИИ. Играй в соответствии со своей ролью (мафия может врать, мирный ищет мафию).',
+          content: MAFIA_RULES_PROMPT,
         },
         {
           role: 'user',
-          content: `${buildGameContextForBot(room, bot, trigger)}${mafiaHint ? `\n\n${mafiaHint}` : ''}${donHint ? `\n\n${donHint}` : ''}\n\n${instruction}`,
+          content: `${buildGameContextForBot(room, bot, trigger)}\n\n${instruction}`,
         },
       ],
-      { timeoutMs: 20_000 }
+      { timeoutMs: 22_000, temperature }
     );
   } catch (err) {
     console.error(`[ai] DeepSeek for bot ${bot.id}:`, err);
@@ -308,8 +220,9 @@ async function runBotChatReply(
     const response = await askDeepSeek<{ shouldReply?: boolean; message?: string }>(
       bot,
       room,
-      `Игрок написал в чат. Реши, нужен ли ответ в контексте ЭТОЙ партии. Если сообщение не требует ответа (спам, смайлик, «ок»), верни {"shouldReply":false}. Иначе ответь игроку коротко (до 180 символов), ссылаясь на события этой игры. JSON: {"shouldReply":true,"message":"..."}`,
-      trigger
+      `Игрок написал в чат. Реши, нужен ли ответ по ходу ЭТОЙ партии. Если спам, смайлик, «ок» — {"shouldReply":false}. Иначе коротко (до 180 символов) ответь по фактам, голосам и сводке, без раскрытия своей роли без нужды. JSON: {"shouldReply":true,"message":"..."}`,
+      trigger,
+      0.7
     );
 
     if (response?.shouldReply === false) return;
@@ -340,7 +253,9 @@ async function runDayChat(room: GameRoom): Promise<void> {
     const response = await askDeepSeek<{ message?: string }>(
       bot,
       room,
-      `Начался день ${dayNumber}. Напиши одно короткое сообщение в чат (до 180 символов): прокомментируй итог прошлой ночи или подозрения по фактам ЭТОЙ партии. JSON: {"message":"..."}`
+      `Начался день ${dayNumber}. Одно короткое сообщение (до 180 символов): прокомментируй сводку ночи, голосование или подозрения по фактам ЭТОЙ партии. Не раскрывай роль. JSON: {"message":"..."}`,
+      undefined,
+      0.7
     );
     let text = response?.message?.trim().slice(0, 180) ?? '';
     if (!text) {
@@ -371,15 +286,20 @@ async function runNominations(room: GameRoom): Promise<void> {
     await sleep(BOT_DELAY_MS + Math.random() * 1200);
 
     const targets = aliveTargets(room, bot.id);
-    const fallback = pickRandom(targets);
+    const fallback = heuristicNominateTarget(bot, room, targets);
     if (!fallback) continue;
 
     const response = await askDeepSeek<{ targetId?: number | null }>(
       bot,
       room,
-      `Выдвини кандидата на казнь в ЭТОЙ партии. Это ещё не казнь, а только выдвижение. Учитывай переписку и сообщения ведущего.${bot.isDon ? ' Ты главарь — не выделяйся.' : ''} Доступные id: ${targets.map((p) => p.id).join(', ')}. JSON: {"targetId":число}`
+      `Выдвижение на казнь. Выбери id из списка: ${targets.map((p) => p.id).join(', ')}. Учитывай сводку, чат, текущий счёт голосов и свою роль: мафия не сдаёт союзников, город ищет чёрных. Это ещё не казнь. JSON: {"targetId":число,"reason":"..."}`,
+      undefined,
+      0.35
     );
-    const targetId = targets.find((p) => p.id === Number(response?.targetId))?.id ?? fallback.id;
+    const chosen = targets.find((p) => p.id === Number(response?.targetId));
+    const safeChosen =
+      chosen && !(isMafiaTeam(bot.role) && isMafiaTeam(chosen.role)) ? chosen : null;
+    const targetId = safeChosen?.id ?? fallback.id;
 
     try {
       castDayVote(room, bot.id, targetId);
@@ -401,9 +321,14 @@ async function runHangConfirm(room: GameRoom): Promise<void> {
     const response = await askDeepSeek<{ yes?: boolean }>(
       bot,
       room,
-      `На голосовании кандидат ${accusedName} (id ${room.accusedId}). Реши: казнить (yes:true) или пощадить (yes:false).${bot.isDon ? ' Ты главарь — голосуй вместе с городом, не выделяйся.' : ''} JSON: {"yes":true|false}`
+      `Кандидат ${accusedName} (id ${room.accusedId}). Казнить — yes:true, оправдать — yes:false. Мафия не вешает союзника. Город вешает, если факты против кандидата сильнее защиты. JSON: {"yes":true|false,"reason":"..."}`,
+      undefined,
+      0.3
     );
-    const yes = response?.yes !== false;
+    let yes =
+      typeof response?.yes === 'boolean' ? response.yes : heuristicHangYes(bot, room);
+    if (accused && isMafiaTeam(bot.role) && isMafiaTeam(accused.role)) yes = false;
+    if (accused?.id === bot.id) yes = false;
 
     try {
       castHangVote(room, bot.id, yes);
@@ -414,107 +339,21 @@ async function runHangConfirm(room: GameRoom): Promise<void> {
   }
 }
 
-function fallbackNightAction(bot: GamePlayer, room: GameRoom): NightAction | null {
-  const allTargets = aliveTargets(room, bot.id);
-  const killTargets = allTargets.filter((p) => !isMafiaTeam(p.role));
-  const target = pickRandom(killTargets);
-  if (!bot.role) return null;
-
-  switch (bot.role) {
-    case 'mafia':
-      if (!bot.isDon || !target) return null;
-      return { type: 'kill', targetId: target.id };
-    case 'maniac': {
-      const maniacTarget = pickRandom(allTargets);
-      if (!maniacTarget) return null;
-      return { type: 'kill', targetId: maniacTarget.id };
-    }
-    case 'commissar': {
-      const commissarTarget = pickRandom(allTargets);
-      if (!commissarTarget) return null;
-      return room.nightNumber <= 1
-        ? { type: 'check', targetId: commissarTarget.id }
-        : { type: 'kill', targetId: commissarTarget.id };
-    }
-    case 'doctor': {
-      const healTarget = pickRandom(allTargets);
-      if (!healTarget) return null;
-      return { type: 'heal', targetId: healTarget.id };
-    }
-    case 'prostitute': {
-      const seduceTarget = pickRandom(allTargets);
-      if (!seduceTarget) return null;
-      return { type: 'seduce', targetId: seduceTarget.id };
-    }
-    case 'homeless': {
-      const checkTarget = pickRandom(allTargets);
-      if (!checkTarget) return null;
-      return { type: 'check', targetId: checkTarget.id };
-    }
-    case 'advocate': {
-      const coverTarget = pickRandom(allTargets.filter((p) => p.id !== bot.id));
-      if (!coverTarget) return null;
-      return { type: 'cover', targetId: coverTarget.id };
-    }
-    case 'clown': {
-      const first = pickRandom(allTargets);
-      if (!first) return null;
-      const second = pickRandom(allTargets.filter((p) => p.id !== first.id));
-      if (!second) return null;
-      return { type: 'swap', targetId: first.id, targetId2: second.id };
-    }
-    case 'commissar_wife':
-      if (room.wifeRevengeAvailable && !room.wifeRevengeUsed) {
-        const revengeTarget = pickRandom(allTargets);
-        if (!revengeTarget) return null;
-        return { type: 'revenge', targetId: revengeTarget.id };
-      }
-      return null;
-    default:
-      return null;
-  }
-}
-
-function nightInstruction(bot: GamePlayer): string {
-  if (!bot.role) return '';
-  if (bot.role === 'mafia' && !bot.isDon) return '';
-  switch (bot.role) {
-    case 'mafia':
-      return 'Ты главарь мафии. Выбери жертву (не атакуй союзников). JSON: {"action":"kill","targetId":число}';
-    case 'commissar':
-      return 'Проверь или убей игрока. JSON: {"action":"check"|"kill","targetId":число}';
-    case 'doctor':
-      return 'Кого лечить? JSON: {"action":"heal","targetId":число}';
-    case 'prostitute':
-      return 'Кого соблазнить? JSON: {"action":"seduce","targetId":число}';
-    case 'homeless':
-      return 'Кого проверить? JSON: {"action":"check","targetId":число}';
-    case 'maniac':
-      return 'Кого убить? JSON: {"action":"kill","targetId":число}';
-    case 'clown':
-      return 'Поменяй роли двух игроков. JSON: {"action":"swap","targetId":число,"targetId2":число}';
-    case 'commissar_wife':
-      return 'Месть жены комиссара. JSON: {"action":"revenge","targetId":число}';
-    case 'advocate':
-      return 'Кого защитить адвокатом? JSON: {"action":"cover","targetId":число}';
-    default:
-      return '';
-  }
-}
-
 function parseNightAction(
   bot: GamePlayer,
   room: GameRoom,
   raw: { action?: string; targetId?: number; targetId2?: number } | null
 ): NightAction | null {
-  if (!raw?.action || !bot.role) return fallbackNightAction(bot, room);
-  const targets = aliveTargets(room, bot.id).filter((p) => !isMafiaTeam(p.role));
+  const fallback = heuristicNightAction(bot, room);
+  if (!raw?.action || !bot.role) return fallback;
+
+  const targets = nightTargetsForBot(bot, room);
   const target = targets.find((p) => p.id === Number(raw.targetId));
-  if (!target) return fallbackNightAction(bot, room);
+  if (!target) return fallback;
 
   switch (raw.action) {
     case 'kill':
-      if (bot.role === 'mafia' && bot.isDon) {
+      if (bot.role === 'mafia' && bot.isDon && !isMafiaTeam(target.role)) {
         return { type: 'kill', targetId: target.id };
       }
       if (bot.role === 'commissar' || bot.role === 'maniac') {
@@ -548,21 +387,22 @@ function parseNightAction(
       break;
     }
   }
-  return fallbackNightAction(bot, room);
+  return fallback;
 }
 
 async function runNightActions(room: GameRoom): Promise<void> {
-  const bots = aliveBots(room).filter((p) => !p.nightActionDone && nightInstruction(p));
+  const bots = aliveBots(room).filter((p) => !p.nightActionDone && nightInstruction(p, room));
   for (const bot of bots) {
     if (room.phase !== PHASE.NIGHT) return;
     await sleep(BOT_DELAY_MS + Math.random() * 1500);
 
-    const targets = aliveTargets(room, bot.id).filter((p) => !isMafiaTeam(p.role));
-    const instruction = `${nightInstruction(bot)}\nДоступные id: ${targets.map((p) => p.id).join(', ')}`;
+    const instruction = nightInstruction(bot, room);
     const response = await askDeepSeek<{ action?: string; targetId?: number; targetId2?: number }>(
       bot,
       room,
-      instruction
+      instruction,
+      undefined,
+      0.3
     );
     const action = parseNightAction(bot, room, response);
     if (!action) continue;
@@ -570,7 +410,7 @@ async function runNightActions(room: GameRoom): Promise<void> {
     try {
       submitNightAction(room, bot.id, action);
     } catch (err) {
-      const fallback = fallbackNightAction(bot, room);
+      const fallback = heuristicNightAction(bot, room);
       if (fallback) {
         try {
           submitNightAction(room, bot.id, fallback);
@@ -593,13 +433,4 @@ async function runAiForRoom(room: GameRoom): Promise<void> {
   } else if (room.phase === PHASE.NIGHT) {
     await runNightActions(room);
   }
-}
-
-export function buildMafiaHintForBot(bot: GamePlayer, room: GameRoom): string {
-  if (!bot.role || !isMafiaTeam(bot.role)) return '';
-  const team = room.players
-    .filter((p) => p.alive && p.inGame && isMafiaTeam(p.role))
-    .map((p) => `${p.username} (#${p.id})`)
-    .join(', ');
-  return team ? `Твоя мафиозная команда: ${team}` : '';
 }

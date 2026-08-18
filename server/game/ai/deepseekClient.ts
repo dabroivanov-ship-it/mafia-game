@@ -15,7 +15,13 @@ function abortErrorMessage(err: unknown): string | null {
 
 export async function deepSeekJsonChat<T>(
   messages: ChatMessage[],
-  options: { timeoutMs?: number; model?: string; baseUrl?: string; apiKey?: string } = {}
+  options: {
+    timeoutMs?: number;
+    model?: string;
+    baseUrl?: string;
+    apiKey?: string;
+    temperature?: number;
+  } = {}
 ): Promise<T> {
   const saved = getDeepSeekSettings();
   const apiKey = options.apiKey?.trim() || getDeepSeekApiKey();
@@ -37,7 +43,7 @@ export async function deepSeekJsonChat<T>(
       body: JSON.stringify({
         model,
         messages,
-        temperature: 0.8,
+        temperature: options.temperature ?? 0.8,
         response_format: { type: 'json_object' },
       }),
       signal: controller.signal,

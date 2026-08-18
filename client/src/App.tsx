@@ -26,6 +26,7 @@ import type { LobbyRoom, RoomState, User, ThemeId, LobbyUpdate, SiteBranding, Us
 import { applyTheme, resolveTheme, DEFAULT_THEME } from './themes';
 import { DEFAULT_SITE_BRANDING } from './siteBranding';
 import SiteFooter from './components/SiteFooter';
+import GuestLayout from './components/GuestLayout';
 import InstallAppBanner from './components/InstallAppBanner';
 import NotificationBell from './components/NotificationBell';
 
@@ -84,6 +85,10 @@ export default function App() {
   const [messageThreadUserId, setMessageThreadUserId] = useState<number | null>(null);
   const [messageThreadUsername, setMessageThreadUsername] = useState<string | null>(null);
   const [messagesOpenUnread, setMessagesOpenUnread] = useState(false);
+  const [mailReadReceipt, setMailReadReceipt] = useState<{
+    readerId: number;
+    messageIds: number[];
+  } | null>(null);
   const [profileStatsUserId, setProfileStatsUserId] = useState<number | null>(() =>
     readInitialProfileUserId()
   );
@@ -244,6 +249,13 @@ export default function App() {
     s.on('pm:unread', ({ count }: { count: number }) => {
       setUnreadMailCount(count);
     });
+
+    s.on(
+      'pm:read',
+      ({ readerId, messageIds }: { readerId: number; messageIds: number[] }) => {
+        setMailReadReceipt({ readerId, messageIds });
+      }
+    );
 
     const applyNotificationSync = (list: UserNotification[], unreadCount: number) => {
       setNotifications(list);
@@ -611,7 +623,7 @@ export default function App() {
     const profileId = profileUserIdFromPath(window.location.pathname);
     if (profileId) {
       return (
-        <div className="app app-public-info">
+        <GuestLayout branding={siteBranding}>
           <ViewSuspense label="Загружаем статистику…">
             <UserStatisticsPage
               userId={profileId}
@@ -621,22 +633,21 @@ export default function App() {
               }}
             />
           </ViewSuspense>
-          <SiteFooter text={siteBranding.footerText} />
-        </div>
+        </GuestLayout>
       );
     }
   }
 
   if ((!user || !token) && isPublicInfoPath(window.location.pathname)) {
     return (
-      <div className="app app-public-info">
+      <GuestLayout branding={siteBranding}>
         <ViewSuspense label="Загружаем раздел…">
           <Info
             initialSection={infoSectionFromPath(window.location.pathname)}
             publicMode
           />
         </ViewSuspense>
-      </div>
+      </GuestLayout>
     );
   }
 
@@ -778,6 +789,7 @@ export default function App() {
               threadUserId={messageThreadUserId}
               threadUsername={messageThreadUsername}
               openUnread={messagesOpenUnread}
+              mailReadReceipt={mailReadReceipt}
               onUnreadChange={setUnreadMailCount}
               onInitialNavigationHandled={() => {
                 setMessageThreadUserId(null);

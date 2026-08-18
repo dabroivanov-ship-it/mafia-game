@@ -21,6 +21,7 @@ interface MessagesProps {
   threadUsername?: string | null;
   openUnread?: boolean;
   onUnreadChange?: (count: number) => void;
+  mailReadReceipt?: { readerId: number; messageIds: number[] } | null;
   onBack: () => void;
   onInitialNavigationHandled?: () => void;
 }
@@ -32,6 +33,7 @@ export default function Messages({
   threadUsername = null,
   openUnread = false,
   onUnreadChange,
+  mailReadReceipt = null,
   onBack,
   onInitialNavigationHandled,
 }: MessagesProps) {
@@ -177,6 +179,25 @@ export default function Messages({
       }
     })();
   }, [openUnread, threadUserId]);
+
+  useEffect(() => {
+    if (!mailReadReceipt?.messageIds.length) return;
+    const ids = new Set(mailReadReceipt.messageIds);
+    setThread((prev) =>
+      prev.map((msg) =>
+        msg.direction === 'out' && ids.has(msg.id) ? { ...msg, isRead: true } : msg
+      )
+    );
+    setConversations((prev) =>
+      prev.map((conv) =>
+        conv.otherUser.id === mailReadReceipt.readerId &&
+        conv.lastMessage.direction === 'out' &&
+        ids.has(conv.lastMessage.id)
+          ? { ...conv, lastMessage: { ...conv.lastMessage, isRead: true } }
+          : conv
+      )
+    );
+  }, [mailReadReceipt]);
 
   useEffect(() => {
     const el = threadRef.current;
@@ -480,6 +501,11 @@ function ConversationItem({
           </div>
           <span className="muted mail-conversation-login">@{otherUser.username}</span>
           <p className="mail-text mail-conversation-preview">{preview}</p>
+          {lastMessage.direction === 'out' && (
+            <span className={`mail-read-status ${lastMessage.isRead ? 'is-read' : 'is-unread'}`}>
+              {lastMessage.isRead ? 'Прочитано' : 'Не прочитано'}
+            </span>
+          )}
         </div>
         {unreadCount > 0 && <span className="mail-conversation-badge">{unreadCount}</span>}
       </div>
@@ -506,6 +532,11 @@ function ThreadBubble({ msg }: { msg: PrivateMessage }) {
         </span>
       </div>
       <p>{msg.text}</p>
+      {isOut && (
+        <span className={`mail-read-status ${msg.isRead ? 'is-read' : 'is-unread'}`}>
+          {msg.isRead ? 'Прочитано' : 'Не прочитано'}
+        </span>
+      )}
       {attachmentSrc && (
         <a href={attachmentSrc} target="_blank" rel="noopener noreferrer" className="mail-thread-attachment">
           <img src={attachmentSrc} alt="Вложение" />

@@ -51,6 +51,7 @@ export interface ConversationPreview {
     text: string;
     createdAt: string;
     direction: 'in' | 'out';
+    isRead: boolean;
   };
   unreadCount: number;
 }
@@ -122,7 +123,7 @@ function rowToHistoryView(row: MessageRow, userId: number): PrivateMessageView {
     id: row.id,
     text: row.text,
     createdAt: row.created_at.includes('T') ? row.created_at : `${row.created_at.replace(' ', 'T')}Z`,
-    isRead: incoming ? !!row.is_read : true,
+    isRead: !!row.is_read,
     attachmentUrl: row.attachment_url || null,
     direction: incoming ? 'in' : 'out',
     otherUser: mapOtherUser(otherId),
@@ -182,6 +183,7 @@ export function listConversations(userId: number, limit = 50): ConversationPrevi
         text: view.text,
         createdAt: view.createdAt,
         direction: view.direction || 'in',
+        isRead: view.isRead,
       },
       unreadCount: unreadRow?.c ?? 0,
     };
@@ -244,14 +246,21 @@ export function listThread(
   return { messages, hasMore, total };
 }
 
-export function markThreadRead(userId: number, otherUserId: number): number {
-  const result = db
+export function markThreadRead(userId: number, otherUserId: number): number[] {
+  const unread = db
     .prepare(
-      `UPDATE private_messages SET is_read = 1
+      `SELECT id FROM private_messages
        WHERE recipient_id = ? AND sender_id = ? AND is_read = 0`
     )
-    .run(userId, otherUserId);
-  return Number(result.changes);
+    .all(userId, otherUserId) as { id: number }[];
+  if (unread.length === 0) return [];
+
+  db.prepare(
+    `UPDATE private_messages SET is_read = 1
+     WHERE recipient_id = ? AND sender_id = ? AND is_read = 0`
+  ).run(userId, otherUserId);
+
+  return unread.map((row) => row.id);
 }
 
 export function getUnreadCount(userId: number): number {
@@ -261,11 +270,20 @@ export function getUnreadCount(userId: number): number {
   return row?.c ?? 0;
 }
 
-export function markMessageRead(messageId: number, userId: number): boolean {
-  const result = db
+export function markMessageRead(
+  messageId: number,
+  userId: number
+): { id: number; senderId: number } | null {
+  const row = db
     .prepare(
-      'UPDATE private_messages SET is_read = 1 WHERE id = ? AND recipient_id = ? AND is_read = 0'
+      'SELECT id, sender_id FROM private_messages WHERE id = ? AND recipient_id = ?'
     )
-    .run(messageId, userId);
-  return Number(result.changes) > 0;
+    .get(messageId, userId) as { id: number; sender_id: number } | undefined;
+  if (!row) return null;
+
+  db.prepare(
+    'UPDATE private_messages SET is_read = 1 WHERE id = ? AND recipient_id = ? AND is_read = 0'
+  ).run(messageId, userId);
+
+  return { id: row.id, senderId: row.sender_id };
 }

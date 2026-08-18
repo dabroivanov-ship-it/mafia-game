@@ -485,6 +485,9 @@ app.use(
     onMessageRead: (userId, unreadCount) => {
       notifyUser(userId, 'pm:unread', { count: unreadCount });
     },
+    onOutgoingRead: (senderId, payload) => {
+      notifyUser(senderId, 'pm:read', payload);
+    },
   })
 );
 app.use(

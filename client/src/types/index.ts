@@ -438,6 +438,7 @@ export interface MailConversation {
     text: string;
     createdAt: string;
     direction: 'in' | 'out';
+    isRead: boolean;
   };
   unreadCount: number;
 }

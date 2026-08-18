@@ -17,8 +17,7 @@ import { isTelegramWebApp, waitForTelegramWebApp } from '../telegramWebApp';
 import TelegramLoginWidget from './TelegramLoginWidget';
 import TelegramIcon from './TelegramIcon';
 import VkLoginWidget from './VkLoginWidget';
-import SiteLogo from './SiteLogo';
-import SiteFooter from './SiteFooter';
+import GuestLayout from './GuestLayout';
 import { DEFAULT_PAGE_META, updatePageMeta } from '../seo';
 import type { SiteBranding } from '../types';
 import { DEFAULT_SITE_BRANDING } from '../siteBranding';
@@ -281,27 +280,7 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
   };
 
   return (
-    <div className="auth-page">
-      <div className="auth-page-bar">
-        <a href="/" className="auth-brand" aria-label={branding.logoText || 'Mafia'}>
-          <SiteLogo branding={branding} className="auth-brand-logo" />
-        </a>
-        <nav className="auth-top-links home-quick-links" aria-label="О сайте">
-          <a href="/info/rules" className="home-quick-link">
-            Правила
-          </a>
-          <a href="/info/rating" className="home-quick-link">
-            Лидеры
-          </a>
-          <a href="/info/faq" className="home-quick-link">
-            FAQ
-          </a>
-          <a href="/info/about" className="home-quick-link">
-            Об игре
-          </a>
-        </nav>
-      </div>
-
+    <GuestLayout branding={branding} centered>
       <div className="auth-card">
         <header className="auth-header">
           <p>Войдите или зарегистрируйтесь, чтобы играть</p>
@@ -527,9 +506,7 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
 
 
       </div>
-
-      <SiteFooter variant="auth" text={branding.footerText} />
-    </div>
+    </GuestLayout>
   );
 }
 
