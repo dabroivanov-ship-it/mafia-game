@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, FormEvent } from 'react';
+import { useEffect, useRef, useState, FormEvent, type MouseEvent, type ReactNode } from 'react';
 import {
   avatarUrl,
   fetchMailConversations,
@@ -10,9 +10,45 @@ import {
 } from '../api';
 import type { MailConversation, PrivateMessage, FriendUser } from '../types';
 import DeleteMessageModal, { type ViolationType } from './DeleteMessageModal';
+import { INFO_PATHS } from '../infoRouting';
 
 const THREAD_PAGE_SIZE = 10;
 const DELETED_MAIL_TEXT = '[сообщение удалено модератором]';
+const FAQ_IN_MAIL_RE = /FAQ:\s*\/info\/faq|\bFAQ\b/gi;
+
+function renderMailText(text: string, onOpenFaq?: () => void): ReactNode {
+  const parts: ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  const re = new RegExp(FAQ_IN_MAIL_RE.source, FAQ_IN_MAIL_RE.flags);
+  let key = 0;
+  while ((match = re.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    parts.push(
+      <a
+        key={`faq-${key++}`}
+        className="mail-inline-link"
+        href={INFO_PATHS.faq}
+        onClick={(event: MouseEvent<HTMLAnchorElement>) => {
+          if (!onOpenFaq) return;
+          if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+            return;
+          }
+          event.preventDefault();
+          onOpenFaq();
+        }}
+      >
+        FAQ
+      </a>
+    );
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex === 0) return text;
+  if (lastIndex < text.length) parts.push(text.slice(lastIndex));
+  return parts;
+}
 
 type MailView = 'list' | 'thread' | 'compose';
 type ListTab = 'dialogs' | 'friends';
@@ -27,6 +63,7 @@ interface MessagesProps {
   mailReadReceipt?: { readerId: number; messageIds: number[] } | null;
   onBack: () => void;
   onInitialNavigationHandled?: () => void;
+  onOpenFaq?: () => void;
 }
 
 export default function Messages({
@@ -39,6 +76,7 @@ export default function Messages({
   mailReadReceipt = null,
   onBack,
   onInitialNavigationHandled,
+  onOpenFaq,
 }: MessagesProps) {
   const [view, setView] = useState<MailView>(
     threadUserId ? 'thread' : composeToUserId || composeToUsername ? 'compose' : 'list'
@@ -441,6 +479,7 @@ export default function Messages({
                 <ThreadBubble
                   key={msg.id}
                   msg={msg}
+                  onOpenFaq={onOpenFaq}
                   onReport={
                     msg.direction === 'in' && msg.text !== DELETED_MAIL_TEXT
                       ? () => setReportTarget(msg)
@@ -556,9 +595,11 @@ function ConversationItem({
 function ThreadBubble({
   msg,
   onReport,
+  onOpenFaq,
 }: {
   msg: PrivateMessage;
   onReport?: () => void;
+  onOpenFaq?: () => void;
 }) {
   const isOut = msg.direction === 'out';
   const authorName = isOut ? 'Вы' : msg.otherUser.username;
@@ -588,7 +629,7 @@ function ThreadBubble({
           </button>
         )}
       </div>
-      <p>{msg.text}</p>
+      <p>{deleted ? msg.text : renderMailText(msg.text, onOpenFaq)}</p>
       {isOut && (
         <span className={`mail-read-status ${msg.isRead ? 'is-read' : 'is-unread'}`}>
           {msg.isRead ? 'Прочитано' : 'Не прочитано'}

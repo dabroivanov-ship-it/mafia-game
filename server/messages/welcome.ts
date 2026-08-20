@@ -34,7 +34,7 @@ export function sendWelcomeLetter(user: User): void {
     if (admin.id === user.id) return;
 
     const text = buildWelcomeLetter(user, admin);
-    const message = sendPrivateMessage(admin.id, user.id, text);
+    const message = sendPrivateMessage(admin.id, user.id, text, null, { hideFromSender: true });
     if (!message) return;
 
     pushMailNotification(user.id, {

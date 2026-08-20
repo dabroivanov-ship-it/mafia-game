@@ -19,6 +19,27 @@ try {
   /* column exists */
 }
 
+try {
+  db.exec(
+    `ALTER TABLE private_messages ADD COLUMN hide_from_sender INTEGER NOT NULL DEFAULT 0`
+  );
+} catch {
+  /* column exists */
+}
+
+/** Hide legacy welcome letters from the admin outbox. */
+try {
+  db.prepare(
+    `UPDATE private_messages
+     SET hide_from_sender = 1
+     WHERE hide_from_sender = 0
+       AND text LIKE '%Рады видеть тебя за столом%'
+       AND text LIKE '%Удачи за столом%'`
+  ).run();
+} catch {
+  /* ignore */
+}
+
 interface MessageRow {
   id: number;
   sender_id: number;
@@ -27,7 +48,14 @@ interface MessageRow {
   is_read: number;
   created_at: string;
   attachment_url?: string | null;
+  hide_from_sender?: number;
 }
+
+/** Message is visible to userId (recipient always; sender unless hidden). */
+const VISIBLE_TO_USER_SQL = `(
+  recipient_id = ?
+  OR (sender_id = ? AND COALESCE(hide_from_sender, 0) = 0)
+)`;
 
 export interface PrivateMessageView {
   id: number;
@@ -88,16 +116,19 @@ export function sendPrivateMessage(
   senderId: number,
   recipientId: number,
   text: string,
-  attachmentUrl?: string | null
+  attachmentUrl?: string | null,
+  opts?: { hideFromSender?: boolean }
 ): PrivateMessageView | null {
   if (senderId === recipientId) return null;
   if (!findUserById(recipientId)) return null;
 
+  const hideFromSender = opts?.hideFromSender ? 1 : 0;
   const result = db
     .prepare(
-      'INSERT INTO private_messages (sender_id, recipient_id, text, attachment_url) VALUES (?, ?, ?, ?)'
+      `INSERT INTO private_messages (sender_id, recipient_id, text, attachment_url, hide_from_sender)
+       VALUES (?, ?, ?, ?, ?)`
     )
-    .run(senderId, recipientId, text, attachmentUrl || null);
+    .run(senderId, recipientId, text, attachmentUrl || null, hideFromSender);
 
   const row = db
     .prepare('SELECT * FROM private_messages WHERE id = ?')
@@ -133,7 +164,8 @@ function rowToHistoryView(row: MessageRow, userId: number): PrivateMessageView {
 export function listOutbox(userId: number, limit = 50): PrivateMessageView[] {
   const rows = db
     .prepare(
-      `SELECT * FROM private_messages WHERE sender_id = ?
+      `SELECT * FROM private_messages
+       WHERE sender_id = ? AND COALESCE(hide_from_sender, 0) = 0
        ORDER BY created_at DESC LIMIT ?`
     )
     .all(userId, limit) as MessageRow[];
@@ -144,7 +176,7 @@ export function listHistory(userId: number, limit = 100): PrivateMessageView[] {
   const rows = db
     .prepare(
       `SELECT * FROM private_messages
-       WHERE sender_id = ? OR recipient_id = ?
+       WHERE ${VISIBLE_TO_USER_SQL}
        ORDER BY created_at DESC LIMIT ?`
     )
     .all(userId, userId, limit) as MessageRow[];
@@ -160,7 +192,7 @@ export function listConversations(userId: number, limit = 50): ConversationPrevi
            CASE WHEN sender_id = ? THEN recipient_id ELSE sender_id END AS other_id,
            MAX(id) AS max_id
          FROM private_messages
-         WHERE sender_id = ? OR recipient_id = ?
+         WHERE ${VISIBLE_TO_USER_SQL}
          GROUP BY other_id
        ) latest ON pm.id = latest.max_id
        ORDER BY pm.created_at DESC
@@ -190,11 +222,18 @@ export function listConversations(userId: number, limit = 50): ConversationPrevi
   });
 }
 
+const THREAD_PAIR_VISIBLE_SQL = `(
+  (
+    (sender_id = ? AND recipient_id = ? AND COALESCE(hide_from_sender, 0) = 0)
+    OR (sender_id = ? AND recipient_id = ?)
+  )
+)`;
+
 function countThreadMessages(userId: number, otherUserId: number): number {
   const row = db
     .prepare(
       `SELECT COUNT(*) AS c FROM private_messages
-       WHERE (sender_id = ? AND recipient_id = ?) OR (sender_id = ? AND recipient_id = ?)`
+       WHERE ${THREAD_PAIR_VISIBLE_SQL}`
     )
     .get(userId, otherUserId, otherUserId, userId) as { c: number };
   return row?.c ?? 0;
@@ -213,7 +252,7 @@ export function listThread(
     rows = db
       .prepare(
         `SELECT * FROM private_messages
-         WHERE ((sender_id = ? AND recipient_id = ?) OR (sender_id = ? AND recipient_id = ?))
+         WHERE ${THREAD_PAIR_VISIBLE_SQL}
            AND id < ?
          ORDER BY id DESC LIMIT ?`
       )
@@ -222,7 +261,7 @@ export function listThread(
     rows = db
       .prepare(
         `SELECT * FROM private_messages
-         WHERE (sender_id = ? AND recipient_id = ?) OR (sender_id = ? AND recipient_id = ?)
+         WHERE ${THREAD_PAIR_VISIBLE_SQL}
          ORDER BY id DESC LIMIT ?`
       )
       .all(userId, otherUserId, otherUserId, userId, limit) as MessageRow[];
@@ -236,7 +275,7 @@ export function listThread(
     const older = db
       .prepare(
         `SELECT COUNT(*) AS c FROM private_messages
-         WHERE ((sender_id = ? AND recipient_id = ?) OR (sender_id = ? AND recipient_id = ?))
+         WHERE ${THREAD_PAIR_VISIBLE_SQL}
            AND id < ?`
       )
       .get(userId, otherUserId, otherUserId, userId, oldestId) as { c: number };

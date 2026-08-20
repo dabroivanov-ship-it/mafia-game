@@ -3369,6 +3369,23 @@ html.telegram-webapp .app-body {
   outline-offset: 2px;
 }
 
+.mail-inline-link {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mail-inline-link:hover {
+  color: var(--accent-hover);
+}
+
+.mail-inline-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .chat-msg.spectator-only {
   background: rgba(241, 196, 15, 0.08);
   border-radius: 6px;

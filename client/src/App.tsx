@@ -5,7 +5,7 @@ import Menu, { type MenuView } from './components/Menu';
 import Lobby, { type LobbyScreen } from './components/Lobby';
 import CabinetHub from './components/CabinetHub';
 import PageLoader from './components/PageLoader';
-import { infoSectionFromPath, isPublicInfoPath, pathForInfoSection } from './infoRouting';
+import { infoSectionFromPath, isPublicInfoPath, pathForInfoSection, INFO_PATHS } from './infoRouting';
 import { isPublicBlogPath } from './blogRouting';
 import { isPublicOnlinePath } from './onlineRouting';
 import {
@@ -925,6 +925,11 @@ export default function App() {
               openUnread={messagesOpenUnread}
               mailReadReceipt={mailReadReceipt}
               onUnreadChange={setUnreadMailCount}
+              onOpenFaq={() => {
+                window.history.pushState({}, '', INFO_PATHS.faq);
+                setView('info');
+                setLobbyScreen('rooms');
+              }}
               onInitialNavigationHandled={() => {
                 setMessageThreadUserId(null);
                 setMessageThreadUsername(null);
