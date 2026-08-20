@@ -257,23 +257,19 @@ export function getRecentGameEvents(limit = 30): GameEvent[] {
 
 export function hydrateRoomHistory(room: GameRoom): void {
   if (room.historyLoaded) return;
-  const sessionId = room.kind === 'chat' ? undefined : room.sessionId;
-  if (room.kind !== 'chat' && sessionId == null) {
-    room.historyLoaded = true;
-    return;
-  }
   const { chat, mafiaChat, deadChat, spectatorChat, privateChat } = loadRoomChatHistory(
     room.id,
-    300,
-    sessionId
+    300
   );
   room.chat = chat.map((msg) =>
     msg.system ? { ...msg, playerName: normalizeSystemSender(msg.playerName) } : msg
   );
-  room.mafiaChat = mafiaChat;
-  room.deadChat = deadChat;
-  room.spectatorChat = spectatorChat;
-  room.privateChat = room.kind === 'chat' ? [] : privateChat;
+  const restoreSideChannels =
+    room.kind !== 'chat' && room.phase !== 'waiting' && room.phase !== 'ended';
+  room.mafiaChat = restoreSideChannels ? mafiaChat : [];
+  room.deadChat = restoreSideChannels ? deadChat : [];
+  room.spectatorChat = restoreSideChannels ? spectatorChat : [];
+  room.privateChat = restoreSideChannels ? privateChat : [];
   room.historyLoaded = true;
 }
 

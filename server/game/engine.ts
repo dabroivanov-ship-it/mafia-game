@@ -84,24 +84,6 @@ export const SYSTEM_SENDER_NAME = 'Система';
 export const HOST_SENDER_NAME = 'Ведущий';
 export const QUIZ_BOT_NAME = 'Умник';
 
-function freshChatRoomState(room: GameRoom): void {
-  room.historyLoaded = true;
-  room.chat = [];
-  room.mafiaChat = [];
-  room.deadChat = [];
-  room.spectatorChat = [];
-  room.privateChat = [];
-  room.systemMessages = [];
-  room.phase = PHASE.WAITING;
-  room.sessionId = null;
-  room.timerEnd = null;
-  room.timerReason = null;
-  room.winnerTeam = null;
-  room.nightNumber = 0;
-  room.votes = {};
-  room.nightActions = {};
-}
-
 export function isChatRoom(room: GameRoom): boolean {
   return room.kind === 'chat';
 }
@@ -143,10 +125,6 @@ export function createInitialRooms(): Map<number, GameRoom> {
   for (const [id, config] of savedConfigs) {
     if (config.kind === 'chat') {
       const room = createChatRoom(id, config.name);
-      freshChatRoomState(room);
-      if (!room.chat.some((m) => m.system)) {
-        addSystemMessage(room, `💬 Добро пожаловать в «${room.name}».`);
-      }
       rooms.set(id, room);
     }
   }
@@ -154,8 +132,6 @@ export function createInitialRooms(): Map<number, GameRoom> {
   if (!Array.from(rooms.values()).some((r) => r.kind === 'chat')) {
     const id = nextRoomId(rooms.keys());
     const room = createChatRoom(id, 'Общий чат');
-    freshChatRoomState(room);
-    addSystemMessage(room, `💬 Добро пожаловать в «${room.name}».`);
     rooms.set(id, room);
     saveRoomConfig(id, room.name, 'chat');
   }
@@ -163,7 +139,6 @@ export function createInitialRooms(): Map<number, GameRoom> {
   if (!Array.from(rooms.values()).some((r) => r.kind === 'chat' && /викторин/i.test(r.name))) {
     const id = nextRoomId(rooms.keys());
     const room = createChatRoom(id, 'Викторина');
-    freshChatRoomState(room);
     rooms.set(id, room);
     saveRoomConfig(id, room.name, 'chat');
   }
@@ -360,9 +335,8 @@ export function addChatRoom(rooms: Map<number, GameRoom>, name: string): GameRoo
   }
   const id = nextRoomId(rooms.keys());
   const room = createChatRoom(id, trimmed);
-  freshChatRoomState(room);
   if (!/викторин/i.test(trimmed)) {
-    addSystemMessage(room, `💬 Чат-комната «${room.name}» создана.`);
+    addSystemMessage(room, `Чат-комната «${room.name}» создана.`);
   }
   rooms.set(id, room);
   saveRoomConfig(id, room.name, 'chat');
@@ -599,13 +573,11 @@ export function startRegistration(room: GameRoom, _starterPlayerId: number | nul
     p.joinGameAvailableAt = 0;
   }
 
-  room.chat = [];
   room.mafiaChat = [];
   room.deadChat = [];
   room.spectatorChat = [];
   room.privateChat = [];
   room.systemMessages = [];
-  room.historyLoaded = true;
   room.phase = PHASE.REGISTRATION;
   room.sessionId = Date.now();
 
@@ -1582,10 +1554,12 @@ export function resetRoom(room: GameRoom): void {
   const aiEnabled = room.aiEnabled;
   const aiCount = room.aiCount;
   const connectedPlayers = room.players.filter((p) => p.connected && !p.isBot);
+  const publicChat = room.chat;
   Object.assign(room, createRoom(id, kind));
   room.name = name;
   room.aiEnabled = aiEnabled;
   room.aiCount = aiCount;
+  room.chat = publicChat;
   room.historyLoaded = true;
   room.players = connectedPlayers.map((p) => ({
     ...p,

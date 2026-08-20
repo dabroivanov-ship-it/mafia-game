@@ -119,6 +119,9 @@ const io = new Server(httpServer, {
 const rooms = createInitialRooms();
 for (const room of rooms.values()) {
   hydrateRoomHistory(room);
+  if (isChatRoom(room) && room.chat.length === 0 && !/викторин/i.test(room.name)) {
+    addSystemMessage(room, `Добро пожаловать в «${room.name}».`);
+  }
 }
 setOnlineRoomResolver((userId) => {
   const names: string[] = [];
