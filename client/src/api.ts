@@ -1,4 +1,4 @@
-import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, NewsPoll, NewsPollInput, NewsComment, MailConversation, RoomKind, ThemeId, ViolationLogEntry, UserSearchHit, UserPresence, FriendUser, LeaderboardEntry, QuizLeaderboardEntry, SiteBranding, LobbyAnnouncement, UserStatisticsResponse, UserNotification } from './types';
+import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, NewsPoll, NewsPollInput, NewsComment, MailConversation, RoomKind, ThemeId, ViolationLogEntry, UserSearchHit, UserPresence, FriendUser, LeaderboardEntry, QuizLeaderboardEntry, SiteBranding, LobbyAnnouncement, UserStatisticsResponse, UserNotification, PublicSiteStats } from './types';
 import type { AdminPermission } from './adminPermissions';
 
 const API_BASE =
@@ -650,6 +650,10 @@ export async function adminSetUserReputation(
 
 export async function fetchOnlineCount(): Promise<{ onlineCount: number }> {
   return apiRequest('/api/profile/online-count');
+}
+
+export async function fetchSiteStats(): Promise<PublicSiteStats> {
+  return apiRequest('/api/profile/site-stats');
 }
 
 export async function fetchOnlineUsers(): Promise<{ users: UserSearchHit[]; onlineCount: number }> {

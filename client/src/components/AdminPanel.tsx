@@ -1474,8 +1474,8 @@ export default function AdminPanel({
             {!editUser.isAdmin && (canSetRoles || canBanUsers || canDeleteUsers) && (
               <div className="admin-edit-user-actions">
                 {canSetRoles && (
-                  <label>
-                    Роль
+                  <label className="admin-edit-role">
+                    <span>Роль</span>
                     <select
                       className="admin-role-select"
                       value={assignableRole(editUser)}
@@ -1486,31 +1486,33 @@ export default function AdminPanel({
                         )
                       }
                     >
-                      <option value="user">игрок</option>
-                      <option value="watcher">смотрящий</option>
-                      <option value="moderator">модер</option>
+                      <option value="user">Игрок</option>
+                      <option value="watcher">Смотрящий</option>
+                      <option value="moderator">Модер</option>
                     </select>
                   </label>
                 )}
-                {canBanUsers && !editUser.isModerator && !editUser.isWatcher && !editUser.isBanned && (
-                  <button type="button" className="btn btn-sm danger" onClick={() => setBanTarget(editUser)}>
-                    Забанить
-                  </button>
-                )}
-                {canBanUsers && editUser.isBanned && (
-                  <button type="button" className="btn btn-sm" onClick={() => void handleUnban(editUser.id)}>
-                    Разбан
-                  </button>
-                )}
-                {canDeleteUsers && (
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-ghost danger"
-                    onClick={() => void handleDeleteUser(editUser.id)}
-                  >
-                    Удалить аккаунт
-                  </button>
-                )}
+                <div className="admin-edit-user-buttons">
+                  {canBanUsers && !editUser.isModerator && !editUser.isWatcher && !editUser.isBanned && (
+                    <button type="button" className="btn btn-sm danger" onClick={() => setBanTarget(editUser)}>
+                      Забанить
+                    </button>
+                  )}
+                  {canBanUsers && editUser.isBanned && (
+                    <button type="button" className="btn btn-sm" onClick={() => void handleUnban(editUser.id)}>
+                      Разбан
+                    </button>
+                  )}
+                  {canDeleteUsers && (
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-ghost danger"
+                      onClick={() => void handleDeleteUser(editUser.id)}
+                    >
+                      Удалить аккаунт
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 

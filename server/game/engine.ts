@@ -422,16 +422,12 @@ export function addPlayerToRoom(
     if (username) existingUser.username = username;
     existingUser.connected = true;
     existingUser.disconnectedAt = null;
-    if (!isChatRoom(room) && isLobbyPhase(room.phase)) {
-      existingUser.inGame = true;
-    }
     return { player: existingUser, privateNotes: [] };
   }
 
   const connectedCount = room.players.filter((p) => p.connected).length;
   const inGameCount = countRegisteredPlayers(room);
-  const isGamePhase = !isLobbyPhase(room.phase);
-  const defaultInGame = isChatRoom(room) ? false : !isGamePhase;
+  const defaultInGame = false;
 
   if (isChatRoom(room)) {
     if (connectedCount >= room.maxPlayers) {
@@ -723,7 +719,7 @@ export function onRegistrationTimerEnd(room: GameRoom): PrivateNote[] {
     room.phase = PHASE.WAITING;
     clearTimer(room);
     room.players.forEach((p) => {
-      p.inGame = true;
+      p.inGame = false;
     });
     addHostMessage(
       room,
@@ -1593,7 +1589,7 @@ export function resetRoom(room: GameRoom): void {
   room.historyLoaded = true;
   room.players = connectedPlayers.map((p) => ({
     ...p,
-    inGame: true,
+    inGame: false,
     role: null,
     alive: true,
     score: 0,
@@ -2035,6 +2031,22 @@ export function addBotChatMessage(room: GameRoom, text: string, senderName: stri
 
 export function addSystemMessage(room: GameRoom, text: string): void {
   addBotChatMessage(room, text, SYSTEM_SENDER_NAME);
+}
+
+export function announceRegistrationToIdleRooms(
+  rooms: Map<number, GameRoom>,
+  source: GameRoom
+): number[] {
+  const notified: number[] = [];
+  const text = `Запускается игра в комнате «${source.name}». /room/${source.id}`;
+  for (const room of rooms.values()) {
+    if (room.id === source.id) continue;
+    if (!isChatRoom(room) && isActiveGamePhase(room.phase)) continue;
+    if (!room.players.some((p) => p.connected && !p.isBot)) continue;
+    addSystemMessage(room, text);
+    notified.push(room.id);
+  }
+  return notified;
 }
 
 export function addHostMessage(room: GameRoom, text: string): void {

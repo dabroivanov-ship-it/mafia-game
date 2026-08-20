@@ -46,6 +46,8 @@ module.exports = {
         JWT_SECRET: process.env.JWT_SECRET,
         ADMIN_USERNAMES: process.env.ADMIN_USERNAMES || 'admin',
         CORS_ORIGIN: process.env.CORS_ORIGIN,
+        SITE_URL: process.env.SITE_URL,
+        TRUST_PROXY: process.env.TRUST_PROXY || '1',
         TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
         TELEGRAM_WEBAPP_URL: process.env.TELEGRAM_WEBAPP_URL,
         DB_PATH: process.env.DB_PATH,

@@ -258,6 +258,7 @@ export interface UserSearchHit {
   isModerator: boolean;
   isOnline: boolean;
   lastSeenAt: string | null;
+  location?: string;
 }
 
 export interface LeaderboardEntry {
@@ -410,6 +411,16 @@ export interface ViolationLogEntry {
 export interface LobbyUpdate {
   rooms: LobbyRoom[];
   onlineCount: number;
+  siteStats?: PublicSiteStats;
+}
+
+export interface PublicSiteStats {
+  gamesArchived: number;
+  mafiaWins: number;
+  townWins: number;
+  draws: number;
+  online: number;
+  activePlayers: number;
 }
 
 export interface FriendUser extends PublicUser {

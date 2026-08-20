@@ -23,7 +23,7 @@ import {
 import { DEFAULT_PAGE_META, updatePageMeta } from './seo';
 import { clearSession, fetchMe, fetchUnreadMailCount, fetchUnreadNewsCount, fetchThemeSettings, fetchNotifications, markNotificationRead, markAllNotificationsRead, saveSession, loadStoredPlayerId, saveStoredPlayerId, clearStoredPlayerIds, telegramWebAppLogin } from './api';
 import { isLikelyTelegramWebApp, waitForTelegramWebApp } from './telegramWebApp';
-import type { LobbyRoom, RoomState, User, ThemeId, LobbyUpdate, SiteBranding, UserNotification, LobbyAnnouncement } from './types';
+import type { LobbyRoom, RoomState, User, ThemeId, LobbyUpdate, SiteBranding, UserNotification, LobbyAnnouncement, PublicSiteStats } from './types';
 import { applyTheme, resolveTheme, DEFAULT_THEME } from './themes';
 import { DEFAULT_SITE_BRANDING } from './siteBranding';
 import SiteFooter from './components/SiteFooter';
@@ -40,7 +40,7 @@ const RoomMembersPage = lazy(() => import('./components/RoomMembersPage'));
 const Messages = lazy(() => import('./components/Messages'));
 const UserSearch = lazy(() => import('./components/UserSearch'));
 const CabinetProfileSettings = lazy(() => import('./components/CabinetProfileSettings'));
-const CabinetSiteSettings = lazy(() => import('./components/CabinetSiteSettings'));
+const CabinetAccountSettings = lazy(() => import('./components/CabinetAccountSettings'));
 const CabinetSupport = lazy(() => import('./components/CabinetSupport'));
 const UserStatisticsPage = lazy(() => import('./components/UserStatisticsPage'));
 
@@ -52,6 +52,22 @@ const SOCKET_URL =
   (import.meta.env.DEV ? 'http://localhost:3001' : undefined);
 
 type AppView = MenuView | 'room';
+
+function presenceSection(
+  view: AppView,
+  lobbyScreen: LobbyScreen,
+  profileStatsUserId: number | null,
+  inVisibleRoom: boolean
+): string {
+  if (profileStatsUserId != null) return 'profile';
+  if (inVisibleRoom || view === 'room') return 'room';
+  if (view === 'news') return 'news';
+  if (view === 'cabinet') return 'cabinet';
+  if (view === 'info') return 'info';
+  if (view === 'admin') return 'admin';
+  if (view === 'lobby' && lobbyScreen === 'online-users') return 'online';
+  return 'lobby';
+}
 
 interface RoomJoinResponse {
   error?: string;
@@ -68,6 +84,7 @@ export default function App() {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [rooms, setRooms] = useState<LobbyRoom[]>([]);
   const [siteOnlineCount, setSiteOnlineCount] = useState(0);
+  const [siteStats, setSiteStats] = useState<PublicSiteStats | null>(null);
   const [roomState, setRoomState] = useState<RoomState | null>(null);
   const [currentRoomId, setCurrentRoomId] = useState<number | null>(null);
   const [roomScreen, setRoomScreen] = useState<RoomScreen>(() => readInitialRoomScreen());
@@ -247,6 +264,7 @@ export default function App() {
       } else {
         setRooms(payload.rooms);
         setSiteOnlineCount(payload.onlineCount);
+        if (payload.siteStats) setSiteStats(payload.siteStats);
       }
     });
     s.on('room:state', applyRoomState);
@@ -350,6 +368,25 @@ export default function App() {
       s.disconnect();
     };
   }, [token, user, applyRoomState]);
+
+  useEffect(() => {
+    if (!socket) return;
+    const emitWhere = () => {
+      socket.emit('presence:where', {
+        section: presenceSection(
+          view,
+          lobbyScreen,
+          profileStatsUserId,
+          !!currentRoomId && !roomMinimized
+        ),
+      });
+    };
+    emitWhere();
+    socket.on('connect', emitWhere);
+    return () => {
+      socket.off('connect', emitWhere);
+    };
+  }, [socket, view, lobbyScreen, profileStatsUserId, currentRoomId, roomMinimized]);
 
   useEffect(() => {
     if (!token) return;
@@ -457,6 +494,13 @@ export default function App() {
   const joinRoom = useCallback(
     (roomId: number) => {
       if (!socket || !user) return;
+      if (currentRoomIdRef.current === roomId) {
+        setRoomMinimized(false);
+        setRoomScreen('game');
+        setView('room');
+        window.history.pushState(null, '', roomGamePath(roomId));
+        return;
+      }
       setError(null);
       const previousId = currentRoomIdRef.current;
       currentRoomIdRef.current = roomId;
@@ -737,6 +781,7 @@ export default function App() {
               onOpenMembers={openRoomMembers}
               onStateUpdate={applyRoomState}
               currentUserId={user.id}
+              onJoinRoom={joinRoom}
               onWriteMessage={(userId, username) => openMessages({ userId, username })}
               onOpenStatistics={openProfileStatistics}
             />
@@ -777,6 +822,7 @@ export default function App() {
           <Lobby
             rooms={rooms}
             siteOnlineCount={siteOnlineCount}
+            siteStats={siteStats}
             announcement={lobbyAnnouncement}
             onJoin={joinRoom}
             unreadMailCount={unreadMailCount}
@@ -804,7 +850,7 @@ export default function App() {
           </ViewSuspense>
         )}
         {view === 'cabinet' && lobbyScreen === 'cabinet-settings' && (
-          <ViewSuspense label="Профиль…">
+          <ViewSuspense label="Анкета…">
             <CabinetProfileSettings
               user={user}
               onUpdate={handleUserUpdate}
@@ -813,9 +859,9 @@ export default function App() {
             />
           </ViewSuspense>
         )}
-        {view === 'cabinet' && lobbyScreen === 'cabinet-site-settings' && (
+        {view === 'cabinet' && lobbyScreen === 'cabinet-account-settings' && (
           <ViewSuspense label="Настройки…">
-            <CabinetSiteSettings
+            <CabinetAccountSettings
               user={user}
               onUpdate={handleUserUpdate}
               onBack={() => setLobbyScreen('cabinet')}
@@ -868,7 +914,7 @@ export default function App() {
             user={user}
             unreadMailCount={unreadMailCount}
             onOpenProfileSettings={() => setLobbyScreen('cabinet-settings')}
-            onOpenSiteSettings={() => setLobbyScreen('cabinet-site-settings')}
+            onOpenAccountSettings={() => setLobbyScreen('cabinet-account-settings')}
             onOpenMessages={() => openMessages({ openUnread: unreadMailCount > 0 })}
             onOpenSupport={() => setLobbyScreen('cabinet-support')}
             onOpenUserSearch={() => setLobbyScreen('cabinet-search')}

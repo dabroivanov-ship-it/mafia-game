@@ -15,6 +15,15 @@ import {
 import type { User, ProfileStaffMeta, ChatReplyTarget, UserPresence } from '../types';
 import { USER_GENDER_LABELS, genderLabel } from '../gender';
 import { formatPresenceLabel } from '../utils/presence';
+import { userPositionLabel } from '../userPosition';
+
+function quizAnswersLabel(count: number): string {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  if (mod10 === 1 && mod100 !== 11) return `${count} ответ`;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} ответа`;
+  return `${count} ответов`;
+}
 
 type ChatVisibility = 'direct' | 'private';
 
@@ -363,9 +372,6 @@ export default function UserProfileModal({
                   )}
                   <div>
                     <strong>@{user.username}</strong>
-                    {user.isAdmin && <span className="admin-badge">admin</span>}
-                    {user.isModerator && <span className="mod-badge">mod</span>}
-                    {user.isWatcher && <span className="watcher-badge">watch</span>}
                   </div>
                 </div>
 
@@ -434,7 +440,11 @@ export default function UserProfileModal({
                   </li>
                   <li>
                     <span className="player-page-label">Викторина</span>
-                    <span>{data?.user.quizCorrectAnswers ?? 0} ответов</span>
+                    <span>{quizAnswersLabel(data?.user.quizCorrectAnswers ?? 0)}</span>
+                  </li>
+                  <li>
+                    <span className="player-page-label">Должность</span>
+                    <span>{userPositionLabel(user)}</span>
                   </li>
                   <li>
                     <span className="player-page-label">Регистрация</span>
@@ -559,7 +569,11 @@ export default function UserProfileModal({
                     <div className="profile-staff-meta-body">
                       <div className="profile-staff-meta-row">
                         <span className="muted">IP</span>
-                        <strong>{data.staffMeta.lastIp || '—'}</strong>
+                        <strong>
+                          {data.staffMeta.lastIp?.startsWith('::ffff:')
+                            ? data.staffMeta.lastIp.slice(7)
+                            : data.staffMeta.lastIp || '—'}
+                        </strong>
                       </div>
                       <details className="profile-staff-meta-expand">
                         <summary className="profile-staff-meta-expand-summary">Софт / браузер</summary>
@@ -571,6 +585,10 @@ export default function UserProfileModal({
               </>
             ) : (
               <div className="auth-form">
+                <label>
+                  Должность
+                  <input value={userPositionLabel(user)} readOnly />
+                </label>
                 <label>
                   Имя
                   <input

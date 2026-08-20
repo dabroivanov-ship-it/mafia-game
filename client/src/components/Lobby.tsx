@@ -1,5 +1,5 @@
-import type { GamePhase, LobbyRoom, LobbyAnnouncement } from '../types';
-import SiteOnlineStatus from './SiteOnlineStatus';
+import type { GamePhase, LobbyRoom, LobbyAnnouncement, PublicSiteStats } from '../types';
+import SiteServerStats from './SiteServerStats';
 
 function mailNoticeLabel(count: number): string {
   if (count === 1) return 'У вас 1 новое сообщение';
@@ -26,7 +26,7 @@ export type LobbyScreen =
   | 'online-users'
   | 'cabinet'
   | 'cabinet-settings'
-  | 'cabinet-site-settings'
+  | 'cabinet-account-settings'
   | 'cabinet-messages'
   | 'cabinet-support'
   | 'cabinet-search';
@@ -34,6 +34,7 @@ export type LobbyScreen =
 interface LobbyProps {
   rooms: LobbyRoom[];
   siteOnlineCount?: number;
+  siteStats?: PublicSiteStats | null;
   announcement?: LobbyAnnouncement | null;
   onJoin: (roomId: number) => void;
   unreadMailCount?: number;
@@ -80,6 +81,7 @@ function RoomCard({
 export default function Lobby({
   rooms,
   siteOnlineCount = 0,
+  siteStats = null,
   announcement = null,
   onJoin,
   unreadMailCount = 0,
@@ -89,6 +91,19 @@ export default function Lobby({
   const gameRooms = rooms.filter((r) => r.kind !== 'chat');
   const chatRooms = rooms.filter((r) => r.kind === 'chat');
 
+  const stats =
+    siteStats ??
+    (siteOnlineCount
+      ? {
+          gamesArchived: 0,
+          mafiaWins: 0,
+          townWins: 0,
+          draws: 0,
+          online: siteOnlineCount,
+          activePlayers: 0,
+        }
+      : null);
+
   return (
     <div className="lobby">
       <header className="lobby-header">
@@ -97,6 +112,8 @@ export default function Lobby({
           <p>Выберите комнату для игры</p>
         </div>
       </header>
+
+      {stats && <SiteServerStats stats={stats} onOpenOnline={onOpenOnlineUsers} />}
 
       {announcement?.enabled && announcement.text.trim() && (
         <div className="lobby-announcement" role="status">
@@ -145,10 +162,6 @@ export default function Lobby({
           ))}
         </div>
       </section>
-
-      <footer className="lobby-online-footer">
-        <SiteOnlineStatus count={siteOnlineCount} onOpen={onOpenOnlineUsers} />
-      </footer>
     </div>
   );
 }

@@ -1,8 +1,30 @@
-import { useState, useRef, useEffect, FormEvent } from 'react';
+import { useState, useRef, useEffect, FormEvent, type MouseEvent } from 'react';
 import type { ChatChannel, ChatMessage, ChatReplyTarget, ViolationType } from '../types';
 import { isHostSender } from '../content/hostContent';
+import { roomGamePath } from '../roomRouting';
 import DeleteMessageModal from './DeleteMessageModal';
 import HostProfileModal from './HostProfileModal';
+
+const GAME_START_ROOM_LINK_RE =
+  /^(Запускается игра в комнате «)(.+)(»\.)\s+\/room\/(\d+)\s*$/;
+
+function parseGameStartRoomLink(text: string): {
+  before: string;
+  roomName: string;
+  after: string;
+  roomId: number;
+} | null {
+  const match = text.match(GAME_START_ROOM_LINK_RE);
+  if (!match) return null;
+  const roomId = Number(match[4]);
+  if (!Number.isFinite(roomId) || roomId <= 0) return null;
+  return {
+    before: match[1],
+    roomName: match[2],
+    after: match[3],
+    roomId,
+  };
+}
 
 export interface ChatSendOptions {
   toPlayerId?: number;
@@ -21,6 +43,7 @@ interface ChatProps {
     violationType: ViolationType
   ) => void;
   onOpenPlayerPage?: (target: ChatReplyTarget) => void;
+  onJoinRoom?: (roomId: number) => void;
   canModerate?: boolean;
   placeholder?: string;
   hasMoreChat?: boolean;
@@ -38,6 +61,7 @@ export default function Chat({
   onSend,
   onDeleteMessage,
   onOpenPlayerPage,
+  onJoinRoom,
   canModerate,
   placeholder = 'Сообщение...',
   hasMoreChat = false,
@@ -181,6 +205,37 @@ export default function Chat({
     }
   };
 
+  const handleRoomLinkClick = (event: MouseEvent<HTMLAnchorElement>, roomId: number) => {
+    if (!onJoinRoom) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+      return;
+    }
+    event.preventDefault();
+    onJoinRoom(roomId);
+  };
+
+  const renderText = (msg: ChatMessage) => {
+    if (msg.system) {
+      const parsed = parseGameStartRoomLink(msg.text);
+      if (parsed) {
+        return (
+          <span className="chat-text">
+            {parsed.before}
+            <a
+              className="chat-room-link"
+              href={roomGamePath(parsed.roomId)}
+              onClick={(event) => handleRoomLinkClick(event, parsed.roomId)}
+            >
+              {parsed.roomName}
+            </a>
+            {parsed.after}
+          </span>
+        );
+      }
+    }
+    return <span className="chat-text">{msg.text}</span>;
+  };
+
   return (
     <div className={`chat ${replyTo ? 'chat-has-reply' : ''}`}>
       <div className="chat-messages" ref={listRef} onScroll={handleScroll}>
@@ -215,7 +270,7 @@ export default function Chat({
                   → {msg.toPlayerName}:
                 </span>
               )}
-              <span className="chat-text">{msg.text}</span>
+              {renderText(msg)}
             </span>
             {canModerate && !msg.system && !msg.deleted && onDeleteMessage && (
               <button

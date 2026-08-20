@@ -11,14 +11,16 @@ import {
   telegramWebAppLogin,
   completeOauthLogin,
   fetchOnlineCount,
+  fetchSiteStats,
 } from '../api';
-import type { User } from '../types';
+import type { User, PublicSiteStats } from '../types';
 import { USER_GENDER_LABELS } from '../gender';
 import { isTelegramWebApp, waitForTelegramWebApp } from '../telegramWebApp';
 import TelegramLoginWidget from './TelegramLoginWidget';
 import TelegramIcon from './TelegramIcon';
 import VkLoginWidget from './VkLoginWidget';
 import GuestLayout from './GuestLayout';
+import SiteServerStats from './SiteServerStats';
 import SiteOnlineStatus from './SiteOnlineStatus';
 import { DEFAULT_PAGE_META, updatePageMeta } from '../seo';
 import type { SiteBranding } from '../types';
@@ -49,6 +51,7 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
   } | null>(null);
   const [vkUsername, setVkUsername] = useState('');
   const [onlineCount, setOnlineCount] = useState(0);
+  const [siteStats, setSiteStats] = useState<PublicSiteStats | null>(null);
 
   const [loginForm, setLoginForm] = useState({ login: '', password: '' });
   const [regForm, setRegForm] = useState({
@@ -58,7 +61,6 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
     confirm: '',
     displayName: '',
     gender: '' as '' | 'male' | 'female',
-    invitedByUserId: '',
   });
 
   useEffect(() => {
@@ -69,8 +71,18 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
     let cancelled = false;
     const load = async () => {
       try {
-        const data = await fetchOnlineCount();
-        if (!cancelled) setOnlineCount(data.onlineCount);
+        const data = await fetchSiteStats();
+        if (!cancelled) {
+          setSiteStats(data);
+          setOnlineCount(data.online);
+        }
+      } catch {
+        try {
+          const online = await fetchOnlineCount();
+          if (!cancelled) setOnlineCount(online.onlineCount);
+        } catch {
+          /* keep last known count */
+        }
       } catch {
         /* keep last known count */
       }
@@ -285,17 +297,6 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
       return;
     }
 
-    const invitedRaw = regForm.invitedByUserId.trim();
-    let invitedByUserId: number | null = null;
-    if (invitedRaw) {
-      const id = Number(invitedRaw);
-      if (!Number.isInteger(id) || id <= 0) {
-        setError('Некорректный id пригласившего');
-        return;
-      }
-      invitedByUserId = id;
-    }
-
     setLoading(true);
     try {
       const { token, user } = await register({
@@ -304,7 +305,6 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
         password: regForm.password,
         displayName: regForm.displayName || regForm.username,
         gender: regForm.gender,
-        invitedByUserId,
       });
       saveRememberedLogin(regForm.username.trim(), true);
       saveSession(token, user);
@@ -506,18 +506,6 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
                   autoComplete="new-password"
                 />
               </label>
-              <label>
-                id того, кто вас пригласил
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={regForm.invitedByUserId}
-                  onChange={(e) => setRegForm({ ...regForm, invitedByUserId: e.target.value })}
-                  placeholder="необязательно"
-                  autoComplete="off"
-                />
-                <span className="profile-field-hint">Числовой id друга, если он вас позвал</span>
-              </label>
               <button type="submit" className="btn btn-primary btn-lg" disabled={loading}>
                 {loading ? 'Регистрация...' : 'Зарегистрироваться'}
 
@@ -556,7 +544,11 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
 
       </div>
       <footer className="auth-online-footer">
-        <SiteOnlineStatus count={onlineCount} href="/online" />
+        {siteStats ? (
+          <SiteServerStats stats={siteStats} onlineHref="/online" />
+        ) : (
+          <SiteOnlineStatus count={onlineCount} href="/online" />
+        )}
       </footer>
     </GuestLayout>
   );

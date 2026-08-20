@@ -59,6 +59,7 @@ interface RoomProps {
   onOpenMembers?: () => void;
   onStateUpdate?: (state: RoomState) => void;
   currentUserId: number;
+  onJoinRoom?: (roomId: number) => void;
   onWriteMessage?: (userId: number, username: string) => void;
   onOpenStatistics?: (userId: number) => void;
 }
@@ -70,6 +71,7 @@ export default function Room({
   onOpenMembers,
   onStateUpdate,
   currentUserId,
+  onJoinRoom,
   onWriteMessage,
   onOpenStatistics,
 }: RoomProps) {
@@ -332,6 +334,7 @@ export default function Room({
                 canSend={state.canChat}
                 myPlayerId={state.myId}
                 currentUserId={currentUserId}
+                onJoinRoom={onJoinRoom}
                 replyTo={chatReplyTo}
                 onReplyToChange={setChatReplyTo}
                 onSend={(text, opts) => {

@@ -31,6 +31,7 @@ import { getQuizCorrectAnswers, listQuizLeaderboard } from '../quiz/store.js';
 import { getUserStatistics } from '../stats/store.js';
 import { isValidThemeId } from '../settings/themes.js';
 import { getUserPresence, getOnlineUserCount, listOnlineUsers } from '../presence.js';
+import { getPublicSiteStats } from '../stats/siteStats.js';
 import {
   areFriends,
   canViewerVoteReputation,
@@ -171,6 +172,10 @@ export function createProfileRouter({ onProfileUpdated }: ProfileRouterOptions =
 
   router.get('/online-count', (_req, res) => {
     res.json({ onlineCount: getOnlineUserCount() });
+  });
+
+  router.get('/site-stats', (_req, res) => {
+    res.json(getPublicSiteStats());
   });
 
   router.get('/online-users', (_req, res) => {

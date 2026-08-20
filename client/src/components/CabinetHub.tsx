@@ -5,7 +5,7 @@ interface CabinetHubProps {
   user: User;
   unreadMailCount?: number;
   onOpenProfileSettings: () => void;
-  onOpenSiteSettings: () => void;
+  onOpenAccountSettings: () => void;
   onOpenMessages: () => void;
   onOpenSupport: () => void;
   onOpenUserSearch: () => void;
@@ -18,15 +18,15 @@ const HUB_ITEMS = [
   { title: 'Письма', desc: 'История переписки и новые сообщения', action: 'messages' as const },
   { title: 'Поддержка', desc: 'Сообщить о проблеме администратору', action: 'support' as const },
   { title: 'Поиск пользователей', desc: 'Найти игрока по логину, имени или городу', action: 'search' as const },
-  { title: 'Личные настройки', desc: 'Имя, город, аватар, лимит чата', action: 'profile' as const },
-  { title: 'Оформление сайта', desc: 'Цветовая тема интерфейса', action: 'theme' as const },
+  { title: 'Анкета', desc: 'Имя, город, аватар, о себе', action: 'profile' as const },
+  { title: 'Настройки', desc: 'Тема, пароль и лимит чата', action: 'account' as const },
 ];
 
 export default function CabinetHub({
   user,
   unreadMailCount = 0,
   onOpenProfileSettings,
-  onOpenSiteSettings,
+  onOpenAccountSettings,
   onOpenMessages,
   onOpenSupport,
   onOpenUserSearch,
@@ -39,7 +39,7 @@ export default function CabinetHub({
     support: onOpenSupport,
     search: onOpenUserSearch,
     profile: onOpenProfileSettings,
-    theme: onOpenSiteSettings,
+    account: onOpenAccountSettings,
   };
 
   return (

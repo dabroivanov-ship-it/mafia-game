@@ -39,6 +39,7 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
   CREATE INDEX IF NOT EXISTS idx_room_game_room ON room_game_log(room_id, created_at);
+  CREATE INDEX IF NOT EXISTS idx_room_game_event ON room_game_log(event_type);
 `);
 
 function migrateChatLogColumns(): void {

@@ -37,6 +37,15 @@ export interface AdminSiteStats {
   visitsToday: number;
 }
 
+export interface PublicSiteStats {
+  gamesArchived: number;
+  mafiaWins: number;
+  townWins: number;
+  draws: number;
+  online: number;
+  activePlayers: number;
+}
+
 function todayNum(): number {
   return Number(new Date().toISOString().slice(0, 10).replace(/-/g, ''));
 }
@@ -71,6 +80,67 @@ export function recordSiteVisit(_userId: number): void {
   } else {
     incCounter('visits_today');
   }
+}
+
+function countGameEnds(winnerTeam?: string): number {
+  if (!winnerTeam) {
+    return (
+      db.prepare(`SELECT COUNT(*) AS c FROM room_game_log WHERE event_type = 'game_end'`).get() as {
+        c: number;
+      }
+    ).c;
+  }
+  try {
+    return (
+      db
+        .prepare(
+          `SELECT COUNT(*) AS c FROM room_game_log
+           WHERE event_type = 'game_end' AND json_extract(payload, '$.winnerTeam') = ?`
+        )
+        .get(winnerTeam) as { c: number }
+    ).c;
+  } catch {
+    return (
+      db
+        .prepare(
+          `SELECT COUNT(*) AS c FROM (
+             SELECT DISTINCT room_id, session_id FROM user_game_results WHERE winner_team = ?
+           )`
+        )
+        .get(winnerTeam) as { c: number }
+    ).c;
+  }
+}
+
+let publicStatsCache: { at: number; stats: Omit<PublicSiteStats, 'online'> } | null = null;
+
+export function getPublicSiteStats(): PublicSiteStats {
+  const now = Date.now();
+  if (!publicStatsCache || now - publicStatsCache.at > 5000) {
+    const activePlayers = (
+      db
+        .prepare(
+          `SELECT COUNT(*) AS c FROM users
+           WHERE is_banned = 0 AND last_seen_at IS NOT NULL
+             AND last_seen_at >= datetime('now', '-30 days')`
+        )
+        .get() as { c: number }
+    ).c;
+    publicStatsCache = {
+      at: now,
+      stats: {
+        gamesArchived: countGameEnds(),
+        mafiaWins: countGameEnds('mafia'),
+        townWins: countGameEnds('town'),
+        draws: countGameEnds('draw'),
+        activePlayers,
+      },
+    };
+  }
+  return {
+    ...publicStatsCache.stats,
+    online: getOnlineUserCount(),
+  };
 }
 
 export function getAdminSiteStats(): AdminSiteStats {

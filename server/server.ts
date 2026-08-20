@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 import { CONFIG, PHASE, isActiveGamePhase } from './game/config.js';
 import { isMafiaTeam } from './game/roles.js';
 import authRoutes from './auth/routes.js';
-import { getOnlineUserCount } from './presence.js';
+import { getOnlineUserCount, markUserConnected, markUserDisconnected, setOnlineRoomResolver, setUserSection } from './presence.js';
 import friendsRoutes from './social/routes.js';
 import reputationRoutes from './reputation/routes.js';
 import './social/store.js';
@@ -20,7 +20,7 @@ import { createSupportRouter } from './support/routes.js';
 import { createNewsRouter } from './news/routes.js';
 import './news/comments.js';
 import './news/polls.js';
-import './stats/siteStats.js';
+import { getPublicSiteStats } from './stats/siteStats.js';
 import settingsRoutes from './settings/routes.js';
 import notificationRoutes from './notifications/routes.js';
 import { initNotificationPush, pushMailNotification } from './notifications/push.js';
@@ -58,6 +58,7 @@ import {
   deleteChatMessage,
   clearRoomChat,
   addSystemMessage,
+  announceRegistrationToIdleRooms,
   getChatMessageForModeration,
   getModerationSnapshot,
   resetRoom,
@@ -81,9 +82,9 @@ import {
 } from './game/engine.js';
 import type { ChatChannel, GameRoom, GamePlayer, PrivateNote, PublicUser, RoomState, Session, User } from './types/index.js';
 import { assertProductionEnv } from './config/env.js';
+import { resolveClientIp } from './security/ip.js';
 import { securityHeadersMiddleware } from './security/headers.js';
 import { chatSocketRateLimiter } from './security/rateLimit.js';
-import { markUserConnected, markUserDisconnected } from './presence.js';
 import { normalizeChatText, normalizeModerationReason, parseViolationType } from './security/validate.js';
 import { addViolation } from './moderation/violationLog.js';
 import fs from 'fs';
@@ -101,7 +102,7 @@ const corsOrigin = process.env.CORS_ORIGIN?.split(',').map((s) => s.trim()).filt
 
 const app = express();
 app.disable('x-powered-by');
-if (process.env.TRUST_PROXY === '1') {
+if (process.env.TRUST_PROXY === '1' || process.env.NODE_ENV === 'production') {
   app.set('trust proxy', 1);
 }
 app.use(securityHeadersMiddleware);
@@ -119,6 +120,15 @@ const rooms = createInitialRooms();
 for (const room of rooms.values()) {
   hydrateRoomHistory(room);
 }
+setOnlineRoomResolver((userId) => {
+  const names: string[] = [];
+  for (const room of rooms.values()) {
+    if (room.players.some((p) => p.userId === userId && p.connected)) {
+      names.push(room.name);
+    }
+  }
+  return names;
+});
 const sessions = new Map<string, Session>();
 const userSocketIds = new Map<number, Set<string>>();
 const DEFAULT_CHAT_LIMIT = 15;
@@ -655,6 +665,7 @@ function getLobbyPayload() {
   return {
     rooms: getLobbySnapshot(rooms),
     onlineCount: getOnlineUserCount(),
+    siteStats: getPublicSiteStats(),
   };
 }
 
@@ -691,7 +702,13 @@ function broadcastRoom(roomId: number): void {
 
 setQuizBroadcaster((roomId) => broadcastRoom(roomId));
 initGameAiRunner((roomId) => broadcastRoom(roomId));
-onRoomPhaseChange((room) => triggerGameAi(room));
+onRoomPhaseChange((room) => {
+  triggerGameAi(room);
+  if (room.phase !== PHASE.REGISTRATION) return;
+  for (const roomId of announceRegistrationToIdleRooms(rooms, room)) {
+    broadcastRoom(roomId);
+  }
+});
 initAllQuizRooms(rooms.values());
 
 function deliverHostNotes(room: GameRoom, privateNotes: PrivateNote[] = []): void {
@@ -742,16 +759,7 @@ setInterval(() => {
 }, 1000);
 
 function getClientIp(socket: Socket): string {
-  if (process.env.TRUST_PROXY === '1') {
-    const forwarded = socket.handshake.headers['x-forwarded-for'];
-    if (typeof forwarded === 'string' && forwarded.trim()) {
-      return forwarded.split(',')[0].trim();
-    }
-    if (Array.isArray(forwarded) && forwarded[0]) {
-      return String(forwarded[0]).split(',')[0].trim();
-    }
-  }
-  return socket.handshake.address || '';
+  return resolveClientIp(socket.handshake.address, socket.handshake.headers);
 }
 
 function trackUserConnection(socket: Socket): void {
@@ -789,11 +797,19 @@ io.on('connection', (socket) => {
     socket.emit('lobby:update', getLobbyPayload());
   });
 
+  socket.on('presence:where', ({ section }) => {
+    if (!requireSocketUser(socket)) return;
+    setUserSection(socket.userId!, section);
+  });
+
   socket.on('room:join', ({ roomId, playerId: reconnectId }, cb) => {
     if (!requireSocketUser(socket, cb)) return;
     try {
       const room = rooms.get(Number(roomId));
       if (!room) return cb?.({ error: 'Комната не найдена' });
+
+      const previous = sessions.get(socket.id);
+      const leavingPrevious = previous && previous.roomId !== room.id;
 
       const playerName = socket.displayName!;
       const playerUsername = socket.username!;
@@ -835,10 +851,22 @@ io.on('connection', (socket) => {
       player.connected = true;
       player.disconnectedAt = null;
 
+      if (leavingPrevious && previous) {
+        const prevRoom = rooms.get(previous.roomId);
+        socket.leave(`room:${previous.roomId}`);
+        if (prevRoom) {
+          cancelDisconnectTimer(previous.roomId, previous.playerId);
+          removePlayer(prevRoom, socket.id, false);
+        }
+      }
+
       attachSession(socket.id, room.id, player.id, socket.userId);
       socket.join(`room:${room.id}`);
       if (joinPrivateNotes.length) {
         deliverHostNotes(room, joinPrivateNotes);
+      }
+      if (leavingPrevious && previous) {
+        broadcastRoom(previous.roomId);
       }
       broadcastRoom(room.id);
       cb?.({ ok: true, playerId: player.id, state: serializeForSocketUser(room, player.id, socket.userId, socket.id) });

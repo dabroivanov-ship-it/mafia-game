@@ -594,7 +594,7 @@ export function countLeaderboard(): number {
 export function listAllUsers(): PublicUser[] {
   const rows = db
     .prepare(
-      `SELECT id, username, email, display_name, city, bio, avatar, role, is_banned, ban_reason, banned_until, total_score, created_at, telegram_id, vk_id, telegram_username, vk_username
+      `SELECT id, username, email, display_name, gender, city, bio, avatar, role, is_banned, ban_reason, banned_until, total_score, created_at, telegram_id, vk_id, telegram_username, vk_username
        FROM users ORDER BY created_at DESC`
     )
     .all() as User[];

@@ -92,6 +92,9 @@ export default function OnlineUsers({
             >
               {hit.username}
             </button>
+            {hit.location && (
+              <span className="online-user-location">{hit.location}</span>
+            )}
           </li>
         ))}
       </ul>

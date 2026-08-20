@@ -23,9 +23,11 @@ function displayName(p: RoomPresence): string {
 function PersonRow({
   person,
   onViewProfile,
+  extraStatus,
 }: {
   person: RoomPresence;
   onViewProfile?: (userId: number) => void;
+  extraStatus?: string;
 }) {
   return (
     <li className={`room-member-row${person.isMe ? ' me' : ''}`}>
@@ -39,7 +41,7 @@ function PersonRow({
         {displayName(person)}
       </button>
       {person.isMe && <span className="room-member-status muted">вы</span>}
-      {person.roleLabel && <span className="player-role">{person.roleLabel}</span>}
+      {extraStatus && <span className="room-member-status muted">{extraStatus}</span>}
     </li>
   );
 }
@@ -53,9 +55,6 @@ export default function RoomMembersPage({ state, onBack, onViewProfile }: RoomMe
   return (
     <div className="room room-members-page">
       <header className="room-header">
-        <button type="button" className="btn btn-ghost btn-leave" onClick={onBack}>
-          ← Назад
-        </button>
         <div className="room-header-main">
           <h1>Кто тут</h1>
           <div className="room-header-meta">
@@ -64,6 +63,11 @@ export default function RoomMembersPage({ state, onBack, onViewProfile }: RoomMe
               <span className="registration-count">{PHASE_LABELS[state.phase]}</span>
             )}
           </div>
+        </div>
+        <div className="room-header-actions">
+          <button type="button" className="btn btn-ghost btn-leave" onClick={onBack}>
+            ← Назад
+          </button>
         </div>
       </header>
 
@@ -86,7 +90,7 @@ export default function RoomMembersPage({ state, onBack, onViewProfile }: RoomMe
             <section className="room-members-section">
               <h2>В игре ({inGame.length})</h2>
               {inGame.length === 0 ? (
-                <p className="muted">За столом никого не осталось.</p>
+                <p className="muted">Никто не вступил в игру.</p>
               ) : (
                 <ul className="room-members-list">
                   {inGame.map((p) => (
@@ -99,11 +103,16 @@ export default function RoomMembersPage({ state, onBack, onViewProfile }: RoomMe
             <section className="room-members-section">
               <h2>Не в игре ({notInGame.length})</h2>
               {notInGame.length === 0 ? (
-                <p className="muted">Все, кто в комнате, за столом.</p>
+                <p className="muted">Наблюдателей и выбывших нет.</p>
               ) : (
                 <ul className="room-members-list">
                   {notInGame.map((p) => (
-                    <PersonRow key={p.id} person={p} onViewProfile={onViewProfile} />
+                    <PersonRow
+                      key={p.id}
+                      person={p}
+                      onViewProfile={onViewProfile}
+                      extraStatus={p.inGame && !p.alive ? 'выбыл' : undefined}
+                    />
                   ))}
                 </ul>
               )}
