@@ -119,17 +119,12 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
     }
 
     if (hasNominated) {
-      const waitingOthers = state.players.some(
-        (p) => p.alive && p.inGame && p.id !== state.myId && !p.hasVoted
-      );
       return (
         <div className="action-panel">
           <p className="muted">Вы выдвинули кандидата ✓</p>
-          {waitingOthers && (
-            <p className="muted" style={{ marginTop: 8 }}>
-              Ждём остальных. Кнопки «да» / «нет» появятся, когда одного выберут не меньше половины.
-            </p>
-          )}
+          <p className="muted" style={{ marginTop: 8 }}>
+            Ждём остальных.
+          </p>
         </div>
       );
     }
@@ -304,6 +299,25 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
             {aliveOthers.map((p) =>
               targetBtn(p, (id) => {
                 void emit('game:nightAction', { type: 'cover', targetId: id });
+              })
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    if (role === 'samurai') {
+      return (
+        <div className="action-panel">
+          <h3>Кого закрыть?</h3>
+          <p className="muted" style={{ marginBottom: 12, fontSize: '0.9rem' }}>
+            Смертельный удар по этому игроку примете на себя. Себя закрывать нельзя. Доктор спасёт
+            вас, только если вылечит именно вас.
+          </p>
+          <div className="target-grid">
+            {aliveOthers.map((p) =>
+              targetBtn(p, (id) => {
+                void emit('game:nightAction', { type: 'guard', targetId: id });
               })
             )}
           </div>

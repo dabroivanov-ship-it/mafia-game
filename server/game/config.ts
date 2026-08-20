@@ -37,6 +37,7 @@ export const ROLE_LABELS: Record<RoleId, string> = {
   clown: 'Клоун',
   commissar_wife: 'Жена комиссара',
   highlander: 'Горец',
+  samurai: 'Самурай',
   civilian: 'Мирный гражданин',
   advocate: 'Адвокат',
 };
@@ -52,6 +53,7 @@ export const TOWN_ROLES: RoleId[] = [
   'clown',
   'commissar_wife',
   'highlander',
+  'samurai',
   'civilian',
 ];
 

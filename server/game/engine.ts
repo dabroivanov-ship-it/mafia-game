@@ -1097,39 +1097,15 @@ export function onNightTimerEnd(room: GameRoom): NightResolveResult | null {
   return null;
 }
 
-function emitNightAtmosphereForAction(room: GameRoom, player: GamePlayer, action: NightAction): void {
+function emitNightAtmosphereForAction(room: GameRoom, player: GamePlayer): void {
   if (!player.role || !player.alive) return;
-
-  let atmosphereKey: string | null = null;
-  switch (player.role) {
-    case 'mafia':
-      if (action.type === 'kill') atmosphereKey = 'mafia';
-      break;
-    case 'commissar':
-      if (action.type === 'check' || action.type === 'kill') atmosphereKey = 'commissar';
-      break;
-    case 'doctor':
-      if (action.type === 'heal') atmosphereKey = 'doctor';
-      break;
-    case 'prostitute':
-      if (action.type === 'seduce') atmosphereKey = 'prostitute';
-      break;
-    case 'advocate':
-      if (action.type === 'cover') atmosphereKey = 'advocate';
-      break;
-    case 'maniac':
-      if (action.type === 'kill') atmosphereKey = 'maniac';
-      break;
-    default:
-      break;
-  }
-
-  if (!atmosphereKey) return;
-  if (!room.nightAtmosphereSent) room.nightAtmosphereSent = {};
-  if (room.nightAtmosphereSent[atmosphereKey]) return;
 
   const msg = getRoleNightAtmosphereMessage(player.role);
   if (!msg) return;
+
+  const atmosphereKey = player.role;
+  if (!room.nightAtmosphereSent) room.nightAtmosphereSent = {};
+  if (room.nightAtmosphereSent[atmosphereKey]) return;
 
   addHostMessage(room, msg);
   room.nightAtmosphereSent[atmosphereKey] = true;
@@ -1159,6 +1135,10 @@ export function submitNightAction(
     throw new Error('Адвокат не может защищать себя');
   }
 
+  if (player.role === 'samurai' && action.type === 'guard' && action.targetId === playerId) {
+    throw new Error('Самурай не может закрывать себя');
+  }
+
   if (player.role === 'mafia') {
     if (!player.isDon) {
       throw new Error('Только главарь мафии выбирает жертву');
@@ -1173,7 +1153,7 @@ export function submitNightAction(
 
   room.nightActions[playerId] = action;
   player.nightActionDone = true;
-  emitNightAtmosphereForAction(room, player, action);
+  emitNightAtmosphereForAction(room, player);
 
   const needAction = getPlayersNeedingNightAction(room);
   if (needAction.every((p) => p.nightActionDone)) {
@@ -1194,6 +1174,7 @@ function getPlayersNeedingNightAction(room: GameRoom): GamePlayer[] {
     if (p.role === 'advocate') return true;
     if (p.role === 'homeless') return true;
     if (p.role === 'clown' && !room.clownUsed) return true;
+    if (p.role === 'samurai') return true;
     if (p.role === 'commissar_wife' && room.wifeRevengeAvailable && !room.wifeRevengeUsed) return true;
     return false;
   });
@@ -1301,6 +1282,38 @@ export function resolveNight(room: GameRoom): NightResolveResult {
     }
   }
 
+  const samurai = room.players.find((p) => p.alive && p.role === 'samurai');
+  let samuraiGuardId: number | null = null;
+  if (samurai && !isSeduced(samurai.id)) {
+    const act = actions[samurai.id];
+    if (act?.type === 'guard' && act.targetId && act.targetId !== samurai.id) {
+      const guarded = room.players.find((p) => p.id === act.targetId && p.alive);
+      if (guarded) samuraiGuardId = guarded.id;
+    }
+  }
+
+  const takeHit = (
+    intended: GamePlayer | null | undefined,
+    source: 'mafia' | 'maniac' | 'commissar' | 'wife'
+  ): GamePlayer | null => {
+    if (!intended?.alive) return intended ?? null;
+    if (source === 'mafia' && isMafiaImmune(intended.role)) return intended;
+    if (
+      samurai &&
+      samurai.alive &&
+      samuraiGuardId === intended.id &&
+      samurai.id !== intended.id
+    ) {
+      if (!report.samuraiGuardTarget) {
+        report.samuraiGuardTarget = intended;
+        samurai.score += 25;
+      }
+      report.samuraiTookHit = true;
+      return samurai;
+    }
+    return intended;
+  };
+
   const doctor = room.players.find((p) => p.alive && p.role === 'doctor');
   if (doctor && !isSeduced(doctor.id)) {
     const act = actions[doctor.id];
@@ -1320,26 +1333,36 @@ export function resolveNight(room: GameRoom): NightResolveResult {
   }
 
   if (commissarShot && commissar) {
-    if (heals.has(commissarShot.id)) {
+    const intended = commissarShot;
+    const victim = takeHit(intended, 'commissar');
+    if (victim && heals.has(victim.id)) {
       awardDoctorSave();
-      report.commissarSaved = commissarShot;
-    } else {
-      if (isEvil(commissarShot.role)) commissar.score += 20;
-      else commissar.score -= 5;
-      deaths.add(commissarShot.id);
-      report.commissarKilled = commissarShot;
+      if (victim.id === intended.id) report.commissarSaved = victim;
+      else report.samuraiSaved = true;
+    } else if (victim) {
+      if (victim.id === intended.id) {
+        if (isEvil(intended.role)) commissar.score += 20;
+        else commissar.score -= 5;
+        report.commissarKilled = victim;
+      }
+      deaths.add(victim.id);
     }
   }
 
   if (maniacShot && maniac) {
-    if (heals.has(maniacShot.id)) {
+    const intended = maniacShot;
+    const victim = takeHit(intended, 'maniac');
+    if (victim && heals.has(victim.id)) {
       awardDoctorSave();
-      report.maniacSaved = maniacShot;
-    } else {
-      if (isMafia(maniacShot.role)) maniac.score += 20;
-      else maniac.score -= 5;
-      deaths.add(maniacShot.id);
-      report.maniacKilled = maniacShot;
+      if (victim.id === intended.id) report.maniacSaved = victim;
+      else report.samuraiSaved = true;
+    } else if (victim) {
+      if (victim.id === intended.id) {
+        if (isMafia(intended.role)) maniac.score += 20;
+        else maniac.score -= 5;
+        report.maniacKilled = victim;
+      }
+      deaths.add(victim.id);
     }
   }
 
@@ -1404,29 +1427,39 @@ export function resolveNight(room: GameRoom): NightResolveResult {
     if (act?.type === 'revenge') {
       const target = room.players.find((p) => p.id === act.targetId);
       if (target) {
-        deaths.add(act.targetId);
+        const victim = takeHit(target, 'wife') || target;
         wife.score += 50;
         room.wifeRevengeUsed = true;
         room.wifeRevengeAvailable = false;
-        report.wifeKilled = target;
+        if (heals.has(victim.id) && victim.id !== target.id) {
+          awardDoctorSave();
+          report.samuraiSaved = true;
+        } else {
+          deaths.add(victim.id);
+          if (victim.id === target.id) report.wifeKilled = victim;
+        }
       }
     }
   }
 
   if (mafiaTarget) {
-    const target = room.players.find((p) => p.id === mafiaTarget);
-    if (target?.alive) {
-      report.mafiaAttacked = target;
-      if (isMafiaImmune(target.role)) {
-        report.highlanderAttacked = target;
-      } else if (heals.has(mafiaTarget)) {
-        awardDoctorSave();
+    const intended = room.players.find((p) => p.id === mafiaTarget);
+    if (intended?.alive) {
+      report.mafiaAttacked = intended;
+      if (isMafiaImmune(intended.role)) {
+        report.highlanderAttacked = intended;
       } else {
-        deaths.add(mafiaTarget);
-        report.mafiaKilled = target;
-        room.players.filter((p) => p.alive && p.role === 'mafia').forEach((m) => {
-          m.score += 10;
-        });
+        const victim = takeHit(intended, 'mafia');
+        if (victim && heals.has(victim.id)) {
+          awardDoctorSave();
+          if (victim.id !== intended.id) report.samuraiSaved = true;
+        } else if (victim) {
+          deaths.add(victim.id);
+          room.players.filter((p) => p.alive && p.role === 'mafia').forEach((m) => {
+            m.score += 10;
+          });
+          if (victim.id === intended.id) report.mafiaKilled = victim;
+        }
       }
     }
   }

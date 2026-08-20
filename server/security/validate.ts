@@ -108,6 +108,8 @@ export function isValidNightActionForRole(
       );
     case 'advocate':
       return action.type === 'cover' && Number.isFinite(action.targetId);
+    case 'samurai':
+      return action.type === 'guard' && Number.isFinite(action.targetId);
     default:
       return false;
   }

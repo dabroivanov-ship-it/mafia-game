@@ -17,6 +17,7 @@ export type RoleId =
   | 'clown'
   | 'commissar_wife'
   | 'highlander'
+  | 'samurai'
   | 'civilian'
   | 'advocate';
 
@@ -310,7 +311,8 @@ export type NightAction =
   | { type: 'seduce'; targetId: number }
   | { type: 'swap'; targetId: number; targetId2: number }
   | { type: 'revenge'; targetId: number }
-  | { type: 'cover'; targetId: number };
+  | { type: 'cover'; targetId: number }
+  | { type: 'guard'; targetId: number };
 
 export interface PrivateNote {
   playerId: number;

@@ -31,6 +31,7 @@ const KILL_TARGET_ROLE: Record<RoleId, string> = {
   clown: 'клоуна',
   commissar_wife: 'жену комиссара',
   highlander: 'горца',
+  samurai: 'самурая',
   civilian: 'мирного жителя',
   advocate: 'адвоката',
 };
@@ -55,6 +56,7 @@ function morningDeathLabel(player: GamePlayer): string {
   if (player.isDon) return `главарь мафии ${nick}`;
   if (player.role === 'mafia') return `мафия ${nick}`;
   if (player.role === 'commissar_wife') return `жена комиссара ${nick}`;
+  if (player.role === 'samurai') return `самурай ${nick}`;
   if (player.role === 'civilian') return `мирный житель ${nick}`;
   const role = player.role ? getRoleLabel(player.role) : 'игрок';
   return `${role.toLowerCase()} ${nick}`;
@@ -93,13 +95,10 @@ function aliveNames(room: GameRoom, excludeId?: number): string[] {
 
 
 function withPlayerList(prompt: string, room: GameRoom, excludeId?: number): string {
-
   const targets = aliveNames(room, excludeId);
-
   if (!targets.length) return prompt;
-
-  return `${prompt}${getPhraseText('prompt.players_suffix', { list: targets.join(', ') })}`;
-
+  const suffix = getPhraseText('prompt.players_suffix', { list: targets.join(', ') }).trim();
+  return `${prompt.trim()}\n${suffix}`;
 }
 
 
@@ -188,6 +187,12 @@ function nightActionPrompt(player: GamePlayer, room: GameRoom): string {
 
       break;
 
+    case 'samurai':
+
+      prompt = getPhraseText('prompt.samurai');
+
+      break;
+
     default:
 
       prompt = getPhraseText('prompt.civilian');
@@ -197,51 +202,27 @@ function nightActionPrompt(player: GamePlayer, room: GameRoom): string {
 
 
   return withPlayerList(prompt, room, player.id);
-
 }
-
-
-
-function actionHint(player: GamePlayer, room: GameRoom): string {
-
-  return nightActionPrompt(player, room).replace(/\nИгроки:.*$/, '');
-
-}
-
-
 
 export function buildRoleRevealNotes(room: GameRoom): PrivateNote[] {
-
   const notes: PrivateNote[] = [];
 
   for (const player of room.players) {
-
     if (!player.inGame || !player.role || !player.alive) continue;
 
     const roleLine = getRoleLabel(player.role);
-
     const donLine = player.isDon ? ' Вы — главарь мафии.' : '';
-
     notes.push({
-
       playerId: player.id,
-
       message: getPhraseText('note.role_reveal', {
-
         role: roleLine,
-
         donLine,
-
-        hint: actionHint(player, room),
-
-      }),
-
+        hint: '',
+      }).trim(),
     });
-
   }
 
   return notes;
-
 }
 
 
@@ -271,6 +252,8 @@ export function buildNightReminderNotes(room: GameRoom): PrivateNote[] {
       player.role === 'maniac' ||
 
       (player.role === 'clown' && !room.clownUsed) ||
+
+      player.role === 'samurai' ||
 
       (player.role === 'commissar_wife' && room.wifeRevengeAvailable && !room.wifeRevengeUsed);
 
@@ -399,6 +382,9 @@ export interface NightReport {
   wifeKilled?: GamePlayer;
 
   clownSwapped?: [GamePlayer, GamePlayer];
+  samuraiGuardTarget?: GamePlayer;
+  samuraiTookHit?: boolean;
+  samuraiSaved?: boolean;
 
   killed: GamePlayer[];
 
@@ -434,11 +420,13 @@ export function buildMorningReportMessage(
   const doctorSavedThisNight = Boolean(
     report.commissarSaved ||
       report.maniacSaved ||
+      report.samuraiSaved ||
       (report.mafiaAttacked &&
         report.doctorHealed &&
         report.mafiaAttacked.id === report.doctorHealed.id &&
         !report.mafiaKilled &&
-        !report.highlanderAttacked)
+        !report.highlanderAttacked &&
+        !report.samuraiTookHit)
   );
 
   if (report.doctorHealed && !doctorSavedThisNight) {
@@ -471,6 +459,15 @@ export function buildMorningReportMessage(
     parts.push(pickPhraseLine('report.clown_swap', { a: playerNick(a), b: playerNick(b) }));
   }
 
+  if (report.samuraiTookHit && report.samuraiGuardTarget) {
+    const nick = playerNick(report.samuraiGuardTarget);
+    parts.push(
+      report.samuraiSaved
+        ? pickPhraseLine('report.samurai_saved', { nick })
+        : pickPhraseLine('report.samurai_die', { nick })
+    );
+  }
+
   if (report.mafiaNoDecision) {
     parts.push(getPhraseText('report.mafia_no_decision'));
   } else if (report.mafiaAttacked) {
@@ -478,7 +475,11 @@ export function buildMorningReportMessage(
       parts.push(pickPhraseLine('report.highlander', { nick: playerNick(report.highlanderAttacked) }));
     } else if (report.mafiaKilled) {
       parts.push(pickPhraseLine('report.mafia_kill', killReportVars(report.mafiaKilled)));
-    } else if (report.doctorHealed && report.mafiaAttacked.id === report.doctorHealed.id) {
+    } else if (
+      report.doctorHealed &&
+      report.mafiaAttacked.id === report.doctorHealed.id &&
+      !report.samuraiTookHit
+    ) {
       parts.push(pickPhraseLine('report.mafia_saved', { nick: playerNick(report.mafiaAttacked) }));
     }
   }
@@ -693,6 +694,10 @@ export function getRoleNightAtmosphereMessage(role: RoleId): string | null {
 
       return pickPhraseLine('atmosphere.doctor');
 
+    case 'homeless':
+
+      return pickPhraseLine('atmosphere.homeless');
+
     case 'prostitute':
 
       return pickPhraseLine('atmosphere.prostitute');
@@ -704,6 +709,18 @@ export function getRoleNightAtmosphereMessage(role: RoleId): string | null {
     case 'advocate':
 
       return pickPhraseLine('atmosphere.advocate');
+
+    case 'samurai':
+
+      return pickPhraseLine('atmosphere.samurai');
+
+    case 'clown':
+
+      return pickPhraseLine('atmosphere.clown');
+
+    case 'commissar_wife':
+
+      return pickPhraseLine('atmosphere.commissar_wife');
 
     default:
 

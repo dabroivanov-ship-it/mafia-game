@@ -606,6 +606,11 @@ function parseNightAction(
         return { type: 'cover', targetId: target.id };
       }
       break;
+    case 'guard':
+      if (bot.role === 'samurai' && target.id !== bot.id) {
+        return { type: 'guard', targetId: target.id };
+      }
+      break;
     case 'revenge':
       if (bot.role === 'commissar_wife') return { type: 'revenge', targetId: target.id };
       break;

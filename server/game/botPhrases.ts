@@ -78,6 +78,16 @@ export const BOT_PHRASE_DEFINITIONS: BotPhraseDefinition[] = [
     defaultValue: ['Доктор готовит аптечку и выбирает, кого спасти этой ночью...'].join('\n'),
   },
   {
+    key: 'atmosphere.homeless',
+    group: 'Ночь',
+    label: 'Атмосфера: бомж',
+    type: 'lines',
+    defaultValue: [
+      'Бомж шарится по дворам и заглядывает в чужие окна...',
+      'У помойки кто-то решает, к кому подслушать этой ночью...',
+    ].join('\n'),
+  },
+  {
     key: 'atmosphere.prostitute',
     group: 'Ночь',
     label: 'Атмосфера: путана',
@@ -101,6 +111,36 @@ export const BOT_PHRASE_DEFINITIONS: BotPhraseDefinition[] = [
     label: 'Атмосфера: адвокат',
     type: 'lines',
     defaultValue: ['Адвокат готовит алиби для своих клиентов из тени...'].join('\n'),
+  },
+  {
+    key: 'atmosphere.samurai',
+    group: 'Ночь',
+    label: 'Атмосфера: самурай',
+    type: 'lines',
+    defaultValue: [
+      'Самурай этой ночью встаёт у чужой двери...',
+      'Кто-то готов закрыть другого ценой своей жизни...',
+    ].join('\n'),
+  },
+  {
+    key: 'atmosphere.clown',
+    group: 'Ночь',
+    label: 'Атмосфера: клоун',
+    type: 'lines',
+    defaultValue: [
+      'Клоун этой ночью затевает обмен ролями...',
+      'В темноте клоун выбирает, кого поменять местами...',
+    ].join('\n'),
+  },
+  {
+    key: 'atmosphere.commissar_wife',
+    group: 'Ночь',
+    label: 'Атмосфера: жена комиссара',
+    type: 'lines',
+    defaultValue: [
+      'Жена комиссара этой ночью мстит за Катани...',
+      'После гибели инспектора кто-то выходит на месть...',
+    ].join('\n'),
   },
   {
     key: 'morning.all_alive',
@@ -260,6 +300,28 @@ export const BOT_PHRASE_DEFINITIONS: BotPhraseDefinition[] = [
     placeholders: ['{nick}'],
     defaultValue: [
       'Мафия била в {nick}, но горец встал и ушёл.',
+    ].join('\n'),
+  },
+  {
+    key: 'report.samurai_die',
+    group: 'Сводка дня',
+    label: 'Самурай погиб, закрыв игрока',
+    type: 'lines',
+    placeholders: ['{nick}'],
+    defaultValue: [
+      'Самурай закрыл {nick} собой и не дожил до утра.',
+      '{nick} остался жив: самурай принял удар на себя.',
+    ].join('\n'),
+  },
+  {
+    key: 'report.samurai_saved',
+    group: 'Сводка дня',
+    label: 'Доктор спас самурая после закрытия',
+    type: 'lines',
+    placeholders: ['{nick}'],
+    defaultValue: [
+      'Самурай закрыл {nick} собой, но доктор успел к самураю.',
+      '{nick} был под защитой самурая — и доктор не дал самураю погибнуть.',
     ].join('\n'),
   },
   {
@@ -470,7 +532,7 @@ export const BOT_PHRASE_DEFINITIONS: BotPhraseDefinition[] = [
     group: 'Подсказки ролей',
     label: 'Доктор',
     type: 'text',
-    defaultValue: 'Выберите, кого вылечить этой ночью (себя — не чаще раза в 3 ночи). Спасает от мафии, маньяка и выстрела Катани.',
+    defaultValue: 'Выберите, кого вылечить этой ночью (себя — не чаще раза в 3 ночи). Спасает от мафии, маньяка и выстрела Катани. Если самурай принял удар на себя — лечите самурая, не его цель.',
   },
   {
     key: 'prompt.homeless',
@@ -484,7 +546,7 @@ export const BOT_PHRASE_DEFINITIONS: BotPhraseDefinition[] = [
     group: 'Подсказки ролей',
     label: 'Путана',
     type: 'text',
-    defaultValue: 'Выберите, кого соблазнить — ночной ход цели этой ночью не сработает (дон, Катани, доктор, маньяк, клоун и любой другой, кто ходит).',
+    defaultValue: 'Выберите, кого соблазнить — ночной ход цели этой ночью не сработает (дон, Катани, доктор, маньяк, самурай, клоун и любой другой, кто ходит).',
   },
   {
     key: 'prompt.maniac',
@@ -534,6 +596,14 @@ export const BOT_PHRASE_DEFINITIONS: BotPhraseDefinition[] = [
     label: 'Адвокат',
     type: 'text',
     defaultValue: 'Выберите мафиози, кого укрыть от проверки Катани этой ночью (не себя).',
+  },
+  {
+    key: 'prompt.samurai',
+    group: 'Подсказки ролей',
+    label: 'Самурай',
+    type: 'text',
+    defaultValue:
+      'Кого закрыть этой ночью? Смертельный удар по цели примите на себя. Себя закрывать нельзя. Доктор может спасти вас, если вылечит именно вас.',
   },
   {
     key: 'prompt.civilian',

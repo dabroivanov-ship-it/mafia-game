@@ -126,6 +126,8 @@ export type GameRole =
   | 'clown'
   | 'commissar_wife'
   | 'advocate'
+  | 'highlander'
+  | 'samurai'
   | 'citizen'
   | 'mountaineer'
   | null;
