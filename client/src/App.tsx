@@ -23,7 +23,7 @@ import {
 import { DEFAULT_PAGE_META, updatePageMeta } from './seo';
 import { clearSession, fetchMe, fetchUnreadMailCount, fetchUnreadNewsCount, fetchThemeSettings, fetchNotifications, markNotificationRead, markAllNotificationsRead, saveSession, loadStoredPlayerId, saveStoredPlayerId, clearStoredPlayerIds, telegramWebAppLogin } from './api';
 import { isLikelyTelegramWebApp, waitForTelegramWebApp } from './telegramWebApp';
-import type { LobbyRoom, RoomState, User, ThemeId, LobbyUpdate, SiteBranding, UserNotification, LobbyAnnouncement, PublicSiteStats } from './types';
+import type { LobbyRoom, RoomState, User, ThemeId, LobbyUpdate, SiteBranding, UserNotification, LobbyAnnouncement } from './types';
 import { applyTheme, resolveTheme, DEFAULT_THEME } from './themes';
 import { DEFAULT_SITE_BRANDING } from './siteBranding';
 import SiteFooter from './components/SiteFooter';
@@ -83,8 +83,6 @@ export default function App() {
 
   const [socket, setSocket] = useState<Socket | null>(null);
   const [rooms, setRooms] = useState<LobbyRoom[]>([]);
-  const [siteOnlineCount, setSiteOnlineCount] = useState(0);
-  const [siteStats, setSiteStats] = useState<PublicSiteStats | null>(null);
   const [roomState, setRoomState] = useState<RoomState | null>(null);
   const [currentRoomId, setCurrentRoomId] = useState<number | null>(null);
   const [roomScreen, setRoomScreen] = useState<RoomScreen>(() => readInitialRoomScreen());
@@ -263,8 +261,6 @@ export default function App() {
         setRooms(payload);
       } else {
         setRooms(payload.rooms);
-        setSiteOnlineCount(payload.onlineCount);
-        if (payload.siteStats) setSiteStats(payload.siteStats);
       }
     });
     s.on('room:state', applyRoomState);
@@ -821,13 +817,10 @@ export default function App() {
         {view === 'lobby' && lobbyScreen === 'rooms' && (
           <Lobby
             rooms={rooms}
-            siteOnlineCount={siteOnlineCount}
-            siteStats={siteStats}
             announcement={lobbyAnnouncement}
             onJoin={joinRoom}
             unreadMailCount={unreadMailCount}
             onOpenMessages={() => openMessages({ openUnread: true })}
-            onOpenOnlineUsers={() => setLobbyScreen('online-users')}
           />
         )}
         {view === 'lobby' && lobbyScreen === 'online-users' && (

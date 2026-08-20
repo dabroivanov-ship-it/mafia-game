@@ -1,5 +1,4 @@
-import type { GamePhase, LobbyRoom, LobbyAnnouncement, PublicSiteStats } from '../types';
-import SiteServerStats from './SiteServerStats';
+import type { GamePhase, LobbyRoom, LobbyAnnouncement } from '../types';
 
 function mailNoticeLabel(count: number): string {
   if (count === 1) return 'У вас 1 новое сообщение';
@@ -33,13 +32,10 @@ export type LobbyScreen =
 
 interface LobbyProps {
   rooms: LobbyRoom[];
-  siteOnlineCount?: number;
-  siteStats?: PublicSiteStats | null;
   announcement?: LobbyAnnouncement | null;
   onJoin: (roomId: number) => void;
   unreadMailCount?: number;
   onOpenMessages?: () => void;
-  onOpenOnlineUsers?: () => void;
 }
 
 function RoomCard({
@@ -80,29 +76,13 @@ function RoomCard({
 
 export default function Lobby({
   rooms,
-  siteOnlineCount = 0,
-  siteStats = null,
   announcement = null,
   onJoin,
   unreadMailCount = 0,
   onOpenMessages,
-  onOpenOnlineUsers,
 }: LobbyProps) {
   const gameRooms = rooms.filter((r) => r.kind !== 'chat');
   const chatRooms = rooms.filter((r) => r.kind === 'chat');
-
-  const stats =
-    siteStats ??
-    (siteOnlineCount
-      ? {
-          gamesArchived: 0,
-          mafiaWins: 0,
-          townWins: 0,
-          draws: 0,
-          online: siteOnlineCount,
-          activePlayers: 0,
-        }
-      : null);
 
   return (
     <div className="lobby">
@@ -112,8 +92,6 @@ export default function Lobby({
           <p>Выберите комнату для игры</p>
         </div>
       </header>
-
-      {stats && <SiteServerStats stats={stats} onOpenOnline={onOpenOnlineUsers} />}
 
       {announcement?.enabled && announcement.text.trim() && (
         <div className="lobby-announcement" role="status">
