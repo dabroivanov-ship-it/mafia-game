@@ -6,7 +6,7 @@ import DeleteMessageModal from './DeleteMessageModal';
 import HostProfileModal from './HostProfileModal';
 
 const GAME_START_ROOM_LINK_RE =
-  /^(Запускается игра в комнате «)(.+)(»\.)\s+\/room\/(\d+)\s*$/;
+  /Запускается игра в комнате\s+[«"„](.+?)[»"“]\.?\s*\/room\/(\d+)/u;
 
 function parseGameStartRoomLink(text: string): {
   before: string;
@@ -14,14 +14,16 @@ function parseGameStartRoomLink(text: string): {
   after: string;
   roomId: number;
 } | null {
-  const match = text.match(GAME_START_ROOM_LINK_RE);
+  const match = String(text || '').trim().match(GAME_START_ROOM_LINK_RE);
   if (!match) return null;
-  const roomId = Number(match[4]);
+  const roomId = Number(match[2]);
   if (!Number.isFinite(roomId) || roomId <= 0) return null;
+  const roomName = match[1].trim();
+  if (!roomName) return null;
   return {
-    before: match[1],
-    roomName: match[2],
-    after: match[3],
+    before: 'Запускается игра в комнате «',
+    roomName,
+    after: '».',
     roomId,
   };
 }
@@ -215,23 +217,21 @@ export default function Chat({
   };
 
   const renderText = (msg: ChatMessage) => {
-    if (msg.system) {
-      const parsed = parseGameStartRoomLink(msg.text);
-      if (parsed) {
-        return (
-          <span className="chat-text">
-            {parsed.before}
-            <a
-              className="chat-room-link"
-              href={roomGamePath(parsed.roomId)}
-              onClick={(event) => handleRoomLinkClick(event, parsed.roomId)}
-            >
-              {parsed.roomName}
-            </a>
-            {parsed.after}
-          </span>
-        );
-      }
+    const parsed = parseGameStartRoomLink(msg.text);
+    if (parsed) {
+      return (
+        <span className="chat-text">
+          {parsed.before}
+          <a
+            className="chat-room-link"
+            href={roomGamePath(parsed.roomId)}
+            onClick={(event) => handleRoomLinkClick(event, parsed.roomId)}
+          >
+            {parsed.roomName}
+          </a>
+          {parsed.after}
+        </span>
+      );
     }
     return <span className="chat-text">{msg.text}</span>;
   };
