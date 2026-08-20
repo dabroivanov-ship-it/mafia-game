@@ -111,7 +111,7 @@ export default function Room({
       setProfileTarget(target);
       return;
     }
-    if (!target.userId || target.userId === currentUserId) return;
+    if (!target.userId) return;
     setProfileTarget({
       userId: target.userId,
       playerName: target.playerName,

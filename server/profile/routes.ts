@@ -173,7 +173,7 @@ export function createProfileRouter({ onProfileUpdated }: ProfileRouterOptions =
     res.json({ onlineCount: getOnlineUserCount() });
   });
 
-  router.get('/online-users', authMiddleware, (_req, res) => {
+  router.get('/online-users', (_req, res) => {
     const users = listOnlineUsers().map((user) => ({
       ...user,
       ...getUserPresence(user.id),

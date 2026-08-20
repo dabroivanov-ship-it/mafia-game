@@ -3,15 +3,17 @@ import bcrypt from 'bcryptjs';
 import type { Request } from 'express';
 import {
   createUser,
+  fillEmptyProfileFields,
   findUserByEmail,
   findUserByUsername,
   findUserByVkId,
   isAdminReservedUsername,
   isUserBanned,
 } from './db.js';
+import { sendWelcomeLetter } from '../messages/welcome.js';
 import { getSiteOrigin } from './telegramOidc.js';
 import { createOauthLoginTicket } from './oauthTicket.js';
-import type { User } from '../types/index.js';
+import type { User, UserGender } from '../types/index.js';
 
 const VK_AUTHORIZE_URL = 'https://id.vk.ru/authorize';
 const VK_TOKEN_URL = 'https://id.vk.ru/oauth2/auth';
@@ -28,6 +30,7 @@ interface PendingVkState {
 export interface PendingVkSignup {
   vkId: string;
   displayName: string;
+  gender: UserGender;
   suggestedUsername: string;
   remember: boolean;
   createdAt: number;
@@ -258,6 +261,20 @@ async function fetchVkUserInfo(accessToken: string): Promise<VkUserInfo> {
   return data.user;
 }
 
+function genderFromVkSex(sex: unknown): UserGender {
+  if (sex === 2 || sex === '2' || sex === 'male') return 'male';
+  if (sex === 1 || sex === '1' || sex === 'female') return 'female';
+  return '';
+}
+
+function displayNameFromVk(firstName: string, lastName: string, vkId: string): string {
+  const first = firstName.trim();
+  if (first) return first.slice(0, 30);
+  const full = `${firstName} ${lastName}`.trim();
+  if (full) return full.slice(0, 30);
+  return `Игрок ${vkId.slice(-4)}`.slice(0, 30);
+}
+
 function transliterate(text: string): string {
   let out = '';
   for (const ch of text.toLowerCase()) {
@@ -306,6 +323,7 @@ export async function createVkUserWithUsername(input: {
   vkId: string;
   username: string;
   displayName: string;
+  gender?: UserGender;
 }): Promise<User | undefined> {
   const vkId = String(input.vkId);
   if (findUserByVkId(vkId)) {
@@ -315,16 +333,19 @@ export async function createVkUserWithUsername(input: {
   if (!isUsernameAvailable(username)) {
     throw new Error('Этот логин уже занят или недопустим');
   }
-  const displayName = (input.displayName.trim() || username).slice(0, 20);
+  const displayName = (input.displayName.trim() || username).slice(0, 30);
   const passwordHash = await bcrypt.hash(crypto.randomUUID(), 10);
-  return createUser({
+  const user = createUser({
     username,
     email: allocateEmail(vkId),
     passwordHash,
     displayName,
+    gender: input.gender,
     vkId,
     vkUsername: `id${vkId}`.slice(0, 32),
   });
+  if (user) sendWelcomeLetter(user);
+  return user;
 }
 
 function createSetupToken(signup: Omit<PendingVkSignup, 'createdAt'>): string {
@@ -360,7 +381,12 @@ export async function completeVkUsernameSetup(
     if (isUserBanned(existing)) {
       throw new Error(`Аккаунт заблокирован: ${existing.ban_reason || ''}`);
     }
-    return { user: existing, remember: pending.remember };
+    const updated =
+      fillEmptyProfileFields(existing.id, {
+        displayName: pending.displayName,
+        gender: pending.gender,
+      }) || existing;
+    return { user: updated, remember: pending.remember };
   }
 
   const username = usernameRaw.trim();
@@ -381,6 +407,7 @@ export async function completeVkUsernameSetup(
     vkId: pending.vkId,
     username,
     displayName: pending.displayName,
+    gender: pending.gender,
   });
   if (!user) {
     throw new Error('Ошибка регистрации через VK');
@@ -421,10 +448,12 @@ export async function completeVkAuthorization(req: Request): Promise<VkAuthResul
 
   let firstName = '';
   let lastName = '';
+  let gender: UserGender = '';
   try {
     const info = await fetchVkUserInfo(accessToken);
     firstName = info.first_name?.trim() || '';
     lastName = info.last_name?.trim() || '';
+    gender = genderFromVkSex(info.sex);
     if (info.user_id != null && String(info.user_id) !== userId) {
       throw new Error('Идентификатор пользователя VK не совпадает');
     }
@@ -433,15 +462,18 @@ export async function completeVkAuthorization(req: Request): Promise<VkAuthResul
     console.warn('VK user_info failed, using token user_id only:', err);
   }
 
+  const displayName = displayNameFromVk(firstName, lastName, userId);
+
   const existing = findUserByVkId(userId);
   if (existing) {
     if (isUserBanned(existing)) {
       throw new Error(`Аккаунт заблокирован: ${existing.ban_reason || ''}`);
     }
-    return { status: 'ok', user: existing, remember: pending.remember };
+    const updated =
+      fillEmptyProfileFields(existing.id, { displayName, gender }) || existing;
+    return { status: 'ok', user: updated, remember: pending.remember };
   }
 
-  const displayName = `${firstName} ${lastName}`.trim() || `Игрок ${userId.slice(-4)}`;
   const suggestedUsername = buildVkUsernameCandidate(firstName, lastName, userId);
 
   if (isUsernameAvailable(suggestedUsername)) {
@@ -449,6 +481,7 @@ export async function completeVkAuthorization(req: Request): Promise<VkAuthResul
       vkId: userId,
       username: suggestedUsername,
       displayName,
+      gender,
     });
     if (!user) {
       throw new Error('Ошибка регистрации через VK');
@@ -458,7 +491,8 @@ export async function completeVkAuthorization(req: Request): Promise<VkAuthResul
 
   const setupToken = createSetupToken({
     vkId: userId,
-    displayName: displayName.slice(0, 20),
+    displayName,
+    gender,
     suggestedUsername,
     remember: pending.remember,
   });
@@ -467,7 +501,7 @@ export async function completeVkAuthorization(req: Request): Promise<VkAuthResul
     status: 'need_username',
     setupToken,
     suggestedUsername,
-    displayName: displayName.slice(0, 20),
+    displayName: displayName.slice(0, 30),
     takenUsername: suggestedUsername,
     remember: pending.remember,
   };

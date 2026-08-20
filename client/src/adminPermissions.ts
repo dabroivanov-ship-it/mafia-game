@@ -46,6 +46,7 @@ export const SYSTEM_VIEW_PERMISSIONS: Record<string, AdminPermission> = {
   announcement: 'manage_news',
   backup: 'manage_backups',
   theme: 'manage_theme',
+  settings: 'manage_telegram',
   telegram: 'manage_telegram',
   metrika: 'manage_metrika',
   deepseek: 'manage_deepseek',
@@ -54,10 +55,19 @@ export const SYSTEM_VIEW_PERMISSIONS: Record<string, AdminPermission> = {
   'chat-rooms': 'view_rooms',
 };
 
+const SETTINGS_PERMISSIONS: AdminPermission[] = [
+  'manage_telegram',
+  'manage_metrika',
+  'manage_deepseek',
+];
+
 export function canOpenSystemView(
   permissions: AdminPermission[],
   view: string
 ): boolean {
+  if (view === 'settings' || view === 'telegram' || view === 'metrika' || view === 'deepseek') {
+    return SETTINGS_PERMISSIONS.some((perm) => permissions.includes(perm));
+  }
   const perm = SYSTEM_VIEW_PERMISSIONS[view];
   if (!perm) return false;
   return permissions.includes(perm);

@@ -1,20 +1,24 @@
 import { useEffect, useState } from 'react';
 import { fetchOnlineUsers } from '../api';
+import { ONLINE_PAGE_META, updatePageMeta } from '../seo';
+import { profileStatsPath } from '../profileRouting';
 import type { User, UserSearchHit } from '../types';
 import UserProfileModal from './UserProfileModal';
 
 interface OnlineUsersProps {
-  currentUser: User;
+  currentUser?: User | null;
   onBack: () => void;
-  onWriteMessage: (userId: number, username: string) => void;
+  onWriteMessage?: (userId: number, username: string) => void;
   onOpenStatistics?: (userId: number) => void;
+  backLabel?: string;
 }
 
 export default function OnlineUsers({
-  currentUser,
+  currentUser = null,
   onBack,
   onWriteMessage,
   onOpenStatistics,
+  backLabel = '← Комнаты',
 }: OnlineUsersProps) {
   const [users, setUsers] = useState<UserSearchHit[]>([]);
   const [onlineCount, setOnlineCount] = useState(0);
@@ -36,16 +40,29 @@ export default function OnlineUsers({
   };
 
   useEffect(() => {
+    if (!currentUser) updatePageMeta(ONLINE_PAGE_META);
     void load();
     const id = window.setInterval(() => void load(), 15000);
     return () => window.clearInterval(id);
-  }, []);
+  }, [currentUser]);
+
+  const openUser = (userId: number) => {
+    if (currentUser) {
+      setProfileUserId(userId);
+      return;
+    }
+    if (onOpenStatistics) {
+      onOpenStatistics(userId);
+      return;
+    }
+    window.location.href = profileStatsPath(userId);
+  };
 
   return (
     <div className="online-users-page">
       <nav className="info-back">
         <button type="button" className="btn btn-ghost btn-sm" onClick={onBack}>
-          ← Комнаты
+          {backLabel}
         </button>
       </nav>
 
@@ -71,7 +88,7 @@ export default function OnlineUsers({
             <button
               type="button"
               className="online-user-name"
-              onClick={() => setProfileUserId(hit.id)}
+              onClick={() => openUser(hit.id)}
             >
               {hit.username}
             </button>
@@ -79,7 +96,7 @@ export default function OnlineUsers({
         ))}
       </ul>
 
-      {profileUserId != null && (
+      {currentUser && profileUserId != null && (
         <UserProfileModal
           userId={profileUserId}
           currentUserId={currentUser.id}

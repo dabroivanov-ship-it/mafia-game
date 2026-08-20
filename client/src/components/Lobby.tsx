@@ -1,4 +1,5 @@
 import type { GamePhase, LobbyRoom, LobbyAnnouncement } from '../types';
+import SiteOnlineStatus from './SiteOnlineStatus';
 
 function mailNoticeLabel(count: number): string {
   if (count === 1) return 'У вас 1 новое сообщение';
@@ -146,13 +147,7 @@ export default function Lobby({
       </section>
 
       <footer className="lobby-online-footer">
-        <p className="lobby-online-count muted">
-          На сайте:{' '}
-          <button type="button" className="lobby-online-link" onClick={onOpenOnlineUsers}>
-            {siteOnlineCount}
-          </button>{' '}
-          в сети
-        </p>
+        <SiteOnlineStatus count={siteOnlineCount} onOpen={onOpenOnlineUsers} />
       </footer>
     </div>
   );

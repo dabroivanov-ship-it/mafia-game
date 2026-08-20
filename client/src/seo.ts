@@ -84,6 +84,12 @@ export const DEFAULT_PAGE_META: PageMeta = {
   path: '/',
 };
 
+export const ONLINE_PAGE_META: PageMeta = {
+  title: 'Кто в сети',
+  description: 'Игроки, которые сейчас на сайте «Мафия онлайн».',
+  path: '/online',
+};
+
 export const INFO_PAGE_META: Record<string, PageMeta> = {
   hub: {
     title: 'Информация об игре',

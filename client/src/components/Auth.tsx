@@ -10,6 +10,7 @@ import {
   completeVkUsernameSetup,
   telegramWebAppLogin,
   completeOauthLogin,
+  fetchOnlineCount,
 } from '../api';
 import type { User } from '../types';
 import { USER_GENDER_LABELS } from '../gender';
@@ -18,6 +19,7 @@ import TelegramLoginWidget from './TelegramLoginWidget';
 import TelegramIcon from './TelegramIcon';
 import VkLoginWidget from './VkLoginWidget';
 import GuestLayout from './GuestLayout';
+import SiteOnlineStatus from './SiteOnlineStatus';
 import { DEFAULT_PAGE_META, updatePageMeta } from '../seo';
 import type { SiteBranding } from '../types';
 import { DEFAULT_SITE_BRANDING } from '../siteBranding';
@@ -46,6 +48,7 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
     takenUsername: string;
   } | null>(null);
   const [vkUsername, setVkUsername] = useState('');
+  const [onlineCount, setOnlineCount] = useState(0);
 
   const [loginForm, setLoginForm] = useState({ login: '', password: '' });
   const [regForm, setRegForm] = useState({
@@ -55,10 +58,29 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
     confirm: '',
     displayName: '',
     gender: '' as '' | 'male' | 'female',
+    invitedByUserId: '',
   });
 
   useEffect(() => {
     updatePageMeta(DEFAULT_PAGE_META);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const data = await fetchOnlineCount();
+        if (!cancelled) setOnlineCount(data.onlineCount);
+      } catch {
+        /* keep last known count */
+      }
+    };
+    void load();
+    const id = window.setInterval(() => void load(), 15000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
   }, []);
 
   useEffect(() => {
@@ -263,6 +285,13 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
       return;
     }
 
+    const invitedRaw = regForm.invitedByUserId.trim();
+    const invitedByUserId = invitedRaw ? Number(invitedRaw) : null;
+    if (invitedRaw && (!Number.isInteger(invitedByUserId) || invitedByUserId <= 0)) {
+      setError('Некорректный id пригласившего');
+      return;
+    }
+
     setLoading(true);
     try {
       const { token, user } = await register({
@@ -271,6 +300,7 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
         password: regForm.password,
         displayName: regForm.displayName || regForm.username,
         gender: regForm.gender,
+        invitedByUserId,
       });
       saveRememberedLogin(regForm.username.trim(), true);
       saveSession(token, user);
@@ -472,6 +502,18 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
                   autoComplete="new-password"
                 />
               </label>
+              <label>
+                id того, кто вас пригласил
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={regForm.invitedByUserId}
+                  onChange={(e) => setRegForm({ ...regForm, invitedByUserId: e.target.value })}
+                  placeholder="необязательно"
+                  autoComplete="off"
+                />
+                <span className="profile-field-hint">Числовой id друга, если он вас позвал</span>
+              </label>
               <button type="submit" className="btn btn-primary btn-lg" disabled={loading}>
                 {loading ? 'Регистрация...' : 'Зарегистрироваться'}
 
@@ -509,6 +551,9 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
 
 
       </div>
+      <footer className="auth-online-footer">
+        <SiteOnlineStatus count={onlineCount} href="/online" />
+      </footer>
     </GuestLayout>
   );
 }

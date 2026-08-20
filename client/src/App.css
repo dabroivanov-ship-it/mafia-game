@@ -439,6 +439,11 @@ html.telegram-webapp .app-body {
   color: var(--text-muted);
 }
 
+.auth-form .profile-field-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
 .auth-form input {
   padding: 12px 14px;
   border-radius: var(--radius);
@@ -1219,6 +1224,18 @@ html.telegram-webapp .app-body {
   opacity: 0.85;
 }
 
+.lobby-online-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.auth-online-footer {
+  width: 100%;
+  max-width: 420px;
+  margin-top: 20px;
+  text-align: center;
+}
+
 .online-users-page {
   max-width: 720px;
   margin: 0 auto;
@@ -1272,6 +1289,11 @@ html.telegram-webapp .app-body {
 .online-user-name:hover {
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+.online-user-name:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 
 .user-search-card:hover {

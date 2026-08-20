@@ -7,7 +7,7 @@ import AdminBackupPanel from './AdminBackupPanel';
 import AdminLobbyAnnouncementEditor from './AdminLobbyAnnouncementEditor';
 import AdminCategoryIcon from './AdminCategoryIcon';
 import type { ThemeId, SiteBranding, LobbyAnnouncement } from '../types';
-import { canOpenSystemView, type AdminPermission } from '../adminPermissions';
+import { canOpenSystemView, hasAdminPermission, type AdminPermission } from '../adminPermissions';
 
 export type SystemView =
   | 'hub'
@@ -19,6 +19,7 @@ export type SystemView =
   | 'announcement'
   | 'violations'
   | 'stats'
+  | 'settings'
   | 'telegram'
   | 'metrika'
   | 'deepseek'
@@ -107,8 +108,7 @@ const SYSTEM_CATEGORIES: {
       { view: 'announcement', label: 'Объявление на главной' },
       { view: 'backup', label: 'Резервные копии' },
       { view: 'theme', label: 'Тема сайта' },
-      { view: 'telegram', label: 'Telegram-бот' },
-      { view: 'metrika', label: 'Яндекс.Метрика' },
+      { view: 'settings', label: 'Аналитика и боты' },
     ],
   },
   {
@@ -118,7 +118,6 @@ const SYSTEM_CATEGORIES: {
     links: [
       { view: 'phrases', label: 'Фразы ведущего' },
       { view: 'game-rooms', label: 'Комнаты мафии' },
-      { view: 'deepseek', label: 'DeepSeek (ИИ)' },
       { view: 'chat-rooms', label: 'Комнаты чата' },
     ],
   },
@@ -133,9 +132,10 @@ const VIEW_TITLES: Record<Exclude<SystemView, 'hub'>, string> = {
   announcement: 'Объявление на главной',
   violations: 'Журнал модерации',
   stats: 'Статистика',
-  telegram: 'Telegram-бот',
-  metrika: 'Яндекс.Метрика',
-  deepseek: 'DeepSeek (ИИ)',
+  settings: 'Аналитика и боты',
+  telegram: 'Аналитика и боты',
+  metrika: 'Аналитика и боты',
+  deepseek: 'Аналитика и боты',
   theme: 'Тема сайта',
   phrases: 'Фразы ведущего',
   backup: 'Резервные копии',
@@ -191,10 +191,10 @@ export default function AdminSystemSection({
     else setInternalView(next);
   };
 
-  const badgeFor = (categoryId: CategoryId) => {
+  const badgeFor = (categoryId: CategoryId, linksCount: number) => {
     if (categoryId === 'users') return usersCount + banListCount + violationsCount;
-    if (categoryId === 'system') return 7;
-    return gameRoomsCount + chatRoomsCount + 1;
+    if (categoryId === 'system') return linksCount;
+    return gameRoomsCount + chatRoomsCount;
   };
 
   const visibleCategories = SYSTEM_CATEGORIES.map((category) => ({
@@ -253,142 +253,154 @@ export default function AdminSystemSection({
             <AdminBackupPanel />
           </div>
         )}
-        {view === 'telegram' && (
-          <form className="admin-system-detail-panel theme-settings-block admin-theme-block" onSubmit={onSaveTelegram}>
-            <h4>Telegram бот и сайт</h4>
-            <p className="theme-settings-hint">
-              Укажите username бота и URL сайта. Это включает Telegram Login Widget и ссылку на Web App.
-            </p>
-            <label>
-              Username бота (без @)
-              <input
-                value={telegramForm.botUsername}
-                onChange={(e) => onTelegramFormChange({ botUsername: e.target.value })}
-                placeholder="my_mafia_bot"
-                maxLength={64}
-                required
-              />
-            </label>
-            <label>
-              URL сайта для Web App
-              <input
-                value={telegramForm.webAppUrl}
-                onChange={(e) => onTelegramFormChange({ webAppUrl: e.target.value })}
-                placeholder="https://example.com"
-                maxLength={300}
-                required
-              />
-            </label>
-            <div className="profile-actions">
-              <button type="submit" className="btn btn-primary" disabled={telegramSaving}>
-                {telegramSaving ? 'Сохранение...' : 'Сохранить Telegram'}
-              </button>
-            </div>
-            {telegramBotLink && (
-              <p className="theme-settings-hint">
-                Ссылка на бота:{' '}
-                <a href={telegramBotLink} target="_blank" rel="noreferrer">
-                  {telegramBotLink}
-                </a>
-              </p>
-            )}
-          </form>
-        )}
-        {view === 'metrika' && (
-          <form className="admin-system-detail-panel theme-settings-block admin-theme-block" onSubmit={onSaveMetrika}>
-            <h4>Яндекс.Метрика</h4>
-            <label className="theme-use-default">
-              <input
-                type="checkbox"
-                checked={metrikaDisabled}
-                onChange={(e) => onMetrikaDisabledChange(e.target.checked)}
-                disabled={metrikaSaving}
-              />
-              <span>Отключить счётчик</span>
-            </label>
-            <label>
-              Номер счётчика
-              <input
-                value={metrikaId}
-                onChange={(e) => onMetrikaIdChange(e.target.value)}
-                placeholder="109982503"
-                maxLength={12}
-                disabled={metrikaDisabled || metrikaSaving}
-                required={!metrikaDisabled}
-              />
-            </label>
-            <div className="profile-actions">
-              <button type="submit" className="btn btn-primary" disabled={metrikaSaving}>
-                {metrikaSaving ? 'Сохранение...' : 'Сохранить Метрику'}
-              </button>
-            </div>
-          </form>
-        )}
-        {view === 'deepseek' && (
-          <form className="admin-system-detail-panel theme-settings-block admin-theme-block" onSubmit={onSaveDeepseek}>
-            <h4>DeepSeek — ИИ-игроки</h4>
-            <p className="theme-settings-hint">
-              API для ботов в игровых комнатах. Официальный DeepSeek: ключ с platform.deepseek.com и URL
-              https://api.deepseek.com. Для стороннего прокси (OpenAI Compatible) укажите Base URL и Model ID из
-              инструкции продавца ключа.
-            </p>
-            <label className="theme-use-default">
-              <input
-                type="checkbox"
-                checked={deepseekEnabled}
-                onChange={(e) => onDeepseekEnabledChange(e.target.checked)}
-                disabled={deepseekSaving}
-              />
-              <span>Включить DeepSeek для ИИ-игроков</span>
-            </label>
-            <label>
-              Base URL
-              <input
-                value={deepseekBaseUrl}
-                onChange={(e) => onDeepseekBaseUrlChange(e.target.value)}
-                placeholder="https://api.deepseek.com"
-                maxLength={300}
-                disabled={deepseekSaving}
-              />
-            </label>
-            <label>
-              Модель (Model ID)
-              <input
-                value={deepseekModel}
-                onChange={(e) => onDeepseekModelChange(e.target.value)}
-                placeholder="deepseek-chat"
-                maxLength={64}
-                disabled={deepseekSaving}
-              />
-            </label>
-            <label>
-              API Key
-              <input
-                type="password"
-                value={deepseekApiKey}
-                onChange={(e) => onDeepseekApiKeyChange(e.target.value)}
-                placeholder={deepseekApiKeyPreview ? `Текущий: ${deepseekApiKeyPreview}` : 'sk-...'}
-                autoComplete="off"
-                disabled={deepseekSaving}
-              />
-            </label>
-            <div className="profile-actions">
-              <button type="submit" className="btn btn-primary" disabled={deepseekSaving}>
-                {deepseekSaving ? 'Сохранение...' : 'Сохранить DeepSeek'}
-              </button>
-              <button
-                type="button"
-                className="btn btn-ghost"
-                disabled={deepseekSaving || deepseekTesting}
-                onClick={onTestDeepseek}
+        {(view === 'settings' || view === 'telegram' || view === 'metrika' || view === 'deepseek') && (
+          <div className="admin-settings-stack">
+            {hasAdminPermission(permissions, 'manage_telegram') && (
+              <form
+                className="admin-system-detail-panel theme-settings-block admin-theme-block"
+                onSubmit={onSaveTelegram}
               >
-                {deepseekTesting ? 'Проверка... подождите до 20 сек' : 'Проверить подключение'}
-              </button>
-            </div>
-            {deepseekStatus && (
-              <p className={deepseekStatusError ? 'auth-error' : 'theme-settings-hint'}>{deepseekStatus}</p>
+                <h4>Telegram-бот</h4>
+                <p className="theme-settings-hint">
+                  Username бота и URL сайта — для Telegram Login и ссылки на Web App.
+                </p>
+                <label>
+                  Username бота (без @)
+                  <input
+                    value={telegramForm.botUsername}
+                    onChange={(e) => onTelegramFormChange({ botUsername: e.target.value })}
+                    placeholder="my_mafia_bot"
+                    maxLength={64}
+                    required
+                  />
+                </label>
+                <label>
+                  URL сайта для Web App
+                  <input
+                    value={telegramForm.webAppUrl}
+                    onChange={(e) => onTelegramFormChange({ webAppUrl: e.target.value })}
+                    placeholder="https://example.com"
+                    maxLength={300}
+                    required
+                  />
+                </label>
+                <div className="profile-actions">
+                  <button type="submit" className="btn btn-primary" disabled={telegramSaving}>
+                    {telegramSaving ? 'Сохранение...' : 'Сохранить Telegram'}
+                  </button>
+                </div>
+                {telegramBotLink && (
+                  <p className="theme-settings-hint">
+                    Ссылка на бота:{' '}
+                    <a href={telegramBotLink} target="_blank" rel="noreferrer">
+                      {telegramBotLink}
+                    </a>
+                  </p>
+                )}
+              </form>
             )}
-          </form>
+            {hasAdminPermission(permissions, 'manage_metrika') && (
+              <form
+                className="admin-system-detail-panel theme-settings-block admin-theme-block"
+                onSubmit={onSaveMetrika}
+              >
+                <h4>Яндекс.Метрика</h4>
+                <label className="theme-use-default">
+                  <input
+                    type="checkbox"
+                    checked={metrikaDisabled}
+                    onChange={(e) => onMetrikaDisabledChange(e.target.checked)}
+                    disabled={metrikaSaving}
+                  />
+                  <span>Отключить счётчик</span>
+                </label>
+                <label>
+                  Номер счётчика
+                  <input
+                    value={metrikaId}
+                    onChange={(e) => onMetrikaIdChange(e.target.value)}
+                    placeholder="109982503"
+                    maxLength={12}
+                    disabled={metrikaDisabled || metrikaSaving}
+                    required={!metrikaDisabled}
+                  />
+                </label>
+                <div className="profile-actions">
+                  <button type="submit" className="btn btn-primary" disabled={metrikaSaving}>
+                    {metrikaSaving ? 'Сохранение...' : 'Сохранить Метрику'}
+                  </button>
+                </div>
+              </form>
+            )}
+            {hasAdminPermission(permissions, 'manage_deepseek') && (
+              <form
+                className="admin-system-detail-panel theme-settings-block admin-theme-block"
+                onSubmit={onSaveDeepseek}
+              >
+                <h4>DeepSeek (ИИ)</h4>
+                <p className="theme-settings-hint">
+                  API для ботов в игровых комнатах. Официальный DeepSeek: ключ с platform.deepseek.com и URL
+                  https://api.deepseek.com. Для стороннего прокси укажите Base URL и Model ID из инструкции к ключу.
+                </p>
+                <label className="theme-use-default">
+                  <input
+                    type="checkbox"
+                    checked={deepseekEnabled}
+                    onChange={(e) => onDeepseekEnabledChange(e.target.checked)}
+                    disabled={deepseekSaving}
+                  />
+                  <span>Включить DeepSeek для ИИ-игроков</span>
+                </label>
+                <label>
+                  Base URL
+                  <input
+                    value={deepseekBaseUrl}
+                    onChange={(e) => onDeepseekBaseUrlChange(e.target.value)}
+                    placeholder="https://api.deepseek.com"
+                    maxLength={300}
+                    disabled={deepseekSaving}
+                  />
+                </label>
+                <label>
+                  Модель (Model ID)
+                  <input
+                    value={deepseekModel}
+                    onChange={(e) => onDeepseekModelChange(e.target.value)}
+                    placeholder="deepseek-chat"
+                    maxLength={64}
+                    disabled={deepseekSaving}
+                  />
+                </label>
+                <label>
+                  API Key
+                  <input
+                    type="password"
+                    value={deepseekApiKey}
+                    onChange={(e) => onDeepseekApiKeyChange(e.target.value)}
+                    placeholder={deepseekApiKeyPreview ? `Текущий: ${deepseekApiKeyPreview}` : 'sk-...'}
+                    autoComplete="off"
+                    disabled={deepseekSaving}
+                  />
+                </label>
+                <div className="profile-actions">
+                  <button type="submit" className="btn btn-primary" disabled={deepseekSaving}>
+                    {deepseekSaving ? 'Сохранение...' : 'Сохранить DeepSeek'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    disabled={deepseekSaving || deepseekTesting}
+                    onClick={onTestDeepseek}
+                  >
+                    {deepseekTesting ? 'Проверка... подождите до 20 сек' : 'Проверить подключение'}
+                  </button>
+                </div>
+                {deepseekStatus && (
+                  <p className={deepseekStatusError ? 'auth-error' : 'theme-settings-hint'}>{deepseekStatus}</p>
+                )}
+              </form>
+            )}
+          </div>
         )}
         {view === 'theme' && (
           <div className="admin-system-detail-panel theme-settings-block admin-theme-block">
@@ -417,7 +429,7 @@ export default function AdminSystemSection({
               </span>
               <h4>{category.title}</h4>
               <span className={`admin-dash-badge admin-dash-badge--${category.tone}`}>
-                {badgeFor(category.id)}
+                {badgeFor(category.id, category.links.length)}
               </span>
             </header>
             <ul className="admin-dash-links">

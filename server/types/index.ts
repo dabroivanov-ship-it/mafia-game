@@ -59,6 +59,7 @@ export interface User {
   last_ip?: string | null;
   last_user_agent?: string | null;
   theme?: string | null;
+  invited_by_user_id?: number | null;
 }
 
 export interface StaffMember {

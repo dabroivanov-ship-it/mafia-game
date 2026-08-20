@@ -6,6 +6,7 @@ import Lobby, { type LobbyScreen } from './components/Lobby';
 import CabinetHub from './components/CabinetHub';
 import PageLoader from './components/PageLoader';
 import { infoSectionFromPath, isPublicInfoPath, pathForInfoSection } from './infoRouting';
+import { isPublicOnlinePath } from './onlineRouting';
 import {
   isPublicProfilePath,
   profileStatsPath,
@@ -645,6 +646,24 @@ export default function App() {
           <Info
             initialSection={infoSectionFromPath(window.location.pathname)}
             publicMode
+          />
+        </ViewSuspense>
+      </GuestLayout>
+    );
+  }
+
+  if ((!user || !token) && isPublicOnlinePath(window.location.pathname)) {
+    return (
+      <GuestLayout branding={siteBranding}>
+        <ViewSuspense label="Игроки онлайн…">
+          <OnlineUsers
+            onBack={() => {
+              window.location.href = '/';
+            }}
+            onOpenStatistics={(userId) => {
+              window.location.href = profileStatsPath(userId);
+            }}
+            backLabel="← Вход"
           />
         </ViewSuspense>
       </GuestLayout>

@@ -114,7 +114,9 @@ export default function Chat({
   };
 
   const canOpenAuthorProfile = (msg: ChatMessage): boolean =>
-    !msg.system && !isOwnMessage(msg) && !!onOpenPlayerPage && (!!msg.userId || !!msg.isBot);
+    !msg.system &&
+    !!onOpenPlayerPage &&
+    (!!msg.userId || (!isOwnMessage(msg) && !!msg.isBot));
 
   const canOpenHostProfile = (msg: ChatMessage): boolean =>
     !!msg.system && isHostSender(msg.playerName);
@@ -142,7 +144,13 @@ export default function Chat({
           type="button"
           className={`chat-author-btn ${msg.isBot ? 'chat-bot-btn' : ''} ${isReplyTarget(msg) ? 'selected' : ''}`}
           onClick={() => handleAuthorClick(msg)}
-          title={msg.isBot ? 'AI игрок' : 'Открыть профиль и написать'}
+          title={
+            msg.isBot
+              ? 'AI игрок'
+              : isOwnMessage(msg)
+                ? 'Открыть свой профиль'
+                : 'Открыть профиль и написать'
+          }
         >
           {msg.playerName}:
         </button>

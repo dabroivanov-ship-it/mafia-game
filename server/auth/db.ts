@@ -68,6 +68,9 @@ function migrateColumns(): void {
     add('ALTER TABLE users ADD COLUMN quiz_correct_answers INTEGER NOT NULL DEFAULT 0');
   }
   if (!cols.includes('gender')) add('ALTER TABLE users ADD COLUMN gender TEXT NOT NULL DEFAULT ""');
+  if (!cols.includes('invited_by_user_id')) {
+    add('ALTER TABLE users ADD COLUMN invited_by_user_id INTEGER DEFAULT NULL');
+  }
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_telegram_id ON users(telegram_id)');
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_vk_id ON users(vk_id)');
 }
@@ -237,6 +240,37 @@ export function findUserById(id: number): User | undefined {
   return db.prepare('SELECT * FROM users WHERE id = ?').get(id) as User | undefined;
 }
 
+export function findPrimaryAdmin(): User | undefined {
+  const names = (process.env.ADMIN_USERNAMES || 'admin')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  for (const name of names) {
+    const user = findUserByUsername(name);
+    if (user && user.role === 'admin' && !isUserBanned(user)) return user;
+  }
+  return db
+    .prepare(
+      `SELECT * FROM users WHERE role = 'admin' AND is_banned = 0 ORDER BY id ASC LIMIT 1`
+    )
+    .get() as User | undefined;
+}
+
+export function resolveInvitedByUserId(raw: unknown): { ok: true; id: number | null } | { ok: false; error: string } {
+  if (raw == null || raw === '') return { ok: true, id: null };
+  const value = String(raw).trim();
+  if (!value) return { ok: true, id: null };
+  const id = Number(value);
+  if (!Number.isInteger(id) || id <= 0) {
+    return { ok: false, error: 'Некорректный id пригласившего' };
+  }
+  const inviter = findUserById(id);
+  if (!inviter || isUserBanned(inviter)) {
+    return { ok: false, error: 'Пригласивший не найден' };
+  }
+  return { ok: true, id };
+}
+
 export function findUserPublic(id: number): PublicUser | null {
   const user = findUserById(id);
   return user ? publicUser(user) : null;
@@ -252,6 +286,7 @@ export function createUser({
   telegramUsername,
   vkId,
   vkUsername,
+  invitedByUserId,
 }: {
   username: string;
   email: string;
@@ -262,14 +297,15 @@ export function createUser({
   telegramUsername?: string | null;
   vkId?: string | null;
   vkUsername?: string | null;
+  invitedByUserId?: number | null;
 }): User | undefined {
   const role = 'user';
 
   const result = db
     .prepare(
       `INSERT INTO users
-      (username, email, password_hash, display_name, gender, role, telegram_id, telegram_username, vk_id, vk_username)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      (username, email, password_hash, display_name, gender, role, telegram_id, telegram_username, vk_id, vk_username, invited_by_user_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       username,
@@ -281,9 +317,36 @@ export function createUser({
       telegramId || null,
       telegramUsername || null,
       vkId || null,
-      vkUsername || null
+      vkUsername || null,
+      invitedByUserId || null
     );
   return findUserById(Number(result.lastInsertRowid));
+}
+
+const PLACEHOLDER_DISPLAY_NAME = /^Игрок \d+$/;
+
+export function fillEmptyProfileFields(
+  userId: number,
+  input: { displayName?: string | null; gender?: UserGender | null }
+): User | undefined {
+  const user = findUserById(userId);
+  if (!user) return undefined;
+
+  const incomingName = input.displayName?.trim().slice(0, 30) || '';
+  const incomingGender = normalizeGender(input.gender);
+  const currentName = (user.display_name || '').trim();
+  const nameIsPlaceholder = !currentName || PLACEHOLDER_DISPLAY_NAME.test(currentName);
+  const nextName = nameIsPlaceholder && incomingName ? incomingName : user.display_name;
+  const nextGender = !normalizeGender(user.gender) && incomingGender ? incomingGender : user.gender;
+
+  if (nextName === user.display_name && nextGender === user.gender) return user;
+
+  db.prepare('UPDATE users SET display_name = ?, gender = ? WHERE id = ?').run(
+    nextName,
+    nextGender,
+    userId
+  );
+  return findUserById(userId);
 }
 
 export function updateUserProfile(

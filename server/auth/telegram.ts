@@ -6,6 +6,7 @@ import {
   findUserByTelegramId,
   createUser,
 } from './db.js';
+import { sendWelcomeLetter } from '../messages/welcome.js';
 import type { User } from '../types/index.js';
 
 export interface TelegramAuthPayload {
@@ -145,6 +146,7 @@ export async function getOrCreateUserFromTelegram(input: {
       telegramId,
       telegramUsername: input.username ? String(input.username).slice(0, 32) : null,
     });
+    if (user) sendWelcomeLetter(user);
   }
 
   return user;

@@ -8,7 +8,9 @@ import {
   isUserBanned,
   isAdminReservedUsername,
   findUserById,
+  resolveInvitedByUserId,
 } from './db.js';
+import { sendWelcomeLetter } from '../messages/welcome.js';
 import { isValidRegistrationGender, normalizeGender } from './gender.js';
 import { signToken, authMiddleware, verifyToken } from './jwt.js';
 import {
@@ -37,7 +39,7 @@ const authRateLimit = createRateLimitMiddleware(authRateLimiter);
 
 router.post('/register', authRateLimit, async (req, res) => {
   try {
-    const { username, email, password, displayName, gender } = req.body;
+    const { username, email, password, displayName, gender, invitedByUserId } = req.body;
 
     if (!username?.trim() || !email?.trim() || !password) {
       return res.status(400).json({ error: 'Заполните все поля' });
@@ -71,6 +73,9 @@ router.post('/register', authRateLimit, async (req, res) => {
     if (findUserByUsername(u)) return res.status(409).json({ error: 'Логин уже занят' });
     if (findUserByEmail(e)) return res.status(409).json({ error: 'Email уже зарегистрирован' });
 
+    const invitedBy = resolveInvitedByUserId(invitedByUserId);
+    if (!invitedBy.ok) return res.status(400).json({ error: invitedBy.error });
+
     const passwordHash = await bcrypt.hash(password, 10);
     const name = (displayName?.trim() || u).slice(0, 20);
 
@@ -80,8 +85,10 @@ router.post('/register', authRateLimit, async (req, res) => {
       passwordHash,
       displayName: name,
       gender: normalizeGender(gender),
+      invitedByUserId: invitedBy.id,
     });
     if (!user) return res.status(500).json({ error: 'Ошибка регистрации' });
+    sendWelcomeLetter(user);
     const token = signToken(user, false);
     res.status(201).json({ token, user: publicUser(user) });
   } catch (err) {

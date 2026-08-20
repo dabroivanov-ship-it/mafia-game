@@ -110,6 +110,7 @@ export async function register(payload: {
   password: string;
   displayName: string;
   gender: 'male' | 'female';
+  invitedByUserId?: number | null;
 }): Promise<{ token: string; user: User }> {
   return apiRequest('/api/auth/register', {
     method: 'POST',
