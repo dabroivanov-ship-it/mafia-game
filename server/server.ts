@@ -24,11 +24,11 @@ import { createBlogRouter } from './blog/routes.js';
 import { getPublicSiteStats } from './stats/siteStats.js';
 import settingsRoutes from './settings/routes.js';
 import notificationRoutes from './notifications/routes.js';
-import { initNotificationPush, pushMailNotification } from './notifications/push.js';
+import { initNotificationPush, pushMailNotification, pushStaffAutoModerationAlert } from './notifications/push.js';
 import { getUnreadNotificationCount, listNotifications } from './notifications/store.js';
 import { getUnreadCount } from './messages/store.js';
 import { socketAuthMiddleware, refreshSocketUser } from './auth/jwt.js';
-import { findUserById, updateUserScore, isAdmin, isStaff, isModerator, canModerateSilence, canSilenceTarget, updateUserConnectionInfo, uploadsDir, normalizeChatLimit, canBanTarget } from './auth/db.js';
+import { findUserById, updateUserScore, isAdmin, isStaff, isModerator, canModerateSilence, canSilenceTarget, updateUserConnectionInfo, uploadsDir, normalizeChatLimit, canBanTarget, listStaffUsers } from './auth/db.js';
 import { hydrateRoomHistory, loadGameEvents, getRecentGameEvents, getAdminChatHistory, getRecentChatForAdmin } from './history/store.js';
 import { recordRoomGameResults } from './stats/store.js';
 import {
@@ -88,7 +88,7 @@ import { securityHeadersMiddleware } from './security/headers.js';
 import { chatSocketRateLimiter } from './security/rateLimit.js';
 import { normalizeChatText, normalizeModerationReason, parseViolationType } from './security/validate.js';
 import { addViolation } from './moderation/violationLog.js';
-import { ADVERTISING_BLOCK_MESSAGE, looksLikeAdvertising } from './moderation/advertising.js';
+import { AUTO_BLOCK_MESSAGES, detectChatViolation } from './moderation/advertising.js';
 import fs from 'fs';
 import { ensureNewsUploadsDir } from './upload/newsImage.js';
 import { ensureSiteBrandingUploadsDir } from './upload/siteLogo.js';
@@ -626,8 +626,8 @@ function requireSocketSilenceModerator(
   return user;
 }
 
-/** Auto-log + block advertising. Staff bypass. Returns true if blocked. */
-function blockAdvertisingChat(input: {
+/** Auto-log + block ads/profanity/spam. Staff bypass. Returns true if blocked. */
+function blockAutoModerationChat(input: {
   user: User;
   text: string;
   roomId: number;
@@ -638,10 +638,11 @@ function blockAdvertisingChat(input: {
   cb?: (res: { error?: string; ok?: boolean }) => void;
 }): boolean {
   if (isStaff(input.user)) return false;
-  if (!looksLikeAdvertising(input.text)) return false;
+  const violationType = detectChatViolation(input.text);
+  if (!violationType) return false;
 
   addViolation({
-    violationType: 'advertising',
+    violationType,
     messageText: input.text,
     authorUserId: input.authorUserId,
     authorName: input.authorName,
@@ -653,7 +654,21 @@ function blockAdvertisingChat(input: {
     moderatorName: 'Авто',
     messageAt: new Date().toISOString(),
   });
-  input.cb?.({ error: ADVERTISING_BLOCK_MESSAGE });
+
+  const place =
+    input.channel === 'mail' || input.roomId === 0
+      ? 'Письма'
+      : `${input.roomName}`;
+  pushStaffAutoModerationAlert({
+    violationType,
+    authorName: input.authorName,
+    authorUserId: input.authorUserId,
+    preview: input.text,
+    place,
+    staffUserIds: listStaffUsers().map((s) => s.id),
+  });
+
+  input.cb?.({ error: AUTO_BLOCK_MESSAGES[violationType] });
   return true;
 }
 
@@ -1047,7 +1062,7 @@ io.on('connection', (socket) => {
 
     if (isPrivate && hasTarget) {
       if (
-        blockAdvertisingChat({
+        blockAutoModerationChat({
           user,
           text: trimmed,
           roomId: room.id,
@@ -1090,7 +1105,7 @@ io.on('connection', (socket) => {
     }
 
     if (
-      blockAdvertisingChat({
+      blockAutoModerationChat({
         user,
         text: trimmed,
         roomId: room.id,
@@ -1151,7 +1166,7 @@ io.on('connection', (socket) => {
     if (!trimmed) return cb?.({ error: 'Пустое сообщение' });
 
     if (
-      blockAdvertisingChat({
+      blockAutoModerationChat({
         user,
         text: trimmed,
         roomId: room.id,

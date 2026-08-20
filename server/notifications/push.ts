@@ -81,3 +81,36 @@ export function pushAdminReputationNotification(
     payload: { userId },
   });
 }
+
+const VIOLATION_TITLE: Record<string, string> = {
+  advertising: 'Реклама',
+  profanity: 'Мат',
+  other: 'Спам',
+};
+
+/** Notify admins/moderators/watchers about an auto-moderation hit. */
+export function pushStaffAutoModerationAlert(input: {
+  violationType: string;
+  authorName: string;
+  authorUserId: number | null;
+  preview: string;
+  place: string;
+  staffUserIds: number[];
+}): void {
+  const kind = VIOLATION_TITLE[input.violationType] || 'Нарушение';
+  const preview = input.preview.trim().slice(0, 120);
+  const body = `${input.authorName} · ${input.place}: ${preview || '—'}`;
+  for (const staffId of input.staffUserIds) {
+    if (input.authorUserId != null && staffId === input.authorUserId) continue;
+    pushNotification(staffId, {
+      type: 'system',
+      title: `Автомодерация: ${kind}`,
+      body,
+      action: 'admin_violations',
+      payload: {
+        authorUserId: input.authorUserId,
+        violationType: input.violationType,
+      },
+    });
+  }
+}

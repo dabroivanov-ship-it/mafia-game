@@ -159,6 +159,8 @@ interface AdminPanelProps {
   onDefaultThemeChange?: (theme: ThemeId) => void;
   onBrandingChange?: (branding: SiteBranding) => void;
   onLobbyAnnouncementChange?: (announcement: LobbyAnnouncement) => void;
+  onOpenStatistics?: (userId: number) => void;
+  initialSystemView?: SystemView;
 }
 
 export default function AdminPanel({
@@ -166,8 +168,10 @@ export default function AdminPanel({
   onDefaultThemeChange,
   onBrandingChange,
   onLobbyAnnouncementChange,
+  onOpenStatistics,
+  initialSystemView = 'hub',
 }: AdminPanelProps) {
-  const [systemView, setSystemView] = useState<SystemView>('hub');
+  const [systemView, setSystemView] = useState<SystemView>(initialSystemView);
   const [users, setUsers] = useState<User[]>([]);
   const [usersRegisteredToday, setUsersRegisteredToday] = useState(0);
   const [rooms, setRooms] = useState<AdminRoom[]>([]);
@@ -204,6 +208,8 @@ export default function AdminPanel({
   const [showNewsEditor, setShowNewsEditor] = useState(false);
   const [violations, setViolations] = useState<ViolationLogEntry[]>([]);
   const [violationsLoading, setViolationsLoading] = useState(false);
+  const [violationTypeFilter, setViolationTypeFilter] = useState<'all' | ViolationType>('all');
+  const [violationNickFilter, setViolationNickFilter] = useState('');
   const [editNews, setEditNews] = useState<NewsPost | null>(null);
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
   const [blogLoading, setBlogLoading] = useState(false);
@@ -891,6 +897,22 @@ export default function AdminPanel({
   const canManageGameRooms = hasAdminPermission(permissions, 'manage_game_rooms');
   const canManageChatRooms = hasAdminPermission(permissions, 'manage_chat_rooms');
 
+  const nickQ = violationNickFilter.trim().toLowerCase();
+  const filteredViolations = violations.filter((v) => {
+    if (violationTypeFilter !== 'all' && v.violationType !== violationTypeFilter) return false;
+    if (!nickQ) return true;
+    return v.authorName.toLowerCase().includes(nickQ);
+  });
+
+  const findUserForViolation = (v: ViolationLogEntry): User | null => {
+    if (v.authorUserId != null) {
+      const byId = users.find((u) => u.id === v.authorUserId);
+      if (byId) return byId;
+    }
+    const nick = v.authorName.trim().toLowerCase();
+    return users.find((u) => u.username.toLowerCase() === nick || u.displayName.toLowerCase() === nick) ?? null;
+  };
+
   const formatUntil = (value?: string | null) => {
     if (!value) return 'навсегда';
     return new Date(value).toLocaleString('ru-RU');
@@ -1524,7 +1546,10 @@ export default function AdminPanel({
           violations: (
             <section className="admin-section admin-section-embedded">
               <div className="admin-section-head">
-                <h3>Журнал модерации ({violations.length})</h3>
+                <h3>
+                  Журнал модерации ({filteredViolations.length}
+                  {filteredViolations.length !== violations.length ? ` из ${violations.length}` : ''})
+                </h3>
                 <button
                   type="button"
                   className="btn btn-sm danger"
@@ -1535,13 +1560,40 @@ export default function AdminPanel({
                 </button>
               </div>
               <p className="muted admin-ad-log-hint">
-                Авто: реклама и сторонние ссылки в чате/письмах. Вручную: удаление в чате или жалоба на
-                письмо. В записи — ник, время и текст.
+                Авто: реклама, мат и спам. Вручную: удаление в чате или жалоба на письмо.
               </p>
+              <div className="admin-violation-filters">
+                <label>
+                  Тип
+                  <select
+                    value={violationTypeFilter}
+                    onChange={(e) =>
+                      setViolationTypeFilter(e.target.value as 'all' | ViolationType)
+                    }
+                  >
+                    <option value="all">Все</option>
+                    <option value="advertising">Реклама</option>
+                    <option value="profanity">Мат</option>
+                    <option value="other">Другое / спам</option>
+                  </select>
+                </label>
+                <label>
+                  Ник
+                  <input
+                    type="search"
+                    value={violationNickFilter}
+                    onChange={(e) => setViolationNickFilter(e.target.value)}
+                    placeholder="фильтр по нику"
+                    maxLength={40}
+                  />
+                </label>
+              </div>
               {violationsLoading && violations.length === 0 && <p className="muted">Загрузка...</p>}
-              {violations.length === 0 && !violationsLoading && (
+              {filteredViolations.length === 0 && !violationsLoading && (
                 <p className="muted">
-                  Записей пока нет. Они появляются при удалении сообщений в чате или жалобе на письмо.
+                  {violations.length === 0
+                    ? 'Записей пока нет.'
+                    : 'Нет записей по выбранному фильтру.'}
                 </p>
               )}
               <div className="admin-table-wrap">
@@ -1554,27 +1606,60 @@ export default function AdminPanel({
                       <th>Сообщение</th>
                       <th>Где</th>
                       <th>Кто отметил</th>
+                      <th>Действия</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {violations.map((v) => (
-                      <tr key={v.id}>
-                        <td className="violation-time">
-                          {new Date(v.messageAt || v.createdAt).toLocaleString('ru-RU')}
-                        </td>
-                        <td>
-                          <span className={`violation-badge violation-${v.violationType}`}>
-                            {VIOLATION_LABELS[v.violationType]}
-                          </span>
-                        </td>
-                        <td>
-                          <strong>{v.authorName}</strong>
-                        </td>
-                        <td className="violation-message">{v.messageText}</td>
-                        <td>{violationPlace(v)}</td>
-                        <td>{v.moderatorName}</td>
-                      </tr>
-                    ))}
+                    {filteredViolations.map((v) => {
+                      const author = findUserForViolation(v);
+                      return (
+                        <tr key={v.id}>
+                          <td className="violation-time">
+                            {new Date(v.messageAt || v.createdAt).toLocaleString('ru-RU')}
+                          </td>
+                          <td>
+                            <span className={`violation-badge violation-${v.violationType}`}>
+                              {VIOLATION_LABELS[v.violationType]}
+                            </span>
+                          </td>
+                          <td>
+                            <strong>{v.authorName}</strong>
+                          </td>
+                          <td className="violation-message">{v.messageText}</td>
+                          <td>{violationPlace(v)}</td>
+                          <td>{v.moderatorName}</td>
+                          <td className="violation-actions">
+                            {v.authorUserId != null && onOpenStatistics && (
+                              <button
+                                type="button"
+                                className="btn btn-ghost btn-sm"
+                                onClick={() => onOpenStatistics(v.authorUserId!)}
+                              >
+                                Профиль
+                              </button>
+                            )}
+                            {author && canBanUsers && !author.isAdmin && (
+                              <button
+                                type="button"
+                                className="btn btn-sm danger"
+                                onClick={() => {
+                                  setBanReason(
+                                    v.violationType === 'advertising'
+                                      ? 'Реклама'
+                                      : v.violationType === 'profanity'
+                                        ? 'Мат'
+                                        : 'Нарушение правил'
+                                  );
+                                  setBanTarget(author);
+                                }}
+                              >
+                                Бан
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

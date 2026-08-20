@@ -1310,6 +1310,22 @@ html.telegram-webapp .app-body {
   text-align: center;
 }
 
+.return-to-room-bar {
+  display: flex;
+  justify-content: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-card));
+}
+
+.messages-return-room {
+  margin: 0 0 12px;
+}
+
+.messages-return-room .btn {
+  width: 100%;
+}
+
 .lobby-blog-section {
   margin-top: 8px;
 }
@@ -2355,6 +2371,38 @@ html.telegram-webapp .app-body {
 
 .admin-ad-log-hint {
   margin: 0 0 12px;
+}
+
+.admin-violation-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  margin: 0 0 14px;
+}
+
+.admin-violation-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.admin-violation-filters select,
+.admin-violation-filters input {
+  min-width: 160px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.violation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  white-space: nowrap;
 }
 
 .roles-banner {

@@ -105,6 +105,7 @@ export default function App() {
   const [messageThreadUserId, setMessageThreadUserId] = useState<number | null>(null);
   const [messageThreadUsername, setMessageThreadUsername] = useState<string | null>(null);
   const [messagesOpenUnread, setMessagesOpenUnread] = useState(false);
+  const [adminInitialView, setAdminInitialView] = useState<'hub' | 'violations'>('hub');
   const [mailReadReceipt, setMailReadReceipt] = useState<{
     readerId: number;
     messageIds: number[];
@@ -559,6 +560,19 @@ export default function App() {
     window.history.pushState(null, '', '/');
   }, []);
 
+  const returnToMinimizedRoom = useCallback(() => {
+    if (!currentRoomId) return;
+    setRoomMinimized(false);
+    setRoomScreen('game');
+    setProfileStatsUserId(null);
+    setComposeToUserId(null);
+    setComposeToUsername(null);
+    setMessageThreadUserId(null);
+    setMessageThreadUsername(null);
+    setMessagesOpenUnread(false);
+    window.history.pushState(null, '', roomGamePath(currentRoomId));
+  }, [currentRoomId]);
+
   const handleNotificationSelect = useCallback(
     async (notification: UserNotification) => {
       if (!notification.isRead) {
@@ -589,6 +603,18 @@ export default function App() {
             ? notification.payload.fromUsername
             : undefined;
         openMessages({ userId: fromUserId, username: fromUsername, thread: true });
+        return;
+      }
+
+      if (notification.action === 'admin_violations') {
+        if (user?.canAccessAdminPanel) {
+          if (currentRoomId && !roomMinimized) {
+            if (roomState?.kind === 'chat') leaveRoom();
+            else minimizeMafiaRoom();
+          }
+          setAdminInitialView('violations');
+          setView('admin');
+        }
         return;
       }
 
@@ -826,6 +852,13 @@ export default function App() {
 
       <div className="app-main">
         {notificationBar}
+        {currentRoomId && roomMinimized && roomState && (
+          <div className="return-to-room-bar">
+            <button type="button" className="btn btn-primary btn-sm" onClick={returnToMinimizedRoom}>
+              Вернуться в комнату «{roomState.name}»
+            </button>
+          </div>
+        )}
         <div className="app-body">
         {profileStatsUserId != null ? (
           <ViewSuspense label="Статистика…">
@@ -897,6 +930,14 @@ export default function App() {
               openUnread={messagesOpenUnread}
               mailReadReceipt={mailReadReceipt}
               onUnreadChange={setUnreadMailCount}
+              returnToRoomLabel={
+                currentRoomId && roomMinimized && roomState
+                  ? `Вернуться в комнату «${roomState.name}»`
+                  : null
+              }
+              onReturnToRoom={
+                currentRoomId && roomMinimized ? returnToMinimizedRoom : undefined
+              }
               onInitialNavigationHandled={() => {
                 setMessageThreadUserId(null);
                 setMessageThreadUsername(null);
@@ -966,10 +1007,16 @@ export default function App() {
         {view === 'admin' && user.canAccessAdminPanel && (
           <ViewSuspense label="Админка…">
             <AdminPanel
-              onBack={() => setView('lobby')}
+              key={adminInitialView}
+              initialSystemView={adminInitialView}
+              onBack={() => {
+                setAdminInitialView('hub');
+                setView('lobby');
+              }}
               onDefaultThemeChange={setSiteDefaultTheme}
               onBrandingChange={setSiteBranding}
               onLobbyAnnouncementChange={setLobbyAnnouncement}
+              onOpenStatistics={openProfileStatistics}
             />
           </ViewSuspense>
         )}
@@ -1005,6 +1052,9 @@ export default function App() {
           }
           if (v === 'news') {
             window.history.pushState(null, '', '/news');
+          }
+          if (v === 'admin') {
+            setAdminInitialView('hub');
           }
           setView(v);
         }}

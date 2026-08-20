@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import { authMiddleware } from '../auth/jwt.js';
-import { findUserById, findUserByUsername, isStaff } from '../auth/db.js';
+import { findUserById, findUserByUsername, isStaff, listStaffUsers } from '../auth/db.js';
 import { createRateLimitMiddleware, pmRateLimiter } from '../security/rateLimit.js';
 import { MAX_PM_MESSAGE_LENGTH } from '../security/constants.js';
 import { parseViolationType } from '../security/validate.js';
 import { addViolation } from '../moderation/violationLog.js';
-import { ADVERTISING_BLOCK_MESSAGE, looksLikeAdvertising } from '../moderation/advertising.js';
+import { AUTO_BLOCK_MESSAGES, detectChatViolation } from '../moderation/advertising.js';
+import { pushStaffAutoModerationAlert } from '../notifications/push.js';
 import {
   sendPrivateMessage,
   listInbox,
@@ -92,22 +93,34 @@ export function createMessagesRouter({ onMessageSent, onMessageRead, onOutgoingR
     const recipient = findUserById(toUserId);
     if (!recipient) return res.status(404).json({ error: 'Пользователь не найден' });
 
-    if (!isStaff(req.user) && looksLikeAdvertising(text)) {
-      const sender = findUserById(req.userId!);
-      addViolation({
-        violationType: 'advertising',
-        messageText: text,
-        authorUserId: req.userId!,
-        authorName: sender?.username || sender?.display_name || 'Игрок',
-        roomId: 0,
-        roomName: 'Письма',
-        channel: 'mail',
-        messageId: `auto-mail-${Date.now()}-${req.userId}`,
-        moderatorId: 0,
-        moderatorName: 'Авто',
-        messageAt: new Date().toISOString(),
-      });
-      return res.status(400).json({ error: ADVERTISING_BLOCK_MESSAGE });
+    if (!isStaff(req.user)) {
+      const violationType = detectChatViolation(text);
+      if (violationType) {
+        const sender = findUserById(req.userId!);
+        const authorName = sender?.username || sender?.display_name || 'Игрок';
+        addViolation({
+          violationType,
+          messageText: text,
+          authorUserId: req.userId!,
+          authorName,
+          roomId: 0,
+          roomName: 'Письма',
+          channel: 'mail',
+          messageId: `auto-mail-${Date.now()}-${req.userId}`,
+          moderatorId: 0,
+          moderatorName: 'Авто',
+          messageAt: new Date().toISOString(),
+        });
+        pushStaffAutoModerationAlert({
+          violationType,
+          authorName,
+          authorUserId: req.userId!,
+          preview: text,
+          place: 'Письма',
+          staffUserIds: listStaffUsers().map((s) => s.id),
+        });
+        return res.status(400).json({ error: AUTO_BLOCK_MESSAGES[violationType] });
+      }
     }
 
     const message = sendPrivateMessage(req.userId!, toUserId, text);
