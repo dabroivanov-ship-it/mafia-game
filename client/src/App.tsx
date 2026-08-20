@@ -83,6 +83,7 @@ export default function App() {
 
   const [socket, setSocket] = useState<Socket | null>(null);
   const [rooms, setRooms] = useState<LobbyRoom[]>([]);
+  const [siteOnlineCount, setSiteOnlineCount] = useState(0);
   const [roomState, setRoomState] = useState<RoomState | null>(null);
   const [currentRoomId, setCurrentRoomId] = useState<number | null>(null);
   const [roomScreen, setRoomScreen] = useState<RoomScreen>(() => readInitialRoomScreen());
@@ -261,6 +262,7 @@ export default function App() {
         setRooms(payload);
       } else {
         setRooms(payload.rooms);
+        setSiteOnlineCount(payload.onlineCount);
       }
     });
     s.on('room:state', applyRoomState);
@@ -817,10 +819,12 @@ export default function App() {
         {view === 'lobby' && lobbyScreen === 'rooms' && (
           <Lobby
             rooms={rooms}
+            siteOnlineCount={siteOnlineCount}
             announcement={lobbyAnnouncement}
             onJoin={joinRoom}
             unreadMailCount={unreadMailCount}
             onOpenMessages={() => openMessages({ openUnread: true })}
+            onOpenOnlineUsers={() => setLobbyScreen('online-users')}
           />
         )}
         {view === 'lobby' && lobbyScreen === 'online-users' && (

@@ -376,6 +376,18 @@ export interface NewsPost {
   poll?: NewsPoll | null;
 }
 
+export interface BlogPost {
+  id: number;
+  title: string;
+  body: string;
+  coverImage?: string | null;
+  isPublished: boolean;
+  authorId?: number;
+  authorName?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface NewsComment {
   id: number;
   newsId: number;

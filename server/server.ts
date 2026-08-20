@@ -20,6 +20,7 @@ import { createSupportRouter } from './support/routes.js';
 import { createNewsRouter } from './news/routes.js';
 import './news/comments.js';
 import './news/polls.js';
+import { createBlogRouter } from './blog/routes.js';
 import { getPublicSiteStats } from './stats/siteStats.js';
 import settingsRoutes from './settings/routes.js';
 import notificationRoutes from './notifications/routes.js';
@@ -255,6 +256,7 @@ app.use(
 app.use('/api/friends', friendsRoutes);
 app.use('/api/reputation', reputationRoutes);
 app.use('/api/news', createNewsRouter());
+app.use('/api/blog', createBlogRouter());
 app.use(
   '/uploads/avatars',
   (_req, res, next) => {

@@ -22,6 +22,10 @@ import {
   adminCreateNews,
   adminUpdateNews,
   adminDeleteNews,
+  fetchAdminBlog,
+  adminCreateBlog,
+  adminUpdateBlog,
+  adminDeleteBlog,
   fetchViolationLog,
   adminClearViolationLog,
   fetchThemeSettings,
@@ -37,7 +41,7 @@ import {
   type AdminRoom,
   type SilencedPlayerEntry,
 } from '../api';
-import type { User, NewsPost, ThemeId, ViolationLogEntry, ViolationType, SiteBranding, LobbyAnnouncement, UserRole } from '../types';
+import type { User, NewsPost, BlogPost, ThemeId, ViolationLogEntry, ViolationType, SiteBranding, LobbyAnnouncement, UserRole } from '../types';
 import { AuthProviderBadges } from './AuthProviderBadges';
 import { USER_GENDER_LABELS } from '../gender';
 import {
@@ -46,6 +50,7 @@ import {
   type AdminPermission,
 } from '../adminPermissions';
 import NewsEditor, { type NewsEditorValue } from './NewsEditor';
+import BlogEditor, { type BlogEditorValue } from './BlogEditor';
 import NewsBody from './NewsBody';
 import { isEmptyNewsBody } from './newsBodyUtils';
 import { initYandexMetrika } from '../metrika';
@@ -92,6 +97,24 @@ function buildPollPayload(form: NewsEditorValue) {
     question: form.pollQuestion.trim(),
     options: form.pollOptions.map((option) => option.trim()).filter(Boolean),
     endsAt: form.pollEndsAt ? new Date(form.pollEndsAt).toISOString() : null,
+  };
+}
+
+function defaultBlogForm(): BlogEditorValue {
+  return {
+    title: '',
+    body: '',
+    coverImage: null,
+    isPublished: true,
+  };
+}
+
+function blogFormFromPost(item: BlogPost): BlogEditorValue {
+  return {
+    title: item.title,
+    body: item.body,
+    coverImage: item.coverImage ?? null,
+    isPublished: item.isPublished,
   };
 }
 
@@ -167,6 +190,11 @@ export default function AdminPanel({
   const [violations, setViolations] = useState<ViolationLogEntry[]>([]);
   const [violationsLoading, setViolationsLoading] = useState(false);
   const [editNews, setEditNews] = useState<NewsPost | null>(null);
+  const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
+  const [blogLoading, setBlogLoading] = useState(false);
+  const [blogForm, setBlogForm] = useState<BlogEditorValue>(defaultBlogForm());
+  const [showBlogEditor, setShowBlogEditor] = useState(false);
+  const [editBlog, setEditBlog] = useState<BlogPost | null>(null);
   const [defaultTheme, setDefaultTheme] = useState<ThemeId>('midnight');
   const [themeSaving, setThemeSaving] = useState(false);
   const [telegramForm, setTelegramForm] = useState({ botUsername: '', webAppUrl: '' });
@@ -385,6 +413,18 @@ export default function AdminPanel({
     }
   };
 
+  const loadBlog = async () => {
+    setBlogLoading(true);
+    try {
+      const { posts } = await fetchAdminBlog();
+      setBlogPosts(posts);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка загрузки блога');
+    } finally {
+      setBlogLoading(false);
+    }
+  };
+
   const loadBanList = async () => {
     setBanListLoading(true);
     try {
@@ -412,6 +452,7 @@ export default function AdminPanel({
 
   useEffect(() => {
     if (systemView === 'news') void loadNews();
+    if (systemView === 'blog') void loadBlog();
     if (systemView === 'violations') void loadViolations();
     if (systemView === 'banlist') void loadBanList();
   }, [systemView]);
@@ -715,6 +756,65 @@ export default function AdminPanel({
     setEditNews(item);
     setNewsForm(newsFormFromPost(item));
     setShowNewsEditor(true);
+  };
+
+  const resetBlogForm = () => {
+    setBlogForm(defaultBlogForm());
+    setEditBlog(null);
+    setShowBlogEditor(false);
+  };
+
+  const handleSaveBlog = async (e: FormEvent) => {
+    e.preventDefault();
+    const title = blogForm.title.trim();
+    const body = blogForm.body.trim();
+    if (!title || isEmptyNewsBody(body)) {
+      setError('Заголовок и текст статьи обязательны');
+      return;
+    }
+    try {
+      const payload = {
+        title,
+        body,
+        coverImage: blogForm.coverImage,
+        isPublished: blogForm.isPublished,
+      };
+      if (editBlog) {
+        await adminUpdateBlog(editBlog.id, payload);
+      } else {
+        await adminCreateBlog(payload);
+      }
+      resetBlogForm();
+      await loadBlog();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка сохранения статьи');
+    }
+  };
+
+  const handleEditBlog = (item: BlogPost) => {
+    setEditBlog(item);
+    setBlogForm(blogFormFromPost(item));
+    setShowBlogEditor(true);
+  };
+
+  const handleToggleBlogPublished = async (item: BlogPost) => {
+    try {
+      await adminUpdateBlog(item.id, { isPublished: !item.isPublished });
+      await loadBlog();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка');
+    }
+  };
+
+  const handleDeleteBlog = async (id: number) => {
+    if (!confirm('Удалить статью?')) return;
+    try {
+      await adminDeleteBlog(id);
+      if (editBlog?.id === id) resetBlogForm();
+      await loadBlog();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка удаления');
+    }
   };
 
   const handleClearViolations = async () => {
@@ -1312,6 +1412,90 @@ export default function AdminPanel({
                             {item.isPublished ? 'Снять с публикации' : 'Опубликовать'}
                           </button>
                           <button type="button" className="btn btn-sm danger" onClick={() => void handleDeleteNews(item.id)}>
+                            Удалить
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ),
+          blog: (
+            <section className="admin-section admin-section-embedded">
+              <div className="admin-section-head">
+                <h3>Блог ({blogPosts.length})</h3>
+                {!showBlogEditor && canManageNews && (
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={() => {
+                      setEditBlog(null);
+                      setBlogForm(defaultBlogForm());
+                      setShowBlogEditor(true);
+                    }}
+                  >
+                    + Новая статья
+                  </button>
+                )}
+              </div>
+
+              {showBlogEditor && (
+                <>
+                  {editBlog && <p className="muted">Редактирование #{editBlog.id}</p>}
+                  <BlogEditor
+                    key={editBlog?.id ?? 'new-blog'}
+                    value={blogForm}
+                    onChange={setBlogForm}
+                    onSubmit={handleSaveBlog}
+                    submitLabel="Сохранить"
+                    onCancel={resetBlogForm}
+                  />
+                </>
+              )}
+
+              {blogLoading && blogPosts.length === 0 && <p className="muted">Загрузка...</p>}
+
+              <div className="news-list admin-news-list">
+                {blogPosts.length === 0 && !blogLoading && <p className="muted">Статей пока нет</p>}
+                {blogPosts.map((item) => (
+                  <article key={item.id} className="news-card">
+                    <header className="news-card-header">
+                      <h2>{item.title}</h2>
+                      <time className="muted" dateTime={item.createdAt}>
+                        {new Date(item.createdAt).toLocaleString('ru-RU')}
+                      </time>
+                    </header>
+                    <p className="news-author muted">
+                      {item.authorName || '—'} · {item.isPublished ? 'опубликовано' : 'черновик'}
+                    </p>
+                    {item.coverImage && (
+                      <img
+                        src={avatarUrl(item.coverImage) ?? undefined}
+                        alt=""
+                        className="news-cover-image"
+                      />
+                    )}
+                    <NewsBody body={item.body} />
+                    <div className="admin-actions">
+                      {canManageNews && (
+                        <>
+                          <button type="button" className="btn btn-sm" onClick={() => handleEditBlog(item)}>
+                            Редактировать
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-sm"
+                            onClick={() => void handleToggleBlogPublished(item)}
+                          >
+                            {item.isPublished ? 'Снять с публикации' : 'Опубликовать'}
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-sm danger"
+                            onClick={() => void handleDeleteBlog(item.id)}
+                          >
                             Удалить
                           </button>
                         </>

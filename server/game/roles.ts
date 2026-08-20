@@ -6,6 +6,9 @@ import type { RoleId } from '../types/index.js';
  * Первый мафия в списке становится главным (don).
  */
 export function distributeRoles(playerCount: number): RoleId[] {
+  if (playerCount < 3) {
+    throw new Error(`Недостаточно игроков для раздачи ролей: ${playerCount}`);
+  }
   if (playerCount === 3) {
     return shuffle(['mafia', 'commissar', 'civilian']);
   }

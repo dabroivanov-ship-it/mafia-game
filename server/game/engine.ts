@@ -678,7 +678,7 @@ export function clearTimer(room: GameRoom): void {
 export function tryStartGameAfterRegistration(room: GameRoom): PrivateNote[] {
   if (room.phase !== PHASE.REGISTRATION) return [];
   const registered = listRegisteredPlayers(room);
-  if (registered.length >= room.maxPlayers) {
+  if (registered.length >= room.maxPlayers && registered.length >= CONFIG.MIN_PLAYERS) {
     return beginGame(room);
   }
   return [];
@@ -686,6 +686,11 @@ export function tryStartGameAfterRegistration(room: GameRoom): PrivateNote[] {
 
 export function onRegistrationTimerEnd(room: GameRoom): PrivateNote[] {
   if (room.phase !== PHASE.REGISTRATION) return [];
+  room.players.forEach((p) => {
+    if (p.inGame && !p.connected) {
+      p.inGame = false;
+    }
+  });
   const registered = listRegisteredPlayers(room);
   if (registered.length < CONFIG.MIN_PLAYERS) {
     room.phase = PHASE.WAITING;
@@ -715,6 +720,19 @@ function beginGame(room: GameRoom): PrivateNote[] {
     }
   });
   const participants = room.players.filter((p) => p.connected && p.inGame);
+
+  if (participants.length < CONFIG.MIN_PLAYERS) {
+    room.phase = PHASE.WAITING;
+    room.players.forEach((p) => {
+      p.inGame = false;
+      p.role = null;
+    });
+    addHostMessage(
+      room,
+      `⏱ К старту осталось ${participants.length} из ${CONFIG.MIN_PLAYERS} нужных (кто-то вышел или отключился). Игра не состоялась — можно запустить снова.`
+    );
+    return [];
+  }
 
   const roles = distributeRoles(participants.length);
   participants.forEach((p, i) => {

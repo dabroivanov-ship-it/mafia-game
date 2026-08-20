@@ -16,6 +16,7 @@ export type SystemView =
   | 'game-rooms'
   | 'chat-rooms'
   | 'news'
+  | 'blog'
   | 'announcement'
   | 'violations'
   | 'stats'
@@ -78,6 +79,7 @@ interface AdminSystemSectionProps {
     gameRooms: ReactNode;
     chatRooms: ReactNode;
     news: ReactNode;
+    blog: ReactNode;
     violations: ReactNode;
   };
 }
@@ -105,6 +107,7 @@ const SYSTEM_CATEGORIES: {
     links: [
       { view: 'stats', label: 'Статистика' },
       { view: 'news', label: 'Новости' },
+      { view: 'blog', label: 'Блог' },
       { view: 'announcement', label: 'Объявление на главной' },
       { view: 'backup', label: 'Резервные копии' },
       { view: 'theme', label: 'Тема сайта' },
@@ -129,6 +132,7 @@ const VIEW_TITLES: Record<Exclude<SystemView, 'hub'>, string> = {
   'game-rooms': 'Комнаты мафии',
   'chat-rooms': 'Комнаты чата',
   news: 'Новости',
+  blog: 'Блог',
   announcement: 'Объявление на главной',
   violations: 'Журнал модерации',
   stats: 'Статистика',
@@ -235,6 +239,7 @@ export default function AdminSystemSection({
           <div className="admin-system-detail-panel admin-system-wide">{panels.chatRooms}</div>
         )}
         {view === 'news' && <div className="admin-system-detail-panel admin-system-wide">{panels.news}</div>}
+        {view === 'blog' && <div className="admin-system-detail-panel admin-system-wide">{panels.blog}</div>}
         {view === 'announcement' && (
           <div className="admin-system-detail-panel admin-system-wide">
             <AdminLobbyAnnouncementEditor onAnnouncementChange={onAnnouncementChange} />

@@ -29,6 +29,13 @@ import {
   listAllNews,
   findNewsById,
 } from '../news/store.js';
+import {
+  createBlogPost,
+  updateBlogPost,
+  deleteBlogPost,
+  listAllBlog,
+  findBlogById,
+} from '../blog/store.js';
 import { upsertPollForNews, type PollInput } from '../news/polls.js';
 import { listViolations, clearViolations } from '../moderation/violationLog.js';
 import { newsImageUpload, newsImagePublicPath } from '../upload/newsImage.js';
@@ -472,6 +479,46 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
   router.delete('/news/:id', requireAdminPermission('manage_news'), (req, res) => {
     const ok = deleteNews(Number(req.params.id));
     if (!ok) return res.status(404).json({ error: 'Новость не найдена' });
+    res.json({ ok: true });
+  });
+
+  router.get('/blog', requireAdminPermission('manage_news'), (_req, res) => {
+    res.json({ posts: listAllBlog(100) });
+  });
+
+  router.post('/blog', requireAdminPermission('manage_news'), (req, res) => {
+    try {
+      const post = createBlogPost(req.userId!, {
+        title: req.body.title,
+        body: req.body.body,
+        coverImage: req.body.coverImage ?? null,
+        isPublished: req.body.isPublished !== false,
+      });
+      res.status(201).json({ post: findBlogById(post.id) });
+    } catch (err) {
+      res.status(400).json({ error: err instanceof Error ? err.message : 'Ошибка' });
+    }
+  });
+
+  router.put('/blog/:id', requireAdminPermission('manage_news'), (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const post = updateBlogPost(id, {
+        title: req.body.title,
+        body: req.body.body,
+        coverImage: req.body.coverImage,
+        isPublished: req.body.isPublished,
+      });
+      if (!post) return res.status(404).json({ error: 'Статья не найдена' });
+      res.json({ post });
+    } catch (err) {
+      res.status(400).json({ error: err instanceof Error ? err.message : 'Ошибка' });
+    }
+  });
+
+  router.delete('/blog/:id', requireAdminPermission('manage_news'), (req, res) => {
+    const ok = deleteBlogPost(Number(req.params.id));
+    if (!ok) return res.status(404).json({ error: 'Статья не найдена' });
     res.json({ ok: true });
   });
 

@@ -1,4 +1,7 @@
+import { useState } from 'react';
 import type { GamePhase, LobbyRoom, LobbyAnnouncement } from '../types';
+import SiteOnlineStatus from './SiteOnlineStatus';
+import LobbyBlog from './LobbyBlog';
 
 function mailNoticeLabel(count: number): string {
   if (count === 1) return 'У вас 1 новое сообщение';
@@ -32,10 +35,12 @@ export type LobbyScreen =
 
 interface LobbyProps {
   rooms: LobbyRoom[];
+  siteOnlineCount?: number;
   announcement?: LobbyAnnouncement | null;
   onJoin: (roomId: number) => void;
   unreadMailCount?: number;
   onOpenMessages?: () => void;
+  onOpenOnlineUsers?: () => void;
 }
 
 function RoomCard({
@@ -76,11 +81,14 @@ function RoomCard({
 
 export default function Lobby({
   rooms,
+  siteOnlineCount = 0,
   announcement = null,
   onJoin,
   unreadMailCount = 0,
   onOpenMessages,
+  onOpenOnlineUsers,
 }: LobbyProps) {
+  const [blogPostId, setBlogPostId] = useState<number | null>(null);
   const gameRooms = rooms.filter((r) => r.kind !== 'chat');
   const chatRooms = rooms.filter((r) => r.kind === 'chat');
 
@@ -110,36 +118,48 @@ export default function Lobby({
         </button>
       )}
 
-      <section className="lobby-rooms-section">
-        <h2 className="lobby-section-title">Игровые комнаты</h2>
-        <div className="rooms-list">
-          {rooms.length === 0 && <p className="muted">Загрузка комнат...</p>}
-          {gameRooms.length === 0 && rooms.length > 0 && (
-            <p className="muted">Игровых комнат нет</p>
-          )}
-          {gameRooms.map((room) => (
-            <RoomCard key={room.id} room={room} onJoin={onJoin} joinLabel="Войти" />
-          ))}
-        </div>
-      </section>
+      {blogPostId == null && (
+        <>
+          <section className="lobby-rooms-section">
+            <h2 className="lobby-section-title">Игровые комнаты</h2>
+            <div className="rooms-list">
+              {rooms.length === 0 && <p className="muted">Загрузка комнат...</p>}
+              {gameRooms.length === 0 && rooms.length > 0 && (
+                <p className="muted">Игровых комнат нет</p>
+              )}
+              {gameRooms.map((room) => (
+                <RoomCard key={room.id} room={room} onJoin={onJoin} joinLabel="Войти" />
+              ))}
+            </div>
+          </section>
 
-      <section className="lobby-rooms-section">
-        <h2 className="lobby-section-title">Чат</h2>
-        <div className="rooms-list">
-          {chatRooms.length === 0 && rooms.length > 0 && (
-            <p className="muted">Чат-комнат пока нет</p>
-          )}
-          {chatRooms.map((room) => (
-            <RoomCard
-              key={room.id}
-              room={room}
-              onJoin={onJoin}
-              joinLabel="Войти"
-              showPhase={false}
-            />
-          ))}
-        </div>
-      </section>
+          <section className="lobby-rooms-section">
+            <h2 className="lobby-section-title">Чат</h2>
+            <div className="rooms-list">
+              {chatRooms.length === 0 && rooms.length > 0 && (
+                <p className="muted">Чат-комнат пока нет</p>
+              )}
+              {chatRooms.map((room) => (
+                <RoomCard
+                  key={room.id}
+                  room={room}
+                  onJoin={onJoin}
+                  joinLabel="Войти"
+                  showPhase={false}
+                />
+              ))}
+            </div>
+          </section>
+        </>
+      )}
+
+      <LobbyBlog selectedId={blogPostId} onSelect={setBlogPostId} />
+
+      {blogPostId == null && onOpenOnlineUsers && (
+        <footer className="lobby-online-footer">
+          <SiteOnlineStatus count={siteOnlineCount} onOpen={onOpenOnlineUsers} />
+        </footer>
+      )}
     </div>
   );
 }

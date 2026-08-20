@@ -1,4 +1,4 @@
-import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, NewsPoll, NewsPollInput, NewsComment, MailConversation, RoomKind, ThemeId, ViolationLogEntry, UserSearchHit, UserPresence, FriendUser, LeaderboardEntry, QuizLeaderboardEntry, SiteBranding, LobbyAnnouncement, UserStatisticsResponse, UserNotification, PublicSiteStats } from './types';
+import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, NewsPoll, NewsPollInput, NewsComment, BlogPost, MailConversation, RoomKind, ThemeId, ViolationLogEntry, UserSearchHit, UserPresence, FriendUser, LeaderboardEntry, QuizLeaderboardEntry, SiteBranding, LobbyAnnouncement, UserStatisticsResponse, UserNotification, PublicSiteStats } from './types';
 import type { AdminPermission } from './adminPermissions';
 
 const API_BASE =
@@ -581,6 +581,49 @@ export async function adminUploadNewsImage(file: File): Promise<{ url: string }>
   const form = new FormData();
   form.append('image', file);
   return apiRequest('/api/admin/news/upload-image', { method: 'POST', body: form });
+}
+
+export async function fetchBlog(): Promise<{ posts: BlogPost[] }> {
+  return apiRequest('/api/blog');
+}
+
+export async function fetchBlogPost(id: number): Promise<{ post: BlogPost }> {
+  return apiRequest(`/api/blog/${id}`);
+}
+
+export async function fetchAdminBlog(): Promise<{ posts: BlogPost[] }> {
+  return apiRequest('/api/admin/blog');
+}
+
+export async function adminCreateBlog(payload: {
+  title: string;
+  body: string;
+  coverImage?: string | null;
+  isPublished?: boolean;
+}): Promise<{ post: BlogPost }> {
+  return apiRequest('/api/admin/blog', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function adminUpdateBlog(
+  id: number,
+  payload: {
+    title?: string;
+    body?: string;
+    coverImage?: string | null;
+    isPublished?: boolean;
+  }
+): Promise<{ post: BlogPost }> {
+  return apiRequest(`/api/admin/blog/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function adminDeleteBlog(id: number): Promise<void> {
+  await apiRequest(`/api/admin/blog/${id}`, { method: 'DELETE' });
 }
 
 export async function fetchViolationLog(): Promise<{ violations: ViolationLogEntry[] }> {
