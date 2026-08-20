@@ -117,6 +117,7 @@ function didPlayerWin(role: RoleId | null, winnerTeam: WinnerTeam): boolean {
   if (!role || !winnerTeam || winnerTeam === 'draw') return false;
   if (winnerTeam === 'town') return isTown(role) && role !== 'maniac';
   if (winnerTeam === 'mafia') return isMafiaTeam(role);
+  if (winnerTeam === 'maniac') return role === 'maniac';
   return false;
 }
 

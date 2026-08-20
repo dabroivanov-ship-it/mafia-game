@@ -54,6 +54,7 @@ import type {
   RoomState,
   RoomStatePlayer,
   TimerReason,
+  WinnerTeam,
 } from '../types/index.js';
 
 let nextPlayerId = 1;
@@ -1441,34 +1442,47 @@ export function resolveNight(room: GameRoom): NightResolveResult {
   return { privateNotes };
 }
 
-/** Катани и мафия 1v1 — ничья. */
+/** Катани и чёрный (мафия или адвокат) 1v1 — ничья. */
 function isCommissarMafiaDraw(alive: GamePlayer[]): boolean {
   if (alive.length !== 2) return false;
-  return alive.some((p) => p.role === 'commissar') && alive.some((p) => p.role === 'mafia');
+  return alive.some((p) => p.role === 'commissar') && alive.some((p) => isMafiaTeam(p.role));
+}
+
+/** Главный мафиози и горец 1v1 — ничья: ночной выстрел мафии горца не берёт. */
+function isDonHighlanderDraw(alive: GamePlayer[]): boolean {
+  if (alive.length !== 2) return false;
+  return alive.some((p) => p.role === 'mafia') && alive.some((p) => p.role === 'highlander');
 }
 
 export function checkWin(room: GameRoom): boolean {
   const alive = room.players.filter((p) => p.alive && p.inGame && p.role);
-  const mafiaAlive = alive.filter((p) => p.role === 'mafia').length;
-  const maniacAlive = alive.filter((p) => p.role === 'maniac').length;
+  const mafiaSideAlive = alive.filter((p) => isMafiaTeam(p.role)).length;
   const townAlive = alive.filter((p) => isTown(p.role)).length;
 
-  if (mafiaAlive === 0 && maniacAlive === 0) {
+  if (mafiaSideAlive === 0) {
+    if (alive.length > 0 && alive.every((p) => p.role === 'maniac')) {
+      endGame(room, 'maniac', 'Маньяк победил!');
+      return true;
+    }
     endGame(room, 'town', 'Мирные победили!');
     return true;
   }
-  if (mafiaAlive > 0 && mafiaAlive >= townAlive) {
-    if (isCommissarMafiaDraw(alive)) {
-      endGame(room, 'draw', 'Ничья! Катани и мафия остались один на один.');
-      return true;
-    }
+  if (isCommissarMafiaDraw(alive)) {
+    endGame(room, 'draw', 'Ничья! Катани и мафия остались один на один.');
+    return true;
+  }
+  if (isDonHighlanderDraw(alive)) {
+    endGame(room, 'draw', 'Ничья! Главный мафиози и горец остались один на один.');
+    return true;
+  }
+  if (townAlive === 0) {
     endGame(room, 'mafia', 'Мафия победила!');
     return true;
   }
   return false;
 }
 
-function endGame(room: GameRoom, team: 'town' | 'mafia' | 'draw', message: string): void {
+function endGame(room: GameRoom, team: NonNullable<WinnerTeam>, message: string): void {
   room.phase = PHASE.ENDED;
   room.winnerTeam = team;
   clearTimer(room);
@@ -1492,6 +1506,8 @@ function endGame(room: GameRoom, team: 'town' | 'mafia' | 'draw', message: strin
       p.score += p.alive ? 100 : 50;
     } else if (team === 'mafia' && isMafiaTeam(p.role)) {
       p.score += p.alive ? 50 : 0;
+    } else if (team === 'maniac' && p.role === 'maniac') {
+      p.score += p.alive ? 100 : 50;
     }
   });
 }
