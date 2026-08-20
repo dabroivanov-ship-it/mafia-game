@@ -286,10 +286,14 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
     }
 
     const invitedRaw = regForm.invitedByUserId.trim();
-    const invitedByUserId = invitedRaw ? Number(invitedRaw) : null;
-    if (invitedRaw && (!Number.isInteger(invitedByUserId) || invitedByUserId <= 0)) {
-      setError('Некорректный id пригласившего');
-      return;
+    let invitedByUserId: number | null = null;
+    if (invitedRaw) {
+      const id = Number(invitedRaw);
+      if (!Number.isInteger(id) || id <= 0) {
+        setError('Некорректный id пригласившего');
+        return;
+      }
+      invitedByUserId = id;
     }
 
     setLoading(true);
