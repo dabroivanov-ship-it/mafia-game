@@ -560,19 +560,6 @@ export default function App() {
     window.history.pushState(null, '', '/');
   }, []);
 
-  const returnToMinimizedRoom = useCallback(() => {
-    if (!currentRoomId) return;
-    setRoomMinimized(false);
-    setRoomScreen('game');
-    setProfileStatsUserId(null);
-    setComposeToUserId(null);
-    setComposeToUsername(null);
-    setMessageThreadUserId(null);
-    setMessageThreadUsername(null);
-    setMessagesOpenUnread(false);
-    window.history.pushState(null, '', roomGamePath(currentRoomId));
-  }, [currentRoomId]);
-
   const handleNotificationSelect = useCallback(
     async (notification: UserNotification) => {
       if (!notification.isRead) {
@@ -852,13 +839,6 @@ export default function App() {
 
       <div className="app-main">
         {notificationBar}
-        {currentRoomId && roomMinimized && roomState && (
-          <div className="return-to-room-bar">
-            <button type="button" className="btn btn-primary btn-sm" onClick={returnToMinimizedRoom}>
-              Вернуться в комнату «{roomState.name}»
-            </button>
-          </div>
-        )}
         <div className="app-body">
         {profileStatsUserId != null ? (
           <ViewSuspense label="Статистика…">
@@ -930,14 +910,6 @@ export default function App() {
               openUnread={messagesOpenUnread}
               mailReadReceipt={mailReadReceipt}
               onUnreadChange={setUnreadMailCount}
-              returnToRoomLabel={
-                currentRoomId && roomMinimized && roomState
-                  ? `Вернуться в комнату «${roomState.name}»`
-                  : null
-              }
-              onReturnToRoom={
-                currentRoomId && roomMinimized ? returnToMinimizedRoom : undefined
-              }
               onInitialNavigationHandled={() => {
                 setMessageThreadUserId(null);
                 setMessageThreadUsername(null);

@@ -27,8 +27,6 @@ interface MessagesProps {
   mailReadReceipt?: { readerId: number; messageIds: number[] } | null;
   onBack: () => void;
   onInitialNavigationHandled?: () => void;
-  returnToRoomLabel?: string | null;
-  onReturnToRoom?: () => void;
 }
 
 export default function Messages({
@@ -41,8 +39,6 @@ export default function Messages({
   mailReadReceipt = null,
   onBack,
   onInitialNavigationHandled,
-  returnToRoomLabel = null,
-  onReturnToRoom,
 }: MessagesProps) {
   const [view, setView] = useState<MailView>(
     threadUserId ? 'thread' : composeToUserId || composeToUsername ? 'compose' : 'list'
@@ -304,14 +300,6 @@ export default function Messages({
           </button>
         )}
       </nav>
-
-      {returnToRoomLabel && onReturnToRoom && (
-        <div className="messages-return-room">
-          <button type="button" className="btn btn-primary btn-sm" onClick={onReturnToRoom}>
-            {returnToRoomLabel}
-          </button>
-        </div>
-      )}
 
       <header className="page-header">
         <h1>
