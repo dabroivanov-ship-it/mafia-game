@@ -98,8 +98,3 @@ export function isEvil(role: RoleId | null | undefined): boolean {
 export function isMafiaImmune(role: RoleId | null | undefined): boolean {
   return role === 'highlander';
 }
-
-/** Клоун не подвержен соблазнению путаны */
-export function isSeductionImmune(role: RoleId | null | undefined): boolean {
-  return role === 'clown';
-}

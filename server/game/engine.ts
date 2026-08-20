@@ -1,6 +1,6 @@
 import { CONFIG, PHASE, isLobbyPhase, isActiveGamePhase } from './config.js';
 import { isValidNightActionForRole } from '../security/validate.js';
-import { distributeRoles, isMafia, isMafiaTeam, isTown, isEvil, isMafiaImmune, isSeductionImmune, getRoleLabel } from './roles.js';
+import { distributeRoles, isMafia, isMafiaTeam, isTown, isEvil, isMafiaImmune, getRoleLabel } from './roles.js';
 import {
   buildRoleRevealNotes,
   buildNightReminderNotes,
@@ -1103,6 +1103,9 @@ function emitNightAtmosphereForAction(room: GameRoom, player: GamePlayer, action
     case 'doctor':
       if (action.type === 'heal') atmosphereKey = 'doctor';
       break;
+    case 'prostitute':
+      if (action.type === 'seduce') atmosphereKey = 'prostitute';
+      break;
     case 'advocate':
       if (action.type === 'cover') atmosphereKey = 'advocate';
       break;
@@ -1196,23 +1199,29 @@ export function resolveNight(room: GameRoom): NightResolveResult {
   const heals = new Set<number>();
   const privateNotes: PrivateNote[] = [];
   const report: NightReport = { killed: [] };
+  let commissarShot: GamePlayer | null = null;
+  let maniacShot: GamePlayer | null = null;
+  let doctorSaveBonus = false;
+
+  const awardDoctorSave = (): void => {
+    if (doctorSaveBonus) return;
+    doctorSaveBonus = true;
+    const doc = room.players.find((p) => p.role === 'doctor' && p.alive);
+    if (doc) doc.score += 15;
+  };
 
   const prostitute = room.players.find((p) => p.alive && p.role === 'prostitute');
   if (prostitute && actions[prostitute.id]?.type === 'seduce') {
     const act = actions[prostitute.id] as Extract<NightAction, { type: 'seduce' }>;
     const target = room.players.find((p) => p.id === act.targetId);
-    if (target && !isSeductionImmune(target.role)) {
+    if (target?.alive && target.id !== prostitute.id) {
       room.seducedPlayerId = target.id;
       prostitute.score += 5;
       report.prostituteSeduced = target;
     }
   }
 
-  const isSeduced = (playerId: number): boolean => {
-    const p = room.players.find((pl) => pl.id === playerId);
-    if (!p || isSeductionImmune(p.role)) return false;
-    return room.seducedPlayerId === playerId;
-  };
+  const isSeduced = (playerId: number): boolean => room.seducedPlayerId === playerId;
 
   const mafiaDon = room.players.find((p) => p.alive && p.role === 'mafia' && p.isDon);
   let mafiaTarget: number | null = null;
@@ -1268,10 +1277,7 @@ export function resolveNight(room: GameRoom): NightResolveResult {
     } else if (act?.type === 'kill') {
       const target = room.players.find((p) => p.id === act.targetId);
       if (target?.alive) {
-        if (isEvil(target.role)) commissar.score += 20;
-        else commissar.score -= 5;
-        deaths.add(target.id);
-        report.commissarKilled = target;
+        commissarShot = target;
       }
     }
   }
@@ -1281,11 +1287,8 @@ export function resolveNight(room: GameRoom): NightResolveResult {
     const act = actions[maniac.id];
     if (act?.type === 'kill') {
       const target = room.players.find((p) => p.id === act.targetId);
-      if (target) {
-        if (isMafia(target.role)) maniac.score += 20;
-        else maniac.score -= 5;
-        deaths.add(target.id);
-        report.maniacKilled = target;
+      if (target?.alive) {
+        maniacShot = target;
       }
     }
   }
@@ -1305,6 +1308,30 @@ export function resolveNight(room: GameRoom): NightResolveResult {
           report.doctorSelfHeal = selfHeal;
         }
       }
+    }
+  }
+
+  if (commissarShot && commissar) {
+    if (heals.has(commissarShot.id)) {
+      awardDoctorSave();
+      report.commissarSaved = commissarShot;
+    } else {
+      if (isEvil(commissarShot.role)) commissar.score += 20;
+      else commissar.score -= 5;
+      deaths.add(commissarShot.id);
+      report.commissarKilled = commissarShot;
+    }
+  }
+
+  if (maniacShot && maniac) {
+    if (heals.has(maniacShot.id)) {
+      awardDoctorSave();
+      report.maniacSaved = maniacShot;
+    } else {
+      if (isMafia(maniacShot.role)) maniac.score += 20;
+      else maniac.score -= 5;
+      deaths.add(maniacShot.id);
+      report.maniacKilled = maniacShot;
     }
   }
 
@@ -1375,15 +1402,14 @@ export function resolveNight(room: GameRoom): NightResolveResult {
       report.mafiaAttacked = target;
       if (isMafiaImmune(target.role)) {
         report.highlanderAttacked = target;
-      } else if (!heals.has(mafiaTarget)) {
+      } else if (heals.has(mafiaTarget)) {
+        awardDoctorSave();
+      } else {
         deaths.add(mafiaTarget);
         report.mafiaKilled = target;
         room.players.filter((p) => p.alive && p.role === 'mafia').forEach((m) => {
           m.score += 10;
         });
-      } else {
-        const doc = room.players.find((p) => p.role === 'doctor' && p.alive);
-        if (doc) doc.score += 15;
       }
     }
   }

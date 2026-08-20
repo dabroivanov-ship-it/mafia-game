@@ -78,6 +78,17 @@ export const BOT_PHRASE_DEFINITIONS: BotPhraseDefinition[] = [
     defaultValue: ['Доктор готовит аптечку и выбирает, кого спасти этой ночью...'].join('\n'),
   },
   {
+    key: 'atmosphere.prostitute',
+    group: 'Ночь',
+    label: 'Атмосфера: путана',
+    type: 'lines',
+    defaultValue: [
+      'Путана выбирает, кого оставить без ночного хода...',
+      'В одном из окон ещё горит свет — путана уже в деле...',
+      'Кто-то этой ночью не успеет сделать свой ход...',
+    ].join('\n'),
+  },
+  {
     key: 'atmosphere.maniac',
     group: 'Ночь',
     label: 'Атмосфера: маньяк',
@@ -106,75 +117,189 @@ export const BOT_PHRASE_DEFINITIONS: BotPhraseDefinition[] = [
     defaultValue: 'Вот и день наступил. Но все ли дожили до него?',
   },
   {
-    key: 'morning.killed_commissar',
+    key: 'morning.deaths',
     group: 'Утро',
-    label: 'Утро: погиб комиссар',
+    label: 'Утро: список погибших',
     type: 'text',
-    placeholders: ['{nick}'],
-    defaultValue: 'Не все дожили до рассвета — среди погибших комиссар {nick}.',
-  },
-  {
-    key: 'morning.killed_player',
-    group: 'Утро',
-    label: 'Утро: погиб игрок',
-    type: 'text',
-    placeholders: ['{nick}', '{role}'],
-    defaultValue: '{nick} ({role}) не дожил(а) до утра.',
+    placeholders: ['{list}'],
+    defaultValue: 'Этой ночью погибли: {list}.',
   },
   {
     key: 'morning.after_kills',
     group: 'Утро',
     label: 'Утро после ночных убийств',
     type: 'text',
-    defaultValue: 'Вот и день наступил.',
+    defaultValue: 'Вот и день наступил. Но все ли дожили до него?',
+  },
+  {
+    key: 'report.commissar_check',
+    group: 'Сводка дня',
+    label: 'Катани проверил игрока',
+    type: 'lines',
+    hint: 'Одна фраза на строку. Результат проверки в общий чат не пишите.',
+    placeholders: ['{nick}'],
+    defaultValue: [
+      'Инспектор Катани времени зря не терял. Проведя тщательное расследование, он наконец-то выяснил, кто такой {nick}!',
+      'Катани не спал. К утру у него было имя: {nick}.',
+      'Инспектор Катани провёл ночь за делом и вышел к городу: он знает, кто такой {nick}.',
+    ].join('\n'),
+  },
+  {
+    key: 'report.homeless_check',
+    group: 'Сводка дня',
+    label: 'Бомж проверил игрока',
+    type: 'lines',
+    placeholders: ['{nick}'],
+    defaultValue: [
+      'Бомж этой ночью заглянул не в те окна и теперь знает, кто такой {nick}.',
+      'По дворам ходил бомж. К рассвету он выяснил, кто такой {nick}.',
+    ].join('\n'),
+  },
+  {
+    key: 'report.prostitute',
+    group: 'Сводка дня',
+    label: 'Путана соблазнила',
+    type: 'lines',
+    placeholders: ['{nick}'],
+    defaultValue: [
+      'Путана не дала {nick} заняться своими ночными делами.',
+      '{nick} этой ночью был(а) занят(а) — до своих дел так и не добрался.',
+    ].join('\n'),
+  },
+  {
+    key: 'report.doctor_heal',
+    group: 'Сводка дня',
+    label: 'Доктор лечил',
+    type: 'lines',
+    placeholders: ['{nick}'],
+    defaultValue: [
+      'Доктор не сидел сложа руки: к утру {nick} был(а) цел(а).',
+      'Этой ночью кто-то успел к {nick} с аптечкой.',
+    ].join('\n'),
+  },
+  {
+    key: 'report.doctor_self',
+    group: 'Сводка дня',
+    label: 'Доктор лечил себя',
+    type: 'lines',
+    placeholders: ['{nick}'],
+    defaultValue: ['Доктор этой ночью занимался собой ({nick}).'].join('\n'),
+  },
+  {
+    key: 'report.advocate_cover',
+    group: 'Сводка дня',
+    label: 'Адвокат укрыл',
+    type: 'lines',
+    placeholders: ['{nick}'],
+    defaultValue: [
+      'Адвокат этой ночью заметал следы вокруг {nick}.',
+    ].join('\n'),
   },
   {
     key: 'report.commissar_kill_don',
-    group: 'Сводка ночи',
+    group: 'Сводка дня',
     label: 'Комиссар убил дона',
     type: 'text',
     placeholders: ['{role}', '{nick}'],
-    defaultValue: 'Комиссар Катани убил {role} {nick}',
+    defaultValue:
+      'Катани этой ночью не проверял — стрелял. Не стало {nick}.',
   },
   {
     key: 'report.commissar_kill_mafioso',
-    group: 'Сводка ночи',
+    group: 'Сводка дня',
     label: 'Комиссар убил мафиози',
     type: 'text',
     placeholders: ['{role}', '{nick}'],
-    defaultValue: 'Комиссар Катани убил {role} {nick}',
+    defaultValue: 'Катани этой ночью сам нажал на курок. Не стало {nick}.',
   },
   {
     key: 'report.commissar_kill_other',
-    group: 'Сводка ночи',
+    group: 'Сводка дня',
     label: 'Комиссар убил игрока',
     type: 'text',
-    placeholders: ['{role}', '{nick}'],
-    defaultValue: 'Комиссар Катани убил {role} {nick}',
+    placeholders: ['{role}', '{roleName}', '{nick}'],
+    defaultValue: 'Инспектор Катани этой ночью выстрелил. Не стало {nick}.',
+  },
+  {
+    key: 'report.commissar_saved',
+    group: 'Сводка дня',
+    label: 'Доктор спас от выстрела Катани',
+    type: 'lines',
+    placeholders: ['{nick}'],
+    defaultValue: [
+      'Катани выстрелил в {nick}, но тот дожил до утра: доктор успел.',
+    ].join('\n'),
   },
   {
     key: 'report.mafia_kill',
-    group: 'Сводка ночи',
+    group: 'Сводка дня',
     label: 'Мафия убила жертву',
-    type: 'text',
+    type: 'lines',
     placeholders: ['{role}', '{nick}'],
-    defaultValue: 'Мафия убила {role} {nick}.',
+    defaultValue: [
+      'Главарь мафии этой ночью оставил без зубов {nick}.',
+      'Главарь мафии этой ночью разобрался с {nick}.',
+      'Мафия этой ночью не оставила {nick} шанса.',
+    ].join('\n'),
+  },
+  {
+    key: 'report.mafia_saved',
+    group: 'Сводка дня',
+    label: 'Доктор спас от мафии',
+    type: 'lines',
+    placeholders: ['{nick}'],
+    defaultValue: [
+      'Мафия устроила терракт, но {nick} выбрался живым: доктор был рядом.',
+    ].join('\n'),
+  },
+  {
+    key: 'report.highlander',
+    group: 'Сводка дня',
+    label: 'Горец пережил атаку мафии',
+    type: 'lines',
+    placeholders: ['{nick}'],
+    defaultValue: [
+      'Мафия била в {nick}, но горец встал и ушёл.',
+    ].join('\n'),
   },
   {
     key: 'report.maniac_kill',
-    group: 'Сводка ночи',
+    group: 'Сводка дня',
     label: 'Маньяк убил',
-    type: 'text',
+    type: 'lines',
     placeholders: ['{role}', '{nick}'],
-    defaultValue: 'Маньяк убил {role} {nick}.',
+    defaultValue: [
+      'Маньяк этой ночью оставил без зубов {nick}.',
+      'Маньяк этой ночью разобрался с {nick}.',
+    ].join('\n'),
+  },
+  {
+    key: 'report.maniac_saved',
+    group: 'Сводка дня',
+    label: 'Доктор спас от маньяка',
+    type: 'lines',
+    placeholders: ['{nick}'],
+    defaultValue: [
+      'Маньяк напал на {nick}, но доктор вытащил его до рассвета.',
+    ].join('\n'),
   },
   {
     key: 'report.wife_kill',
-    group: 'Сводка ночи',
+    group: 'Сводка дня',
     label: 'Месть жены комиссара',
     type: 'text',
     placeholders: ['{role}', '{nick}'],
-    defaultValue: 'Жена комиссара отомстила — убила {role} {nick}.',
+    defaultValue: 'Жена комиссара этой ночью отомстила. Не стало {nick}.',
+  },
+  {
+    key: 'report.clown_swap',
+    group: 'Сводка дня',
+    label: 'Клоун поменял роли',
+    type: 'lines',
+    placeholders: ['{a}', '{b}'],
+    defaultValue: [
+      'К утру {a} и {b} будто поменялись местами — клоун постарался.',
+    ].join('\n'),
   },
   {
     key: 'day.discussion',
@@ -182,7 +307,7 @@ export const BOT_PHRASE_DEFINITIONS: BotPhraseDefinition[] = [
     label: 'Начало дня',
     type: 'text',
     placeholders: ['{day}'],
-    defaultValue: '☀️ День {day}. Сводка ночи выше — можно сразу выдвигать кандидата на казнь.',
+    defaultValue: 'День {day}. Город просыпается. Пора решать, кто ответит за эту ночь.',
   },
   {
     key: 'day.discussion_private',
@@ -233,7 +358,7 @@ export const BOT_PHRASE_DEFINITIONS: BotPhraseDefinition[] = [
     group: 'Ночь',
     label: 'Главарь не выбрал жертву',
     type: 'text',
-    defaultValue: 'Главарь мафии не определился с жертвой — от рук мафии никто не пострадал.',
+    defaultValue: 'Главарь мафии не определился с жертвой — от их рук никто не пострадал.',
   },
   {
     key: 'voting.majority',
@@ -345,7 +470,7 @@ export const BOT_PHRASE_DEFINITIONS: BotPhraseDefinition[] = [
     group: 'Подсказки ролей',
     label: 'Доктор',
     type: 'text',
-    defaultValue: 'Выберите, кого вылечить этой ночью (себя — не чаще раза в 3 ночи).',
+    defaultValue: 'Выберите, кого вылечить этой ночью (себя — не чаще раза в 3 ночи). Спасает от мафии, маньяка и выстрела Катани.',
   },
   {
     key: 'prompt.homeless',
@@ -359,7 +484,7 @@ export const BOT_PHRASE_DEFINITIONS: BotPhraseDefinition[] = [
     group: 'Подсказки ролей',
     label: 'Путана',
     type: 'text',
-    defaultValue: 'Выберите, кого соблазнить — его ночное действие будет заблокировано.',
+    defaultValue: 'Выберите, кого соблазнить — ночной ход цели этой ночью не сработает (дон, Катани, доктор, маньяк, клоун и любой другой, кто ходит).',
   },
   {
     key: 'prompt.maniac',
@@ -490,10 +615,11 @@ export function getPhraseLines(key: string): string[] {
     .filter(Boolean);
 }
 
-export function pickPhraseLine(key: string): string {
+export function pickPhraseLine(key: string, vars?: Record<string, string | number>): string {
   const lines = getPhraseLines(key);
-  if (lines.length === 0) return '';
-  return lines[Math.floor(Math.random() * lines.length)];
+  if (lines.length === 0) return vars ? getPhraseText(key, vars) : '';
+  const line = lines[Math.floor(Math.random() * lines.length)];
+  return vars ? renderPhraseTemplate(line, vars) : line;
 }
 
 export function listBotPhrasesForAdmin(): {

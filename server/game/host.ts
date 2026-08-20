@@ -41,8 +41,30 @@ function getKillTargetRolePhrase(target: GamePlayer): string {
   return KILL_TARGET_ROLE[target.role] || getRoleLabel(target.role).toLowerCase();
 }
 
-function killReportVars(target: GamePlayer): { nick: string; role: string } {
-  return { nick: playerNick(target), role: getKillTargetRolePhrase(target) };
+function killReportVars(target: GamePlayer): { nick: string; role: string; roleName: string } {
+  return {
+    nick: playerNick(target),
+    role: getKillTargetRolePhrase(target),
+    roleName: target.role ? getRoleLabel(target.role) : 'игрок',
+  };
+}
+
+function morningDeathLabel(player: GamePlayer): string {
+  const nick = playerNick(player);
+  if (player.role === 'commissar') return `комиссар Катани ${nick}`;
+  if (player.isDon) return `главарь мафии ${nick}`;
+  if (player.role === 'mafia') return `мафия ${nick}`;
+  if (player.role === 'commissar_wife') return `жена комиссара ${nick}`;
+  if (player.role === 'civilian') return `мирный житель ${nick}`;
+  const role = player.role ? getRoleLabel(player.role) : 'игрок';
+  return `${role.toLowerCase()} ${nick}`;
+}
+
+function morningDeathsLine(killed: GamePlayer[]): string {
+  if (killed.length === 0) return '';
+  return getPhraseText('morning.deaths', {
+    list: killed.map(morningDeathLabel).join(', '),
+  });
 }
 
 function getCommissarKillReportLine(target: GamePlayer): string {
@@ -352,6 +374,8 @@ export interface NightReport {
 
   commissarKilled?: GamePlayer;
 
+  commissarSaved?: GamePlayer;
+
   homelessChecked?: GamePlayer;
 
   advocateCovered?: GamePlayer;
@@ -370,6 +394,8 @@ export interface NightReport {
 
   maniacKilled?: GamePlayer;
 
+  maniacSaved?: GamePlayer;
+
   wifeKilled?: GamePlayer;
 
   clownSwapped?: [GamePlayer, GamePlayer];
@@ -381,153 +407,86 @@ export interface NightReport {
 
 
 export function buildMorningReportMessage(
-
   _room: GameRoom,
-
   report: NightReport,
-
-  hadActions: boolean
-
+  _hadActions: boolean
 ): string {
-
-  const parts: string[] = [];
-
-
-
-  if (hadActions) {
-
-    parts.push(getNightCompleteMessage());
-
-  }
-
-
-
-  if (report.prostituteSeduced) {
-
-    parts.push(
-
-      `Путана соблазнила ${playerNick(report.prostituteSeduced)} — его ночное действие заблокировано.`
-
-    );
-
-  }
-
-
+  const parts: string[] = [getMorningIntroMessage(report.killed)];
 
   if (report.commissarChecked) {
+    parts.push(
+      pickPhraseLine('report.commissar_check', { nick: playerNick(report.commissarChecked) })
+    );
+  }
 
-    parts.push(`Комиссар Катани проверил ${playerNick(report.commissarChecked)}.`);
+  if (report.homelessChecked) {
+    parts.push(pickPhraseLine('report.homeless_check', { nick: playerNick(report.homelessChecked) }));
+  }
 
+  if (report.prostituteSeduced) {
+    parts.push(pickPhraseLine('report.prostitute', { nick: playerNick(report.prostituteSeduced) }));
+  }
+
+  if (report.advocateCovered) {
+    parts.push(pickPhraseLine('report.advocate_cover', { nick: playerNick(report.advocateCovered) }));
+  }
+
+  const doctorSavedThisNight = Boolean(
+    report.commissarSaved ||
+      report.maniacSaved ||
+      (report.mafiaAttacked &&
+        report.doctorHealed &&
+        report.mafiaAttacked.id === report.doctorHealed.id &&
+        !report.mafiaKilled &&
+        !report.highlanderAttacked)
+  );
+
+  if (report.doctorHealed && !doctorSavedThisNight) {
+    const nick = playerNick(report.doctorHealed);
+    parts.push(
+      report.doctorSelfHeal
+        ? pickPhraseLine('report.doctor_self', { nick })
+        : pickPhraseLine('report.doctor_heal', { nick })
+    );
   }
 
   if (report.commissarKilled) {
     parts.push(getCommissarKillReportLine(report.commissarKilled));
+  } else if (report.commissarSaved) {
+    parts.push(pickPhraseLine('report.commissar_saved', { nick: playerNick(report.commissarSaved) }));
   }
-
-
-
-  if (report.homelessChecked) {
-
-    parts.push(`Бомж проверил ${playerNick(report.homelessChecked)}.`);
-
-  }
-
-
-
-  if (report.doctorHealed) {
-
-    const nick = playerNick(report.doctorHealed);
-
-    if (report.doctorSelfHeal) {
-
-      parts.push(`Доктор вылечил себя (${nick}).`);
-
-    } else {
-
-      parts.push(`Доктор вылечил ${nick}.`);
-
-    }
-
-  }
-
-
-
-  if (report.advocateCovered) {
-
-    parts.push(`Адвокат укрыл ${playerNick(report.advocateCovered)} от проверки Катани.`);
-
-  }
-
-
 
   if (report.maniacKilled) {
-    parts.push(getPhraseText('report.maniac_kill', killReportVars(report.maniacKilled)));
+    parts.push(pickPhraseLine('report.maniac_kill', killReportVars(report.maniacKilled)));
+  } else if (report.maniacSaved) {
+    parts.push(pickPhraseLine('report.maniac_saved', { nick: playerNick(report.maniacSaved) }));
   }
-
-
 
   if (report.wifeKilled) {
     parts.push(getPhraseText('report.wife_kill', killReportVars(report.wifeKilled)));
   }
 
-
-
   if (report.clownSwapped) {
-
     const [a, b] = report.clownSwapped;
-
-    parts.push(`Клоун поменял роли ${playerNick(a)} и ${playerNick(b)}!`);
-
+    parts.push(pickPhraseLine('report.clown_swap', { a: playerNick(a), b: playerNick(b) }));
   }
-
-
 
   if (report.mafiaNoDecision) {
-
     parts.push(getPhraseText('report.mafia_no_decision'));
-
   } else if (report.mafiaAttacked) {
-
     if (report.highlanderAttacked) {
-
-      parts.push(
-
-        `Мафия напала на ${playerNick(report.highlanderAttacked)}, но горец пережил атаку!`
-
-      );
-
+      parts.push(pickPhraseLine('report.highlander', { nick: playerNick(report.highlanderAttacked) }));
     } else if (report.mafiaKilled) {
-      parts.push(getPhraseText('report.mafia_kill', killReportVars(report.mafiaKilled)));
-    } else if (
-
-      report.doctorHealed &&
-
-      report.mafiaAttacked.id === report.doctorHealed.id
-
-    ) {
-
-      parts.push(
-
-        `Мафия напала на ${playerNick(report.mafiaAttacked)}, но доктор спас ${playerNick(report.mafiaAttacked)}!`
-
-      );
-
-    } else {
-
-      parts.push(`Мафия выбрала жертвой ${playerNick(report.mafiaAttacked)}.`);
-
+      parts.push(pickPhraseLine('report.mafia_kill', killReportVars(report.mafiaKilled)));
+    } else if (report.doctorHealed && report.mafiaAttacked.id === report.doctorHealed.id) {
+      parts.push(pickPhraseLine('report.mafia_saved', { nick: playerNick(report.mafiaAttacked) }));
     }
-
   }
 
+  const deaths = morningDeathsLine(report.killed);
+  if (deaths) parts.push(deaths);
 
-
-  if (!hadActions) {
-    parts.push(getMorningIntroMessage(report.killed));
-  }
-
-  return parts.join(' ');
-
+  return parts.filter(Boolean).join(' ');
 }
 
 
@@ -734,6 +693,10 @@ export function getRoleNightAtmosphereMessage(role: RoleId): string | null {
 
       return pickPhraseLine('atmosphere.doctor');
 
+    case 'prostitute':
+
+      return pickPhraseLine('atmosphere.prostitute');
+
     case 'maniac':
 
       return pickPhraseLine('atmosphere.maniac');
@@ -802,7 +765,7 @@ export function getMorningIntroMessage(killed: GamePlayer[]): string {
   if (killed.length === 0) {
     return getPhraseText('morning.all_alive');
   }
-  return getPhraseText('morning.after_kills');
+  return getPhraseText('morning.intro_prefix');
 }
 
 
