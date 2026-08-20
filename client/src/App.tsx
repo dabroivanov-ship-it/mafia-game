@@ -98,6 +98,14 @@ export default function App() {
     view: AppView;
     lobbyScreen: LobbyScreen;
   } | null>(null);
+  const currentRoomIdRef = useRef<number | null>(null);
+  currentRoomIdRef.current = currentRoomId;
+
+  const applyRoomState = useCallback((state: RoomState) => {
+    const activeId = currentRoomIdRef.current;
+    if (activeId != null && state.id !== activeId) return;
+    setRoomState(state);
+  }, []);
   const [siteDefaultTheme, setSiteDefaultTheme] = useState<ThemeId>(DEFAULT_THEME);
   const [siteBranding, setSiteBranding] = useState<SiteBranding>(DEFAULT_SITE_BRANDING);
   const [lobbyAnnouncement, setLobbyAnnouncement] = useState<LobbyAnnouncement>({
@@ -241,7 +249,7 @@ export default function App() {
         setSiteOnlineCount(payload.onlineCount);
       }
     });
-    s.on('room:state', setRoomState);
+    s.on('room:state', applyRoomState);
     s.on('notification:private', ({ message }: { message: string }) => {
       setNotification(message);
       setTimeout(() => setNotification(null), 8000);
@@ -313,6 +321,7 @@ export default function App() {
       setUser(null);
       setToken(null);
       setSocket(null);
+      currentRoomIdRef.current = null;
       setCurrentRoomId(null);
       setRoomState(null);
       setRoomMinimized(false);
@@ -322,7 +331,11 @@ export default function App() {
       setError(reason || 'Сессия завершена');
     });
 
-    s.on('room:kicked', ({ reason }: { reason?: string }) => {
+    s.on('room:kicked', ({ reason, roomId }: { reason?: string; roomId?: number }) => {
+      if (roomId != null && currentRoomIdRef.current != null && roomId !== currentRoomIdRef.current) {
+        return;
+      }
+      currentRoomIdRef.current = null;
       setCurrentRoomId(null);
       setRoomState(null);
       setRoomMinimized(false);
@@ -336,7 +349,7 @@ export default function App() {
     return () => {
       s.disconnect();
     };
-  }, [token, user]);
+  }, [token, user, applyRoomState]);
 
   useEffect(() => {
     if (!token) return;
@@ -425,6 +438,7 @@ export default function App() {
     setSocket(null);
     setRooms([]);
     setRoomState(null);
+    currentRoomIdRef.current = null;
     setCurrentRoomId(null);
     setRoomMinimized(false);
     setRoomScreen('game');
@@ -444,31 +458,38 @@ export default function App() {
     (roomId: number) => {
       if (!socket || !user) return;
       setError(null);
+      const previousId = currentRoomIdRef.current;
+      currentRoomIdRef.current = roomId;
+      setCurrentRoomId(roomId);
       setRoomMinimized(false);
       setRoomScreen('game');
       setView('room');
       window.history.pushState(null, '', roomGamePath(roomId));
 
-      const reconnectId = loadStoredPlayerId(user.id);
+      const reconnectId = loadStoredPlayerId(user.id, roomId);
       socket.emit('room:join', { roomId, playerId: reconnectId ?? undefined }, (res: RoomJoinResponse) => {
         if (res?.error) {
+          currentRoomIdRef.current = previousId;
+          setCurrentRoomId(previousId);
           setError(res.error);
-          setView('lobby');
-          window.history.pushState(null, '', '/');
+          if (!previousId) {
+            setView('lobby');
+            window.history.pushState(null, '', '/');
+          }
           return;
         }
         if (res.playerId != null) {
-          saveStoredPlayerId(user.id, res.playerId);
+          saveStoredPlayerId(user.id, res.playerId, roomId);
         }
-        setCurrentRoomId(roomId);
-        if (res.state) setRoomState(res.state);
+        if (res.state) applyRoomState(res.state);
       });
     },
-    [socket, user]
+    [socket, user, applyRoomState]
   );
 
   const leaveRoom = useCallback(() => {
     socket?.emit('room:detach');
+    currentRoomIdRef.current = null;
     setCurrentRoomId(null);
     setRoomState(null);
     setRoomMinimized(false);
@@ -589,10 +610,11 @@ export default function App() {
     if (!socket || !currentRoomId || !user) return;
 
     const resyncRoom = () => {
-      const reconnectId = loadStoredPlayerId(user.id);
+      const reconnectId = loadStoredPlayerId(user.id, currentRoomId);
       socket.emit('room:join', { roomId: currentRoomId, playerId: reconnectId ?? undefined }, (res: RoomJoinResponse) => {
         if (res?.error) {
           setError(res.error);
+          currentRoomIdRef.current = null;
           setCurrentRoomId(null);
           setRoomState(null);
           clearStoredPlayerIds();
@@ -600,9 +622,9 @@ export default function App() {
           return;
         }
         if (res?.playerId != null) {
-          saveStoredPlayerId(user.id, res.playerId);
+          saveStoredPlayerId(user.id, res.playerId, currentRoomId);
         }
-        if (res?.state) setRoomState(res.state);
+        if (res?.state) applyRoomState(res.state);
       });
     };
 
@@ -610,7 +632,7 @@ export default function App() {
     return () => {
       socket.off('connect', resyncRoom);
     };
-  }, [socket, currentRoomId, user]);
+  }, [socket, currentRoomId, user, applyRoomState]);
 
   if (authLoading && (token || isLikelyTelegramWebApp())) {
     return (
@@ -713,7 +735,7 @@ export default function App() {
               state={roomState}
               onLeave={isChatRoom ? leaveRoom : minimizeMafiaRoom}
               onOpenMembers={openRoomMembers}
-              onStateUpdate={setRoomState}
+              onStateUpdate={applyRoomState}
               currentUserId={user.id}
               onWriteMessage={(userId, username) => openMessages({ userId, username })}
               onOpenStatistics={openProfileStatistics}

@@ -364,8 +364,13 @@ function adminClearRoomMessages(roomId: number): number {
 
 function kickPlayersFromRoom(room: GameRoom): void {
   for (const player of room.players) {
-    if (player.socketId) {
-      io.to(player.socketId).emit('room:kicked', { reason: 'Комната удалена администратором' });
+    if (!player.socketId) continue;
+    io.to(player.socketId).emit('room:kicked', {
+      reason: 'Комната удалена администратором',
+      roomId: room.id,
+    });
+    const session = sessions.get(player.socketId);
+    if (session?.roomId === room.id) {
       sessions.delete(player.socketId);
     }
   }

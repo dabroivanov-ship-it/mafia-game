@@ -38,8 +38,18 @@ const REMEMBER_LOGIN_KEY = 'mafia_remember_login';
 const REMEMBER_ME_KEY = 'mafia_remember_me';
 const PLAYER_ID_KEY_PREFIX = 'mafia_player_id:';
 
-export function loadStoredPlayerId(userId: number | null | undefined): number | null {
+export function loadStoredPlayerId(
+  userId: number | null | undefined,
+  roomId?: number | null
+): number | null {
   if (!userId) return null;
+  if (roomId != null) {
+    const perRoom = localStorage.getItem(`${PLAYER_ID_KEY_PREFIX}${userId}:${roomId}`);
+    if (perRoom) {
+      const n = Number(perRoom);
+      return Number.isFinite(n) ? n : null;
+    }
+  }
   const scoped = localStorage.getItem(`${PLAYER_ID_KEY_PREFIX}${userId}`);
   if (scoped) {
     const n = Number(scoped);
@@ -62,7 +72,10 @@ export function loadStoredPlayerId(userId: number | null | undefined): number | 
   return null;
 }
 
-export function saveStoredPlayerId(userId: number, playerId: number): void {
+export function saveStoredPlayerId(userId: number, playerId: number, roomId?: number | null): void {
+  if (roomId != null) {
+    localStorage.setItem(`${PLAYER_ID_KEY_PREFIX}${userId}:${roomId}`, String(playerId));
+  }
   localStorage.setItem(`${PLAYER_ID_KEY_PREFIX}${userId}`, String(playerId));
   localStorage.removeItem('mafia_player_id');
 }
