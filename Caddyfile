@@ -1,6 +1,7 @@
 # Весь трафик → Node.js (API + WebSocket + React из client/dist)
 
 realmafia.online {
+	encode zstd gzip
 	reverse_proxy 127.0.0.1:3001
 }
 

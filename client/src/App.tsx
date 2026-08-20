@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState, useCallback, useRef, type ReactNode } from 'react';
-import { io, Socket } from 'socket.io-client';
+import type { Socket } from 'socket.io-client';
 import Auth from './components/Auth';
 import Menu, { type MenuView } from './components/Menu';
 import Lobby, { type LobbyScreen } from './components/Lobby';
@@ -251,128 +251,143 @@ export default function App() {
       return;
     }
 
-    const s = io(SOCKET_URL, {
-      transports: ['websocket', 'polling'],
-      auth: { token },
-    });
+    let cancelled = false;
+    let active: Socket | null = null;
 
-    s.on('connect_error', (err: Error) => {
-      const msg = err.message || '';
-      if (msg.includes('авториза') || msg.includes('токен') || msg.includes('заблокирован')) {
+    void (async () => {
+      const { io } = await import('socket.io-client');
+      if (cancelled) return;
+
+      const s = io(SOCKET_URL, {
+        transports: ['websocket', 'polling'],
+        auth: { token },
+      });
+      active = s;
+
+      s.on('connect_error', (err: Error) => {
+        const msg = err.message || '';
+        if (msg.includes('авториза') || msg.includes('токен') || msg.includes('заблокирован')) {
+          clearSession();
+          setUser(null);
+          setToken(null);
+          setError(msg.includes('заблокирован') ? msg : 'Сессия истекла. Войдите снова.');
+        }
+      });
+
+      s.on('lobby:update', (payload: LobbyRoom[] | LobbyUpdate) => {
+        if (Array.isArray(payload)) {
+          setRooms(payload);
+        } else {
+          setRooms(payload.rooms);
+          setSiteOnlineCount(payload.onlineCount);
+        }
+      });
+      s.on('room:state', applyRoomState);
+      s.on('notification:private', ({ message }: { message: string }) => {
+        setNotification(message);
+        setTimeout(() => setNotification(null), 8000);
+      });
+
+      s.on('pm:unread', ({ count }: { count: number }) => {
+        setUnreadMailCount(count);
+      });
+
+      s.on(
+        'pm:read',
+        ({ readerId, messageIds }: { readerId: number; messageIds: number[] }) => {
+          setMailReadReceipt({ readerId, messageIds });
+        }
+      );
+
+      const applyNotificationSync = (list: UserNotification[], unreadCount: number) => {
+        setNotifications(list);
+        setNotificationUnreadCount(unreadCount);
+      };
+
+      s.on('connect', () => {
+        void fetchNotifications()
+          .then(({ notifications: list, unreadCount }) => applyNotificationSync(list, unreadCount))
+          .catch(() => {});
+      });
+
+      s.on(
+        'notification:sync',
+        ({ notifications: list, unreadCount }: { notifications: UserNotification[]; unreadCount: number }) => {
+          applyNotificationSync(list, unreadCount);
+        }
+      );
+
+      s.on(
+        'notification:new',
+        ({ notification, unreadCount }: { notification: UserNotification; unreadCount: number }) => {
+          setNotifications((prev) => {
+            const without = prev.filter((item) => item.id !== notification.id);
+            return [notification, ...without].slice(0, 40);
+          });
+          setNotificationUnreadCount(unreadCount);
+          if (notification.type === 'mail') {
+            const payload = notification.payload;
+            const fromUserId = typeof payload?.fromUserId === 'number' ? payload.fromUserId : undefined;
+            if (fromUserId) {
+              void fetchUnreadMailCount()
+                .then(({ count }) => setUnreadMailCount(count))
+                .catch(() => {});
+            }
+          }
+        }
+      );
+
+      s.on(
+        'pm:received',
+        ({ unreadCount }: { fromDisplayName: string; preview: string; unreadCount: number }) => {
+          setUnreadMailCount(unreadCount);
+          void fetchNotifications()
+            .then(({ notifications: list, unreadCount: bellUnread }) =>
+              applyNotificationSync(list, bellUnread)
+            )
+            .catch(() => {});
+        }
+      );
+
+      s.on('auth:kicked', ({ reason }: { reason?: string }) => {
         clearSession();
         setUser(null);
         setToken(null);
-        setError(msg.includes('заблокирован') ? msg : 'Сессия истекла. Войдите снова.');
-      }
-    });
+        setSocket(null);
+        currentRoomIdRef.current = null;
+        setCurrentRoomId(null);
+        setRoomState(null);
+        setRoomMinimized(false);
+        setRoomScreen('game');
+        clearStoredPlayerIds();
+        setView('lobby');
+        setError(reason || 'Сессия завершена');
+      });
 
-    s.on('lobby:update', (payload: LobbyRoom[] | LobbyUpdate) => {
-      if (Array.isArray(payload)) {
-        setRooms(payload);
-      } else {
-        setRooms(payload.rooms);
-        setSiteOnlineCount(payload.onlineCount);
-      }
-    });
-    s.on('room:state', applyRoomState);
-    s.on('notification:private', ({ message }: { message: string }) => {
-      setNotification(message);
-      setTimeout(() => setNotification(null), 8000);
-    });
-
-    s.on('pm:unread', ({ count }: { count: number }) => {
-      setUnreadMailCount(count);
-    });
-
-    s.on(
-      'pm:read',
-      ({ readerId, messageIds }: { readerId: number; messageIds: number[] }) => {
-        setMailReadReceipt({ readerId, messageIds });
-      }
-    );
-
-    const applyNotificationSync = (list: UserNotification[], unreadCount: number) => {
-      setNotifications(list);
-      setNotificationUnreadCount(unreadCount);
-    };
-
-    s.on('connect', () => {
-      void fetchNotifications()
-        .then(({ notifications: list, unreadCount }) => applyNotificationSync(list, unreadCount))
-        .catch(() => {});
-    });
-
-    s.on(
-      'notification:sync',
-      ({ notifications: list, unreadCount }: { notifications: UserNotification[]; unreadCount: number }) => {
-        applyNotificationSync(list, unreadCount);
-      }
-    );
-
-    s.on(
-      'notification:new',
-      ({ notification, unreadCount }: { notification: UserNotification; unreadCount: number }) => {
-        setNotifications((prev) => {
-          const without = prev.filter((item) => item.id !== notification.id);
-          return [notification, ...without].slice(0, 40);
-        });
-        setNotificationUnreadCount(unreadCount);
-        if (notification.type === 'mail') {
-          const payload = notification.payload;
-          const fromUserId = typeof payload?.fromUserId === 'number' ? payload.fromUserId : undefined;
-          if (fromUserId) {
-            void fetchUnreadMailCount()
-              .then(({ count }) => setUnreadMailCount(count))
-              .catch(() => {});
-          }
+      s.on('room:kicked', ({ reason, roomId }: { reason?: string; roomId?: number }) => {
+        if (roomId != null && currentRoomIdRef.current != null && roomId !== currentRoomIdRef.current) {
+          return;
         }
-      }
-    );
+        currentRoomIdRef.current = null;
+        setCurrentRoomId(null);
+        setRoomState(null);
+        setRoomMinimized(false);
+        setRoomScreen('game');
+        setView('lobby');
+        clearStoredPlayerIds();
+        setError(reason || 'Вы вышли из комнаты');
+      });
 
-    s.on(
-      'pm:received',
-      ({ unreadCount }: { fromDisplayName: string; preview: string; unreadCount: number }) => {
-        setUnreadMailCount(unreadCount);
-        void fetchNotifications()
-          .then(({ notifications: list, unreadCount: bellUnread }) =>
-            applyNotificationSync(list, bellUnread)
-          )
-          .catch(() => {});
-      }
-    );
-
-    s.on('auth:kicked', ({ reason }: { reason?: string }) => {
-      clearSession();
-      setUser(null);
-      setToken(null);
-      setSocket(null);
-      currentRoomIdRef.current = null;
-      setCurrentRoomId(null);
-      setRoomState(null);
-      setRoomMinimized(false);
-      setRoomScreen('game');
-      clearStoredPlayerIds();
-      setView('lobby');
-      setError(reason || 'Сессия завершена');
-    });
-
-    s.on('room:kicked', ({ reason, roomId }: { reason?: string; roomId?: number }) => {
-      if (roomId != null && currentRoomIdRef.current != null && roomId !== currentRoomIdRef.current) {
+      if (cancelled) {
+        s.disconnect();
         return;
       }
-      currentRoomIdRef.current = null;
-      setCurrentRoomId(null);
-      setRoomState(null);
-      setRoomMinimized(false);
-      setRoomScreen('game');
-      setView('lobby');
-      clearStoredPlayerIds();
-      setError(reason || 'Вы вышли из комнаты');
-    });
+      setSocket(s);
+    })();
 
-    setSocket(s);
     return () => {
-      s.disconnect();
+      cancelled = true;
+      active?.disconnect();
     };
   }, [token, user, applyRoomState]);
 

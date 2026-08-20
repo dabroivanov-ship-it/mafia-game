@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Socket } from 'socket.io-client';
+import type { Socket } from 'socket.io-client';
 import Chat from './Chat';
 import ActionPanel from './ActionPanel';
 import UserProfileModal from './UserProfileModal';

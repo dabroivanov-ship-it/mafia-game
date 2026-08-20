@@ -661,7 +661,7 @@ export function leaveGame(room: GameRoom, playerId: number): GamePlayer {
 
   player.inGame = false;
   player.joinGameAvailableAt = Date.now() + CONFIG.JOIN_GAME_COOLDOWN_SEC * 1000;
-  addSystemMessage(room, `${player.username || player.name} вышел из регистрации.`);
+  addSystemMessage(room, `${player.username || player.name} вышел из игры!`);
   return player;
 }
 
