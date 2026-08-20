@@ -629,6 +629,14 @@ export const BOT_PHRASE_DEFINITIONS: BotPhraseDefinition[] = [
     defaultValue: '🎭 Ваша роль: {role}.{donLine}\n{hint}',
   },
   {
+    key: 'note.mafia_allies',
+    group: 'Личные сообщения',
+    label: 'Союзники мафии',
+    type: 'text',
+    placeholders: ['{list}'],
+    defaultValue: 'Союзники: {list}.',
+  },
+  {
     key: 'note.night_reminder',
     group: 'Личные сообщения',
     label: 'Напоминание ночью',

@@ -230,7 +230,7 @@ export interface RoomState {
   isQuizRoom?: boolean;
   aiEnabled?: boolean;
   aiCount?: number;
-  mafiaTeam?: { id: number; username: string; isDon: boolean }[];
+  mafiaTeam?: { id: number; username: string; isDon: boolean; roleLabel?: string }[];
 }
 
 export interface ApiError {

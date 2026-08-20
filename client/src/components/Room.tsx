@@ -275,6 +275,16 @@ export default function Room({
         <div className="my-role-card">
           <strong>Ваша роль:</strong> {state.myRoleLabel}
           {state.isDon && ' (главный маф)'}
+          {state.mafiaTeam &&
+            state.mafiaTeam.some((m) => m.id !== state.myId) && (
+              <span className="my-role-allies muted">
+                Союзники:{' '}
+                {state.mafiaTeam
+                  .filter((m) => m.id !== state.myId)
+                  .map((m) => `${m.username} (${(m.roleLabel || 'мафия').toLowerCase()})`)
+                  .join(', ')}
+              </span>
+            )}
         </div>
       )}
 

@@ -27,6 +27,7 @@ import {
   getVotingSparedMessage,
   getVotingRestartMessage,
   playerNick,
+  mafiaAlliesHint,
   type NightReport,
 } from './host.js';
 import {
@@ -1411,11 +1412,21 @@ export function resolveNight(room: GameRoom): NightResolveResult {
         for (const swapped of [a, b]) {
           const roleLine = getRoleLabel(swapped.role);
           const donLine = swapped.isDon ? ' Вы — главарь мафии.' : '';
+          const allies = isMafiaTeam(swapped.role) ? mafiaAlliesHint(room, swapped.id) : '';
           addHostPrivateMessage(
             room,
             swapped.id,
-            `Клоун сменил вашу роль. Теперь вы: ${roleLine}.${donLine}`
+            `Клоун сменил вашу роль. Теперь вы: ${roleLine}.${donLine}${allies ? `\n${allies}` : ''}`
           );
+        }
+        const swappedIds = new Set([a.id, b.id]);
+        for (const member of room.players) {
+          if (!member.alive || !member.inGame || !isMafiaTeam(member.role)) continue;
+          if (swappedIds.has(member.id)) continue;
+          const allies = mafiaAlliesHint(room, member.id);
+          if (allies) {
+            addHostPrivateMessage(room, member.id, `Состав чёрной команды изменился. ${allies}`);
+          }
         }
       }
     }
@@ -2214,7 +2225,21 @@ function buildChatView(
   };
 }
 
-function mapRoomPresence(p: GamePlayer, viewerId: number): RoomPresence {
+function viewerSeesMafiaTeam(viewer: GamePlayer | null | undefined): boolean {
+  return !!viewer?.role && isMafiaTeam(viewer.role) && !!viewer.inGame && !!viewer.alive;
+}
+
+function knownRoleLabel(p: GamePlayer, viewer: GamePlayer | null | undefined): string | null {
+  if (!p.role) return null;
+  const ally =
+    viewerSeesMafiaTeam(viewer) && p.alive && p.inGame && isMafiaTeam(p.role);
+  if (!p.alive) return getRoleLabel(p.role);
+  if (p.id !== viewer?.id && !ally) return null;
+  const label = getRoleLabel(p.role);
+  return p.isDon ? `${label} (главарь)` : label;
+}
+
+function mapRoomPresence(p: GamePlayer, viewer: GamePlayer | null | undefined): RoomPresence {
   return {
     id: p.id,
     userId: p.userId || null,
@@ -2223,8 +2248,8 @@ function mapRoomPresence(p: GamePlayer, viewerId: number): RoomPresence {
     connected: p.connected,
     inGame: !!p.inGame,
     alive: p.alive,
-    roleLabel: (!p.alive || p.id === viewerId) && p.role ? getRoleLabel(p.role) : null,
-    isMe: p.id === viewerId,
+    roleLabel: knownRoleLabel(p, viewer),
+    isMe: p.id === viewer?.id,
   };
 }
 
@@ -2235,8 +2260,8 @@ function mapPlayerPublic(
   viewerCanModerate = false,
   viewer?: GamePlayer | null
 ): RoomStatePlayer {
-  const viewerSeesMafiaTeam =
-    !!viewer?.role && isMafiaTeam(viewer.role) && viewer.inGame && viewer.alive;
+  const seesTeam = viewerSeesMafiaTeam(viewer);
+  const knownAlly = seesTeam && p.alive && p.inGame && isMafiaTeam(p.role);
   return {
     id: p.id,
     userId: p.userId || null,
@@ -2247,11 +2272,11 @@ function mapPlayerPublic(
     score: p.score,
     connected: p.connected,
     hasVoted: p.hasVoted,
-    role: !p.alive || p.id === playerId ? p.role : null,
-    roleLabel: !p.alive || p.id === playerId ? getRoleLabel(p.role) : null,
-    isDon: viewerSeesMafiaTeam ? p.isDon : p.isDon && p.id === playerId,
+    role: !p.alive || p.id === playerId || knownAlly ? p.role : null,
+    roleLabel: knownRoleLabel(p, viewer),
+    isDon: seesTeam ? p.isDon : p.isDon && p.id === playerId,
     isMafiaAlly:
-      viewerSeesMafiaTeam && p.alive && p.inGame && isMafiaTeam(p.role) && p.id !== playerId
+      seesTeam && p.alive && p.inGame && isMafiaTeam(p.role) && p.id !== playerId
         ? true
         : undefined,
     isBot: p.isBot || undefined,
@@ -2313,7 +2338,7 @@ export function serializeRoomForPlayer(
       isDon: false,
       players: connectedUsers.map((p) => mapPlayerPublic(p, room, playerId, seesModerationInfo, me)),
       spectators: [],
-      presence: connectedUsers.map((p) => mapRoomPresence(p, playerId)),
+      presence: connectedUsers.map((p) => mapRoomPresence(p, me)),
       chat: chatView.messages,
       chatMode: chatView.mode,
       hasMoreChat: chatView.hasMoreChat,
@@ -2400,7 +2425,7 @@ export function serializeRoomForPlayer(
       username: p.username || p.name,
       connected: p.connected,
     })),
-    presence: room.players.filter((p) => p.connected).map((p) => mapRoomPresence(p, playerId)),
+    presence: room.players.filter((p) => p.connected).map((p) => mapRoomPresence(p, me)),
     chat: chatView.messages,
     chatMode: chatView.mode,
     hasMoreChat: chatView.hasMoreChat,
@@ -2440,6 +2465,7 @@ export function serializeRoomForPlayer(
               id: p.id,
               username: p.username || p.name,
               isDon: p.isDon,
+              roleLabel: p.isDon ? `${getRoleLabel(p.role)} (главарь)` : getRoleLabel(p.role),
             }))
         : [],
   };

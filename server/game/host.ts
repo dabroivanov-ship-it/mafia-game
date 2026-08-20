@@ -1,6 +1,6 @@
 import { CONFIG } from './config.js';
 
-import { getRoleLabel, isEvil, isMafia } from './roles.js';
+import { getRoleLabel, isEvil, isMafia, isMafiaTeam } from './roles.js';
 
 import {
 
@@ -204,6 +204,20 @@ function nightActionPrompt(player: GamePlayer, room: GameRoom): string {
   return withPlayerList(prompt, room, player.id);
 }
 
+export function mafiaAlliesHint(room: GameRoom, playerId: number): string {
+  const allies = room.players.filter(
+    (p) => p.alive && p.inGame && isMafiaTeam(p.role) && p.id !== playerId
+  );
+  if (!allies.length) return '';
+  const list = allies
+    .map((p) => {
+      const role = getRoleLabel(p.role);
+      return p.isDon ? `${playerNick(p)} (${role}, главарь)` : `${playerNick(p)} (${role})`;
+    })
+    .join(', ');
+  return getPhraseText('note.mafia_allies', { list });
+}
+
 export function buildRoleRevealNotes(room: GameRoom): PrivateNote[] {
   const notes: PrivateNote[] = [];
 
@@ -212,12 +226,13 @@ export function buildRoleRevealNotes(room: GameRoom): PrivateNote[] {
 
     const roleLine = getRoleLabel(player.role);
     const donLine = player.isDon ? ' Вы — главарь мафии.' : '';
+    const hint = isMafiaTeam(player.role) ? mafiaAlliesHint(room, player.id) : '';
     notes.push({
       playerId: player.id,
       message: getPhraseText('note.role_reveal', {
         role: roleLine,
         donLine,
-        hint: '',
+        hint,
       }).trim(),
     });
   }
@@ -262,7 +277,9 @@ export function buildNightReminderNotes(room: GameRoom): PrivateNote[] {
     if (player.role === 'mafia' && !player.isDon) {
       notes.push({
         playerId: player.id,
-        message: getPhraseText('prompt.mafia.wait'),
+        message: [getPhraseText('prompt.mafia.wait'), mafiaAlliesHint(room, player.id)]
+          .filter(Boolean)
+          .join('\n'),
       });
       continue;
     }

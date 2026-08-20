@@ -43,7 +43,7 @@ export default function PlayersList({
       <h3>Игроки ({alive.length} живых)</h3>
 
       <ul className="players-alive">
-        {alive.map((p) => renderPerson(p))}
+        {alive.map((p) => renderPerson(p, Boolean(p.roleLabel)))}
       </ul>
 
       {dead.length > 0 && (

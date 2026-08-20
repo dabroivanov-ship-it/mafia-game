@@ -2842,6 +2842,11 @@ html.telegram-webapp .app-body {
   align-items: center;
   gap: 12px;
   flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.my-role-allies {
+  font-size: 0.85rem;
 }
 
 .my-score {

@@ -39,6 +39,7 @@ function PersonRow({
         {displayName(person)}
       </button>
       {person.isMe && <span className="room-member-status muted">вы</span>}
+      {person.roleLabel && <span className="player-role">{person.roleLabel}</span>}
     </li>
   );
 }

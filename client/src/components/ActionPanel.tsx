@@ -31,6 +31,10 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
 
   const aliveOthers = state.players.filter((p) => p.alive && p.id !== state.myId);
   const allAlive = state.players.filter((p) => p.alive);
+  const mafiaAlliesLine = (state.mafiaTeam ?? [])
+    .filter((m) => m.id !== state.myId)
+    .map((m) => `${m.username} (${(m.roleLabel || 'мафия').toLowerCase()})`)
+    .join(', ');
 
   if (state.phase !== 'night' && state.phase !== 'day' && state.phase !== 'voting') {
     return null;
@@ -181,14 +185,9 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
             <p className="muted" style={{ marginBottom: 12 }}>
               Жертву выбирает главарь. Если он погибнет — главой станете вы.
             </p>
-            {state.mafiaTeam && state.mafiaTeam.length > 0 && (
-              <p className="muted">
-                Союзники:{' '}
-                {state.mafiaTeam
-                  .map((m) => `${m.username}${m.isDon ? ' (главарь)' : ''}`)
-                  .join(', ')}
-              </p>
-            )}
+            {mafiaAlliesLine ? (
+              <p className="muted">Союзники: {mafiaAlliesLine}</p>
+            ) : null}
           </div>
         );
       }
@@ -200,15 +199,11 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
       return (
         <div className="action-panel">
           <h3>Выберите жертву (вы главарь мафии)</h3>
-          {state.mafiaTeam && state.mafiaTeam.length > 1 && (
+          {mafiaAlliesLine ? (
             <p className="muted" style={{ marginBottom: 12, fontSize: '0.9rem' }}>
-              Союзники:{' '}
-              {state.mafiaTeam
-                .filter((m) => m.id !== state.myId)
-                .map((m) => m.username)
-                .join(', ')}
+              Союзники: {mafiaAlliesLine}
             </p>
-          )}
+          ) : null}
           <div className="target-grid">
             {aliveOthers.map((p) =>
               targetBtn(
@@ -294,6 +289,7 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
           <h3>Кого укрыть от проверки Катани?</h3>
           <p className="muted" style={{ marginBottom: 12, fontSize: '0.9rem' }}>
             Нельзя защитить себя. Приоритет — дон и активные мафиози.
+            {mafiaAlliesLine ? ` Союзники: ${mafiaAlliesLine}.` : ''}
           </p>
           <div className="target-grid">
             {aliveOthers.map((p) =>
