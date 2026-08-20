@@ -1,6 +1,6 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { updateProfile, fetchThemeSettings, linkTelegramEmail, changePassword } from '../api';
-import type { User, ThemeId } from '../types';
+import type { User, ThemeId, UserGender } from '../types';
 import { applyTheme, resolveTheme, THEMES, themeDisplayName } from '../themes';
 
 const CHAT_LIMIT_OPTIONS = [15, 30, 50, 100];
@@ -41,7 +41,7 @@ export default function CabinetAccountSettings({
 
   const profileBase = () => ({
     displayName: user.displayName,
-    gender: user.gender || '',
+    gender: (user.gender || '') as UserGender,
     city: user.city,
     bio: user.bio,
     chatLimit,
