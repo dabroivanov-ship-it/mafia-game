@@ -120,7 +120,7 @@ export default function NewsComments({
               className="news-comment-avatar"
             />
           ) : (
-            <span className="news-comment-avatar placeholder">👤</span>
+            <span className="news-comment-avatar placeholder" aria-hidden="true" />
           )}
           <div className="news-comment-meta">
             <strong>{comment.authorName}</strong>
@@ -172,7 +172,7 @@ export default function NewsComments({
         className="news-comments-toggle"
         onClick={() => setOpen((v) => !v)}
       >
-        💬 Комментарии {count > 0 ? `(${count})` : ''}
+        Комментарии {count > 0 ? `(${count})` : ''}
         <span className="news-comments-toggle-arrow">{open ? '▲' : '▼'}</span>
       </button>
 

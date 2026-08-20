@@ -77,7 +77,7 @@ export default function CabinetSiteSettings({ user, onUpdate, onBack }: CabinetS
       </nav>
 
       <header className="page-header">
-        <h1>🎨 Оформление сайта</h1>
+        <h1>Оформление сайта</h1>
         <p className="muted">Выберите тему — изменения применяются сразу</p>
       </header>
 

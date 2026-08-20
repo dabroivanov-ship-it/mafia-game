@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react';
 import type { UserNotification } from '../types';
 
 function iconForType(type: UserNotification['type']): string {
-  if (type === 'mail') return '✉';
   if (type === 'reputation_up') return '↑';
   if (type === 'reputation_down') return '↓';
   return '•';

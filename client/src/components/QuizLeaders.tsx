@@ -72,7 +72,7 @@ export default function QuizLeaders({
                             className="quiz-leader-avatar"
                           />
                         ) : (
-                          <span className="quiz-leader-avatar placeholder">👤</span>
+                          <span className="quiz-leader-avatar placeholder" aria-hidden="true" />
                         )}
                         {canOpenProfile ? (
                           <button

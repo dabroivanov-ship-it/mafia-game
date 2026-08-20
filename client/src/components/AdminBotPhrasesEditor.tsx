@@ -67,7 +67,7 @@ export default function AdminBotPhrasesEditor() {
   return (
     <form className="admin-bot-phrases" onSubmit={handleSave}>
       <p className="theme-settings-hint">
-        Фразы ведущего (🤖) в чате и личных сообщениях. Используйте плейсхолдеры вроде{' '}
+        Фразы ведущего в чате и личных сообщениях. Используйте плейсхолдеры вроде{' '}
         <code>{'{nick}'}</code>, <code>{'{role}'}</code>, <code>{'{day}'}</code>. Для вариантов
         (ночь, атмосфера) — одна фраза на строку.
       </p>

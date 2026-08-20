@@ -21,7 +21,6 @@ import { AI_AGENTS_INTRO } from '../content/aiAgentsContent';
 import type { User } from '../types';
 
 type InfoHubItem = {
-  icon: string;
   section: Exclude<InfoSection, 'hub'>;
   title: string;
   desc: string;
@@ -29,15 +28,15 @@ type InfoHubItem = {
 };
 
 const INFO_HUB_ITEMS: InfoHubItem[] = [
-  { icon: '📖', section: 'about', title: 'Об игре', desc: 'История Мафии: от МГУ до онлайн-комнат' },
-  { icon: '🎭', section: 'roles', title: 'Игровые роли', desc: 'Мафия, город, маньяк — все способности' },
-  { icon: '📜', section: 'rules', title: 'Правила игры', desc: 'Как начать, фазы, победа и очки' },
-  { icon: '🤖', section: 'aiAgents', title: 'Игры с AI-агентами', desc: 'Боты за столом: чат, роли и голоса' },
-  { icon: '❓', section: 'faq', title: 'Частые вопросы', desc: 'Как начать, роли и ведущий' },
-  { icon: '💬', section: 'chatRules', title: 'Правила чата', desc: 'Общение, профили и модерация' },
-  { icon: '🏆', section: 'rating', title: 'Рейтинг игроков', desc: 'Топ по очкам, играм и репутации' },
-  { icon: '🧠', section: 'quizLeaders', title: 'Самые умные', desc: 'Топ-10 викторины по верным ответам' },
-  { icon: '🛡️', section: 'team', title: 'Команда', desc: 'Администраторы и модераторы', authOnly: true },
+  { section: 'about', title: 'Об игре', desc: 'История Мафии: от МГУ до онлайн-комнат' },
+  { section: 'roles', title: 'Игровые роли', desc: 'Мафия, город, маньяк — все способности' },
+  { section: 'rules', title: 'Правила игры', desc: 'Как начать, фазы, победа и очки' },
+  { section: 'aiAgents', title: 'Игры с AI-агентами', desc: 'Боты за столом: чат, роли и голоса' },
+  { section: 'faq', title: 'Частые вопросы', desc: 'Как начать, роли и ведущий' },
+  { section: 'chatRules', title: 'Правила чата', desc: 'Общение, профили и модерация' },
+  { section: 'rating', title: 'Рейтинг игроков', desc: 'Топ по очкам, играм и репутации' },
+  { section: 'quizLeaders', title: 'Самые умные', desc: 'Топ-10 викторины по верным ответам' },
+  { section: 'team', title: 'Команда', desc: 'Администраторы и модераторы', authOnly: true },
 ];
 
 interface InfoProps {
@@ -108,7 +107,7 @@ export default function Info({
       <div className="info-page">
         {backNav('hub', 'Информация')}
         <header className="page-header">
-          <h1>📜 Правила игры</h1>
+          <h1>Правила игры</h1>
           <p className="muted">Как играть, фазы дня и ночи, победа и очки</p>
         </header>
         <Rules embedded />
@@ -121,7 +120,7 @@ export default function Info({
       <div className="info-page">
         {backNav('hub', 'Информация')}
         <header className="page-header">
-          <h1>🎭 Игровые роли</h1>
+          <h1>Игровые роли</h1>
           <p className="roles-intro muted">{ROLES_INTRO}</p>
         </header>
         <Roles embedded />
@@ -134,7 +133,7 @@ export default function Info({
       <div className="info-page">
         {backNav('hub', 'Информация')}
         <header className="page-header">
-          <h1>🤖 Игры с AI-агентами</h1>
+          <h1>Игры с AI-агентами</h1>
           <p className="muted">{AI_AGENTS_INTRO}</p>
         </header>
         <AiAgents embedded />
@@ -147,7 +146,7 @@ export default function Info({
       <div className="info-page">
         {backNav('hub', 'Информация')}
         <header className="page-header">
-          <h1>💬 Правила чата</h1>
+          <h1>Правила чата</h1>
           <p className="muted">Общение в комнатах и во время игры</p>
         </header>
         <ChatRules embedded />
@@ -169,7 +168,7 @@ export default function Info({
       <div className="info-page">
         {backNav('hub', 'Информация')}
         <header className="page-header">
-          <h1>🏆 Рейтинг игроков</h1>
+          <h1>Рейтинг игроков</h1>
           <p className="muted">Рейтинг игроков по MMR и репутации · по 15 на странице</p>
         </header>
         <PlayerRating
@@ -187,7 +186,7 @@ export default function Info({
       <div className="info-page">
         {backNav('hub', 'Информация')}
         <header className="page-header">
-          <h1>🧠 Самые умные</h1>
+          <h1>Самые умные</h1>
           <p className="muted">Топ-10 по верным ответам в викторине</p>
         </header>
         <QuizLeaders
@@ -221,20 +220,20 @@ export default function Info({
       )}
 
       <header className="page-header">
-        <h1>ℹ️ Информация</h1>
+        <h1>Информация</h1>
         <p className="muted">История, правила, роли, AI-агенты, чат, рейтинг и команда проекта</p>
       </header>
 
       <div className="info-hub">
-        {INFO_HUB_ITEMS.filter((item) => !item.authOnly || !publicMode).map((item) => (
+        {INFO_HUB_ITEMS.filter((item) => !item.authOnly || !publicMode).map((item, index) => (
           <button
             key={item.section}
             type="button"
             className="info-hub-card"
             onClick={() => navigate(item.section)}
           >
-            <span className="info-hub-icon" aria-hidden="true">
-              {item.icon}
+            <span className="info-hub-index" aria-hidden="true">
+              {String(index + 1).padStart(2, '0')}
             </span>
             <span className="info-hub-body">
               <strong>{item.title}</strong>

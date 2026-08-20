@@ -200,7 +200,7 @@ export default function Room({
               title="Кто тут"
             >
               <span className="btn-mobile-icon" aria-hidden="true">
-                👥
+                ···
               </span>
               <span className="btn-mobile-label">Кто тут</span>
             </button>
@@ -218,7 +218,7 @@ export default function Room({
 
       {!isChatRoom && state.phase === 'roles' && !state.isSpectator && (
         <div className="join-game-banner roles-banner">
-          <p>🎭 Раздача ролей. Ведущий сообщит вашу роль в личных сообщениях [P]. Ожидайте ночи…</p>
+          <p>Раздача ролей. Ведущий сообщит вашу роль в личных сообщениях [P]. Ожидайте ночи…</p>
         </div>
       )}
 
@@ -267,7 +267,7 @@ export default function Room({
 
       {!isChatRoom && state.isSpectator && !showJoin && (
         <div className="spectator-banner">
-          👁 Вы наблюдаете. Видите чат игры; ваши сообщения видят только наблюдатели.
+          Вы наблюдаете. Видите чат игры; ваши сообщения видят только наблюдатели.
         </div>
       )}
 
@@ -296,15 +296,15 @@ export default function Room({
               <div className="chat-header-bar">
                 <span className="chat-header-title">
                 {isChatRoom
-                  ? '💬 Общий чат'
+                  ? 'Общий чат'
                   : state.chatMode === 'spectator'
-                    ? '👁 Игра + наблюдатели'
+                    ? 'Игра + наблюдатели'
                     : state.chatMode === 'dead'
-                      ? '💀 Чат выбывших'
-                      : '💬 Чат'}
+                      ? 'Чат выбывших'
+                      : 'Чат'}
                 </span>
                 {state.chatMode === 'spectator' && (
-                  <span className="chat-header-hint muted">👁 — только для зрителей</span>
+                  <span className="chat-header-hint muted">Видно только наблюдателям</span>
                 )}
                 {state.chatMode === 'dead' && (
                   <span className="chat-header-hint muted">Только выбывшие · живые вас не видят</span>

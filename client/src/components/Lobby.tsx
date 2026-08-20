@@ -108,7 +108,6 @@ export default function Lobby({
 
       {unreadMailCount > 0 && (
         <button type="button" className="lobby-mail-notice" onClick={onOpenMessages}>
-          <span className="lobby-mail-notice-icon">✉️</span>
           <span>
             {mailNoticeLabel(unreadMailCount)} — открыть
           </span>

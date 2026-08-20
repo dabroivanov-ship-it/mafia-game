@@ -12,7 +12,7 @@ export default function HostProfileModal({ onClose }: HostProfileModalProps) {
           <button type="button" className="btn btn-ghost btn-sm player-page-close" onClick={onClose}>
             ✕ Закрыть
           </button>
-          <h2 className="player-page-name">🤖 {HOST_SENDER_NAME}</h2>
+          <h2 className="player-page-name">{HOST_SENDER_NAME}</h2>
         </div>
 
         <div className="player-page-body">

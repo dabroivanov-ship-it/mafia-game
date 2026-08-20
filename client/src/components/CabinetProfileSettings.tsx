@@ -127,7 +127,7 @@ export default function CabinetProfileSettings({
       </nav>
 
       <header className="page-header">
-        <h1>👤 Личные настройки</h1>
+        <h1>Личные настройки</h1>
         <p className="muted">Профиль, аватар и параметры чата</p>
       </header>
 
@@ -137,7 +137,7 @@ export default function CabinetProfileSettings({
             {user.avatar ? (
               <img src={avatarUrl(user.avatar) ?? undefined} alt="Аватар" className="profile-avatar" />
             ) : (
-              <div className="profile-avatar placeholder">👤</div>
+              <div className="profile-avatar placeholder" aria-hidden="true" />
             )}
           </div>
           <div className="profile-avatar-info">
@@ -160,13 +160,13 @@ export default function CabinetProfileSettings({
           <span>@{user.username}</span>
           {user.telegramUsername && <span>📱 Telegram @{user.telegramUsername}</span>}
           {user.vkUsername && <span>VK {user.vkUsername}</span>}
-          {user.email && !user.needsEmailLink && <span>✉️ {user.email}</span>}
+          {user.email && !user.needsEmailLink && <span>{user.email}</span>}
           {onOpenStatistics ? (
             <button type="button" className="cabinet-hub-mmr-link" onClick={onOpenStatistics}>
-              🏆 MMR {user.mmr ?? user.totalScore}
+              MMR {user.mmr ?? user.totalScore}
             </button>
           ) : (
-            <span>🏆 MMR {user.mmr ?? user.totalScore}</span>
+            <span>MMR {user.mmr ?? user.totalScore}</span>
           )}
           <span>📅 с {new Date(user.createdAt).toLocaleDateString('ru-RU')}</span>
         </div>

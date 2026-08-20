@@ -62,7 +62,7 @@ export default function CabinetSupport({ onBack }: CabinetSupportProps) {
       </nav>
 
       <header className="page-header">
-        <h1>🆘 Поддержка</h1>
+        <h1>Поддержка</h1>
         <p className="muted">Опишите проблему — сообщение придёт главному администратору</p>
       </header>
 

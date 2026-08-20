@@ -9,7 +9,7 @@ export default function Faq({ embedded = false }: FaqProps) {
     <div className={embedded ? 'faq-embedded' : 'faq-page'}>
       {!embedded && (
         <header className="page-header">
-          <h1>❓ Частые вопросы</h1>
+          <h1>Частые вопросы</h1>
           <p className="muted">{FAQ_INTRO}</p>
         </header>
       )}

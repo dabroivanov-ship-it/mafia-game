@@ -887,7 +887,7 @@ export default function AdminPanel({
                       {u.avatar ? (
                         <img src={avatarUrl(u.avatar) ?? undefined} alt="" className="admin-avatar" />
                       ) : (
-                        <span className="admin-avatar placeholder">👤</span>
+                        <span className="admin-avatar placeholder" aria-hidden="true" />
                       )}
                       <span className="admin-users-list-name">
                         <strong>{u.displayName}</strong>
@@ -967,7 +967,7 @@ export default function AdminPanel({
                               {u.avatar ? (
                                 <img src={avatarUrl(u.avatar) ?? undefined} alt="" className="admin-avatar" />
                               ) : (
-                                <span className="admin-avatar placeholder">👤</span>
+                                <span className="admin-avatar placeholder" aria-hidden="true" />
                               )}
                               <div>
                                 <strong>{u.displayName}</strong>
@@ -1392,7 +1392,7 @@ export default function AdminPanel({
               {editUser.avatar ? (
                 <img src={avatarUrl(editUser.avatar) ?? undefined} alt="" className="profile-avatar" />
               ) : (
-                <div className="profile-avatar placeholder">👤</div>
+                <div className="profile-avatar placeholder" aria-hidden="true" />
               )}
               <div>
                 <input ref={avatarInputRef} type="file" accept="image/*" onChange={handleUserAvatar} hidden id="admin-avatar" />

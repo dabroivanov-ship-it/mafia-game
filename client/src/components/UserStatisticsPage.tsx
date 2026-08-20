@@ -70,7 +70,7 @@ export default function UserStatisticsPage({
               {user.avatar ? (
                 <img src={avatarUrl(user.avatar) ?? undefined} alt="" className="user-stats-avatar" />
               ) : (
-                <div className="user-stats-avatar placeholder">👤</div>
+                <div className="user-stats-avatar placeholder" aria-hidden="true" />
               )}
               <div>
                 <h1>{user.displayName || user.username}</h1>
@@ -222,7 +222,7 @@ export default function UserStatisticsPage({
                 className="btn btn-primary"
                 onClick={() => onWriteMessage?.(user.id, user.username)}
               >
-                ✉️ Написать игроку
+                Написать игроку
               </button>
             </div>
           )}

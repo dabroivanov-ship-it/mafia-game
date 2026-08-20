@@ -93,6 +93,17 @@ textarea:focus {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);
 }
 
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+input:not([type='checkbox']):not([type='radio']):focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+}
+
 .auth-tabs button {
   border-radius: 999px;
 }
@@ -524,7 +535,8 @@ textarea:focus {
 .mail-avatar.placeholder,
 .news-comment-avatar.placeholder,
 .quiz-leader-avatar.placeholder,
-.lobby-cabinet-avatar.placeholder {
+.lobby-cabinet-avatar.placeholder,
+.cabinet-hub-avatar.placeholder {
   font-size: 0;
   color: transparent;
   position: relative;
@@ -540,7 +552,8 @@ textarea:focus {
 .mail-avatar.placeholder::after,
 .news-comment-avatar.placeholder::after,
 .quiz-leader-avatar.placeholder::after,
-.lobby-cabinet-avatar.placeholder::after {
+.lobby-cabinet-avatar.placeholder::after,
+.cabinet-hub-avatar.placeholder::after {
   content: '?';
   position: absolute;
   inset: 0;

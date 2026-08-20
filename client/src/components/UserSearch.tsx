@@ -60,7 +60,7 @@ export default function UserSearch({
       </nav>
 
       <header className="page-header">
-        <h1>🔍 Поиск пользователей</h1>
+        <h1>Поиск пользователей</h1>
         <p className="muted">По логину, имени в игре или городу — минимум 2 символа</p>
       </header>
 
@@ -101,7 +101,7 @@ export default function UserSearch({
                 {hit.avatar ? (
                   <img src={avatarUrl(hit.avatar) ?? undefined} alt="" className="user-search-avatar" />
                 ) : (
-                  <div className="user-search-avatar placeholder">👤</div>
+                  <div className="user-search-avatar placeholder" aria-hidden="true" />
                 )}
                 <div className="user-search-card-body">
                   <strong>{hit.username}</strong>
@@ -124,7 +124,7 @@ export default function UserSearch({
                       className="btn btn-sm btn-ghost"
                       onClick={() => onOpenStatistics(hit.id)}
                     >
-                      🏆 MMR {hit.mmr ?? hit.totalScore}
+                      MMR {hit.mmr ?? hit.totalScore}
                     </button>
                   )}
                   {!isSelf && (
@@ -133,7 +133,7 @@ export default function UserSearch({
                       className="btn btn-sm btn-primary"
                       onClick={() => onWriteMessage(hit.id, hit.username)}
                     >
-                      ✉️ Написать письмо
+                      Написать письмо
                     </button>
                   )}
                 </div>

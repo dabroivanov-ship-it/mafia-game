@@ -77,7 +77,7 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
       }
       return (
         <div className="action-panel">
-          <h3>🗳️ Казнить {accusedName || 'кандидата'}?</h3>
+            <h3>Казнить {accusedName || 'кандидата'}?</h3>
           <p className="muted" style={{ marginBottom: 16 }}>
             Половина выдвинула этого игрока. «Да» — казнить, «Нет» — оправдать. Если больше половины
             нажмут «нет», кандидат оправдан и можно выдвинуть другого.
@@ -136,7 +136,7 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
 
     return (
       <div className="action-panel">
-        <h3>🗳️ Выдвиньте кандидата</h3>
+        <h3>Выдвиньте кандидата</h3>
         <p className="muted" style={{ marginBottom: 12, fontSize: '0.9rem' }}>
           Выберите, кого выдвинуть на казнь. «Да» или «нет» появятся, когда одного игрока выберут не
           меньше половины.
@@ -166,7 +166,7 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
     if (role === 'prostitute') {
       return (
         <div className="action-panel">
-          <h3>💋 Выберите клиента (соблазнить)</h3>
+          <h3>Выберите клиента (соблазнить)</h3>
           <div className="target-grid">
             {aliveOthers.map((p) =>
               targetBtn(p, (id) => {
@@ -182,7 +182,7 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
       if (!state.isDon) {
         return (
           <div className="action-panel">
-            <h3>🎩 Мафия</h3>
+            <h3>Мафия</h3>
             <p className="muted" style={{ marginBottom: 12 }}>
               Жертву выбирает главарь. Если он погибнет — главой станете вы.
             </p>
@@ -204,7 +204,7 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
 
       return (
         <div className="action-panel">
-          <h3>🔫 Выберите жертву (вы главарь мафии)</h3>
+          <h3>Выберите жертву (вы главарь мафии)</h3>
           {state.mafiaTeam && state.mafiaTeam.length > 1 && (
             <p className="muted" style={{ marginBottom: 12, fontSize: '0.9rem' }}>
               Союзники:{' '}
@@ -234,7 +234,7 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
       if (!commissarMode) {
         return (
           <div className="action-panel">
-            <h3>🕵️ Инспектор Катани</h3>
+            <h3>Инспектор Катани</h3>
             <div className="action-row">
               <button type="button" className="btn btn-action" onClick={() => setCommissarMode('check')}>
                 Проверить
@@ -248,7 +248,7 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
       }
       return (
         <div className="action-panel">
-          <h3>{commissarMode === 'check' ? '🔍 Кого проверить?' : '🔫 Кого убить?'}</h3>
+          <h3>{commissarMode === 'check' ? 'Кого проверить?' : 'Кого убить?'}</h3>
           <div className="target-grid">
             {aliveOthers.map((p) =>
               targetBtn(p, (id) => {
@@ -266,7 +266,7 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
     if (role === 'maniac') {
       return (
         <div className="action-panel">
-          <h3>🪓 Маньяк — выберите жертву</h3>
+          <h3>Маньяк — выберите жертву</h3>
           <div className="target-grid">
             {aliveOthers.map((p) =>
               targetBtn(p, (id) => {
@@ -281,7 +281,7 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
     if (role === 'doctor') {
       return (
         <div className="action-panel">
-          <h3>💊 Кого лечить?</h3>
+          <h3>Кого лечить?</h3>
           <div className="target-grid">
             {allAlive.map((p) =>
               targetBtn(p, (id) => {
@@ -296,7 +296,7 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
     if (role === 'advocate') {
       return (
         <div className="action-panel">
-          <h3>⚖️ Кого укрыть от проверки Катани?</h3>
+          <h3>Кого укрыть от проверки Катани?</h3>
           <p className="muted" style={{ marginBottom: 12, fontSize: '0.9rem' }}>
             Нельзя защитить себя. Приоритет — дон и активные мафиози.
           </p>
@@ -314,7 +314,7 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
     if (role === 'homeless') {
       return (
         <div className="action-panel">
-          <h3>👁️ Кого проверить?</h3>
+          <h3>Кого проверить?</h3>
           <div className="target-grid">
             {aliveOthers.map((p) =>
               targetBtn(p, (id) => {
@@ -330,7 +330,7 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
       if (!clownStep) {
         return (
           <div className="action-panel">
-            <h3>🎭 Сменить роли (1 раз за игру)</h3>
+            <h3>Сменить роли (1 раз за игру)</h3>
             <button type="button" className="btn btn-action btn-lg" onClick={() => setClownStep('first')}>
               Сменить роли
             </button>
@@ -375,7 +375,7 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
     if (role === 'commissar_wife' && state.wifeRevengeAvailable) {
       return (
         <div className="action-panel">
-          <h3>⚔️ Мстить — выберите жертву</h3>
+          <h3>Мстить — выберите жертву</h3>
           <div className="target-grid">
             {aliveOthers.map((p) =>
               targetBtn(p, (id) => {

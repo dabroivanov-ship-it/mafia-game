@@ -359,7 +359,7 @@ export default function UserProfileModal({
                   {user.avatar ? (
                     <img src={avatarUrl(user.avatar) ?? undefined} alt="" className="profile-avatar" />
                   ) : (
-                    <div className="profile-avatar placeholder">👤</div>
+                    <div className="profile-avatar placeholder" aria-hidden="true" />
                   )}
                   <div>
                     <strong>@{user.username}</strong>
@@ -465,7 +465,7 @@ export default function UserProfileModal({
                           disabled={friendBusy}
                           onClick={() => void handleToggleFriend()}
                         >
-                          {data?.isFriend ? '💔 Удалить из друзей' : '👥 В друзья'}
+                          {data?.isFriend ? 'Удалить из друзей' : 'В друзья'}
                         </button>
                         <button
                           type="button"
@@ -479,7 +479,7 @@ export default function UserProfileModal({
                             }
                           }}
                         >
-                          ✉️ Написать письмо
+                          Написать письмо
                         </button>
                       </div>
                     ) : (
@@ -517,7 +517,7 @@ export default function UserProfileModal({
                   <div className="profile-reputation-block">
                     {data?.reputationVote != null ? (
                       <p className="muted">
-                        Ваша оценка: {data.reputationVote > 0 ? '👍 Положительная' : '👎 Отрицательная'}
+                        Ваша оценка: {data.reputationVote > 0 ? 'положительная' : 'отрицательная'}
                       </p>
                     ) : data?.canVoteReputation ? (
                       <div className="profile-reputation-actions">

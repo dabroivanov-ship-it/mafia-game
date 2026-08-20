@@ -33,7 +33,7 @@ export default function Staff({ embedded = false }: StaffProps) {
   return (
     <div className={embedded ? 'staff-embedded' : 'staff-page'}>
       <header className="page-header">
-        <h1>{embedded ? '🛡️ Команда' : '🛡️ Команда проекта'}</h1>
+        <h1>{embedded ? 'Команда' : 'Команда проекта'}</h1>
         <p className="muted">
           {embedded
             ? 'Администраторы, модераторы и смотрящие проекта'
@@ -96,7 +96,7 @@ function StaffCard({ member }: { member: StaffMember }) {
       {member.avatar ? (
         <img src={avatarUrl(member.avatar) ?? undefined} alt="" className="staff-avatar" />
       ) : (
-        <div className="staff-avatar placeholder">👤</div>
+        <div className="staff-avatar placeholder" aria-hidden="true" />
       )}
       <div className="staff-card-body">
         <strong>{member.displayName}</strong>

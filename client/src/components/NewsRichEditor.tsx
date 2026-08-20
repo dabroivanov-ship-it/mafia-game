@@ -216,14 +216,14 @@ export default function NewsRichEditor({
     },
     {
       title: 'Ссылка',
-      label: '🔗',
+      label: 'URL',
       group: 'insert',
       active: editor.isActive('link'),
       action: () => run(setLink),
     },
     {
       title: 'Изображение',
-      label: '🖼',
+      label: 'IMG',
       group: 'insert',
       action: () => imageInputRef.current?.click(),
     },

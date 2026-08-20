@@ -201,12 +201,12 @@ export default function Chat({
             )}
             {msg.sourceChannel === 'spectator' && (
               <span className="chat-spectator-tag" title="Только для наблюдателей">
-                👁
+                набл.
               </span>
             )}
             {msg.sourceChannel === 'dead' && (
               <span className="chat-dead-tag" title="Чат выбывших">
-                💀
+                выб.
               </span>
             )}
             <span className="chat-line">

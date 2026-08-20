@@ -275,7 +275,7 @@ export default function Messages({
         </button>
         {view !== 'compose' && (
           <button type="button" className="btn btn-primary btn-sm" onClick={() => setView('compose')}>
-            ✏️ Написать
+            Написать
           </button>
         )}
       </nav>
@@ -283,10 +283,10 @@ export default function Messages({
       <header className="page-header">
         <h1>
           {view === 'thread' && threadUser
-            ? `💬 ${threadUser.username}`
+            ? threadUser.username
             : view === 'compose'
-              ? '✏️ Новое письмо'
-              : '✉️ Письма'}
+              ? 'Новое письмо'
+              : 'Письма'}
         </h1>
         {view === 'thread' && threadUser && (
           <p className="muted">
@@ -304,14 +304,14 @@ export default function Messages({
             className={`btn btn-sm ${listTab === 'dialogs' ? 'btn-primary' : 'btn-ghost'}`}
             onClick={() => setListTab('dialogs')}
           >
-            💬 Диалоги
+            Диалоги
           </button>
           <button
             type="button"
             className={`btn btn-sm ${listTab === 'friends' ? 'btn-primary' : 'btn-ghost'}`}
             onClick={() => setListTab('friends')}
           >
-            👥 Друзья
+            Друзья
           </button>
         </div>
       )}
@@ -445,7 +445,7 @@ function FriendItem({
         {friend.avatar ? (
           <img src={avatarUrl(friend.avatar) ?? undefined} alt="" className="mail-avatar" />
         ) : (
-          <span className="mail-avatar placeholder">👤</span>
+          <span className="mail-avatar placeholder" aria-hidden="true" />
         )}
         <div className="mail-conversation-body">
           <div className="mail-conversation-top">
@@ -457,7 +457,7 @@ function FriendItem({
           <span className="muted mail-conversation-login">@{friend.username}</span>
         </div>
         <button type="button" className="btn btn-primary btn-sm" onClick={onWrite}>
-          ✉️ Написать
+          Написать
         </button>
       </div>
     </div>
@@ -485,7 +485,7 @@ function ConversationItem({
         {otherUser.avatar ? (
           <img src={avatarUrl(otherUser.avatar) ?? undefined} alt="" className="mail-avatar" />
         ) : (
-          <span className="mail-avatar placeholder">👤</span>
+          <span className="mail-avatar placeholder" aria-hidden="true" />
         )}
         <div className="mail-conversation-body">
           <div className="mail-conversation-top">

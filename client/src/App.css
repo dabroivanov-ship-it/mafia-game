@@ -785,7 +785,7 @@ html.telegram-webapp .app-body {
 
 .btn-target.selected {
   border-color: var(--accent);
-  background: rgba(108, 92, 231, 0.2);
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 .btn-lg {
@@ -980,7 +980,7 @@ html.telegram-webapp .app-body {
 }
 
 .lobby-tab.active {
-  background: rgba(124, 108, 240, 0.18);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
   color: var(--text);
 }
 
@@ -1275,7 +1275,7 @@ html.telegram-webapp .app-body {
 }
 
 .user-search-card:hover {
-  border-color: rgba(124, 108, 240, 0.45);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 .user-search-avatar {
@@ -1336,7 +1336,7 @@ html.telegram-webapp .app-body {
 }
 
 .lobby-news-card:hover {
-  border-color: rgba(124, 108, 240, 0.45);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 .lobby-news-card:active {
@@ -2137,8 +2137,8 @@ html.telegram-webapp .app-body {
 }
 
 .roles-banner {
-  border-color: rgba(124, 108, 240, 0.35);
-  background: rgba(124, 108, 240, 0.08);
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
 }
 
 .lobby-cabinet-card {
@@ -2159,7 +2159,7 @@ html.telegram-webapp .app-body {
 }
 
 .lobby-cabinet-card:hover {
-  border-color: rgba(124, 108, 240, 0.45);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 .lobby-cabinet-card:active {
@@ -2236,8 +2236,8 @@ html.telegram-webapp .app-body {
 }
 
 .mail-history-item.unread {
-  border-color: rgba(124, 108, 240, 0.45);
-  background: rgba(124, 108, 240, 0.08);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
 }
 
 .mail-direction {
@@ -2254,7 +2254,7 @@ html.telegram-webapp .app-body {
 }
 
 .mail-direction.out {
-  background: rgba(124, 108, 240, 0.15);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
   color: var(--accent);
 }
 
@@ -2297,8 +2297,8 @@ html.telegram-webapp .app-body {
 }
 
 .mail-conversation-item.unread {
-  border-color: rgba(124, 108, 240, 0.45);
-  background: rgba(124, 108, 240, 0.08);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
 }
 
 .mail-conversation-item .mail-item-header {
@@ -2364,8 +2364,8 @@ html.telegram-webapp .app-body {
 
 .mail-thread-bubble.out {
   align-self: flex-end;
-  background: rgba(124, 108, 240, 0.18);
-  border: 1px solid rgba(124, 108, 240, 0.35);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
 .mail-thread-meta {
@@ -2488,7 +2488,7 @@ html.telegram-webapp .app-body {
 }
 
 .info-hub-card:hover {
-  border-color: rgba(124, 108, 240, 0.45);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
 }
 
 .info-hub-card:active {
@@ -2662,7 +2662,7 @@ html.telegram-webapp .app-body {
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--accent);
-  background: rgba(124, 108, 240, 0.15);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
   padding: 3px 10px;
   border-radius: 20px;
 }
@@ -2777,7 +2777,7 @@ html.telegram-webapp .app-body {
 }
 
 .room-member-row.me {
-  background: rgba(108, 92, 231, 0.08);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
   margin: 0 -8px;
   padding-left: 8px;
   padding-right: 8px;
@@ -2813,7 +2813,7 @@ html.telegram-webapp .app-body {
 }
 
 .my-role-card {
-  background: rgba(108, 92, 231, 0.15);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
   border-bottom: 1px solid var(--border);
   padding: 10px 16px;
   display: flex;
@@ -2845,8 +2845,8 @@ html.telegram-webapp .app-body {
 .join-game-banner {
   margin: 10px 12px 0;
   padding: 14px;
-  background: linear-gradient(135deg, rgba(124, 108, 240, 0.18), rgba(124, 108, 240, 0.08));
-  border: 1px solid rgba(124, 108, 240, 0.35);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 18%, transparent), color-mix(in srgb, var(--accent) 8%, transparent));
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
   border-radius: var(--radius);
   display: flex;
   flex-direction: column;
@@ -2956,11 +2956,15 @@ html.telegram-webapp .app-body {
 }
 
 .players-list li.me {
-  background: rgba(108, 92, 231, 0.2);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
 }
 
 .spectator-badge {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+  color: var(--text-muted);
 }
 
 .players-spectators li {
@@ -3079,14 +3083,13 @@ html.telegram-webapp .app-body {
   padding: 2px 6px;
 }
 
-.chat-spectator-tag {
-  margin-right: 4px;
-  font-size: 0.75rem;
-}
-
+.chat-spectator-tag,
 .chat-dead-tag {
-  margin-right: 4px;
-  font-size: 0.75rem;
+  margin-right: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
 }
 
 .chat-time {
@@ -3205,7 +3208,7 @@ html.telegram-webapp .app-body {
 }
 
 .chat-msg.direct {
-  background: rgba(124, 108, 240, 0.08);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
   border-radius: 4px;
   padding: 2px 6px;
 }
@@ -3217,7 +3220,7 @@ html.telegram-webapp .app-body {
   gap: 8px;
   padding: 8px 12px;
   border-top: 1px solid var(--border);
-  background: rgba(124, 108, 240, 0.12);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
   font-size: 0.9rem;
 }
 
@@ -3231,8 +3234,8 @@ html.telegram-webapp .app-body {
 }
 
 .chat-has-reply .chat-input input {
-  border-color: rgba(124, 108, 240, 0.55);
-  box-shadow: 0 0 0 1px rgba(124, 108, 240, 0.15);
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 15%, transparent);
 }
 
 .chat-private-btn {
@@ -3397,11 +3400,11 @@ html.telegram-webapp .app-body {
   height: 48px;
   border-radius: 18px;
   background:
-    radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.35), transparent 30%),
-    linear-gradient(135deg, #7c6cf0, #d13f72 55%, #f0b429);
+    radial-gradient(circle at 35% 25%, color-mix(in srgb, #fff 28%, transparent), transparent 32%),
+    linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 55%, #000));
   color: #fff;
   font-size: 1.7rem;
-  box-shadow: 0 12px 32px rgba(124, 108, 240, 0.35);
+  box-shadow: 0 12px 32px var(--accent-glow);
   animation: mafiaLogoFloat 3.4s ease-in-out infinite;
 }
 
@@ -3411,7 +3414,7 @@ html.telegram-webapp .app-body {
   position: absolute;
   inset: -7px;
   border-radius: 24px;
-  border: 1px solid rgba(124, 108, 240, 0.45);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
   animation: mafiaLogoPulse 2.2s ease-in-out infinite;
 }
 
@@ -4011,7 +4014,7 @@ html.telegram-webapp .app-body {
 
 .mail-item.unread {
   border-color: var(--accent);
-  box-shadow: 0 0 0 1px rgba(124, 108, 240, 0.25);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
 .mail-item-header {
@@ -4082,9 +4085,9 @@ html.telegram-webapp .app-body {
   width: 100%;
   margin: 0 0 18px;
   padding: 14px 16px;
-  border: 1px solid rgba(124, 108, 240, 0.45);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
   border-radius: var(--radius);
-  background: rgba(124, 108, 240, 0.12);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
   color: var(--text);
   cursor: pointer;
   font: inherit;
@@ -4125,7 +4128,7 @@ html.telegram-webapp .app-body {
 }
 
 .toast.pm-toast {
-  background: rgba(124, 108, 240, 0.95);
+  background: color-mix(in srgb, var(--accent) 88%, #000);
   border-color: var(--accent);
 }
 
@@ -4238,9 +4241,18 @@ html.telegram-webapp .app-body {
 }
 
 .role-card-icon {
-  font-size: 1.75rem;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
   flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent) 14%, var(--bg-hover));
+  color: var(--accent);
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .role-card-titles {
