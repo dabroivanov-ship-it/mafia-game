@@ -29,7 +29,6 @@ export default function PlayersList({
       >
         {displayName(p)}
       </button>
-      {isSpectator && <span className="spectator-badge">набл.</span>}
       {showRole && 'roleLabel' in p && p.roleLabel && (
         <span className="player-role">{p.roleLabel}</span>
       )}

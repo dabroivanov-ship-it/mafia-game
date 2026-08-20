@@ -46,8 +46,8 @@ function PersonRow({
 export default function RoomMembersPage({ state, onBack, onViewProfile }: RoomMembersPageProps) {
   const isChatRoom = state.kind === 'chat';
   const connected = state.presence.filter((p) => p.connected);
-  const inGame = connected.filter((p) => p.inGame);
-  const notInGame = connected.filter((p) => !p.inGame);
+  const inGame = connected.filter((p) => p.inGame && p.alive);
+  const notInGame = connected.filter((p) => !p.inGame || (p.inGame && !p.alive));
 
   return (
     <div className="room room-members-page">
@@ -85,7 +85,7 @@ export default function RoomMembersPage({ state, onBack, onViewProfile }: RoomMe
             <section className="room-members-section">
               <h2>В игре ({inGame.length})</h2>
               {inGame.length === 0 ? (
-                <p className="muted">Никого нет в партии.</p>
+                <p className="muted">За столом никого не осталось.</p>
               ) : (
                 <ul className="room-members-list">
                   {inGame.map((p) => (
@@ -98,7 +98,7 @@ export default function RoomMembersPage({ state, onBack, onViewProfile }: RoomMe
             <section className="room-members-section">
               <h2>Не в игре ({notInGame.length})</h2>
               {notInGame.length === 0 ? (
-                <p className="muted">Все, кто в комнате, уже в партии.</p>
+                <p className="muted">Все, кто в комнате, за столом.</p>
               ) : (
                 <ul className="room-members-list">
                   {notInGame.map((p) => (

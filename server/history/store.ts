@@ -169,7 +169,8 @@ export function deleteRoomChatLog(roomId: number): void {
 
 export function loadRoomChatHistory(
   roomId: number,
-  limit = 300
+  limit = 300,
+  sessionId?: number | null
 ): {
   chat: ChatMessage[];
   mafiaChat: ChatMessage[];
@@ -177,11 +178,25 @@ export function loadRoomChatHistory(
   spectatorChat: ChatMessage[];
   privateChat: ChatMessage[];
 } {
-  const rows = db
-    .prepare(
-      `SELECT * FROM room_chat_log WHERE room_id = ? ORDER BY created_at DESC LIMIT ?`
-    )
-    .all(roomId, limit) as ChatRow[];
+  const rows = (
+    sessionId === undefined
+      ? db
+          .prepare(
+            `SELECT * FROM room_chat_log WHERE room_id = ? ORDER BY created_at DESC LIMIT ?`
+          )
+          .all(roomId, limit)
+      : sessionId == null
+        ? db
+            .prepare(
+              `SELECT * FROM room_chat_log WHERE room_id = ? AND session_id IS NULL ORDER BY created_at DESC LIMIT ?`
+            )
+            .all(roomId, limit)
+        : db
+            .prepare(
+              `SELECT * FROM room_chat_log WHERE room_id = ? AND session_id = ? ORDER BY created_at DESC LIMIT ?`
+            )
+            .all(roomId, sessionId, limit)
+  ) as ChatRow[];
   rows.reverse();
 
   const chat: ChatMessage[] = [];
@@ -241,7 +256,16 @@ export function getRecentGameEvents(limit = 30): GameEvent[] {
 
 export function hydrateRoomHistory(room: GameRoom): void {
   if (room.historyLoaded) return;
-  const { chat, mafiaChat, deadChat, spectatorChat, privateChat } = loadRoomChatHistory(room.id);
+  const sessionId = room.kind === 'chat' ? undefined : room.sessionId;
+  if (room.kind !== 'chat' && sessionId == null) {
+    room.historyLoaded = true;
+    return;
+  }
+  const { chat, mafiaChat, deadChat, spectatorChat, privateChat } = loadRoomChatHistory(
+    room.id,
+    300,
+    sessionId
+  );
   room.chat = chat.map((msg) =>
     msg.system ? { ...msg, playerName: normalizeSystemSender(msg.playerName) } : msg
   );

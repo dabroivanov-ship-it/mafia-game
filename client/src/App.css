@@ -2981,14 +2981,6 @@ html.telegram-webapp .app-body {
   background: color-mix(in srgb, var(--accent) 16%, transparent);
 }
 
-.spectator-badge {
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: lowercase;
-  color: var(--text-muted);
-}
-
 .players-spectators li {
   opacity: 0.85;
 }
@@ -3103,15 +3095,6 @@ html.telegram-webapp .app-body {
   background: rgba(241, 196, 15, 0.08);
   border-radius: 6px;
   padding: 2px 6px;
-}
-
-.chat-spectator-tag,
-.chat-dead-tag {
-  margin-right: 6px;
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: var(--text-muted);
 }
 
 .chat-time {

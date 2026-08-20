@@ -267,7 +267,7 @@ export default function Room({
 
       {!isChatRoom && state.isSpectator && !showJoin && (
         <div className="spectator-banner">
-          Вы наблюдаете. Видите чат игры; ваши сообщения видят только наблюдатели.
+          Вы наблюдаете. Видите чат игры; писать можно наблюдателям и выбывшим.
         </div>
       )}
 
@@ -298,16 +298,20 @@ export default function Room({
                 {isChatRoom
                   ? 'Общий чат'
                   : state.chatMode === 'spectator'
-                    ? 'Игра + наблюдатели'
+                    ? 'Игра + выбывшие'
                     : state.chatMode === 'dead'
-                      ? 'Чат выбывших'
+                      ? 'Выбывшие и наблюдатели'
                       : 'Чат'}
                 </span>
                 {state.chatMode === 'spectator' && (
-                  <span className="chat-header-hint muted">Видно только наблюдателям</span>
+                  <span className="chat-header-hint muted">
+                    Ваши сообщения видят наблюдатели и выбывшие
+                  </span>
                 )}
                 {state.chatMode === 'dead' && (
-                  <span className="chat-header-hint muted">Только выбывшие · живые вас не видят</span>
+                  <span className="chat-header-hint muted">
+                    Наблюдатели вас видят · живые — нет
+                  </span>
                 )}
                 {state.myPlayer?.silenced && (
                   <span className="chat-header-hint muted">🔇 Молчание — ваши сообщения видите только вы</span>
@@ -343,11 +347,9 @@ export default function Room({
                 placeholder={
                   isChatRoom
                     ? 'Сообщение...'
-                    : state.chatMode === 'spectator'
-                      ? 'Для наблюдателей...'
-                      : state.chatMode === 'dead'
-                        ? 'Для выбывших...'
-                        : 'Сообщение...'
+                    : state.chatMode === 'spectator' || state.chatMode === 'dead'
+                      ? 'Для выбывших и наблюдателей...'
+                      : 'Сообщение...'
                 }
               />
               {!isChatRoom && !state.isSpectator && <ActionPanel state={state} emit={emit} />}

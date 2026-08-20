@@ -602,14 +602,21 @@ export function startRegistration(room: GameRoom, _starterPlayerId: number | nul
     p.joinGameAvailableAt = 0;
   }
 
+  room.chat = [];
+  room.mafiaChat = [];
+  room.deadChat = [];
+  room.spectatorChat = [];
+  room.privateChat = [];
+  room.systemMessages = [];
+  room.historyLoaded = true;
+  room.phase = PHASE.REGISTRATION;
+  room.sessionId = Date.now();
+
   const addedBots = ensureAiBots(room, allocatePlayerId);
   for (const bot of addedBots) {
     addSystemMessage(room, `${bot.username} присоединяется к игре!`);
   }
 
-  room.phase = PHASE.REGISTRATION;
-  room.sessionId = Date.now();
-  hydrateRoomHistory(room);
   saveGameEvent(room.id, room.sessionId, 'registration_start', {
     roomName: room.name,
   });
@@ -1378,6 +1385,15 @@ export function resolveNight(room: GameRoom): NightResolveResult {
         room.clownUsed = true;
         clown.score += 30 * room.nightNumber;
         report.clownSwapped = [a, b];
+        for (const swapped of [a, b]) {
+          const roleLine = getRoleLabel(swapped.role);
+          const donLine = swapped.isDon ? ' Вы — главарь мафии.' : '';
+          addHostPrivateMessage(
+            room,
+            swapped.id,
+            `Клоун сменил вашу роль. Теперь вы: ${roleLine}.${donLine}`
+          );
+        }
       }
     }
   }
@@ -1479,6 +1495,11 @@ export function checkWin(room: GameRoom): boolean {
     endGame(room, 'mafia', 'Мафия победила!');
     return true;
   }
+  const maniacAlive = alive.some((p) => p.role === 'maniac');
+  if (!maniacAlive && mafiaSideAlive > townAlive) {
+    endGame(room, 'mafia', 'Мафия победила!');
+    return true;
+  }
   return false;
 }
 
@@ -1518,12 +1539,6 @@ export function resetRoom(room: GameRoom): void {
   const id = room.id;
   const name = room.name;
   const kind = room.kind;
-  const chat = room.chat;
-  const mafiaChat = room.mafiaChat;
-  const deadChat = room.deadChat;
-  const spectatorChat = room.spectatorChat;
-  const privateChat = room.privateChat;
-  const historyLoaded = room.historyLoaded;
   const aiEnabled = room.aiEnabled;
   const aiCount = room.aiCount;
   const connectedPlayers = room.players.filter((p) => p.connected && !p.isBot);
@@ -1531,12 +1546,7 @@ export function resetRoom(room: GameRoom): void {
   room.name = name;
   room.aiEnabled = aiEnabled;
   room.aiCount = aiCount;
-  room.chat = chat;
-  room.mafiaChat = mafiaChat;
-  room.deadChat = deadChat;
-  room.spectatorChat = spectatorChat;
-  room.privateChat = privateChat;
-  room.historyLoaded = historyLoaded;
+  room.historyLoaded = true;
   room.players = connectedPlayers.map((p) => ({
     ...p,
     inGame: true,
@@ -1754,12 +1764,35 @@ function isDeadInGame(p: GamePlayer | undefined, room?: GameRoom): boolean {
   return !!(p?.inGame && p.role && !p.alive);
 }
 
+function isSpectatorInGame(p: GamePlayer | undefined, room: GameRoom): boolean {
+  return !!(p && !isChatRoom(room) && !p.inGame && isActiveGamePhase(room.phase));
+}
+
+/** Выбывшие и наблюдатели — общий боковой чат, живые его не видят. */
+function isSidelineInGame(p: GamePlayer | undefined, room: GameRoom): boolean {
+  return isDeadInGame(p, room) || isSpectatorInGame(p, room);
+}
+
 function filterDeadChatMessages(room: GameRoom, messages: ChatMessage[]): ChatMessage[] {
   return messages.filter((m) => {
     if (m.system || m.playerId == null) return true;
     const author = room.players.find((p) => p.id === m.playerId);
     return isDeadInGame(author, room);
   });
+}
+
+function taggedSidelineMessages(room: GameRoom): ChatMessage[] {
+  const deadMsgs = filterDeadChatMessages(room, room.deadChat).map((m) => ({
+    ...m,
+    sourceChannel: 'dead' as ChatChannel,
+  }));
+  const specMsgs = room.spectatorChat.map((m) => ({
+    ...m,
+    sourceChannel: 'spectator' as ChatChannel,
+  }));
+  return [...deadMsgs, ...specMsgs].sort(
+    (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
+  );
 }
 
 function appendPrivateMessagesForDead(
@@ -1775,9 +1808,9 @@ function appendPrivateMessagesForDead(
   const mine = privateChat.filter((m) => {
     if (m.playerId !== myPlayerId && m.toPlayerId !== myPlayerId) return false;
     const otherId = m.playerId === myPlayerId ? m.toPlayerId : m.playerId;
-    if (!otherId) return false;
+    if (!otherId) return m.toPlayerId === myPlayerId;
     const other = room.players.find((p) => p.id === otherId);
-    return isDeadInGame(other, room);
+    return isSidelineInGame(other, room);
   });
   if (mine.length === 0) return messages;
   return [...messages, ...mine].sort(
@@ -1817,7 +1850,7 @@ export function addPrivateChatMessage(
   const from = room.players.find((p) => p.id === fromPlayerId);
   const to = room.players.find((p) => p.id === toPlayerId);
   if (!from || !to || fromPlayerId === toPlayerId) return null;
-  if (isDeadInGame(from, room) && !isDeadInGame(to, room)) return null;
+  if (isSidelineInGame(from, room) && !isSidelineInGame(to, room)) return null;
 
   const msg: ChatMessage = {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
@@ -2087,9 +2120,9 @@ function buildChatView(
 
   if (isSpectator) {
     const gameMsgs = room.chat.map((m) => ({ ...m, sourceChannel: 'public' as ChatChannel }));
-    const specMsgs = room.spectatorChat.map((m) => ({ ...m, sourceChannel: 'spectator' as ChatChannel }));
+    const sideline = taggedSidelineMessages(room);
     let combined = appendPrivateMessages(
-      [...gameMsgs, ...specMsgs].sort(
+      [...gameMsgs, ...sideline].sort(
         (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
       ),
       room,
@@ -2126,12 +2159,9 @@ function buildChatView(
     };
   }
 
-  const deadMsgs = filterDeadChatMessages(room, room.deadChat).map((m) => ({
-    ...m,
-    sourceChannel: 'dead' as ChatChannel,
-  }));
+  const sideline = taggedSidelineMessages(room);
   let combined = appendPrivateMessagesForDead(
-    [...systemMsgs, ...deadMsgs].sort(
+    [...systemMsgs, ...sideline].sort(
       (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
     ),
     room,

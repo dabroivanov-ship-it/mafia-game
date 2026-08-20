@@ -34,6 +34,8 @@ const REGISTRATION_LINES = [
   'Ну что, кто ещё зайдёт?',
   'Готов играть.',
   'Давайте наберёмся и стартуем.',
+  'Жду старта.',
+  'Место занял, можно начинать.',
 ];
 
 const TABLE_TALK_LINES = [
@@ -42,6 +44,49 @@ const TABLE_TALK_LINES = [
   'Предлагаю смотреть, кто давит на голосовании.',
   'Мне по этой партии пока не всё ясно.',
   'Давайте не торопиться — лучше спокойно разобрать ночь.',
+  'Сводка есть, давайте не вешать первого попавшегося.',
+  'Мне важнее, кто как голосует, а не кто громче орёт.',
+  'Пока расклад мутный. Не суетимся.',
+];
+
+function suspicionLines(name: string): string[] {
+  return [
+    `Я пока смотрю на ${name}.`,
+    `${name} как-то удобно отмалчивается.`,
+    `${name}, объяснись — чего такой спокойный?`,
+    `Давайте ${name} на стол, хочу послушать.`,
+    `Меня смущает ${name}, не все сразу.`,
+    `Голосую за ${name} — давайте разберём.`,
+    `${name} мне сегодня не ложится.`,
+    `У меня вопрос к ${name}.`,
+    `Не ${name} орёт, а ведёт себя слишком ровно.`,
+    `${name} как будто заранее знает, чем ночь кончится.`,
+  ];
+}
+
+function hangTalkLines(name: string, yes: boolean): string[] {
+  if (yes) {
+    return [
+      `${name} на столе — я за казнь.`,
+      `Вешаем ${name}, иначе опять уйдём в ночь вслепую.`,
+      `По ${name} фактов хватает, я за.`,
+      `${name} пусть объясняет, но голос мой — да.`,
+    ];
+  }
+  return [
+    `${name} на столе, но я пока против. Мало.`,
+    `Не вешаем ${name} из-за шума.`,
+    `По ${name} казни не вижу. Нет.`,
+    `${name} рано на стол. Я против.`,
+  ];
+}
+
+const FALLBACK_REPLIES = [
+  (name: string) => `${name}, ок, слышу. Давайте по сводке, не по кругу.`,
+  (name: string) => `${name}, я бы не повторял одно и то же — давай по голосам.`,
+  (name: string) => `${name}, понял. Мне важнее, кто молчит.`,
+  (name: string) => `${name}, давай без общих слов — кто конкретно и почему.`,
+  (name: string) => `${name}, я здесь. По этой катке пока держусь своего.`,
 ];
 
 let broadcastRoom: (roomId: number) => void = () => {};
@@ -127,6 +172,33 @@ function aliveTargets(room: GameRoom, excludeId: number): GamePlayer[] {
 function pickRandom<T>(items: T[]): T | null {
   if (!items.length) return null;
   return items[Math.floor(Math.random() * items.length)] ?? null;
+}
+
+function normalizeTalk(text: string, room: GameRoom): string {
+  const names = room.players
+    .flatMap((p) => [p.username, p.name])
+    .filter((n): n is string => !!n)
+    .sort((a, b) => b.length - a.length);
+  let s = text.toLowerCase();
+  for (const name of names) {
+    s = s.split(name.toLowerCase()).join('#');
+  }
+  return s.replace(/[^\p{L}\s#]/gu, '').replace(/\s+/g, ' ').trim();
+}
+
+function recentTalkKeys(room: GameRoom): Set<string> {
+  const keys = new Set<string>();
+  for (const msg of room.chat) {
+    if (msg.system || msg.deleted || !msg.text) continue;
+    const key = normalizeTalk(msg.text, room);
+    if (key) keys.add(key);
+  }
+  return keys;
+}
+
+function pickFreshLine(candidates: string[], used: Set<string>, room: GameRoom): string {
+  const fresh = candidates.filter((line) => !used.has(normalizeTalk(line, room)));
+  return pickRandom(fresh.length ? fresh : candidates) || candidates[0] || '';
 }
 
 function canReplyNow(roomId: number): boolean {
@@ -240,7 +312,23 @@ function buildFallbackReply(
   if (messageMentionsBot(text, bot)) {
     return `${name}, я здесь. Давай разбираться по фактам — кто молчал и кто давил на голосовании.`;
   }
-  return `${name}, понимаю. По этой игре мне тоже кажется, что стоит присмотреться к голосам.`;
+  const used = recentTalkKeys(room);
+  return pickFreshLine(
+    FALLBACK_REPLIES.map((line) => line(name)),
+    used,
+    room
+  );
+}
+
+function choosePublicReply(
+  room: GameRoom,
+  proposed: string,
+  fallback: string
+): string {
+  const text = proposed.trim();
+  if (!text) return fallback;
+  if (recentTalkKeys(room).has(normalizeTalk(text, room))) return fallback;
+  return text;
 }
 
 async function runBotChatReply(
@@ -273,7 +361,7 @@ async function runBotChatReply(
       room,
       room.phase === PHASE.REGISTRATION
         ? `Игрок написал в чат на регистрации. Коротко ответь как живой игрок за столом (до 140 символов), без мета-речи про ИИ. JSON: {"shouldReply":true,"message":"..."}`
-        : `Игрок написал в чат. Реши, нужен ли ответ по ходу ЭТОЙ партии. Если спам, смайлик, «ок» — {"shouldReply":false}. Иначе коротко (до 180 символов) ответь по фактам, голосам и сводке, без раскрытия своей роли без нужды. JSON: {"shouldReply":true,"message":"..."}`,
+        : `Игрок написал в чат. Реши, нужен ли ответ по ходу ЭТОЙ партии. Если спам, смайлик, «ок» — {"shouldReply":false}. Иначе коротко (до 180 символов) ответь по фактам, голосам и сводке, без раскрытия своей роли. Не копируй чужие фразы и не пиши «стоит присмотреться». JSON: {"shouldReply":true,"message":"..."}`,
       trigger,
       0.7,
       CHAT_TIMEOUT_MS
@@ -282,9 +370,7 @@ async function runBotChatReply(
     if (response?.shouldReply === false && !addressed) return;
 
     let replyText = response?.message?.trim().slice(0, 180) ?? '';
-    if (!replyText) {
-      replyText = buildFallbackReply(bot, author, text, room);
-    }
+    replyText = choosePublicReply(room, replyText, buildFallbackReply(bot, author, text, room));
 
     addChatMessage(room, bot.id, replyText, 'public');
     markReply(room.id);
@@ -295,23 +381,42 @@ async function runBotChatReply(
 }
 
 function fallbackTableTalk(bot: GamePlayer, room: GameRoom): string {
+  const used = recentTalkKeys(room);
   if (room.phase === PHASE.REGISTRATION) {
-    return pickRandom(REGISTRATION_LINES) || 'Всем привет!';
+    return pickFreshLine(REGISTRATION_LINES, used, room);
   }
+
+  if (room.phase === PHASE.VOTING && room.votingStage === 'confirm' && room.accusedId != null) {
+    const accused = room.players.find((p) => p.id === room.accusedId);
+    const name = accused?.username || accused?.name;
+    if (name) {
+      return pickFreshLine(hangTalkLines(name, heuristicHangYes(bot, room)), used, room);
+    }
+  }
+
   const targets = aliveTargets(room, bot.id);
-  const suspect = pickRandom(targets);
-  if (suspect) {
-    return `Мне кажется, стоит присмотреться к ${suspect.username}.`;
-  }
-  return pickRandom(TABLE_TALK_LINES) || 'Давайте разбираться по фактам.';
+  const suspect = heuristicNominateTarget(bot, room, targets);
+  const named = suspect ? suspicionLines(suspect.username || suspect.name) : [];
+  const mix =
+    Math.random() < 0.45 || !named.length
+      ? [...TABLE_TALK_LINES, ...named]
+      : [...named, ...TABLE_TALK_LINES];
+  return pickFreshLine(mix, used, room);
 }
 
 function tableTalkInstruction(room: GameRoom): string {
+  const unique =
+    'Фраза должна быть новой: не копируй чат и не используй шаблон «стоит присмотреться». Не признавайся, что ты ИИ.';
   if (room.phase === PHASE.REGISTRATION) {
-    return 'Регистрация в комнате. Одно короткое сообщение (до 120 символов) как живой игрок: приветствие или «готов играть». Не признавайся, что ты ИИ. JSON: {"message":"..."}';
+    return `Регистрация в комнате. Одно короткое сообщение (до 120 символов) как живой игрок: приветствие или «готов играть». ${unique} JSON: {"message":"..."}`;
+  }
+  if (room.phase === PHASE.VOTING && room.votingStage === 'confirm') {
+    const accused = room.players.find((p) => p.id === room.accusedId);
+    const name = accused?.username || 'кандидат';
+    return `На столе ${name}. Одно короткое сообщение (до 180 символов): казнить или оправдать и почему, без новой случайной фамилии. ${unique} JSON: {"message":"..."}`;
   }
   const dayNumber = room.nightNumber + 1;
-  return `Начался день ${dayNumber} / голосование. Одно короткое сообщение (до 180 символов): прокомментируй сводку ночи, голосование или подозрения по фактам ЭТОЙ партии. Не раскрывай роль. JSON: {"message":"..."}`;
+  return `День ${dayNumber} / голосование. Одно короткое сообщение (до 180 символов): сводка, голос или подозрение по ЭТОЙ партии. Говори своим словами. ${unique} JSON: {"message":"..."}`;
 }
 
 function inspectorRevealBots(room: GameRoom): GamePlayer[] {
@@ -348,6 +453,7 @@ async function runInspectorReveals(room: GameRoom): Promise<void> {
 }
 
 async function runTableTalk(room: GameRoom): Promise<void> {
+  if (room.phase === PHASE.VOTING && room.votingStage === 'confirm') return;
   const revealIds = new Set(inspectorRevealBots(room).map((p) => p.id));
   const bots = talkingBots(room).filter((p) => !revealIds.has(p.id));
   if (!bots.length) return;
@@ -367,11 +473,15 @@ async function runTableTalk(room: GameRoom): Promise<void> {
       room,
       tableTalkInstruction(room),
       undefined,
-      0.75,
+      0.9,
       CHAT_TIMEOUT_MS
     );
-    let text = response?.message?.trim().slice(0, 180) ?? '';
-    if (!text) text = fallbackTableTalk(bot, room);
+    const fallback = fallbackTableTalk(bot, room);
+    const text = choosePublicReply(
+      room,
+      response?.message?.trim().slice(0, 180) ?? '',
+      fallback
+    );
     addChatMessage(room, bot.id, text, 'public');
     broadcastRoom(room.id);
   }

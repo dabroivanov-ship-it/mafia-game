@@ -207,16 +207,6 @@ export default function Chat({
                 [P]
               </span>
             )}
-            {msg.sourceChannel === 'spectator' && (
-              <span className="chat-spectator-tag" title="Только для наблюдателей">
-                набл.
-              </span>
-            )}
-            {msg.sourceChannel === 'dead' && (
-              <span className="chat-dead-tag" title="Чат выбывших">
-                выб.
-              </span>
-            )}
             <span className="chat-line">
               <span className="chat-time">{formatTime(msg.time)}</span>
               {renderAuthor(msg)}
