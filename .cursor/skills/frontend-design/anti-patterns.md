@@ -34,7 +34,7 @@ If listed — redesign. Full catalog: [AkyRayy/Frontend-Design-SKILLS-for-AI](ht
 
 | Reject | Do instead |
 |---|---|
-| Raw `#7c6cf0` in components | Theme tokens |
+| Raw `#8b85e8` / `#3ec8e0` in components | Theme tokens |
 | `outline: none` with no `:focus-visible` | Accent ring, 2px offset |
 | `transition-all` | Explicit `color`, `border-color`, `background` |
 | Emoji in JSX for chrome | Text or CSS `::after` |

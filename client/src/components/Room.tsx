@@ -191,6 +191,14 @@ export default function Room({
           </div>
         </div>
         <div className="room-header-actions">
+          <button
+            type="button"
+            className="btn btn-ghost btn-leave"
+            onClick={onLeave}
+            aria-label={isChatRoom ? 'Выйти в лобби' : 'В лобби'}
+          >
+            ← <span className="btn-mobile-label">Лобби</span>
+          </button>
           {onOpenMembers && (
             <button
               type="button"
@@ -205,14 +213,6 @@ export default function Room({
               <span className="btn-mobile-label">Кто тут</span>
             </button>
           )}
-          <button
-            type="button"
-            className="btn btn-ghost btn-leave"
-            onClick={onLeave}
-            aria-label={isChatRoom ? 'Выйти из комнаты' : 'Назад к комнатам'}
-          >
-            ← <span className="btn-mobile-label">{isChatRoom ? 'Выйти' : 'Назад'}</span>
-          </button>
         </div>
       </header>
 

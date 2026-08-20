@@ -11,7 +11,7 @@ export type UserRole = 'user' | 'watcher' | 'moderator' | 'admin';
 
 export type RoomKind = 'game' | 'chat';
 
-export type ThemeId = 'midnight' | 'emerald' | 'crimson' | 'aurora' | 'sunset' | 'ocean';
+export type ThemeId = 'midnight' | 'emerald' | 'crimson' | 'day' | 'aurora' | 'sunset' | 'ocean';
 
 export interface SiteBranding {
   logoUrl: string | null;

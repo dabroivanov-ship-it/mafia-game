@@ -836,32 +836,6 @@ textarea:focus-visible {
   border-radius: 0;
 }
 
-/* ——— Crimson theme tweaks ——— */
-html[data-theme='crimson'] body {
-  background-image:
-    radial-gradient(circle at 15% 18%, rgba(0, 184, 255, 0.16), transparent 480px),
-    radial-gradient(circle at 82% 8%, rgba(0, 96, 220, 0.22), transparent 448px),
-    linear-gradient(135deg, #000511 0%, #061a45 52%, #03102a 100%);
-}
-
-html[data-theme='crimson'] .btn-primary {
-  background: linear-gradient(135deg, #00c8ff, #0775d9);
-  box-shadow: 0 8px 28px rgba(0, 200, 255, 0.28);
-}
-
-html[data-theme='crimson'] .room-card,
-html[data-theme='crimson'] .news-card,
-html[data-theme='crimson'] .info-hub-card,
-html[data-theme='crimson'] .admin-dash-card {
-  border-color: color-mix(in srgb, var(--accent) 22%, var(--border));
-}
-
-html[data-theme='crimson'] .menu-items {
-  background: transparent;
-  border: none;
-  box-shadow: none;
-}
-
 @media (max-width: 768px) {
   .admin-header {
     flex-direction: column;

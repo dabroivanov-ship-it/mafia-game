@@ -6,112 +6,88 @@ html {
   color-scheme: dark;
 }
 
+html[data-theme='day'] {
+  color-scheme: light;
+}
+
 [data-theme='midnight'] {
   --font: 'Geologica', 'Segoe UI', system-ui, sans-serif;
-  --bg: #0a0a0a;
-  --bg-card: #141414;
-  --bg-hover: #1c1c1c;
-  --bg-elevated: #222222;
-  --border: rgba(255, 255, 255, 0.09);
-  --text: #f5f5f5;
-  --text-muted: #9ca3af;
-  --accent: #f59e0b;
-  --accent-hover: #fbbf24;
-  --accent-glow: rgba(245, 158, 11, 0.32);
+  --bg: #0b0b10;
+  --bg-card: #14141c;
+  --bg-hover: #1b1b26;
+  --bg-elevated: #22222e;
+  --border: rgba(236, 234, 244, 0.1);
+  --text: #eceaf4;
+  --text-muted: #8e8a9e;
+  --accent: #8b85e8;
+  --accent-hover: #a19cf0;
+  --accent-glow: rgba(139, 133, 232, 0.22);
   --danger: #ef4444;
-  --success: #22c55e;
-  --warning: #f59e0b;
-  --body-glow-1: rgba(245, 158, 11, 0.1);
-  --body-glow-2: rgba(245, 158, 11, 0.05);
-  --radius: 18px;
-  --radius-sm: 14px;
-  --radius-lg: 22px;
-  --radius-xl: 28px;
+  --success: #34d399;
+  --warning: #e8b86d;
+  --body-glow-1: rgba(139, 133, 232, 0.1);
+  --body-glow-2: rgba(139, 133, 232, 0.04);
 }
 
 [data-theme='emerald'] {
   --font: 'Geologica', 'Segoe UI', system-ui, sans-serif;
-  --bg: #080f0c;
-  --bg-card: #101a14;
-  --bg-hover: #162219;
-  --bg-elevated: #1c2b22;
-  --border: #243528;
-  --text: #ecf5ef;
-  --text-muted: #8aa894;
-  --accent: #2dd4a8;
-  --accent-hover: #4de0b8;
-  --accent-glow: rgba(45, 212, 168, 0.32);
+  --bg: #0a0f0c;
+  --bg-card: #121a15;
+  --bg-hover: #18221b;
+  --bg-elevated: #1e2a22;
+  --border: rgba(232, 240, 234, 0.1);
+  --text: #e8f0ea;
+  --text-muted: #8a9a8e;
+  --accent: #3dcf9a;
+  --accent-hover: #55d8ab;
+  --accent-glow: rgba(61, 207, 154, 0.22);
   --danger: #f07178;
-  --success: #34d399;
-  --warning: #fbbf24;
-  --body-glow-1: rgba(45, 212, 168, 0.14);
-  --body-glow-2: rgba(52, 211, 153, 0.08);
+  --success: #3dcf9a;
+  --warning: #e8b86d;
+  --body-glow-1: rgba(61, 207, 154, 0.1);
+  --body-glow-2: rgba(61, 207, 154, 0.04);
 }
 
 [data-theme='crimson'] {
-  --bg: #000511;
-  --bg-card: #061428;
-  --bg-hover: #0a2248;
-  --bg-elevated: #0d2e5c;
-  --border: #1a3f72;
-  --text: #dff8ff;
-  --text-muted: #7eb0d4;
-  --accent: #00c8ff;
-  --accent-hover: #33d8ff;
-  --accent-glow: rgba(0, 200, 255, 0.32);
-  --danger: #ff6b8a;
-  --success: #2ee6b8;
-  --warning: #ffd166;
-  --body-glow-1: rgba(0, 184, 255, 0.18);
-  --body-glow-2: rgba(0, 96, 220, 0.26);
-  --radius: 16px;
-  --radius-sm: 12px;
-  --radius-lg: 20px;
-  --radius-xl: 24px;
-  --font: 'Geologica', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  --shadow: 0 18px 55px rgba(0, 0, 0, 0.35), 0 -1px 0 rgba(119, 237, 255, 0.12) inset;
+  --font: 'Geologica', 'Segoe UI', system-ui, sans-serif;
+  --bg: #071018;
+  --bg-card: #0c1824;
+  --bg-hover: #122030;
+  --bg-elevated: #182838;
+  --border: rgba(230, 242, 246, 0.1);
+  --text: #e6f2f6;
+  --text-muted: #7a96a8;
+  --accent: #3ec8e0;
+  --accent-hover: #5ad4e8;
+  --accent-glow: rgba(62, 200, 224, 0.22);
+  --danger: #f07178;
+  --success: #3dcf9a;
+  --warning: #e8b86d;
+  --body-glow-1: rgba(62, 200, 224, 0.1);
+  --body-glow-2: rgba(12, 48, 80, 0.18);
 }
 
-html[data-theme='crimson'] body {
-  background-color: var(--bg);
-  background-image:
-    radial-gradient(circle at 15% 18%, rgba(0, 184, 255, 0.18), transparent 480px),
-    radial-gradient(circle at 82% 8%, rgba(0, 96, 220, 0.26), transparent 448px),
-    linear-gradient(135deg, #000511 0%, #061a45 52%, #03102a 100%);
-}
-
-html[data-theme='crimson'] .btn-primary {
-  background: linear-gradient(135deg, #00c8ff, #0775d9);
-  color: #e8f2fc;
-  box-shadow: 0 16px 44px rgba(0, 200, 255, 0.28);
-}
-
-html[data-theme='crimson'] .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #33d8ff, #1a8ae8);
-  box-shadow: 0 18px 48px rgba(0, 200, 255, 0.36);
-}
-
-html[data-theme='crimson'] .auth-card,
-html[data-theme='crimson'] .room-card,
-html[data-theme='crimson'] .news-card,
-html[data-theme='crimson'] .info-hub-card,
-html[data-theme='crimson'] .admin-section,
-html[data-theme='crimson'] .profile-card {
-  border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
-  box-shadow: var(--shadow);
-}
-
-html[data-theme='crimson'] .main-menu {
-  background: linear-gradient(180deg, rgba(0, 6, 18, 0.96), rgba(0, 12, 30, 0.76));
-  border-bottom-color: color-mix(in srgb, var(--accent) 28%, var(--border));
-  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.35);
-}
-
-html[data-theme='crimson'] .menu-item.active {
-  background: transparent;
-  color: var(--accent);
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
-  box-shadow: none;
+[data-theme='day'] {
+  --font: 'Geologica', 'Segoe UI', system-ui, sans-serif;
+  --bg: #f3f2ee;
+  --bg-card: #faf9f6;
+  --bg-hover: #eceae4;
+  --bg-elevated: #e4e2db;
+  --border: rgba(28, 27, 24, 0.12);
+  --text: #1c1b18;
+  --text-muted: #6b6860;
+  --accent: #5c56c8;
+  --accent-hover: #4e48b8;
+  --accent-glow: rgba(92, 86, 200, 0.16);
+  --danger: #dc2626;
+  --success: #16803c;
+  --warning: #b45309;
+  --body-glow-1: rgba(92, 86, 200, 0.05);
+  --body-glow-2: rgba(28, 27, 24, 0.03);
+  --shadow: 0 1px 2px rgba(28, 27, 24, 0.06), 0 8px 24px rgba(28, 27, 24, 0.05);
+  --shadow-soft: 0 1px 2px rgba(28, 27, 24, 0.05), 0 10px 28px rgba(28, 27, 24, 0.06);
+  --shadow-card: 0 1px 2px rgba(28, 27, 24, 0.05), 0 8px 20px rgba(28, 27, 24, 0.05);
+  --surface-card: var(--bg-card);
 }
 
 [data-theme='aurora'] {
@@ -167,6 +143,19 @@ html[data-theme='crimson'] .menu-item.active {
   --warning: #fbbf24;
   --body-glow-1: rgba(96, 165, 250, 0.14);
   --body-glow-2: rgba(45, 212, 191, 0.07);
+}
+
+html[data-theme='day'] .btn-primary {
+  color: #fff;
+}
+
+html[data-theme='day'] .toast {
+  color: #fff;
+}
+
+html[data-theme='day'] .site-logo-mark,
+html[data-theme='day'] .menu-logo-mark {
+  color: #fff;
 }
 
 @keyframes fadeIn {
@@ -281,7 +270,7 @@ body,
   flex: 1;
   height: 28px;
   border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border);
 }
 
 .theme-picker-name { font-weight: 600; font-size: 0.95rem; }

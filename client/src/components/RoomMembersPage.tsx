@@ -1,147 +1,115 @@
-import type { RoomPresence, RoomState } from '../types';
-
-const PHASE_LABELS: Record<RoomState['phase'], string> = {
-  waiting: 'Ожидание',
-  registration: 'Регистрация',
-  roles: 'Раздача ролей',
-  day: 'День',
-  voting: 'Голосование',
-  night: 'Ночь',
-  ended: 'Игра окончена',
-};
-
-interface RoomMembersPageProps {
-  state: RoomState;
-  onBack: () => void;
-  onViewProfile?: (userId: number) => void;
-}
-
-function displayName(p: RoomPresence): string {
-  return p.username || p.name;
-}
-
-function PersonRow({
-  person,
-  onViewProfile,
-  showStatus = true,
-}: {
-  person: RoomPresence;
-  onViewProfile?: (userId: number) => void;
-  showStatus?: boolean;
-}) {
-  const statusParts: string[] = [];
-  if (person.isMe) statusParts.push('вы');
-  if (person.inGame) {
-    if (person.alive) statusParts.push('в игре');
-    else statusParts.push('выбыл(а)');
-  } else if (showStatus) {
-    statusParts.push('в комнате');
-  }
-  if (!person.connected) statusParts.push('не в сети');
-
-  return (
-    <li className={`room-member-row${person.isMe ? ' me' : ''}`}>
-      <button
-        type="button"
-        className="player-name-btn"
-        onClick={() => person.userId && onViewProfile?.(person.userId)}
-        disabled={!person.userId}
-        title={person.userId ? 'Открыть профиль' : undefined}
-      >
-        {displayName(person)}
-      </button>
-      {showStatus && statusParts.length > 0 && (
-        <span className="room-member-status muted">{statusParts.join(' · ')}</span>
-      )}
-      {person.roleLabel && <span className="player-role">{person.roleLabel}</span>}
-    </li>
-  );
-}
-
-export default function RoomMembersPage({ state, onBack, onViewProfile }: RoomMembersPageProps) {
-  const isChatRoom = state.kind === 'chat';
-  const connected = state.presence.filter((p) => p.connected);
-
-  const inGame = connected.filter((p) => p.inGame);
-  const inGameAlive = inGame.filter((p) => p.alive);
-  const inGameDead = inGame.filter((p) => !p.alive);
-  const visitors = connected.filter((p) => !p.inGame);
-
-  return (
-    <div className="room room-members-page">
-      <header className="room-header">
-        <div className="room-header-main">
-          <h1>Кто тут</h1>
-          <div className="room-header-meta">
-            <span className="phase-badge">{state.name}</span>
-            {!isChatRoom && (
-              <span className="registration-count">{PHASE_LABELS[state.phase]}</span>
-            )}
-            <span className="registration-count">{connected.length} в комнате</span>
-          </div>
-        </div>
-        <button type="button" className="btn btn-ghost btn-leave" onClick={onBack}>
-          {isChatRoom ? '← К чату' : '← К игре'}
-        </button>
-      </header>
-
-      <div className="room-members-content">
-        {isChatRoom ? (
-          <section className="room-members-section">
-            <h2>Участники ({connected.length})</h2>
-            {connected.length === 0 ? (
-              <p className="muted">Сейчас никого нет в комнате.</p>
-            ) : (
-              <ul className="room-members-list">
-                {connected.map((p) => (
-                  <PersonRow key={p.id} person={p} onViewProfile={onViewProfile} showStatus={false} />
-                ))}
-              </ul>
-            )}
-          </section>
-        ) : (
-          <>
-            {inGame.length > 0 && (
-              <section className="room-members-section">
-                <h2>В игре ({inGame.length})</h2>
-                {inGameAlive.length > 0 && (
-                  <>
-                    <h3>Живые ({inGameAlive.length})</h3>
-                    <ul className="room-members-list">
-                      {inGameAlive.map((p) => (
-                        <PersonRow key={p.id} person={p} onViewProfile={onViewProfile} />
-                      ))}
-                    </ul>
-                  </>
-                )}
-                {inGameDead.length > 0 && (
-                  <>
-                    <h3>Выбыли ({inGameDead.length})</h3>
-                    <ul className="room-members-list">
-                      {inGameDead.map((p) => (
-                        <PersonRow key={p.id} person={p} onViewProfile={onViewProfile} />
-                      ))}
-                    </ul>
-                  </>
-                )}
-              </section>
-            )}
-
-            {visitors.length > 0 && (
-              <section className="room-members-section">
-                <h2>Вне игры ({visitors.length})</h2>
-                <ul className="room-members-list">
-                  {visitors.map((p) => (
-                    <PersonRow key={p.id} person={p} onViewProfile={onViewProfile} />
-                  ))}
-                </ul>
-              </section>
-            )}
-
-            {connected.length === 0 && <p className="muted">Сейчас никого нет в комнате.</p>}
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
+import type { RoomPresence, RoomState } from '../types';
+
+const PHASE_LABELS: Record<RoomState['phase'], string> = {
+  waiting: 'Ожидание',
+  registration: 'Регистрация',
+  roles: 'Раздача ролей',
+  day: 'День',
+  voting: 'Голосование',
+  night: 'Ночь',
+  ended: 'Игра окончена',
+};
+
+interface RoomMembersPageProps {
+  state: RoomState;
+  onBack: () => void;
+  onViewProfile?: (userId: number) => void;
+}
+
+function displayName(p: RoomPresence): string {
+  return p.username || p.name;
+}
+
+function PersonRow({
+  person,
+  onViewProfile,
+}: {
+  person: RoomPresence;
+  onViewProfile?: (userId: number) => void;
+}) {
+  return (
+    <li className={`room-member-row${person.isMe ? ' me' : ''}`}>
+      <button
+        type="button"
+        className="player-name-btn"
+        onClick={() => person.userId && onViewProfile?.(person.userId)}
+        disabled={!person.userId}
+        title={person.userId ? 'Открыть профиль' : undefined}
+      >
+        {displayName(person)}
+      </button>
+      {person.isMe && <span className="room-member-status muted">вы</span>}
+    </li>
+  );
+}
+
+export default function RoomMembersPage({ state, onBack, onViewProfile }: RoomMembersPageProps) {
+  const isChatRoom = state.kind === 'chat';
+  const connected = state.presence.filter((p) => p.connected);
+  const inGame = connected.filter((p) => p.inGame);
+  const notInGame = connected.filter((p) => !p.inGame);
+
+  return (
+    <div className="room room-members-page">
+      <header className="room-header">
+        <button type="button" className="btn btn-ghost btn-leave" onClick={onBack}>
+          ← Назад
+        </button>
+        <div className="room-header-main">
+          <h1>Кто тут</h1>
+          <div className="room-header-meta">
+            <span className="phase-badge">{state.name}</span>
+            {!isChatRoom && (
+              <span className="registration-count">{PHASE_LABELS[state.phase]}</span>
+            )}
+          </div>
+        </div>
+      </header>
+
+      <div className="room-members-content">
+        {isChatRoom ? (
+          <section className="room-members-section">
+            <h2>В комнате ({connected.length})</h2>
+            {connected.length === 0 ? (
+              <p className="muted">Сейчас никого нет в комнате.</p>
+            ) : (
+              <ul className="room-members-list">
+                {connected.map((p) => (
+                  <PersonRow key={p.id} person={p} onViewProfile={onViewProfile} />
+                ))}
+              </ul>
+            )}
+          </section>
+        ) : (
+          <>
+            <section className="room-members-section">
+              <h2>В игре ({inGame.length})</h2>
+              {inGame.length === 0 ? (
+                <p className="muted">Никого нет в партии.</p>
+              ) : (
+                <ul className="room-members-list">
+                  {inGame.map((p) => (
+                    <PersonRow key={p.id} person={p} onViewProfile={onViewProfile} />
+                  ))}
+                </ul>
+              )}
+            </section>
+
+            <section className="room-members-section">
+              <h2>Не в игре ({notInGame.length})</h2>
+              {notInGame.length === 0 ? (
+                <p className="muted">Все, кто в комнате, уже в партии.</p>
+              ) : (
+                <ul className="room-members-list">
+                  {notInGame.map((p) => (
+                    <PersonRow key={p.id} person={p} onViewProfile={onViewProfile} />
+                  ))}
+                </ul>
+              )}
+            </section>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}

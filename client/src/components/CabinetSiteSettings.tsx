@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { updateProfile, fetchThemeSettings } from '../api';
 import type { User, ThemeId } from '../types';
-import { applyTheme, resolveTheme, THEMES } from '../themes';
+import { applyTheme, resolveTheme, THEMES, themeDisplayName } from '../themes';
 
 function themeName(id: ThemeId): string {
-  return THEMES.find((t) => t.id === id)?.name ?? id;
+  return themeDisplayName(id);
 }
 
 interface CabinetSiteSettingsProps {

@@ -17,9 +17,25 @@ pages convince them to sign in. Everything else is secondary.
 
 ## Aesthetic (locked)
 
-**Refined Minimal + Technical/Mono.** Dark surfaces, one amber accent
-(`midnight` default). Do not mix brutalist, editorial magazine, or playful
-geometric. Do not invent a second brand.
+**Refined Minimal + Technical/Mono.** Same chrome, four palettes. Do not mix
+brutalist, editorial magazine, or playful geometric. Do not invent a second brand.
+
+Visible picker themes (`client/src/themes.css`):
+
+| Id | Name | Neutrals | Accent (~5–10% of pixels) |
+|---|---|---|---|
+| `midnight` | Полночь | Near-black violet `#0B0B10` / cards `#14141C` | Linear-like purple `#8B85E8` |
+| `emerald` | Изумруд | Forest `#0A0F0C` / `#121A15` | Calm green `#3DCF9A` |
+| `crimson` | Мафия | Navy `#071018` / `#0C1824` | Turquoise `#3EC8E0` (not electric cyan) |
+| `day` | Светлая | Paper `#F3F2EE` / cards `#FAF9F6` (not `#fff`) | Ink `#1C1B18`, purple `#5C56C8` |
+
+Default: `midnight`. Shared `--radius` in `App.css` — never shrink radius per theme.
+`aurora` / `sunset` / `ocean` stay valid for saved accounts; do not show in picker.
+
+One accent, rest neutrals. Not pure black, not pure white. Hairline `--border`.
+No aurora/mesh/glassmorphism. No purple–blue **gradient heroes**. A single purple
+accent (Linear-like) is OK. Do not add Мафия-only VIZOR overlays, button gradients,
+or extra body meshes — all four use the same token set.
 
 North stars: Linear, Stripe dashboard, Vercel. Type already in use: **Geologica**.
 
@@ -27,11 +43,13 @@ Would Linear ship this? If no — redesign.
 
 ## Existing tokens — use them
 
-Colors and radius live in `client/src/themes.css` (`[data-theme='midnight']`
-etc.) and polish in `client/src/ui-flat.css`. Components use:
+Colors live in `client/src/themes.css`. Radius and layout in `client/src/App.css`.
+Polish in `client/src/ui-flat.css`. Components use:
 
-`--bg`, `--bg-card`, `--bg-hover`, `--border`, `--text`, `--text-muted`,
-`--accent`, `--accent-hover`, `--danger`, `--success`, `--radius`, `--radius-sm`.
+`--bg`, `--bg-card`, `--bg-hover`, `--bg-elevated`, `--border`, `--text`,
+`--text-muted`, `--accent`, `--accent-hover`, `--accent-glow`, `--danger`,
+`--success`, `--warning`, `--body-glow-1`, `--body-glow-2`, `--radius`,
+`--radius-sm`.
 
 **No raw hex in new CSS** except inside a theme token definition. No new
 purple/blue gradients. No `border-radius: 9999px` on new cards/images.
