@@ -83,8 +83,6 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
         } catch {
           /* keep last known count */
         }
-      } catch {
-        /* keep last known count */
       }
     };
     void load();
