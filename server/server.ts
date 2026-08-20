@@ -88,6 +88,7 @@ import { securityHeadersMiddleware } from './security/headers.js';
 import { chatSocketRateLimiter } from './security/rateLimit.js';
 import { normalizeChatText, normalizeModerationReason, parseViolationType } from './security/validate.js';
 import { addViolation } from './moderation/violationLog.js';
+import { ADVERTISING_BLOCK_MESSAGE, looksLikeAdvertising } from './moderation/advertising.js';
 import fs from 'fs';
 import { ensureNewsUploadsDir } from './upload/newsImage.js';
 import { ensureSiteBrandingUploadsDir } from './upload/siteLogo.js';
@@ -625,6 +626,37 @@ function requireSocketSilenceModerator(
   return user;
 }
 
+/** Auto-log + block advertising. Staff bypass. Returns true if blocked. */
+function blockAdvertisingChat(input: {
+  user: User;
+  text: string;
+  roomId: number;
+  roomName: string;
+  channel: string;
+  authorName: string;
+  authorUserId: number | null;
+  cb?: (res: { error?: string; ok?: boolean }) => void;
+}): boolean {
+  if (isStaff(input.user)) return false;
+  if (!looksLikeAdvertising(input.text)) return false;
+
+  addViolation({
+    violationType: 'advertising',
+    messageText: input.text,
+    authorUserId: input.authorUserId,
+    authorName: input.authorName,
+    roomId: input.roomId,
+    roomName: input.roomName,
+    channel: input.channel,
+    messageId: `auto-${Date.now()}-${input.authorUserId ?? 0}`,
+    moderatorId: 0,
+    moderatorName: 'Авто',
+    messageAt: new Date().toISOString(),
+  });
+  input.cb?.({ error: ADVERTISING_BLOCK_MESSAGE });
+  return true;
+}
+
 function userRoom(userId: number): string {
   return `user:${userId}`;
 }
@@ -1001,6 +1033,9 @@ io.on('connection', (socket) => {
     const trimmed = normalizeChatText(text);
     if (!trimmed) return cb?.({ error: 'Пустое сообщение' });
 
+    const authorName = me.username || me.name;
+    const authorUserId = me.userId ?? user.id;
+
     const targetPlayer = findRoomPlayer(room, {
       playerId: toPlayerId != null ? Number(toPlayerId) : undefined,
       userId: toUserId != null ? Number(toUserId) : undefined,
@@ -1011,6 +1046,20 @@ io.on('connection', (socket) => {
       (toPlayerId != null || toUserId != null);
 
     if (isPrivate && hasTarget) {
+      if (
+        blockAdvertisingChat({
+          user,
+          text: trimmed,
+          roomId: room.id,
+          roomName: room.name,
+          channel: 'private',
+          authorName,
+          authorUserId,
+          cb,
+        })
+      ) {
+        return;
+      }
       if (isPlayerSilenced(me)) {
         addMutedOnlyMessage(room, me, trimmed, 'private');
         broadcastRoom(room.id);
@@ -1038,6 +1087,21 @@ io.on('connection', (socket) => {
       channel = 'spectator';
     } else if (gameRunning && me.inGame && me.role) {
       channel = me.alive ? 'public' : 'dead';
+    }
+
+    if (
+      blockAdvertisingChat({
+        user,
+        text: trimmed,
+        roomId: room.id,
+        roomName: room.name,
+        channel,
+        authorName,
+        authorUserId,
+        cb,
+      })
+    ) {
+      return;
     }
 
     if (isPlayerSilenced(me)) {
@@ -1085,6 +1149,22 @@ io.on('connection', (socket) => {
 
     const trimmed = normalizeChatText(text);
     if (!trimmed) return cb?.({ error: 'Пустое сообщение' });
+
+    if (
+      blockAdvertisingChat({
+        user,
+        text: trimmed,
+        roomId: room.id,
+        roomName: room.name,
+        channel: 'mafia',
+        authorName: me.username || me.name,
+        authorUserId: me.userId ?? user.id,
+        cb,
+      })
+    ) {
+      return;
+    }
+
     if (isPlayerSilenced(me)) {
       addMutedOnlyMessage(room, me, trimmed, 'mafia');
       broadcastRoom(room.id);
@@ -1182,6 +1262,7 @@ io.on('connection', (socket) => {
       channel: chatChannel,
       messageId: String(messageId),
       moderatorId: staff.id,
+      messageAt: msg.time || null,
     });
 
     const ok = deleteChatMessage(room, String(messageId), chatChannel);

@@ -6,10 +6,13 @@ import {
   fetchUnreadMailCount,
   sendPrivateMessage,
   fetchFriends,
+  reportPrivateMessage,
 } from '../api';
 import type { MailConversation, PrivateMessage, FriendUser } from '../types';
+import DeleteMessageModal, { type ViolationType } from './DeleteMessageModal';
 
 const THREAD_PAGE_SIZE = 10;
+const DELETED_MAIL_TEXT = '[сообщение удалено модератором]';
 
 type MailView = 'list' | 'thread' | 'compose';
 type ListTab = 'dialogs' | 'friends';
@@ -56,6 +59,7 @@ export default function Messages({
   );
   const [composeText, setComposeText] = useState('');
   const [sending, setSending] = useState(false);
+  const [reportTarget, setReportTarget] = useState<PrivateMessage | null>(null);
   const threadRef = useRef<HTMLDivElement>(null);
   const prependingRef = useRef(false);
 
@@ -256,6 +260,23 @@ export default function Messages({
     setView('compose');
   };
 
+  const handleReportMessage = async (violationType: ViolationType) => {
+    if (!reportTarget) return;
+    const id = reportTarget.id;
+    setError('');
+    try {
+      await reportPrivateMessage(id, violationType);
+      setThread((prev) =>
+        prev.map((m) => (m.id === id ? { ...m, text: DELETED_MAIL_TEXT } : m))
+      );
+      setReportTarget(null);
+      setSuccess('Сообщение отмечено и попало в журнал модерации');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось отметить сообщение');
+      setReportTarget(null);
+    }
+  };
+
   return (
     <div className="cabinet-page messages-page">
       <nav className="info-back messages-page-nav">
@@ -417,7 +438,15 @@ export default function Messages({
               )}
               {thread.length === 0 && <p className="muted">Переписки пока нет</p>}
               {thread.map((msg) => (
-                <ThreadBubble key={msg.id} msg={msg} />
+                <ThreadBubble
+                  key={msg.id}
+                  msg={msg}
+                  onReport={
+                    msg.direction === 'in' && msg.text !== DELETED_MAIL_TEXT
+                      ? () => setReportTarget(msg)
+                      : undefined
+                  }
+                />
               ))}
               <div className="mail-thread-actions">
                 <button type="button" className="btn btn-primary btn-sm" onClick={replyInThread}>
@@ -427,6 +456,17 @@ export default function Messages({
             </div>
           )}
         </>
+      )}
+
+      {reportTarget && (
+        <DeleteMessageModal
+          authorName={reportTarget.otherUser.username}
+          messageText={reportTarget.text}
+          onConfirm={(violationType) => {
+            void handleReportMessage(violationType);
+          }}
+          onCancel={() => setReportTarget(null)}
+        />
       )}
     </div>
   );
@@ -513,13 +553,20 @@ function ConversationItem({
   );
 }
 
-function ThreadBubble({ msg }: { msg: PrivateMessage }) {
+function ThreadBubble({
+  msg,
+  onReport,
+}: {
+  msg: PrivateMessage;
+  onReport?: () => void;
+}) {
   const isOut = msg.direction === 'out';
   const authorName = isOut ? 'Вы' : msg.otherUser.username;
   const attachmentSrc = msg.attachmentUrl ? avatarUrl(msg.attachmentUrl) : null;
+  const deleted = msg.text === DELETED_MAIL_TEXT;
 
   return (
-    <div className={`mail-thread-bubble ${isOut ? 'out' : 'in'}`}>
+    <div className={`mail-thread-bubble ${isOut ? 'out' : 'in'}${deleted ? ' is-deleted' : ''}`}>
       <div className="mail-thread-meta">
         <strong>{authorName}</strong>
         <span className="muted">
@@ -530,6 +577,16 @@ function ThreadBubble({ msg }: { msg: PrivateMessage }) {
             minute: '2-digit',
           })}
         </span>
+        {onReport && (
+          <button
+            type="button"
+            className="mail-report-btn"
+            title="Отметить нарушение"
+            onClick={onReport}
+          >
+            ✕
+          </button>
+        )}
       </div>
       <p>{msg.text}</p>
       {isOut && (
@@ -537,7 +594,7 @@ function ThreadBubble({ msg }: { msg: PrivateMessage }) {
           {msg.isRead ? 'Прочитано' : 'Не прочитано'}
         </span>
       )}
-      {attachmentSrc && (
+      {attachmentSrc && !deleted && (
         <a href={attachmentSrc} target="_blank" rel="noopener noreferrer" className="mail-thread-attachment">
           <img src={attachmentSrc} alt="Вложение" />
         </a>

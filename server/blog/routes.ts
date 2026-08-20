@@ -1,10 +1,8 @@
 import { Router } from 'express';
-import { authMiddleware } from '../auth/jwt.js';
 import { findBlogById, listPublishedBlog } from './store.js';
 
 export function createBlogRouter() {
   const router = Router();
-  router.use(authMiddleware);
 
   router.get('/', (_req, res) => {
     try {

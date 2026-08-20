@@ -31,6 +31,7 @@ export const SITEMAP_ENTRIES: SitemapEntry[] = [
   { path: '/info/faq', changefreq: 'monthly', priority: 0.8 },
   { path: '/info/team', changefreq: 'monthly', priority: 0.7 },
   { path: '/info/quiz', changefreq: 'weekly', priority: 0.75 },
+  { path: '/blog', changefreq: 'weekly', priority: 0.8 },
 ];
 
 /** Keep titles/descriptions in sync with client/src/seo.ts */
@@ -97,6 +98,11 @@ const PUBLIC_PAGE_META: Record<string, PublicPageMeta> = {
     description: 'Топ-10 игроков по верным ответам в викторине на сайте.',
     path: '/info/quiz',
   },
+  '/blog': {
+    title: 'Блог',
+    description: 'Обновления и заметки онлайн-игры «Мафия».',
+    path: '/blog',
+  },
 };
 
 const INDEXED_PATHS = new Set(SITEMAP_ENTRIES.map((entry) => normalizePath(entry.path)));
@@ -119,6 +125,7 @@ export function normalizePath(pathname: string): string {
 export function classifySpaPath(pathname: string): SpaRouteKind {
   const path = normalizePath(pathname);
   if (INDEXED_PATHS.has(path)) return 'indexed';
+  if (/^\/blog\/\d+$/.test(path)) return 'indexed';
   if (/^\/profile\/\d+$/.test(path)) return 'app';
   if (/^\/room\/\d+(\/who)?$/.test(path)) return 'app';
   if (path === '/news') return 'app';

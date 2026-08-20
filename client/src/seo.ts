@@ -150,3 +150,9 @@ export const INFO_PAGE_META: Record<string, PageMeta> = {
     path: '/info/quiz',
   },
 };
+
+export const BLOG_PAGE_META: PageMeta = {
+  title: 'Блог',
+  description: 'Обновления и заметки онлайн-игры «Мафия».',
+  path: '/blog',
+};

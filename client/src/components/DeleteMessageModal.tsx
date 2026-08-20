@@ -27,7 +27,9 @@ export default function DeleteMessageModal({
           <strong>{authorName}</strong>
         </p>
         <blockquote className="delete-message-preview">{messageText}</blockquote>
-        <p className="delete-message-hint">Выберите тип нарушения — запись попадёт в лог админки.</p>
+        <p className="delete-message-hint">
+          Выберите тип нарушения — ник автора и время попадут в журнал модерации.
+        </p>
         <div className="delete-message-actions">
           {(Object.keys(VIOLATION_TYPE_LABELS) as ViolationType[]).map((type) => (
             <button

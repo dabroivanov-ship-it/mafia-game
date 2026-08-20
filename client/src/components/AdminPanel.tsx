@@ -124,6 +124,21 @@ const VIOLATION_LABELS: Record<ViolationType, string> = {
   other: 'Другое',
 };
 
+const CHANNEL_LABELS: Record<string, string> = {
+  public: 'общий чат',
+  mafia: 'чат мафии',
+  dead: 'чат мёртвых',
+  spectator: 'чат наблюдателей',
+  private: 'приват в комнате',
+  mail: 'письма',
+};
+
+function violationPlace(v: ViolationLogEntry): string {
+  if (v.channel === 'mail' || v.roomId === 0) return 'Письма';
+  const channel = CHANNEL_LABELS[v.channel] || v.channel;
+  return `${v.roomName} · ${channel}`;
+}
+
 const USERS_PAGE_SIZE = 15;
 
 function assignableRole(u: User): 'user' | 'watcher' | 'moderator' {
@@ -1509,7 +1524,7 @@ export default function AdminPanel({
           violations: (
             <section className="admin-section admin-section-embedded">
               <div className="admin-section-head">
-                <h3>Лог нарушений ({violations.length})</h3>
+                <h3>Журнал модерации ({violations.length})</h3>
                 <button
                   type="button"
                   className="btn btn-sm danger"
@@ -1519,39 +1534,44 @@ export default function AdminPanel({
                   Очистить лог
                 </button>
               </div>
+              <p className="muted admin-ad-log-hint">
+                Авто: реклама и сторонние ссылки в чате/письмах. Вручную: удаление в чате или жалоба на
+                письмо. В записи — ник, время и текст.
+              </p>
               {violationsLoading && violations.length === 0 && <p className="muted">Загрузка...</p>}
               {violations.length === 0 && !violationsLoading && (
-                <p className="muted">Записей пока нет. Они появляются при удалении сообщений в чате.</p>
+                <p className="muted">
+                  Записей пока нет. Они появляются при удалении сообщений в чате или жалобе на письмо.
+                </p>
               )}
               <div className="admin-table-wrap">
                 <table className="admin-table violation-log-table">
                   <thead>
                     <tr>
-                      <th>Когда</th>
+                      <th>Время сообщения</th>
                       <th>Тип</th>
-                      <th>Автор</th>
+                      <th>Ник</th>
                       <th>Сообщение</th>
-                      <th>Комната</th>
-                      <th>Модератор</th>
+                      <th>Где</th>
+                      <th>Кто отметил</th>
                     </tr>
                   </thead>
                   <tbody>
                     {violations.map((v) => (
                       <tr key={v.id}>
                         <td className="violation-time">
-                          {new Date(v.createdAt).toLocaleString('ru-RU')}
+                          {new Date(v.messageAt || v.createdAt).toLocaleString('ru-RU')}
                         </td>
                         <td>
                           <span className={`violation-badge violation-${v.violationType}`}>
                             {VIOLATION_LABELS[v.violationType]}
                           </span>
                         </td>
-                        <td>{v.authorName}</td>
-                        <td className="violation-message">{v.messageText}</td>
                         <td>
-                          {v.roomName}
-                          <span className="muted"> · {v.channel}</span>
+                          <strong>{v.authorName}</strong>
                         </td>
+                        <td className="violation-message">{v.messageText}</td>
+                        <td>{violationPlace(v)}</td>
                         <td>{v.moderatorName}</td>
                       </tr>
                     ))}

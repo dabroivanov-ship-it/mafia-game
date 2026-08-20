@@ -1,4 +1,4 @@
-import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, NewsPoll, NewsPollInput, NewsComment, BlogPost, MailConversation, RoomKind, ThemeId, ViolationLogEntry, UserSearchHit, UserPresence, FriendUser, LeaderboardEntry, QuizLeaderboardEntry, SiteBranding, LobbyAnnouncement, UserStatisticsResponse, UserNotification, PublicSiteStats } from './types';
+import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, NewsPoll, NewsPollInput, NewsComment, BlogPost, MailConversation, RoomKind, ThemeId, ViolationLogEntry, ViolationType, UserSearchHit, UserPresence, FriendUser, LeaderboardEntry, QuizLeaderboardEntry, SiteBranding, LobbyAnnouncement, UserStatisticsResponse, UserNotification, PublicSiteStats } from './types';
 import type { AdminPermission } from './adminPermissions';
 
 const API_BASE =
@@ -456,6 +456,16 @@ export async function markMessageRead(messageId: number): Promise<{ unreadCount:
   return apiRequest(`/api/messages/${messageId}/read`, { method: 'POST' });
 }
 
+export async function reportPrivateMessage(
+  messageId: number,
+  violationType: ViolationType
+): Promise<{ ok: boolean }> {
+  return apiRequest(`/api/messages/${messageId}/report`, {
+    method: 'POST',
+    body: JSON.stringify({ violationType }),
+  });
+}
+
 export async function fetchStaffList(): Promise<{ staff: StaffMember[] }> {
   return apiRequest('/api/profile/staff/list');
 }
@@ -626,12 +636,18 @@ export async function adminDeleteBlog(id: number): Promise<void> {
   await apiRequest(`/api/admin/blog/${id}`, { method: 'DELETE' });
 }
 
-export async function fetchViolationLog(): Promise<{ violations: ViolationLogEntry[] }> {
-  return apiRequest('/api/admin/violations');
+export async function fetchViolationLog(
+  type?: ViolationType
+): Promise<{ violations: ViolationLogEntry[] }> {
+  const q = type ? `?type=${encodeURIComponent(type)}` : '';
+  return apiRequest(`/api/admin/violations${q}`);
 }
 
-export async function adminClearViolationLog(): Promise<{ cleared: number }> {
-  return apiRequest('/api/admin/violations', { method: 'DELETE' });
+export async function adminClearViolationLog(
+  type?: ViolationType
+): Promise<{ cleared: number }> {
+  const q = type ? `?type=${encodeURIComponent(type)}` : '';
+  return apiRequest(`/api/admin/violations${q}`, { method: 'DELETE' });
 }
 
 export async function fetchUserProfile(userId: number): Promise<{

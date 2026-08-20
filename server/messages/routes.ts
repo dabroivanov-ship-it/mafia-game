@@ -1,8 +1,11 @@
 import { Router } from 'express';
 import { authMiddleware } from '../auth/jwt.js';
-import { findUserById, findUserByUsername } from '../auth/db.js';
+import { findUserById, findUserByUsername, isStaff } from '../auth/db.js';
 import { createRateLimitMiddleware, pmRateLimiter } from '../security/rateLimit.js';
 import { MAX_PM_MESSAGE_LENGTH } from '../security/constants.js';
+import { parseViolationType } from '../security/validate.js';
+import { addViolation } from '../moderation/violationLog.js';
+import { ADVERTISING_BLOCK_MESSAGE, looksLikeAdvertising } from '../moderation/advertising.js';
 import {
   sendPrivateMessage,
   listInbox,
@@ -13,6 +16,8 @@ import {
   markThreadRead,
   getUnreadCount,
   markMessageRead,
+  findPrivateMessageForModeration,
+  moderateDeletePrivateMessage,
 } from './store.js';
 
 export interface MessagesRouterOptions {
@@ -87,6 +92,24 @@ export function createMessagesRouter({ onMessageSent, onMessageRead, onOutgoingR
     const recipient = findUserById(toUserId);
     if (!recipient) return res.status(404).json({ error: 'Пользователь не найден' });
 
+    if (!isStaff(req.user) && looksLikeAdvertising(text)) {
+      const sender = findUserById(req.userId!);
+      addViolation({
+        violationType: 'advertising',
+        messageText: text,
+        authorUserId: req.userId!,
+        authorName: sender?.username || sender?.display_name || 'Игрок',
+        roomId: 0,
+        roomName: 'Письма',
+        channel: 'mail',
+        messageId: `auto-mail-${Date.now()}-${req.userId}`,
+        moderatorId: 0,
+        moderatorName: 'Авто',
+        messageAt: new Date().toISOString(),
+      });
+      return res.status(400).json({ error: ADVERTISING_BLOCK_MESSAGE });
+    }
+
     const message = sendPrivateMessage(req.userId!, toUserId, text);
     if (!message) return res.status(400).json({ error: 'Нельзя отправить сообщение' });
 
@@ -110,6 +133,47 @@ export function createMessagesRouter({ onMessageSent, onMessageRead, onOutgoingR
     onMessageRead?.(req.userId!, unreadCount);
     onOutgoingRead?.(marked.senderId, { readerId: req.userId!, messageIds: [marked.id] });
     res.json({ ok: true, unreadCount });
+  });
+
+  /** Recipient or staff: delete letter for violation and write to moderation journal. */
+  router.post('/:messageId/report', (req, res) => {
+    const messageId = Number(req.params.messageId);
+    if (!Number.isFinite(messageId)) {
+      return res.status(400).json({ error: 'Некорректный id сообщения' });
+    }
+    const vType = parseViolationType(req.body?.violationType);
+    if (!vType) return res.status(400).json({ error: 'Укажите тип нарушения' });
+
+    const found = findPrivateMessageForModeration(messageId);
+    if (!found) return res.status(404).json({ error: 'Сообщение не найдено' });
+
+    const reporterId = req.userId!;
+    const staff = isStaff(req.user);
+    const isRecipient = found.recipientId === reporterId;
+    if (!isRecipient && !staff) {
+      return res.status(403).json({ error: 'Можно отметить только входящее письмо' });
+    }
+    if (found.senderId === reporterId) {
+      return res.status(400).json({ error: 'Нельзя отметить своё письмо' });
+    }
+
+    const deleted = moderateDeletePrivateMessage(messageId);
+    if (!deleted) return res.status(404).json({ error: 'Сообщение не найдено' });
+
+    addViolation({
+      violationType: vType,
+      messageText: deleted.text,
+      authorUserId: deleted.senderId,
+      authorName: deleted.senderName,
+      roomId: 0,
+      roomName: 'Письма',
+      channel: 'mail',
+      messageId: String(deleted.id),
+      moderatorId: reporterId,
+      messageAt: deleted.createdAt,
+    });
+
+    res.json({ ok: true });
   });
 
   return router;

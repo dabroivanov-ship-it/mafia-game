@@ -408,12 +408,22 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     res.status(400).json({ error: 'Удаляйте сообщения из комнаты с указанием типа нарушения' });
   });
 
-  router.get('/violations', requireAdminPermission('view_violations'), (_req, res) => {
-    res.json({ violations: listViolations(300) });
+  router.get('/violations', requireAdminPermission('view_violations'), (req, res) => {
+    const rawType = typeof req.query.type === 'string' ? req.query.type : '';
+    const type =
+      rawType === 'profanity' || rawType === 'advertising' || rawType === 'other'
+        ? rawType
+        : undefined;
+    res.json({ violations: listViolations(300, type) });
   });
 
-  router.delete('/violations', requireAdminPermission('clear_violations'), (_req, res) => {
-    const cleared = clearViolations();
+  router.delete('/violations', requireAdminPermission('clear_violations'), (req, res) => {
+    const rawType = typeof req.query.type === 'string' ? req.query.type : '';
+    const type =
+      rawType === 'profanity' || rawType === 'advertising' || rawType === 'other'
+        ? rawType
+        : undefined;
+    const cleared = clearViolations(type);
     res.json({ ok: true, cleared });
   });
 

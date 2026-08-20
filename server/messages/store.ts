@@ -270,6 +270,51 @@ export function getUnreadCount(userId: number): number {
   return row?.c ?? 0;
 }
 
+export const DELETED_PRIVATE_MESSAGE_TEXT = '[сообщение удалено модератором]';
+
+export interface PrivateMessageForModeration {
+  id: number;
+  text: string;
+  senderId: number;
+  recipientId: number;
+  createdAt: string;
+  senderName: string;
+}
+
+export function findPrivateMessageForModeration(
+  messageId: number
+): PrivateMessageForModeration | null {
+  const row = db
+    .prepare('SELECT * FROM private_messages WHERE id = ?')
+    .get(messageId) as MessageRow | undefined;
+  if (!row) return null;
+  if (row.text === DELETED_PRIVATE_MESSAGE_TEXT) return null;
+  const sender = findUserById(row.sender_id);
+  return {
+    id: row.id,
+    text: row.text,
+    senderId: row.sender_id,
+    recipientId: row.recipient_id,
+    createdAt: row.created_at.includes('T')
+      ? row.created_at
+      : `${row.created_at.replace(' ', 'T')}Z`,
+    senderName: sender?.username || sender?.display_name || 'Игрок',
+  };
+}
+
+/** Soft-delete PM after moderation/report. Returns original payload for the log. */
+export function moderateDeletePrivateMessage(
+  messageId: number
+): PrivateMessageForModeration | null {
+  const original = findPrivateMessageForModeration(messageId);
+  if (!original) return null;
+  db.prepare('UPDATE private_messages SET text = ? WHERE id = ?').run(
+    DELETED_PRIVATE_MESSAGE_TEXT,
+    messageId
+  );
+  return original;
+}
+
 export function markMessageRead(
   messageId: number,
   userId: number

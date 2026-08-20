@@ -6,6 +6,7 @@ import Lobby, { type LobbyScreen } from './components/Lobby';
 import CabinetHub from './components/CabinetHub';
 import PageLoader from './components/PageLoader';
 import { infoSectionFromPath, isPublicInfoPath, pathForInfoSection } from './infoRouting';
+import { isPublicBlogPath } from './blogRouting';
 import { isPublicOnlinePath } from './onlineRouting';
 import {
   isPublicProfilePath,
@@ -34,6 +35,7 @@ import NotificationBell from './components/NotificationBell';
 const OnlineUsers = lazy(() => import('./components/OnlineUsers'));
 const News = lazy(() => import('./components/News'));
 const Info = lazy(() => import('./components/Info'));
+const BlogPage = lazy(() => import('./components/BlogPage'));
 const AdminPanel = lazy(() => import('./components/AdminPanel'));
 const Room = lazy(() => import('./components/Room'));
 const RoomMembersPage = lazy(() => import('./components/RoomMembersPage'));
@@ -51,7 +53,7 @@ const SOCKET_URL =
   import.meta.env.VITE_SOCKET_URL ??
   (import.meta.env.DEV ? 'http://localhost:3001' : undefined);
 
-type AppView = MenuView | 'room';
+type AppView = MenuView | 'room' | 'blog';
 
 function presenceSection(
   view: AppView,
@@ -64,6 +66,7 @@ function presenceSection(
   if (view === 'news') return 'news';
   if (view === 'cabinet') return 'cabinet';
   if (view === 'info') return 'info';
+  if (view === 'blog') return 'blog';
   if (view === 'admin') return 'admin';
   if (view === 'lobby' && lobbyScreen === 'online-users') return 'online';
   return 'lobby';
@@ -185,13 +188,15 @@ export default function App() {
     if (!user) return;
     if (isPublicInfoPath(window.location.pathname)) {
       setView('info');
+    } else if (isPublicBlogPath(window.location.pathname)) {
+      setView('blog');
     }
     const profileId = profileUserIdFromPath(window.location.pathname);
     if (profileId) setProfileStatsUserId(profileId);
   }, [user]);
 
   useEffect(() => {
-    if (!user || view === 'info' || view === 'room') return;
+    if (!user || view === 'info' || view === 'room' || view === 'blog') return;
     if (view === 'lobby') {
       updatePageMeta(DEFAULT_PAGE_META);
     } else if (view === 'news') {
@@ -216,6 +221,9 @@ export default function App() {
       }
       if (isPublicInfoPath(path)) {
         setView('info');
+        setProfileStatsUserId(null);
+      } else if (isPublicBlogPath(path)) {
+        setView('blog');
         setProfileStatsUserId(null);
       } else if (isPublicProfilePath(path)) {
         setProfileStatsUserId(profileUserIdFromPath(path));
@@ -716,6 +724,16 @@ export default function App() {
     );
   }
 
+  if ((!user || !token) && isPublicBlogPath(window.location.pathname)) {
+    return (
+      <GuestLayout branding={siteBranding}>
+        <ViewSuspense label="Загружаем блог…">
+          <BlogPage />
+        </ViewSuspense>
+      </GuestLayout>
+    );
+  }
+
   if ((!user || !token) && isPublicOnlinePath(window.location.pathname)) {
     return (
       <GuestLayout branding={siteBranding}>
@@ -930,6 +948,17 @@ export default function App() {
             />
           </ViewSuspense>
         )}
+        {view === 'blog' && (
+          <ViewSuspense label="Блог…">
+            <BlogPage
+              onBack={() => {
+                window.history.pushState(null, '', '/');
+                setView('lobby');
+              }}
+              backLabel="← Комнаты"
+            />
+          </ViewSuspense>
+        )}
         {view === 'admin' && user.canAccessAdminPanel && (
           <ViewSuspense label="Админка…">
             <AdminPanel
@@ -952,7 +981,7 @@ export default function App() {
       <Menu
         user={user}
         branding={siteBranding}
-        view={view === 'room' ? 'lobby' : view}
+        view={view === 'room' || view === 'blog' ? 'lobby' : view}
         onNavigate={(v) => {
           if (v === 'lobby') {
             setLobbyScreen('rooms');

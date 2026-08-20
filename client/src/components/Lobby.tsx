@@ -1,7 +1,5 @@
-import { useState } from 'react';
 import type { GamePhase, LobbyRoom, LobbyAnnouncement } from '../types';
 import SiteOnlineStatus from './SiteOnlineStatus';
-import LobbyBlog from './LobbyBlog';
 
 function mailNoticeLabel(count: number): string {
   if (count === 1) return 'У вас 1 новое сообщение';
@@ -88,7 +86,6 @@ export default function Lobby({
   onOpenMessages,
   onOpenOnlineUsers,
 }: LobbyProps) {
-  const [blogPostId, setBlogPostId] = useState<number | null>(null);
   const gameRooms = rooms.filter((r) => r.kind !== 'chat');
   const chatRooms = rooms.filter((r) => r.kind === 'chat');
 
@@ -153,9 +150,7 @@ export default function Lobby({
         </>
       )}
 
-      <LobbyBlog selectedId={blogPostId} onSelect={setBlogPostId} />
-
-      {blogPostId == null && onOpenOnlineUsers && (
+      {onOpenOnlineUsers && (
         <footer className="lobby-online-footer">
           <SiteOnlineStatus count={siteOnlineCount} onOpen={onOpenOnlineUsers} />
         </footer>

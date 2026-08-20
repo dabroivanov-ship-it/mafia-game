@@ -418,6 +418,7 @@ export interface ViolationLogEntry {
   moderatorId: number;
   moderatorName: string;
   createdAt: string;
+  messageAt?: string;
 }
 
 export interface LobbyUpdate {

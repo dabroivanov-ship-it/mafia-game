@@ -18,6 +18,12 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_violation_log_created ON violation_log(created_at DESC);
 `);
 
+try {
+  db.exec(`ALTER TABLE violation_log ADD COLUMN message_at TEXT`);
+} catch {
+  /* column exists */
+}
+
 export type ViolationType = 'profanity' | 'advertising' | 'other';
 
 export interface ViolationEntry {
@@ -33,6 +39,8 @@ export interface ViolationEntry {
   moderatorId: number;
   moderatorName: string;
   createdAt: string;
+  /** When the original message was written (falls back to createdAt). */
+  messageAt: string;
 }
 
 interface ViolationRow {
@@ -48,9 +56,16 @@ interface ViolationRow {
   moderator_id: number;
   moderator_name: string;
   created_at: string;
+  message_at?: string | null;
+}
+
+function toIso(raw: string): string {
+  return raw.includes('T') ? raw : `${raw.replace(' ', 'T')}Z`;
 }
 
 function rowToEntry(row: ViolationRow): ViolationEntry {
+  const createdAt = toIso(row.created_at);
+  const messageAt = row.message_at ? toIso(row.message_at) : createdAt;
   return {
     id: row.id,
     violationType: row.violation_type as ViolationType,
@@ -63,17 +78,31 @@ function rowToEntry(row: ViolationRow): ViolationEntry {
     messageId: row.message_id,
     moderatorId: row.moderator_id,
     moderatorName: row.moderator_name,
-    createdAt: row.created_at.includes('T')
-      ? row.created_at
-      : `${row.created_at.replace(' ', 'T')}Z`,
+    createdAt,
+    messageAt,
   };
 }
 
-export function countViolations(): number {
+export function countViolations(type?: ViolationType): number {
+  if (type) {
+    return (
+      db.prepare('SELECT COUNT(*) AS c FROM violation_log WHERE violation_type = ?').get(type) as {
+        c: number;
+      }
+    ).c;
+  }
   return (db.prepare('SELECT COUNT(*) AS c FROM violation_log').get() as { c: number }).c;
 }
 
-export function listViolations(limit = 200): ViolationEntry[] {
+export function listViolations(limit = 200, type?: ViolationType): ViolationEntry[] {
+  if (type) {
+    const rows = db
+      .prepare(
+        `SELECT * FROM violation_log WHERE violation_type = ? ORDER BY created_at DESC LIMIT ?`
+      )
+      .all(type, limit) as ViolationRow[];
+    return rows.map(rowToEntry);
+  }
   const rows = db
     .prepare(`SELECT * FROM violation_log ORDER BY created_at DESC LIMIT ?`)
     .all(limit) as ViolationRow[];
@@ -90,16 +119,26 @@ export function addViolation(input: {
   channel: string;
   messageId: string;
   moderatorId: number;
+  moderatorName?: string | null;
+  messageAt?: string | null;
 }): ViolationEntry {
-  const mod = findUserById(input.moderatorId);
-  const moderatorName = mod?.display_name || mod?.username || 'Модератор';
+  const mod = input.moderatorId > 0 ? findUserById(input.moderatorId) : null;
+  const moderatorName =
+    (input.moderatorName && String(input.moderatorName).trim()) ||
+    mod?.display_name ||
+    mod?.username ||
+    (input.moderatorId <= 0 ? 'Авто' : 'Модератор');
   const text = String(input.messageText || '').trim().slice(0, 2000);
+  const messageAt =
+    input.messageAt && String(input.messageAt).trim()
+      ? String(input.messageAt).trim().slice(0, 40)
+      : null;
 
   const result = db
     .prepare(
       `INSERT INTO violation_log
-      (violation_type, message_text, author_user_id, author_name, room_id, room_name, channel, message_id, moderator_id, moderator_name)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      (violation_type, message_text, author_user_id, author_name, room_id, room_name, channel, message_id, moderator_id, moderator_name, message_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       input.violationType,
@@ -111,7 +150,8 @@ export function addViolation(input: {
       input.channel,
       String(input.messageId),
       input.moderatorId,
-      moderatorName.slice(0, 80)
+      moderatorName.slice(0, 80),
+      messageAt
     );
 
   const row = db
@@ -120,7 +160,11 @@ export function addViolation(input: {
   return rowToEntry(row);
 }
 
-export function clearViolations(): number {
+export function clearViolations(type?: ViolationType): number {
+  if (type) {
+    const result = db.prepare('DELETE FROM violation_log WHERE violation_type = ?').run(type);
+    return Number(result.changes);
+  }
   const result = db.prepare('DELETE FROM violation_log').run();
   return Number(result.changes);
 }

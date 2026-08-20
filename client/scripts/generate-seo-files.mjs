@@ -25,6 +25,7 @@ const sitemapEntries = [
   { path: '/info/faq', changefreq: 'monthly', priority: 0.8 },
   { path: '/info/team', changefreq: 'monthly', priority: 0.7 },
   { path: '/info/quiz', changefreq: 'weekly', priority: 0.75 },
+  { path: '/blog', changefreq: 'weekly', priority: 0.8 },
 ];
 
 const lastmod = new Date().toISOString().slice(0, 10);

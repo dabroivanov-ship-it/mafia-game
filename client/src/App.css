@@ -2353,6 +2353,10 @@ html.telegram-webapp .app-body {
   color: var(--text-muted);
 }
 
+.admin-ad-log-hint {
+  margin: 0 0 12px;
+}
+
 .roles-banner {
   border-color: color-mix(in srgb, var(--accent) 35%, transparent);
   background: color-mix(in srgb, var(--accent) 8%, transparent);
@@ -2587,10 +2591,34 @@ html.telegram-webapp .app-body {
 
 .mail-thread-meta {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 4px;
   font-size: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.mail-report-btn {
+  margin-left: auto;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  line-height: 1;
+  font-size: 0.85rem;
+}
+
+.mail-report-btn:hover {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+
+.mail-thread-bubble.is-deleted p {
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 .mail-thread-bubble p {

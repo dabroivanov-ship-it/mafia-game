@@ -7,6 +7,7 @@ const GUEST_NAV = [
   { href: '/info/rating', label: 'Лидеры' },
   { href: '/info/faq', label: 'FAQ' },
   { href: '/info/about', label: 'Об игре' },
+  { href: '/blog', label: 'Блог' },
 ] as const;
 
 interface GuestHeaderProps {
