@@ -433,6 +433,10 @@ export default function App() {
         setComposeToUsername(opts?.username ?? null);
         setMessagesOpenUnread(false);
       }
+      // Room UI is a full-screen branch — leave it so cabinet mail can render.
+      if (currentRoomIdRef.current != null) {
+        setRoomMinimized(true);
+      }
       setView('cabinet');
       setLobbyScreen('cabinet-messages');
     },
