@@ -115,40 +115,36 @@ export default function Lobby({
         </button>
       )}
 
-      {blogPostId == null && (
-        <>
-          <section className="lobby-rooms-section">
-            <h2 className="lobby-section-title">Игровые комнаты</h2>
-            <div className="rooms-list">
-              {rooms.length === 0 && <p className="muted">Загрузка комнат...</p>}
-              {gameRooms.length === 0 && rooms.length > 0 && (
-                <p className="muted">Игровых комнат нет</p>
-              )}
-              {gameRooms.map((room) => (
-                <RoomCard key={room.id} room={room} onJoin={onJoin} joinLabel="Войти" />
-              ))}
-            </div>
-          </section>
+      <section className="lobby-rooms-section">
+        <h2 className="lobby-section-title">Игровые комнаты</h2>
+        <div className="rooms-list">
+          {rooms.length === 0 && <p className="muted">Загрузка комнат...</p>}
+          {gameRooms.length === 0 && rooms.length > 0 && (
+            <p className="muted">Игровых комнат нет</p>
+          )}
+          {gameRooms.map((room) => (
+            <RoomCard key={room.id} room={room} onJoin={onJoin} joinLabel="Войти" />
+          ))}
+        </div>
+      </section>
 
-          <section className="lobby-rooms-section">
-            <h2 className="lobby-section-title">Чат</h2>
-            <div className="rooms-list">
-              {chatRooms.length === 0 && rooms.length > 0 && (
-                <p className="muted">Чат-комнат пока нет</p>
-              )}
-              {chatRooms.map((room) => (
-                <RoomCard
-                  key={room.id}
-                  room={room}
-                  onJoin={onJoin}
-                  joinLabel="Войти"
-                  showPhase={false}
-                />
-              ))}
-            </div>
-          </section>
-        </>
-      )}
+      <section className="lobby-rooms-section">
+        <h2 className="lobby-section-title">Чат</h2>
+        <div className="rooms-list">
+          {chatRooms.length === 0 && rooms.length > 0 && (
+            <p className="muted">Чат-комнат пока нет</p>
+          )}
+          {chatRooms.map((room) => (
+            <RoomCard
+              key={room.id}
+              room={room}
+              onJoin={onJoin}
+              joinLabel="Войти"
+              showPhase={false}
+            />
+          ))}
+        </div>
+      </section>
 
       {onOpenOnlineUsers && (
         <footer className="lobby-online-footer">
