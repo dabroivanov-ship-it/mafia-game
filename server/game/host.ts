@@ -447,12 +447,13 @@ export function buildMorningReportMessage(
   );
 
   if (report.doctorHealed && !doctorSavedThisNight) {
-    const nick = playerNick(report.doctorHealed);
-    parts.push(
-      report.doctorSelfHeal
-        ? pickPhraseLine('report.doctor_self', { nick })
-        : pickPhraseLine('report.doctor_heal', { nick })
-    );
+    if (report.doctorSelfHeal) {
+      parts.push(pickPhraseLine('report.doctor_self'));
+    } else {
+      parts.push(
+        pickPhraseLine('report.doctor_heal', { nick: playerNick(report.doctorHealed) })
+      );
+    }
   }
 
   if (report.commissarKilled) {
@@ -601,16 +602,16 @@ export function getVotingMajorityMessage(votes: number, total: number, name: str
 
 
 
-export function getHangChoiceMessage(voter: GamePlayer, yes: boolean): string {
-
+export function getHangChoiceMessage(
+  voter: GamePlayer,
+  yes: boolean,
+  accused: GamePlayer
+): string {
   return getPhraseText('voting.hang_choice', {
-
     voter: playerNick(voter),
-
-    choice: yes ? 'да, казнить' : 'нет, пощадить',
-
+    choice: yes ? 'голосует за казнь' : 'голосует против казни',
+    accused: playerNick(accused),
   });
-
 }
 
 

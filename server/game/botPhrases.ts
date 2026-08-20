@@ -222,8 +222,8 @@ export const BOT_PHRASE_DEFINITIONS: BotPhraseDefinition[] = [
     group: 'Сводка дня',
     label: 'Доктор лечил себя',
     type: 'lines',
-    placeholders: ['{nick}'],
-    defaultValue: ['Доктор этой ночью занимался собой ({nick}).'].join('\n'),
+    placeholders: [],
+    defaultValue: ['Доктор занимался самолечением.'].join('\n'),
   },
   {
     key: 'report.advocate_cover',
@@ -435,8 +435,8 @@ export const BOT_PHRASE_DEFINITIONS: BotPhraseDefinition[] = [
     group: 'Голосование',
     label: 'Голос да/нет',
     type: 'text',
-    placeholders: ['{voter}', '{choice}'],
-    defaultValue: '🗳️ {voter} — {choice}.',
+    placeholders: ['{voter}', '{choice}', '{accused}'],
+    defaultValue: '{voter} — {choice} ({accused}).',
   },
   {
     key: 'voting.spared',

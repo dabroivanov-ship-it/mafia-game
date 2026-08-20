@@ -861,7 +861,10 @@ export function castHangVote(room: GameRoom, voterId: number, yes: boolean): Pri
 
   room.hangVotes[voterId] = yes;
   voter.hasHangVoted = true;
-  addHostMessage(room, getHangChoiceMessage(voter, yes));
+  const accused = room.players.find((p) => p.id === room.accusedId);
+  if (accused) {
+    addHostMessage(room, getHangChoiceMessage(voter, yes, accused));
+  }
 
   const eligibleVoters = getEligibleVoters(room);
   const threshold = getHangVoteThreshold(eligibleVoters.length);
