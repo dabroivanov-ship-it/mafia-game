@@ -85,6 +85,7 @@
 html {
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
+  overflow-x: clip;
 }
 
 body {
@@ -97,6 +98,17 @@ body {
   min-height: 100vh;
   min-height: 100dvh;
   overscroll-behavior: none;
+  overflow-x: clip;
+  width: 100%;
+  max-width: 100%;
+}
+
+.app,
+#root {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: clip;
 }
 
 html.telegram-webapp,
@@ -214,6 +226,9 @@ html.telegram-webapp .app-body {
   justify-content: flex-start;
   padding: 16px 16px 24px;
   padding-top: max(16px, var(--safe-top));
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 .auth-page-bar {
@@ -268,6 +283,7 @@ html.telegram-webapp .app-body {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 28px 24px;
+  min-width: 0;
 }
 
 .auth-header {
@@ -3723,6 +3739,8 @@ html.telegram-webapp .app-body {
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .site-logo-image {
@@ -3940,6 +3958,8 @@ html.telegram-webapp .app-body {
   max-width: 720px;
   margin: 0 auto;
   padding: 24px 16px;
+  width: 100%;
+  min-width: 0;
 }
 
 .admin-page {
@@ -4025,6 +4045,8 @@ html.telegram-webapp .app-body {
 
 .rating-table-wrap {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--bg-card);
@@ -6636,7 +6658,111 @@ html.telegram-webapp .app-body {
 
   .auth-page,
   .guest-layout:not(.auth-page) {
-    padding: 16px 14px calc(16px + var(--safe-bottom));
+    padding: 12px 12px calc(16px + var(--safe-bottom));
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  .auth-page-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .auth-top-links.home-quick-links,
+  .home-quick-links {
+    width: 100%;
+    flex: 1 1 auto;
+    justify-content: flex-start;
+    gap: 0 2px;
+  }
+
+  .home-quick-link {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+
+  .auth-card {
+    max-width: 100%;
+    padding: 20px 16px;
+  }
+
+  .auth-tabs button {
+    padding: 10px 8px;
+    font-size: 0.92rem;
+  }
+
+  .auth-social-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .auth-social-btn {
+    min-width: 0;
+    width: 100%;
+    justify-content: center;
+    padding: 10px 8px;
+    font-size: 0.88rem;
+  }
+
+  .auth-online-footer {
+    max-width: 100%;
+    padding: 0 2px;
+  }
+
+  .auth-brand-logo .site-logo-image,
+  .auth-brand-logo .site-logo-mark {
+    width: 36px;
+    height: 36px;
+  }
+
+  .site-footer {
+    padding-left: 12px;
+    padding-right: 12px;
+    overflow-wrap: anywhere;
+  }
+
+  .room {
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  .room-header-meta {
+    gap: 4px 6px;
+  }
+
+  .phase-badge,
+  .registration-count,
+  .timer {
+    font-size: 0.78rem;
+  }
+
+  .lobby {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: clip;
+  }
+
+  .lobby-header {
+    gap: 10px;
+  }
+
+  .lobby-header h1 {
+    font-size: clamp(1.45rem, 7vw, 2rem);
+  }
+
+  .rating-table {
+    font-size: 0.85rem;
+  }
+
+  .rating-table th,
+  .rating-table td {
+    padding: 10px 10px;
   }
 
   .auth-form input {
@@ -6754,6 +6880,9 @@ html.telegram-webapp .app-body {
 
 .user-stats-page {
   max-width: 900px;
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .user-stats-hero {
@@ -6761,18 +6890,27 @@ html.telegram-webapp .app-body {
   flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 20px;
+  gap: 16px 20px;
   margin-bottom: 24px;
   padding: 20px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--bg-card);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .user-stats-hero-main {
   display: flex;
   align-items: center;
   gap: 16px;
+  min-width: 0;
+  flex: 1 1 200px;
+}
+
+.user-stats-hero-main > div {
   min-width: 0;
 }
 
@@ -6793,6 +6931,14 @@ html.telegram-webapp .app-body {
 .user-stats-hero h1 {
   margin: 0 0 4px;
   font-size: 1.5rem;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.user-stats-hero .muted {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .user-stats-mmr-card {
@@ -6800,7 +6946,9 @@ html.telegram-webapp .app-body {
   flex-direction: column;
   align-items: flex-end;
   gap: 4px;
-  min-width: 120px;
+  min-width: 0;
+  flex: 0 1 auto;
+  text-align: right;
 }
 
 .user-stats-mmr-label {
@@ -6814,6 +6962,56 @@ html.telegram-webapp .app-body {
   font-size: 2rem;
   line-height: 1;
   color: var(--accent);
+}
+
+.user-stats-mmr-card .muted {
+  max-width: 100%;
+}
+
+@media (max-width: 560px) {
+  .user-stats-hero {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 14px;
+    gap: 14px;
+  }
+
+  .user-stats-hero-main {
+    flex: 1 1 auto;
+    width: 100%;
+    gap: 12px;
+  }
+
+  .user-stats-avatar,
+  .user-stats-avatar.placeholder {
+    width: 56px;
+    height: 56px;
+    font-size: 1.35rem;
+  }
+
+  .user-stats-hero h1 {
+    font-size: 1.25rem;
+  }
+
+  .user-stats-mmr-card {
+    width: 100%;
+    align-items: flex-start;
+    text-align: left;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  .user-stats-mmr-value {
+    font-size: 1.75rem;
+  }
+
+  .user-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .user-stats-team-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .user-stats-section {

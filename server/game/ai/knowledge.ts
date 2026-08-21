@@ -279,7 +279,7 @@ export function buildGameContextForBot(
         .map(([voterId, targetId]) => {
           const voter = room.players.find((p) => p.id === Number(voterId));
           const target = room.players.find((p) => p.id === targetId);
-          return `${voter?.username ?? voterId} выдвигает ${target?.username ?? targetId}`;
+          return `${voter?.username ?? voterId} голосует за ${target?.username ?? targetId}`;
         })
         .join('\n');
       votingInfo = [

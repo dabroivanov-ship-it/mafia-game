@@ -203,7 +203,7 @@ export const BOT_PHRASE_DEFINITIONS: BotPhraseDefinition[] = [
     placeholders: ['{nick}'],
     defaultValue: [
       'Путана не дала {nick} заняться своими ночными делами.',
-      '{nick} этой ночью был(а) занят(а) — до своих дел так и не добрался.',
+      '{nick} этой ночью был(а) занят(а) — до своих дел так и не добрался(ась).',
     ].join('\n'),
   },
   {
@@ -399,7 +399,7 @@ export const BOT_PHRASE_DEFINITIONS: BotPhraseDefinition[] = [
     label: 'Игрок отдал голос',
     type: 'text',
     placeholders: ['{voter}', '{target}'],
-    defaultValue: '🗳️ {voter} выдвигает {target}.',
+    defaultValue: '🗳️ {voter} голосует за {target}.',
   },
   {
     key: 'voting.tie',
@@ -510,14 +510,14 @@ export const BOT_PHRASE_DEFINITIONS: BotPhraseDefinition[] = [
     group: 'Подсказки ролей',
     label: 'Мафия',
     type: 'text',
-    defaultValue: 'Жертву выбирает главарь мафии. Если он погибнет — главой станете вы.',
+    defaultValue: 'Жертву выбирает главарь мафии. Если он погибнет или дважды подряд не выберет жертву, будучи в сети — главой станете вы.',
   },
   {
     key: 'prompt.mafia.wait',
     group: 'Подсказки ролей',
     label: 'Мафия: ожидание главаря',
     type: 'text',
-    defaultValue: 'Главарь мафии выбирает жертву. Дождитесь его решения — при его гибели вы станете новым главарём.',
+    defaultValue: 'Главарь мафии выбирает жертву. Дождитесь его решения — при его гибели или если он дважды подряд не выберет жертву, будучи в сети, вы станете новым главарём.',
   },
   {
     key: 'prompt.commissar',

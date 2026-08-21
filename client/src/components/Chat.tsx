@@ -81,6 +81,7 @@ export default function Chat({
   const atBottomRef = useRef(true);
   const prevLenRef = useRef(0);
   const loadingMoreRef = useRef(false);
+  const [atTop, setAtTop] = useState(true);
 
   const checkAtBottom = () => {
     const el = listRef.current;
@@ -88,8 +89,15 @@ export default function Chat({
     return el.scrollHeight - el.scrollTop - el.clientHeight < 80;
   };
 
+  const checkAtTop = () => {
+    const el = listRef.current;
+    if (!el) return true;
+    return el.scrollTop <= 8;
+  };
+
   const handleScroll = () => {
     atBottomRef.current = checkAtBottom();
+    setAtTop(checkAtTop());
   };
 
   useEffect(() => {
@@ -104,13 +112,22 @@ export default function Chat({
       const prevHeight = el.scrollHeight;
       requestAnimationFrame(() => {
         el.scrollTop += el.scrollHeight - prevHeight;
+        setAtTop(checkAtTop());
       });
     } else if (atBottomRef.current) {
       bottomRef.current?.scrollIntoView({ behavior: grew ? 'smooth' : 'auto' });
+      setAtTop(checkAtTop());
+    } else {
+      setAtTop(checkAtTop());
     }
 
     prevLenRef.current = messages.length;
   }, [messages]);
+
+  useEffect(() => {
+    // Короткий список без скролла — кнопка «ранее» тоже видна.
+    setAtTop(checkAtTop());
+  }, [hasMoreChat, messages.length]);
 
   useEffect(() => {
     if (replyTo) inputRef.current?.focus();
@@ -239,7 +256,7 @@ export default function Chat({
   return (
     <div className={`chat ${replyTo ? 'chat-has-reply' : ''}`}>
       <div className="chat-messages" ref={listRef} onScroll={handleScroll}>
-        {hasMoreChat && onLoadMore && (
+        {hasMoreChat && onLoadMore && atTop && (
           <div className="chat-load-more">
             <button
               type="button"

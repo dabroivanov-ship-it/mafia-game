@@ -188,6 +188,7 @@ function createRoom(id: number, kind: RoomKind = 'game'): GameRoom {
     clownUsed: false,
     doctorLastSelfHealNight: -999,
     mafiaDonId: null,
+    donIdleStreak: 0,
     votingStarted: false,
     winnerTeam: null,
     systemMessages: [],
@@ -790,6 +791,7 @@ function beginGame(room: GameRoom): PrivateNote[] {
   room.wifeRevengeUsed = false;
   room.clownUsed = false;
   room.doctorLastSelfHealNight = -999;
+  room.donIdleStreak = 0;
 
   saveGameEvent(room.id, room.sessionId, 'game_start', {
     playerCount: participants.length,
@@ -1058,8 +1060,31 @@ function transferMafiaDon(room: GameRoom, deadPlayer: GamePlayer): PrivateNote[]
 
   nextMafia.isDon = true;
   room.mafiaDonId = nextMafia.id;
+  room.donIdleStreak = 0;
 
   const text = `🎩 ${playerNick(nextMafia)} стал(а) главным мафиози.`;
+  addMafiaHostMessage(room, text);
+
+  return room.players
+    .filter((p) => p.alive && p.inGame && isMafiaTeam(p.role))
+    .map((p) => ({ playerId: p.id, message: text }));
+}
+
+/** Главарь дважды подряд в сети не выбрал жертву — главенство другому мафиози. */
+function transferDonForInactivity(room: GameRoom, currentDon: GamePlayer): PrivateNote[] {
+  const nextMafia = room.players.find(
+    (p) => p.alive && p.role === 'mafia' && p.id !== currentDon.id
+  );
+  if (!nextMafia) return [];
+
+  room.players.forEach((p) => {
+    p.isDon = false;
+  });
+  nextMafia.isDon = true;
+  room.mafiaDonId = nextMafia.id;
+  room.donIdleStreak = 0;
+
+  const text = `Главарь не выбирал жертву две ночи подряд — главенство переходит к ${playerNick(nextMafia)}.`;
   addMafiaHostMessage(room, text);
 
   return room.players
@@ -1227,15 +1252,29 @@ export function resolveNight(room: GameRoom): NightResolveResult {
 
   const mafiaDon = room.players.find((p) => p.alive && p.role === 'mafia' && p.isDon);
   let mafiaTarget: number | null = null;
-  if (mafiaDon && !isSeduced(mafiaDon.id)) {
-    const act = actions[mafiaDon.id];
-    if (act?.type === 'kill') {
-      const target = room.players.find((p) => p.id === act.targetId);
-      if (target?.alive && !isMafiaTeam(target.role)) {
-        mafiaTarget = act.targetId;
+  let donChoseKill = false;
+  let donBlockedBySeduce = false;
+  if (mafiaDon) {
+    if (isSeduced(mafiaDon.id)) {
+      // Путана сняла главаря: в сводке — что мафия не ударила, без имени (иначе палится дон).
+      report.mafiaNoDecision = true;
+      donBlockedBySeduce = true;
+      if (report.prostituteSeduced?.id === mafiaDon.id) {
+        delete report.prostituteSeduced;
       }
     } else {
-      report.mafiaNoDecision = true;
+      const act = actions[mafiaDon.id];
+      if (act?.type === 'kill') {
+        const target = room.players.find((p) => p.id === act.targetId);
+        if (target?.alive && !isMafiaTeam(target.role)) {
+          mafiaTarget = act.targetId;
+          donChoseKill = true;
+        } else {
+          report.mafiaNoDecision = true;
+        }
+      } else {
+        report.mafiaNoDecision = true;
+      }
     }
   }
 
@@ -1493,6 +1532,23 @@ export function resolveNight(room: GameRoom): NightResolveResult {
     if (p?.alive) killedTonight.push(p);
   }
   report.killed = killedTonight;
+
+  if (mafiaDon?.alive && !deaths.has(mafiaDon.id)) {
+    if (donChoseKill) {
+      room.donIdleStreak = 0;
+    } else if (!donBlockedBySeduce && mafiaDon.connected) {
+      room.donIdleStreak = (room.donIdleStreak ?? 0) + 1;
+      if (room.donIdleStreak >= 2) {
+        const transferred = transferDonForInactivity(room, mafiaDon);
+        if (transferred.length > 0) {
+          privateNotes.push(...transferred);
+        } else {
+          // Других мафиози нет — роль остаётся, счётчик сбрасываем.
+          room.donIdleStreak = 0;
+        }
+      }
+    }
+  }
 
   const hadActions = Object.keys(actions).length > 0;
   const morningReport = buildMorningReportMessage(room, report, hadActions);

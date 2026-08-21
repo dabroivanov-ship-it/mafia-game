@@ -249,8 +249,7 @@ export default function Room({
       {!isChatRoom && state.isInGame && state.phase === 'registration' && (
         <div className="join-game-banner leave-game-banner">
           <p>
-            Вы зарегистрированы ({state.registeredCount}/{state.maxPlayers}). Ожидайте других или
-            таймера.
+            Вы зарегистрированы ({state.registeredCount}/{state.maxPlayers}).
           </p>
           <button
             type="button"
@@ -300,37 +299,46 @@ export default function Room({
                 Игра
               </button>
               <button type="button" className={mafiaTab ? 'active' : ''} onClick={() => setMafiaTab(true)}>
-                Чат мафии
+                Мафия
               </button>
             </div>
           )}
 
           {!mafiaTab ? (
             <>
-              <div className="chat-header-bar">
-                <span className="chat-header-title">
-                {isChatRoom
-                  ? 'Общий чат'
-                  : state.chatMode === 'spectator'
-                    ? 'Игра + выбывшие'
-                    : state.chatMode === 'dead'
-                      ? 'Выбывшие и наблюдатели'
-                      : 'Чат'}
-                </span>
-                {state.chatMode === 'spectator' && (
-                  <span className="chat-header-hint muted">
-                    Ваши сообщения видят наблюдатели и выбывшие
-                  </span>
-                )}
-                {state.chatMode === 'dead' && (
-                  <span className="chat-header-hint muted">
-                    Наблюдатели вас видят · живые — нет
-                  </span>
-                )}
-                {state.myPlayer?.silenced && (
-                  <span className="chat-header-hint muted">🔇 Молчание — ваши сообщения видите только вы</span>
-                )}
-              </div>
+              {(isChatRoom ||
+                state.chatMode === 'spectator' ||
+                state.chatMode === 'dead' ||
+                state.myPlayer?.silenced) && (
+                <div className="chat-header-bar">
+                  {(isChatRoom ||
+                    state.chatMode === 'spectator' ||
+                    state.chatMode === 'dead') && (
+                    <span className="chat-header-title">
+                      {isChatRoom
+                        ? 'Общий чат'
+                        : state.chatMode === 'spectator'
+                          ? 'Игра + выбывшие'
+                          : 'Выбывшие и наблюдатели'}
+                    </span>
+                  )}
+                  {state.chatMode === 'spectator' && (
+                    <span className="chat-header-hint muted">
+                      Ваши сообщения видят наблюдатели и выбывшие
+                    </span>
+                  )}
+                  {state.chatMode === 'dead' && (
+                    <span className="chat-header-hint muted">
+                      Наблюдатели вас видят · живые — нет
+                    </span>
+                  )}
+                  {state.myPlayer?.silenced && (
+                    <span className="chat-header-hint muted">
+                      Молчание — ваши сообщения видите только вы
+                    </span>
+                  )}
+                </div>
+              )}
               <Chat
                 messages={state.chat}
                 canSend={state.canChat}

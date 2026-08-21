@@ -26,6 +26,15 @@ function loadOverrides(): Record<string, string> {
   } catch {
     cache = {};
   }
+  // Старая формулировка выдвижения → «голосует за»
+  const cast = cache['voting.cast'];
+  if (typeof cast === 'string' && cast.includes('выдвигает')) {
+    cache['voting.cast'] = cast.replace('выдвигает', 'голосует за');
+    db.prepare(
+      `INSERT INTO app_settings (key, value) VALUES (?, ?)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value`
+    ).run(BOT_PHRASES_KEY, JSON.stringify(cache));
+  }
   return cache;
 }
 

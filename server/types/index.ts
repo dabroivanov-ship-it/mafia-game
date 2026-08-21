@@ -180,6 +180,8 @@ export interface GameRoom {
   clownUsed: boolean;
   doctorLastSelfHealNight: number;
   mafiaDonId: number | null;
+  /** Подряд ночей, когда главарь был в сети и не выбрал жертву. */
+  donIdleStreak: number;
   votingStarted: boolean;
   winnerTeam: WinnerTeam;
   systemMessages: { text: string; time: string }[];

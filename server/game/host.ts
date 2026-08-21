@@ -486,7 +486,8 @@ export function buildMorningReportMessage(
     );
   }
 
-  if (report.mafiaNoDecision) {
+  // Если путана уже назвала, кого сняла, фразу про главаря не дублируем.
+  if (report.mafiaNoDecision && !report.prostituteSeduced) {
     parts.push(getPhraseText('report.mafia_no_decision'));
   } else if (report.mafiaAttacked) {
     if (report.highlanderAttacked) {
