@@ -265,7 +265,7 @@ export function hydrateRoomHistory(room: GameRoom): void {
     msg.system ? { ...msg, playerName: normalizeSystemSender(msg.playerName) } : msg
   );
   const restoreSideChannels =
-    room.kind !== 'chat' && room.phase !== 'waiting' && room.phase !== 'ended';
+    room.kind === 'game' && room.phase !== 'waiting' && room.phase !== 'ended';
   room.mafiaChat = restoreSideChannels ? mafiaChat : [];
   room.deadChat = restoreSideChannels ? deadChat : [];
   room.spectatorChat = restoreSideChannels ? spectatorChat : [];

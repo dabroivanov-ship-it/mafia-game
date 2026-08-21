@@ -6600,7 +6600,7 @@ html.telegram-webapp .app-body {
   }
 
   .cabinet-hub-item-mobile-only {
-    display: flex;
+    display: flex !important;
   }
 
   .chat-header-bar {
@@ -6899,9 +6899,6 @@ html.telegram-webapp .app-body {
   white-space: nowrap;
 }
 
-.cabinet-hub-item-mobile-only {
-  display: none;
-}
 .clans-page {
   max-width: 720px;
   margin: 0 auto;

@@ -478,6 +478,10 @@ export default function App() {
   );
 
   const openClan = useCallback((clanId: number) => {
+    if (currentRoomIdRef.current != null) {
+      setRoomMinimized(true);
+    }
+    setProfileStatsUserId(null);
     setClansInitialId(clanId);
     setView('clans');
     window.history.pushState(null, '', '/');
@@ -540,6 +544,7 @@ export default function App() {
       const previousId = currentRoomIdRef.current;
       currentRoomIdRef.current = roomId;
       setCurrentRoomId(roomId);
+      setRoomState(null);
       setRoomMinimized(false);
       setRoomScreen('game');
       setView('room');
@@ -552,6 +557,7 @@ export default function App() {
           setCurrentRoomId(previousId);
           setError(res.error);
           if (!previousId) {
+            setRoomState(null);
             setView('lobby');
             window.history.pushState(null, '', '/');
           }
@@ -798,7 +804,7 @@ export default function App() {
   }
 
   if (currentRoomId && !roomMinimized) {
-    const isChatRoom = (roomState?.kind === 'chat' || roomState?.kind === 'clan');
+    const isChatRoom = roomState?.kind === 'chat' || roomState?.kind === 'clan';
     return (
       <div className="app app-in-room">
         {notificationBar}
@@ -834,7 +840,7 @@ export default function App() {
             <Room
               socket={socket}
               state={roomState}
-              onLeave={isChatRoom ? leaveRoom : minimizeMafiaRoom}
+              onLeave={!roomState || isChatRoom ? leaveRoom : minimizeMafiaRoom}
               onOpenMembers={openRoomMembers}
               onStateUpdate={applyRoomState}
               currentUserId={user.id}

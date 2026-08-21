@@ -2059,7 +2059,8 @@ export function announceRegistrationToIdleRooms(
   const text = `Запускается игра в комнате «${source.name}». /room/${source.id}`;
   for (const room of rooms.values()) {
     if (room.id === source.id) continue;
-    if (!isChatRoom(room) && isActiveGamePhase(room.phase)) continue;
+    // Только публичные чаты — не клановые и не активные игровые комнаты
+    if (room.kind !== 'chat') continue;
     if (!room.players.some((p) => p.connected && !p.isBot)) continue;
     addSystemMessage(room, text);
     notified.push(room.id);

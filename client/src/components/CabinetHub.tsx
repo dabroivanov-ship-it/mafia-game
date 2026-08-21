@@ -20,7 +20,6 @@ const HUB_ITEMS = [
     title: 'Кланы',
     desc: 'Создать клан, заявки, комната и новости',
     action: 'clans' as const,
-    mobileOnly: true,
   },
   { title: 'Письма', desc: 'История переписки и новые сообщения', action: 'messages' as const },
   { title: 'Поддержка', desc: 'Сообщить о проблеме администратору', action: 'support' as const },
@@ -89,7 +88,7 @@ export default function CabinetHub({
             <button
               key={item.action}
               type="button"
-              className={`info-hub-card${item.mobileOnly ? ' cabinet-hub-item-mobile-only' : ''}`}
+              className="info-hub-card"
               onClick={handler}
             >
               <span className="info-hub-index" aria-hidden="true">
