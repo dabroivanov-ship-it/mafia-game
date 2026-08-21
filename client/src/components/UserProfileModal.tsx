@@ -37,6 +37,7 @@ interface UserProfileModalProps {
   onAdminAction?: () => void;
   onWriteMessage?: (userId: number, username: string) => void;
   onOpenStatistics?: (userId: number) => void;
+  onOpenClan?: (clanId: number) => void;
   replyTarget?: ChatReplyTarget | null;
   canSendChat?: boolean;
   onSendChat?: (
@@ -57,6 +58,7 @@ interface UserProfileModalProps {
 
 interface ProfileData {
   user: User & { messageCount?: number; gamesPlayed?: number; reputation?: number; quizCorrectAnswers?: number };
+  clan?: { id: number; name: string } | null;
   presence: UserPresence;
   isFriend?: boolean;
   reputationVote?: -1 | 1 | null;
@@ -79,6 +81,7 @@ export default function UserProfileModal({
   onAdminAction,
   onWriteMessage,
   onOpenStatistics,
+  onOpenClan,
   replyTarget = null,
   canSendChat = false,
   onSendChat,
@@ -397,6 +400,27 @@ export default function UserProfileModal({
                     >
                       {formatPresenceLabel(data?.presence)}
                     </span>
+                  </li>
+                  <li>
+                    <span className="player-page-label">Клан</span>
+                    {data?.clan ? (
+                      onOpenClan ? (
+                        <button
+                          type="button"
+                          className="player-page-mmr-link"
+                          onClick={() => {
+                            onOpenClan(data.clan!.id);
+                            onClose();
+                          }}
+                        >
+                          {data.clan.name}
+                        </button>
+                      ) : (
+                        <span>{data.clan.name}</span>
+                      )
+                    ) : (
+                      <span className="muted">—</span>
+                    )}
                   </li>
                   <li>
                     <span className="player-page-label">Игр сыграно</span>

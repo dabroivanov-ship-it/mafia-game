@@ -44,6 +44,7 @@ const UserSearch = lazy(() => import('./components/UserSearch'));
 const CabinetProfileSettings = lazy(() => import('./components/CabinetProfileSettings'));
 const CabinetAccountSettings = lazy(() => import('./components/CabinetAccountSettings'));
 const CabinetSupport = lazy(() => import('./components/CabinetSupport'));
+const Clans = lazy(() => import('./components/Clans'));
 const UserStatisticsPage = lazy(() => import('./components/UserStatisticsPage'));
 
 function ViewSuspense({ children, label }: { children: ReactNode; label?: string }) {
@@ -64,6 +65,7 @@ function presenceSection(
   if (profileStatsUserId != null) return 'profile';
   if (inVisibleRoom || view === 'room') return 'room';
   if (view === 'news') return 'news';
+  if (view === 'clans') return 'clans';
   if (view === 'cabinet') return 'cabinet';
   if (view === 'info') return 'info';
   if (view === 'blog') return 'blog';
@@ -100,6 +102,7 @@ export default function App() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [lobbyScreen, setLobbyScreen] = useState<LobbyScreen>('rooms');
+  const [clansInitialId, setClansInitialId] = useState<number | null>(null);
   const [composeToUserId, setComposeToUserId] = useState<number | null>(null);
   const [composeToUsername, setComposeToUsername] = useState<string | null>(null);
   const [messageThreadUserId, setMessageThreadUserId] = useState<number | null>(null);
@@ -474,6 +477,12 @@ export default function App() {
     [view, lobbyScreen, profileStatsUserId]
   );
 
+  const openClan = useCallback((clanId: number) => {
+    setClansInitialId(clanId);
+    setView('clans');
+    window.history.pushState(null, '', '/');
+  }, []);
+
   const closeProfileStatistics = useCallback(() => {
     setProfileStatsUserId(null);
     const ctx = statsReturnRef.current;
@@ -591,7 +600,7 @@ export default function App() {
       setNotificationsOpen(false);
 
       if (currentRoomId && !roomMinimized) {
-        if (roomState?.kind === 'chat') leaveRoom();
+        if ((roomState?.kind === 'chat' || roomState?.kind === 'clan')) leaveRoom();
         else minimizeMafiaRoom();
       }
 
@@ -611,7 +620,7 @@ export default function App() {
       if (notification.action === 'admin_violations') {
         if (user?.canAccessAdminPanel) {
           if (currentRoomId && !roomMinimized) {
-            if (roomState?.kind === 'chat') leaveRoom();
+            if ((roomState?.kind === 'chat' || roomState?.kind === 'clan')) leaveRoom();
             else minimizeMafiaRoom();
           }
           setAdminInitialView('violations');
@@ -789,7 +798,7 @@ export default function App() {
   }
 
   if (currentRoomId && !roomMinimized) {
-    const isChatRoom = roomState?.kind === 'chat';
+    const isChatRoom = (roomState?.kind === 'chat' || roomState?.kind === 'clan');
     return (
       <div className="app app-in-room">
         {notificationBar}
@@ -832,6 +841,7 @@ export default function App() {
               onJoinRoom={joinRoom}
               onWriteMessage={(userId, username) => openMessages({ userId, username })}
               onOpenStatistics={openProfileStatistics}
+              onOpenClan={openClan}
             />
           </ViewSuspense>
         )}
@@ -884,6 +894,7 @@ export default function App() {
               onBack={() => setLobbyScreen('rooms')}
               onWriteMessage={(userId, username) => openMessages({ userId, username })}
               onOpenStatistics={openProfileStatistics}
+              onOpenClan={openClan}
             />
           </ViewSuspense>
         )}
@@ -893,6 +904,19 @@ export default function App() {
               user={user}
               onBack={() => setView('lobby')}
               onRead={() => setUnreadNewsCount(0)}
+            />
+          </ViewSuspense>
+        )}
+        {view === 'clans' && (
+          <ViewSuspense label="Кланы…">
+            <Clans
+              key={clansInitialId ?? 'browse'}
+              initialClanId={clansInitialId}
+              onBack={() => {
+                setClansInitialId(null);
+                setView('lobby');
+              }}
+              onJoinRoom={joinRoom}
             />
           </ViewSuspense>
         )}
@@ -953,6 +977,7 @@ export default function App() {
               onBack={() => setLobbyScreen('cabinet')}
               onWriteMessage={(userId, username) => openMessages({ userId, username })}
               onOpenStatistics={openProfileStatistics}
+              onOpenClan={openClan}
             />
           </ViewSuspense>
         )}
@@ -970,6 +995,10 @@ export default function App() {
             onOpenMessages={() => openMessages({ openUnread: unreadMailCount > 0 })}
             onOpenSupport={() => setLobbyScreen('cabinet-support')}
             onOpenUserSearch={() => setLobbyScreen('cabinet-search')}
+            onOpenClans={() => {
+              setClansInitialId(null);
+              setView('clans');
+            }}
             onOpenStatistics={() => openProfileStatistics(user.id)}
             onLogout={handleLogout}
             onBack={() => setView('lobby')}
@@ -982,6 +1011,7 @@ export default function App() {
               currentUser={user}
               onWriteMessage={(userId, username) => openMessages({ userId, username })}
               onOpenStatistics={openProfileStatistics}
+              onOpenClan={openClan}
             />
           </ViewSuspense>
         )}
@@ -1044,6 +1074,10 @@ export default function App() {
           }
           if (v === 'news') {
             window.history.pushState(null, '', '/news');
+          }
+          if (v === 'clans') {
+            setClansInitialId(null);
+            window.history.pushState(null, '', '/');
           }
           if (v === 'admin') {
             setAdminInitialView('hub');

@@ -85,7 +85,11 @@ export const HOST_SENDER_NAME = 'Ведущий';
 export const QUIZ_BOT_NAME = 'Умник';
 
 export function isChatRoom(room: GameRoom): boolean {
-  return room.kind === 'chat';
+  return room.kind === 'chat' || room.kind === 'clan';
+}
+
+export function isClanRoom(room: GameRoom): boolean {
+  return room.kind === 'clan';
 }
 
 /** During registration a slot is reserved by inGame even if the socket briefly drops. */
@@ -123,8 +127,9 @@ export function createInitialRooms(): Map<number, GameRoom> {
   }
 
   for (const [id, config] of savedConfigs) {
-    if (config.kind === 'chat') {
+    if (config.kind === 'chat' || config.kind === 'clan') {
       const room = createChatRoom(id, config.name);
+      room.kind = config.kind;
       rooms.set(id, room);
     }
   }
@@ -155,10 +160,13 @@ export function createInitialRooms(): Map<number, GameRoom> {
 function createRoom(id: number, kind: RoomKind = 'game'): GameRoom {
   return {
     id,
-    name: kind === 'chat' ? `Чат ${id}` : `Комната ${id}`,
+    name: kind === 'chat' || kind === 'clan' ? `Чат ${id}` : `Комната ${id}`,
     kind,
     phase: PHASE.WAITING,
-    maxPlayers: kind === 'chat' ? CONFIG.CHAT_ROOM_MAX_PLAYERS : CONFIG.DEFAULT_MAX_PLAYERS,
+    maxPlayers:
+      kind === 'chat' || kind === 'clan'
+        ? CONFIG.CHAT_ROOM_MAX_PLAYERS
+        : CONFIG.DEFAULT_MAX_PLAYERS,
     players: [],
     chat: [],
     mafiaChat: [],
@@ -205,6 +213,7 @@ function createChatRoom(id: number, name?: string): GameRoom {
 export function getLobbySnapshot(rooms: Map<number, GameRoom>): LobbyRoom[] {
   const sortOrders = getRoomSortOrders();
   return Array.from(rooms.values())
+    .filter((room) => room.kind !== 'clan')
     .sort((a, b) => {
       if (a.kind !== b.kind) return a.kind === 'game' ? -1 : 1;
       const orderA = sortOrders.get(a.id) ?? a.id;
@@ -340,6 +349,20 @@ export function addChatRoom(rooms: Map<number, GameRoom>, name: string): GameRoo
   }
   rooms.set(id, room);
   saveRoomConfig(id, room.name, 'chat');
+  return room;
+}
+
+export function addClanRoom(rooms: Map<number, GameRoom>, name: string): GameRoom {
+  const trimmed = String(name || '').trim().slice(0, 50);
+  if (!trimmed) {
+    throw new Error('Укажите название комнаты');
+  }
+  const id = nextRoomId(rooms.keys());
+  const room = createChatRoom(id, trimmed);
+  room.kind = 'clan';
+  addSystemMessage(room, `Комната клана «${room.name}» создана.`);
+  rooms.set(id, room);
+  saveRoomConfig(id, room.name, 'clan');
   return room;
 }
 

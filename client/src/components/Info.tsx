@@ -45,6 +45,7 @@ interface InfoProps {
   currentUser?: User | null;
   onWriteMessage?: (userId: number, username: string) => void;
   onOpenStatistics?: (userId: number) => void;
+  onOpenClan?: (clanId: number) => void;
 }
 
 export default function Info({
@@ -53,6 +54,7 @@ export default function Info({
   currentUser = null,
   onWriteMessage,
   onOpenStatistics,
+  onOpenClan,
 }: InfoProps) {
   const [section, setSection] = useState<InfoSection>(
     initialSection ?? infoSectionFromPath(window.location.pathname)
@@ -176,6 +178,7 @@ export default function Info({
           currentUser={currentUser}
           onWriteMessage={onWriteMessage}
           onOpenStatistics={onOpenStatistics}
+          onOpenClan={onOpenClan}
         />
       </div>
     );
@@ -194,6 +197,7 @@ export default function Info({
           currentUser={currentUser}
           onWriteMessage={onWriteMessage}
           onOpenStatistics={onOpenStatistics}
+          onOpenClan={onOpenClan}
         />
       </div>
     );

@@ -10,6 +10,7 @@ interface OnlineUsersProps {
   onBack: () => void;
   onWriteMessage?: (userId: number, username: string) => void;
   onOpenStatistics?: (userId: number) => void;
+  onOpenClan?: (clanId: number) => void;
   backLabel?: string;
 }
 
@@ -18,6 +19,7 @@ export default function OnlineUsers({
   onBack,
   onWriteMessage,
   onOpenStatistics,
+  onOpenClan,
   backLabel = '← Комнаты',
 }: OnlineUsersProps) {
   const [users, setUsers] = useState<UserSearchHit[]>([]);
@@ -108,6 +110,7 @@ export default function OnlineUsers({
           onClose={() => setProfileUserId(null)}
           onWriteMessage={onWriteMessage}
           onOpenStatistics={onOpenStatistics}
+          onOpenClan={onOpenClan}
         />
       )}
     </div>

@@ -27,7 +27,7 @@ export type TimerReason = 'registration' | 'roles' | 'day' | 'voting' | 'night';
 
 export type WinnerTeam = 'town' | 'mafia' | 'maniac' | 'draw' | null;
 
-export type RoomKind = 'game' | 'chat';
+export type RoomKind = 'game' | 'chat' | 'clan';
 
 export type UserGender = 'male' | 'female' | '';
 

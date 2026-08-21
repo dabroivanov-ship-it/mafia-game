@@ -2,7 +2,7 @@ import type { User, SiteBranding } from '../types';
 import SiteLogo from './SiteLogo';
 import { DEFAULT_SITE_BRANDING } from '../siteBranding';
 
-export type MenuView = 'lobby' | 'news' | 'cabinet' | 'info' | 'admin';
+export type MenuView = 'lobby' | 'news' | 'clans' | 'cabinet' | 'info' | 'admin';
 
 interface MenuItem {
   id: MenuView;
@@ -16,6 +16,7 @@ interface MenuItem {
 const ITEMS: MenuItem[] = [
   { id: 'lobby', icon: '', label: 'Комнаты', mobileBottom: true },
   { id: 'news', icon: '', label: 'Новости', mobileBottom: true },
+  { id: 'clans', icon: '', label: 'Кланы', desktopOnly: true },
   { id: 'cabinet', icon: '', label: 'Кабинет', mobileLabel: 'Кабинет', mobileBottom: true },
   { id: 'info', icon: '', label: 'Информация', mobileLabel: 'Инфо', mobileBottom: true },
 ];

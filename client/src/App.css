@@ -6898,3 +6898,201 @@ html.telegram-webapp .app-body {
 .user-stats-games-table th {
   white-space: nowrap;
 }
+
+.cabinet-hub-item-mobile-only {
+  display: none;
+}
+.clans-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 0 48px;
+}
+
+.clans-my {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.clans-create-bar {
+  margin-bottom: 20px;
+}
+
+.clans-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.clans-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  padding: 14px 16px;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.clans-card:hover {
+  background: var(--bg-hover);
+}
+
+.clans-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.clans-card-mine {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+}
+
+.clans-card-desc {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.clans-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 8px;
+}
+
+.clans-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+
+.clans-form input,
+.clans-form textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
+.clans-form input:focus-visible,
+.clans-form textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.clans-join-mode {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin: 0;
+}
+
+.clans-join-mode legend {
+  padding: 0 6px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.clans-radio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+  cursor: pointer;
+}
+
+.clans-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.clans-detail-head {
+  margin-bottom: 16px;
+}
+
+.clans-detail-head h2 {
+  margin: 0 0 6px;
+  font-size: 1.35rem;
+}
+
+.clans-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.clans-section {
+  margin-bottom: 28px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.clans-section h3 {
+  margin: 0 0 12px;
+  font-size: 1.05rem;
+}
+
+.clans-apps,
+.clans-members,
+.clans-news {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.clans-apps li,
+.clans-members li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+}
+
+.clans-app-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.clans-news li {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+}
+
+.clans-news-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.clans-news-body {
+  margin: 8px 0 0;
+  white-space: pre-wrap;
+}

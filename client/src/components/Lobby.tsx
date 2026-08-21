@@ -86,7 +86,7 @@ export default function Lobby({
   onOpenMessages,
   onOpenOnlineUsers,
 }: LobbyProps) {
-  const gameRooms = rooms.filter((r) => r.kind !== 'chat');
+  const gameRooms = rooms.filter((r) => r.kind === 'game');
   const chatRooms = rooms.filter((r) => r.kind === 'chat');
 
   return (

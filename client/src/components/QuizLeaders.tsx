@@ -8,6 +8,7 @@ interface QuizLeadersProps {
   currentUser?: User | null;
   onWriteMessage?: (userId: number, username: string) => void;
   onOpenStatistics?: (userId: number) => void;
+  onOpenClan?: (clanId: number) => void;
 }
 
 export default function QuizLeaders({
@@ -15,6 +16,7 @@ export default function QuizLeaders({
   currentUser = null,
   onWriteMessage,
   onOpenStatistics,
+  onOpenClan,
 }: QuizLeadersProps) {
   const [players, setPlayers] = useState<QuizLeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -104,6 +106,7 @@ export default function QuizLeaders({
           onClose={() => setProfileUserId(null)}
           onWriteMessage={onWriteMessage}
           onOpenStatistics={onOpenStatistics}
+          onOpenClan={onOpenClan}
         />
       )}
     </div>

@@ -9,6 +9,7 @@ interface UserSearchProps {
   onBack: () => void;
   onWriteMessage: (userId: number, username: string) => void;
   onOpenStatistics?: (userId: number) => void;
+  onOpenClan?: (clanId: number) => void;
 }
 
 export default function UserSearch({
@@ -16,6 +17,7 @@ export default function UserSearch({
   onBack,
   onWriteMessage,
   onOpenStatistics,
+  onOpenClan,
 }: UserSearchProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<UserSearchHit[]>([]);
@@ -152,6 +154,7 @@ export default function UserSearch({
           onClose={() => setProfileUserId(null)}
           onWriteMessage={onWriteMessage}
           onOpenStatistics={onOpenStatistics}
+          onOpenClan={onOpenClan}
         />
       )}
     </div>

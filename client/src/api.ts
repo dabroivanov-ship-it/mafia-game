@@ -1,4 +1,4 @@
-import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, NewsPoll, NewsPollInput, NewsComment, BlogPost, MailConversation, RoomKind, ThemeId, ViolationLogEntry, ViolationType, UserSearchHit, UserPresence, FriendUser, LeaderboardEntry, QuizLeaderboardEntry, SiteBranding, LobbyAnnouncement, UserStatisticsResponse, UserNotification, PublicSiteStats } from './types';
+import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, NewsPoll, NewsPollInput, NewsComment, BlogPost, MailConversation, RoomKind, ThemeId, ViolationLogEntry, ViolationType, UserSearchHit, UserPresence, FriendUser, LeaderboardEntry, QuizLeaderboardEntry, SiteBranding, LobbyAnnouncement, UserStatisticsResponse, UserNotification, PublicSiteStats, ClanDetail, ClanEligibility, ClanListItem, ClanNewsItem, ClanJoinMode } from './types';
 import type { AdminPermission } from './adminPermissions';
 
 const API_BASE =
@@ -652,6 +652,7 @@ export async function adminClearViolationLog(
 
 export async function fetchUserProfile(userId: number): Promise<{
   user: User & { messageCount?: number; gamesPlayed?: number; reputation?: number };
+  clan?: { id: number; name: string } | null;
   presence: UserPresence;
   isSelf?: boolean;
   isFriend?: boolean;
@@ -1035,4 +1036,104 @@ export async function adminUploadUserAvatar(userId: number, file: File): Promise
 
 export async function adminRemoveUserAvatar(userId: number): Promise<void> {
   return apiRequest(`/api/admin/users/${userId}/avatar`, { method: 'DELETE' });
+}
+
+export async function fetchClans(): Promise<{
+  clans: ClanListItem[];
+  eligibility: ClanEligibility;
+  createMinPosts: number;
+}> {
+  return apiRequest('/api/clans');
+}
+
+export async function fetchClan(clanId: number): Promise<{ clan: ClanDetail }> {
+  return apiRequest(`/api/clans/${clanId}`);
+}
+
+export async function createClan(input: {
+  name: string;
+  description?: string;
+  joinMode: ClanJoinMode;
+}): Promise<{ clan: ClanListItem }> {
+  return apiRequest('/api/clans', { method: 'POST', body: JSON.stringify(input) });
+}
+
+export async function updateClan(
+  clanId: number,
+  input: { description?: string; joinMode?: ClanJoinMode }
+): Promise<{ clan: ClanDetail }> {
+  return apiRequest(`/api/clans/${clanId}`, { method: 'PATCH', body: JSON.stringify(input) });
+}
+
+export async function applyToClan(
+  clanId: number
+): Promise<{ joined: boolean; pending: boolean; clan: ClanDetail }> {
+  return apiRequest(`/api/clans/${clanId}/apply`, { method: 'POST', body: '{}' });
+}
+
+export async function decideClanApplication(
+  clanId: number,
+  applicationId: number,
+  decision: 'approve' | 'reject' | 'ban'
+): Promise<{ clan: ClanDetail }> {
+  return apiRequest(`/api/clans/${clanId}/applications/${applicationId}/decide`, {
+    method: 'POST',
+    body: JSON.stringify({ decision }),
+  });
+}
+
+export async function leaveClan(clanId: number): Promise<{ ok: boolean; dissolved?: boolean }> {
+  return apiRequest(`/api/clans/${clanId}/leave`, { method: 'POST', body: '{}' });
+}
+
+export async function kickClanMember(
+  clanId: number,
+  userId: number
+): Promise<{ clan: ClanDetail }> {
+  return apiRequest(`/api/clans/${clanId}/kick`, {
+    method: 'POST',
+    body: JSON.stringify({ userId }),
+  });
+}
+
+export async function blacklistClanMember(
+  clanId: number,
+  userId: number
+): Promise<{ clan: ClanDetail }> {
+  return apiRequest(`/api/clans/${clanId}/blacklist`, {
+    method: 'POST',
+    body: JSON.stringify({ userId }),
+  });
+}
+
+export async function transferClanLeadership(
+  clanId: number,
+  userId: number
+): Promise<{ clan: ClanDetail }> {
+  return apiRequest(`/api/clans/${clanId}/transfer`, {
+    method: 'POST',
+    body: JSON.stringify({ userId }),
+  });
+}
+
+export async function dissolveClan(clanId: number): Promise<{ ok: boolean }> {
+  return apiRequest(`/api/clans/${clanId}/dissolve`, { method: 'POST', body: '{}' });
+}
+
+export async function fetchClanNews(clanId: number): Promise<{ news: ClanNewsItem[] }> {
+  return apiRequest(`/api/clans/${clanId}/news`);
+}
+
+export async function createClanNews(
+  clanId: number,
+  input: { title: string; body: string }
+): Promise<{ news: ClanNewsItem }> {
+  return apiRequest(`/api/clans/${clanId}/news`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteClanNews(clanId: number, newsId: number): Promise<{ ok: boolean }> {
+  return apiRequest(`/api/clans/${clanId}/news/${newsId}`, { method: 'DELETE' });
 }

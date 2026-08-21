@@ -11,6 +11,7 @@ interface PlayerRatingProps {
   currentUser?: User | null;
   onWriteMessage?: (userId: number, username: string) => void;
   onOpenStatistics?: (userId: number) => void;
+  onOpenClan?: (clanId: number) => void;
 }
 
 export default function PlayerRating({
@@ -18,6 +19,7 @@ export default function PlayerRating({
   currentUser = null,
   onWriteMessage,
   onOpenStatistics,
+  onOpenClan,
 }: PlayerRatingProps) {
   const [players, setPlayers] = useState<LeaderboardEntry[]>([]);
   const [total, setTotal] = useState(0);
@@ -157,6 +159,7 @@ export default function PlayerRating({
           onClose={() => setProfileUserId(null)}
           onWriteMessage={onWriteMessage}
           onOpenStatistics={onOpenStatistics}
+          onOpenClan={onOpenClan}
         />
       )}
     </div>

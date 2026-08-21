@@ -257,7 +257,7 @@ export default function AdminPanel({
 
         const aiEdits: Record<number, { aiEnabled: boolean; aiCount: number }> = {};
         (data.rooms || []).forEach((r) => {
-          if (r.kind !== 'chat') {
+          if (r.kind === 'game') {
             aiEdits[r.id] = {
               aiEnabled: !!r.aiEnabled,
               aiCount: r.aiCount ?? 0,
@@ -883,7 +883,7 @@ export default function AdminPanel({
     (userPage + 1) * USERS_PAGE_SIZE
   );
 
-  const gameRooms = rooms.filter((r) => r.kind !== 'chat');
+  const gameRooms = rooms.filter((r) => r.kind === 'game');
   const chatRooms = rooms.filter((r) => r.kind === 'chat');
   const banListCount = users.filter((u) => u.isBanned).length + silencedPlayers.length;
 

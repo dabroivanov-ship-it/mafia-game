@@ -40,6 +40,7 @@ import {
   getReputationVote,
   REPUTATION_MIN_GAMES,
 } from '../social/store.js';
+import { getUserClanBrief } from '../clans/store.js';
 import type { PublicUser } from '../types/index.js';
 
 interface ProfileRouterOptions {
@@ -252,6 +253,7 @@ export function createProfileRouter({ onProfileUpdated }: ProfileRouterOptions =
         reputation: getReputation(targetId),
         quizCorrectAnswers: getQuizCorrectAnswers(targetId),
       },
+      clan: getUserClanBrief(targetId),
       presence: getUserPresence(targetId),
       isSelf,
       isFriend: !isSelf && areFriends(req.userId!, targetId),

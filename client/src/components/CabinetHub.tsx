@@ -9,12 +9,19 @@ interface CabinetHubProps {
   onOpenMessages: () => void;
   onOpenSupport: () => void;
   onOpenUserSearch: () => void;
+  onOpenClans?: () => void;
   onOpenStatistics?: () => void;
   onLogout: () => void;
   onBack: () => void;
 }
 
 const HUB_ITEMS = [
+  {
+    title: 'Кланы',
+    desc: 'Создать клан, заявки, комната и новости',
+    action: 'clans' as const,
+    mobileOnly: true,
+  },
   { title: 'Письма', desc: 'История переписки и новые сообщения', action: 'messages' as const },
   { title: 'Поддержка', desc: 'Сообщить о проблеме администратору', action: 'support' as const },
   { title: 'Поиск пользователей', desc: 'Найти игрока по логину, имени или городу', action: 'search' as const },
@@ -30,11 +37,13 @@ export default function CabinetHub({
   onOpenMessages,
   onOpenSupport,
   onOpenUserSearch,
+  onOpenClans,
   onOpenStatistics,
   onLogout,
   onBack,
 }: CabinetHubProps) {
   const handlers = {
+    clans: onOpenClans,
     messages: onOpenMessages,
     support: onOpenSupport,
     search: onOpenUserSearch,
@@ -73,30 +82,36 @@ export default function CabinetHub({
       </div>
 
       <div className="info-hub">
-        {HUB_ITEMS.map((item, index) => (
-          <button
-            key={item.action}
-            type="button"
-            className="info-hub-card"
-            onClick={handlers[item.action]}
-          >
-            <span className="info-hub-index" aria-hidden="true">
-              {String(index + 1).padStart(2, '0')}
-            </span>
-            <span className="info-hub-body">
-              <strong>
-                {item.title}
-                {item.action === 'messages' && unreadMailCount > 0 && (
-                  <span className="cabinet-hub-badge">{unreadMailCount > 99 ? '99+' : unreadMailCount}</span>
-                )}
-              </strong>
-              <span className="muted">{item.desc}</span>
-            </span>
-            <span className="info-hub-arrow" aria-hidden="true">
-              →
-            </span>
-          </button>
-        ))}
+        {HUB_ITEMS.map((item, index) => {
+          const handler = handlers[item.action];
+          if (!handler) return null;
+          return (
+            <button
+              key={item.action}
+              type="button"
+              className={`info-hub-card${item.mobileOnly ? ' cabinet-hub-item-mobile-only' : ''}`}
+              onClick={handler}
+            >
+              <span className="info-hub-index" aria-hidden="true">
+                {String(index + 1).padStart(2, '0')}
+              </span>
+              <span className="info-hub-body">
+                <strong>
+                  {item.title}
+                  {item.action === 'messages' && unreadMailCount > 0 && (
+                    <span className="cabinet-hub-badge">
+                      {unreadMailCount > 99 ? '99+' : unreadMailCount}
+                    </span>
+                  )}
+                </strong>
+                <span className="muted">{item.desc}</span>
+              </span>
+              <span className="info-hub-arrow" aria-hidden="true">
+                →
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       <div className="cabinet-hub-logout">

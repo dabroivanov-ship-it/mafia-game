@@ -9,7 +9,7 @@ export type GamePhase =
 
 export type UserRole = 'user' | 'watcher' | 'moderator' | 'admin';
 
-export type RoomKind = 'game' | 'chat';
+export type RoomKind = 'game' | 'chat' | 'clan';
 
 export type ThemeId = 'midnight' | 'emerald' | 'crimson' | 'day' | 'aurora' | 'sunset' | 'ocean';
 
@@ -471,4 +471,59 @@ export interface MailConversation {
     isRead: boolean;
   };
   unreadCount: number;
+}
+
+export type ClanJoinMode = 'open' | 'approval';
+
+export interface ClanListItem {
+  id: number;
+  name: string;
+  description: string;
+  leaderId: number;
+  leaderName: string;
+  joinMode: ClanJoinMode;
+  roomId: number | null;
+  memberCount: number;
+  createdAt: string;
+  myRole: 'leader' | 'member' | null;
+  myApplicationStatus: 'pending' | 'rejected' | null;
+  amBanned: boolean;
+}
+
+export interface ClanMember {
+  userId: number;
+  username: string;
+  displayName: string;
+  avatar: string | null;
+  role: 'leader' | 'member';
+  joinedAt: string;
+}
+
+export interface ClanDetail extends ClanListItem {
+  members: ClanMember[];
+  pendingApplications: {
+    id: number;
+    userId: number;
+    username: string;
+    displayName: string;
+    avatar: string | null;
+    createdAt: string;
+  }[];
+}
+
+export interface ClanNewsItem {
+  id: number;
+  clanId: number;
+  authorId: number;
+  authorName: string;
+  title: string;
+  body: string;
+  createdAt: string;
+}
+
+export interface ClanEligibility {
+  canCreate: boolean;
+  messageCount: number;
+  required: number;
+  alreadyInClan: boolean;
 }

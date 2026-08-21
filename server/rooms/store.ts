@@ -27,7 +27,7 @@ function ensureRoomsConfigSchema(): void {
 }
 
 function backfillSortOrder(): void {
-  for (const kind of ['game', 'chat'] as RoomKind[]) {
+  for (const kind of ['game', 'chat', 'clan'] as RoomKind[]) {
     const rows = db
       .prepare('SELECT room_id FROM rooms_config WHERE kind = ? ORDER BY room_id ASC')
       .all(kind) as { room_id: number }[];
@@ -61,7 +61,7 @@ export function loadRoomConfigs(): Map<number, RoomConfig> {
     map.set(row.room_id, {
       roomId: row.room_id,
       name: row.name,
-      kind: row.kind === 'chat' ? 'chat' : 'game',
+      kind: row.kind === 'chat' ? 'chat' : row.kind === 'clan' ? 'clan' : 'game',
       sortOrder: row.sort_order ?? row.room_id,
       aiEnabled: !!row.ai_enabled,
       aiCount: Math.max(0, row.ai_count ?? 0),

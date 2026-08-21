@@ -67,6 +67,7 @@ import {
   renameRoom,
   reorderRoomsInMemory,
   addChatRoom,
+  addClanRoom,
   addGameRoom,
   updateGameRoomAi,
   onRoomPhaseChange,
@@ -74,6 +75,7 @@ import {
   listSilencedPlayers,
   removeRoom,
   isChatRoom,
+  isClanRoom,
   checkWin,
   isPlayerSilenced,
   setPlayerSilenceForUser,
@@ -81,6 +83,9 @@ import {
   findRoomPlayer,
   addMutedOnlyMessage,
 } from './game/engine.js';
+import { createClansRouter } from './clans/routes.js';
+import { canUserAccessClanRoom } from './clans/store.js';
+import './clans/store.js';
 import type { ChatChannel, GameRoom, GamePlayer, PrivateNote, PublicUser, RoomState, Session, User } from './types/index.js';
 import { assertProductionEnv } from './config/env.js';
 import { resolveClientIp } from './security/ip.js';
@@ -258,6 +263,16 @@ app.use('/api/friends', friendsRoutes);
 app.use('/api/reputation', reputationRoutes);
 app.use('/api/news', createNewsRouter());
 app.use('/api/blog', createBlogRouter());
+app.use(
+  '/api/clans',
+  createClansRouter({
+    createClanRoom: (name) => addClanRoom(rooms, name),
+    removeClanRoom: (roomId) => {
+      removeRoom(rooms, roomId);
+    },
+    broadcastLobby: () => broadcastLobby(),
+  })
+);
 app.use(
   '/uploads/avatars',
   (_req, res, next) => {
@@ -859,6 +874,10 @@ io.on('connection', (socket) => {
     try {
       const room = rooms.get(Number(roomId));
       if (!room) return cb?.({ error: 'Комната не найдена' });
+
+      if (isClanRoom(room) && socket.userId && !canUserAccessClanRoom(room.id, socket.userId)) {
+        return cb?.({ error: 'Комната доступна только членам клана' });
+      }
 
       const previous = sessions.get(socket.id);
       const leavingPrevious = previous && previous.roomId !== room.id;

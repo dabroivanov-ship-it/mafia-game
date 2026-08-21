@@ -47,7 +47,7 @@ function PersonRow({
 }
 
 export default function RoomMembersPage({ state, onBack, onViewProfile }: RoomMembersPageProps) {
-  const isChatRoom = state.kind === 'chat';
+  const isChatRoom = state.kind === 'chat' || state.kind === 'clan';
   const connected = state.presence.filter((p) => p.connected);
   const inGame = connected.filter((p) => p.inGame && p.alive);
   const notInGame = connected.filter((p) => !p.inGame || (p.inGame && !p.alive));

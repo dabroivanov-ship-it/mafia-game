@@ -62,6 +62,7 @@ interface RoomProps {
   onJoinRoom?: (roomId: number) => void;
   onWriteMessage?: (userId: number, username: string) => void;
   onOpenStatistics?: (userId: number) => void;
+  onOpenClan?: (clanId: number) => void;
 }
 
 export default function Room({
@@ -74,6 +75,7 @@ export default function Room({
   onJoinRoom,
   onWriteMessage,
   onOpenStatistics,
+  onOpenClan,
 }: RoomProps) {
   const [mafiaTab, setMafiaTab] = useState(false);
   const [profileTarget, setProfileTarget] = useState<ChatReplyTarget | null>(null);
@@ -93,7 +95,7 @@ export default function Room({
   }
 
   const me = state.myPlayer;
-  const isChatRoom = state.kind === 'chat';
+  const isChatRoom = state.kind === 'chat' || state.kind === 'clan';
   const isMafia = !isChatRoom && (state.myRole === 'mafia' || state.myRole === 'advocate') && me?.alive;
   const showJoin =
     !isChatRoom &&
@@ -471,6 +473,7 @@ export default function Room({
           }}
           onWriteMessage={onWriteMessage}
           onOpenStatistics={onOpenStatistics}
+          onOpenClan={onOpenClan}
         />
       )}
     </div>
