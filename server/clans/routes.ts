@@ -5,6 +5,7 @@ import type { GameRoom } from '../types/index.js';
 import {
   applyToClan,
   blacklistMember,
+  removeFromBlacklist,
   CLAN_CREATE_MIN_POSTS,
   createClan,
   createClanNews,
@@ -14,6 +15,7 @@ import {
   getClanById,
   getClanDetail,
   getCreateClanEligibility,
+  isClanLeader,
   kickMember,
   leaveClan,
   listClanNews,
@@ -27,6 +29,7 @@ import { notifyClanAction } from './notify.js';
 export interface ClanRouteHandlers {
   createClanRoom: (name: string) => GameRoom;
   removeClanRoom: (roomId: number) => void;
+  clearClanRoomChat: (roomId: number) => void;
   broadcastLobby: () => void;
 }
 
@@ -235,6 +238,44 @@ export function createClansRouter(handlers: ClanRouteHandlers) {
     } catch (e) {
       const err = e as Error;
       res.status(400).json({ error: err.message || 'Не удалось добавить в чёрный список' });
+    }
+  });
+
+  router.delete('/:clanId/blacklist/:userId', (req, res) => {
+    if (isUserBanned(req.user)) {
+      return res.status(403).json({ error: 'Аккаунт заблокирован' });
+    }
+    const clanId = Number(req.params.clanId);
+    const targetUserId = Number(req.params.userId);
+    if (!Number.isFinite(clanId) || !Number.isFinite(targetUserId)) {
+      return res.status(400).json({ error: 'Некорректные данные' });
+    }
+    try {
+      removeFromBlacklist(clanId, req.userId!, targetUserId);
+      res.json({ clan: getClanDetail(clanId, req.userId!) });
+    } catch (e) {
+      const err = e as Error;
+      res.status(400).json({ error: err.message || 'Не удалось убрать из чёрного списка' });
+    }
+  });
+
+  router.post('/:clanId/clear-chat', (req, res) => {
+    if (isUserBanned(req.user)) {
+      return res.status(403).json({ error: 'Аккаунт заблокирован' });
+    }
+    const clanId = Number(req.params.clanId);
+    if (!Number.isFinite(clanId)) return res.status(400).json({ error: 'Некорректный id' });
+    try {
+      if (!isClanLeader(clanId, req.userId!)) {
+        throw new Error('Только глава может очистить чат');
+      }
+      const clanRow = getClanById(clanId);
+      if (!clanRow?.room_id) throw new Error('У клана нет комнаты');
+      handlers.clearClanRoomChat(clanRow.room_id);
+      res.json({ ok: true, clan: getClanDetail(clanId, req.userId!) });
+    } catch (e) {
+      const err = e as Error;
+      res.status(400).json({ error: err.message || 'Не удалось очистить чат' });
     }
   });
 

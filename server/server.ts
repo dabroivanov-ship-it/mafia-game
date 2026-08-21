@@ -270,6 +270,14 @@ app.use(
     removeClanRoom: (roomId) => {
       removeRoom(rooms, roomId);
     },
+    clearClanRoomChat: (roomId) => {
+      const room = rooms.get(roomId);
+      if (!room || room.kind !== 'clan') {
+        throw new Error('Комната клана не найдена');
+      }
+      clearRoomChat(room, 'История чата очищена главой клана.');
+      broadcastRoom(roomId);
+    },
     broadcastLobby: () => broadcastLobby(),
   })
 );

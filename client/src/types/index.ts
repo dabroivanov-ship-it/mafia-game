@@ -509,6 +509,13 @@ export interface ClanDetail extends ClanListItem {
     avatar: string | null;
     createdAt: string;
   }[];
+  blacklist?: {
+    userId: number;
+    username: string;
+    displayName: string;
+    avatar: string | null;
+    createdAt: string;
+  }[];
 }
 
 export interface ClanNewsItem {

@@ -116,6 +116,13 @@ export interface ClanDetail extends ClanListItem {
     avatar: string | null;
     createdAt: string;
   }[];
+  blacklist: {
+    userId: number;
+    username: string;
+    displayName: string;
+    avatar: string | null;
+    createdAt: string;
+  }[];
 }
 
 export interface ClanNewsItem {
@@ -286,12 +293,33 @@ export function listClanMembers(clanId: number): ClanMemberView[] {
   });
 }
 
+export function listClanBlacklist(clanId: number): ClanDetail['blacklist'] {
+  const rows = db
+    .prepare(
+      `SELECT user_id, created_at FROM clan_application_bans
+       WHERE clan_id = ?
+       ORDER BY created_at DESC`
+    )
+    .all(clanId) as { user_id: number; created_at: string }[];
+  return rows.map((row) => {
+    const user = findUserById(row.user_id);
+    return {
+      userId: row.user_id,
+      username: user?.username || '?',
+      displayName: user?.display_name || user?.username || '?',
+      avatar: user?.avatar || null,
+      createdAt: iso(row.created_at),
+    };
+  });
+}
+
 export function getClanDetail(clanId: number, viewerId: number): ClanDetail | null {
   const row = getClanById(clanId);
   if (!row) return null;
   const base = rowToListItem(row, viewerId);
   const members = listClanMembers(clanId);
   let pendingApplications: ClanDetail['pendingApplications'] = [];
+  let blacklist: ClanDetail['blacklist'] = [];
   if (isClanLeader(clanId, viewerId)) {
     const apps = db
       .prepare(
@@ -311,8 +339,9 @@ export function getClanDetail(clanId: number, viewerId: number): ClanDetail | nu
         createdAt: iso(app.created_at),
       };
     });
+    blacklist = listClanBlacklist(clanId);
   }
-  return { ...base, members, pendingApplications };
+  return { ...base, members, pendingApplications, blacklist };
 }
 
 export function createClan(
@@ -508,6 +537,14 @@ export function blacklistMember(clanId: number, leaderId: number, targetUserId: 
     ).run(clanId, targetUserId);
   });
   tx();
+}
+
+export function removeFromBlacklist(clanId: number, leaderId: number, targetUserId: number): void {
+  if (!isClanLeader(clanId, leaderId)) throw new Error('Только глава может менять чёрный список');
+  const result = db
+    .prepare('DELETE FROM clan_application_bans WHERE clan_id = ? AND user_id = ?')
+    .run(clanId, targetUserId);
+  if (result.changes === 0) throw new Error('Игрок не в чёрном списке');
 }
 
 export function transferLeadership(clanId: number, leaderId: number, newLeaderId: number): void {

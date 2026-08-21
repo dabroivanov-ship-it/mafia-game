@@ -11,6 +11,8 @@ import {
   fetchClans,
   kickClanMember,
   blacklistClanMember,
+  removeClanBlacklistMember,
+  clearClanChat,
   leaveClan,
   transferClanLeadership,
   updateClan,
@@ -332,6 +334,24 @@ export default function Clans({ onBack, onJoinRoom, initialClanId = null }: Clan
                 Распустить клан
               </button>
             )}
+            {clan.myRole === 'leader' && clan.roomId != null && (
+              <button
+                type="button"
+                className="btn btn-ghost"
+                disabled={busy}
+                onClick={() => {
+                  if (!confirm('Очистить весь чат комнаты клана?')) return;
+                  setBusy(true);
+                  setError('');
+                  void clearClanChat(clan.id)
+                    .then((res) => setClan(res.clan))
+                    .catch((err) => setError(err instanceof Error ? err.message : 'Ошибка'))
+                    .finally(() => setBusy(false));
+                }}
+              >
+                Очистить чат
+              </button>
+            )}
           </div>
 
           {clan.myRole === 'leader' && (
@@ -524,6 +544,39 @@ export default function Clans({ onBack, onJoinRoom, initialClanId = null }: Clan
               ))}
             </ul>
           </section>
+
+          {clan.myRole === 'leader' && (clan.blacklist?.length ?? 0) > 0 && (
+            <section className="clans-section">
+              <h3>Чёрный список</h3>
+              <ul className="clans-members">
+                {clan.blacklist!.map((entry) => (
+                  <li key={entry.userId}>
+                    <span>
+                      <strong>{entry.displayName}</strong>{' '}
+                      <span className="muted">@{entry.username}</span>
+                    </span>
+                    <span className="clans-app-actions">
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        disabled={busy}
+                        onClick={() => {
+                          setBusy(true);
+                          setError('');
+                          void removeClanBlacklistMember(clan.id, entry.userId)
+                            .then((res) => setClan(res.clan))
+                            .catch((err) => setError(err instanceof Error ? err.message : 'Ошибка'))
+                            .finally(() => setBusy(false));
+                        }}
+                      >
+                        Убрать
+                      </button>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           {clan.myRole && (
             <section className="clans-section">

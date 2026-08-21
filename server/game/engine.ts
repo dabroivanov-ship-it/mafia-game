@@ -1962,7 +1962,10 @@ export function getChatMessageForModeration(
   return msg;
 }
 
-export function clearRoomChat(room: GameRoom): number {
+export function clearRoomChat(
+  room: GameRoom,
+  notice = 'История чата очищена администратором.'
+): number {
   const cleared =
     room.chat.length +
     room.mafiaChat.length +
@@ -1975,7 +1978,7 @@ export function clearRoomChat(room: GameRoom): number {
   room.spectatorChat = [];
   room.privateChat = [];
   deleteRoomChatLog(room.id);
-  addSystemMessage(room, '🧹 История чата очищена администратором.');
+  addSystemMessage(room, notice);
   return cleared;
 }
 

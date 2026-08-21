@@ -1106,6 +1106,17 @@ export async function blacklistClanMember(
   });
 }
 
+export async function removeClanBlacklistMember(
+  clanId: number,
+  userId: number
+): Promise<{ clan: ClanDetail }> {
+  return apiRequest(`/api/clans/${clanId}/blacklist/${userId}`, { method: 'DELETE' });
+}
+
+export async function clearClanChat(clanId: number): Promise<{ ok: boolean; clan: ClanDetail }> {
+  return apiRequest(`/api/clans/${clanId}/clear-chat`, { method: 'POST', body: '{}' });
+}
+
 export async function transferClanLeadership(
   clanId: number,
   userId: number
