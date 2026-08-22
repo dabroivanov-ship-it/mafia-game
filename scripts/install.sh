@@ -136,6 +136,52 @@ normalize_domain() {
   echo "$raw" | tr '[:upper:]' '[:lower:]'
 }
 
+wait_for_apt_lock() {
+  local max_wait="${APT_LOCK_TIMEOUT:-600}"
+  local waited=0
+  local locks=(
+    /var/lib/dpkg/lock-frontend
+    /var/lib/dpkg/lock
+    /var/lib/apt/lists/lock
+    /var/cache/apt/archives/lock
+  )
+
+  while true; do
+    local busy=0 lock
+    for lock in "${locks[@]}"; do
+      if [[ -e "$lock" ]] && fuser "$lock" >/dev/null 2>&1; then
+        busy=1
+        break
+      fi
+    done
+    [[ "$busy" -eq 0 ]] && return 0
+
+    if [[ "$waited" -eq 0 ]]; then
+      echo
+      log "Другой apt-процесс занят lock (часто unattended-upgrades на свежем VPS)"
+      ps aux | grep -E '[a]pt-get|[a]pt |[d]pkg' | head -5 || true
+      log "Ждём до ${max_wait} сек… (или Ctrl+C и повторите позже)"
+    elif [[ $((waited % 30)) -eq 0 ]]; then
+      echo "  … всё ещё ждём (${waited}/${max_wait} сек)"
+    fi
+
+    sleep 5
+    waited=$((waited + 5))
+    if [[ "$waited" -ge "$max_wait" ]]; then
+      die "apt занят слишком долго. На сервере:
+  ps aux | grep -E 'apt|dpkg'
+  sudo kill <PID>          # если процесс завис
+  sudo dpkg --configure -a
+  sudo bash scripts/install.sh"
+    fi
+  done
+}
+
+apt_get() {
+  wait_for_apt_lock
+  DEBIAN_FRONTEND=noninteractive apt-get "$@"
+}
+
 run_wizard() {
   step_title "Приветствие"
   cat <<'EOF'
@@ -275,28 +321,27 @@ install_system_packages() {
   [[ "$SKIP_APT" == "1" ]] && { log "Пропуск установки системных пакетов (SKIP_APT=1)"; return 0; }
 
   log "Обновление системы"
-  apt-get update -qq
-  DEBIAN_FRONTEND=noninteractive apt-get upgrade -y -qq
-  DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
-    git curl ca-certificates build-essential python3 openssl
+  apt_get update -qq
+  apt_get upgrade -y -qq
+  apt_get install -y -qq git curl ca-certificates build-essential python3 openssl
 
   if ! command -v node >/dev/null 2>&1 || [[ "$(node -p 'process.versions.node.split(".")[0]')" -lt 18 ]]; then
     log "Node.js 20"
     curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-    DEBIAN_FRONTEND=noninteractive apt-get install -y -qq nodejs
+    apt_get install -y -qq nodejs
   else
     log "Node.js уже установлен: $(node -v)"
   fi
 
   if ! command -v caddy >/dev/null 2>&1; then
     log "Caddy"
-    apt-get install -y -qq debian-keyring debian-archive-keyring apt-transport-https curl
+    apt_get install -y -qq debian-keyring debian-archive-keyring apt-transport-https curl
     curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
       | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
     curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' \
       | tee /etc/apt/sources.list.d/caddy-stable.list >/dev/null
-    apt-get update -qq
-    DEBIAN_FRONTEND=noninteractive apt-get install -y -qq caddy
+    apt_get update -qq
+    apt_get install -y -qq caddy
   else
     log "Caddy уже установлен"
   fi

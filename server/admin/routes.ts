@@ -48,6 +48,7 @@ import {
   restoreBackup,
   deleteBackup,
   formatBackupSize,
+  scheduleServerRestart,
 } from '../backup/service.js';
 import { getBackupScheduleSettings, setBackupScheduleSettings } from '../backup/schedule.js';
 import {
@@ -619,7 +620,8 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
   router.post('/backups/:id/restore', requireAdminPermission('manage_backups'), async (req, res) => {
     try {
       await restoreBackup(req.params.id);
-      res.json({ ok: true });
+      scheduleServerRestart();
+      res.json({ ok: true, restarting: true });
     } catch (err) {
       res.status(400).json({ error: err instanceof Error ? err.message : 'Ошибка восстановления' });
     }

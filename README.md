@@ -313,6 +313,7 @@ WebSocket: `/socket.io` — комнаты, игра, чат.
 | SSH connection refused | Проверьте IP в панели хостинга, что VPS включён |
 | Сайт не открывается | `pm2 status` · `curl localhost:3001/api/health` · `systemctl status caddy` |
 | `pm2 logs mafia-server` | Логи приложения |
+| `Could not get lock /var/lib/dpkg/lock-frontend` | Фоновый `apt-get` (unattended-upgrades) | Подождите 2–5 мин или `ps aux \| grep apt` · `sudo kill 1369` · `sudo dpkg --configure -a` |
 
 ---
 

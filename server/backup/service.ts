@@ -1,4 +1,5 @@
 import Database from 'better-sqlite3';
+import { exec } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { db } from '../auth/db.js';
@@ -125,6 +126,15 @@ export async function restoreBackup(backupId: string): Promise<void> {
     const uploadsDest = path.join(getServerRoot(), 'uploads');
     fs.cpSync(uploadsBackup, uploadsDest, { recursive: true, force: true });
   }
+}
+
+/** Rooms and other state live in memory — restart PM2 after restore so DB changes apply. */
+export function scheduleServerRestart(delayMs = 800): void {
+  setTimeout(() => {
+    exec('pm2 restart mafia-server', (err) => {
+      if (err) console.error('[backup] pm2 restart failed:', err.message);
+    });
+  }, delayMs);
 }
 
 export function deleteBackup(backupId: string): void {

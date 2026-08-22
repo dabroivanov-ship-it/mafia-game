@@ -74,18 +74,14 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
           <div className="action-panel">
             <p className="muted">Вы проголосовали ✓</p>
             <p className="muted" style={{ marginTop: 8 }}>
-              Ожидание остальных: казнить {accusedName || 'кандидата'}?
+              Казнить {accusedName || 'кандидата'}?
             </p>
           </div>
         );
       }
       return (
         <div className="action-panel">
-            <h3>Казнить {accusedName || 'кандидата'}?</h3>
-          <p className="muted" style={{ marginBottom: 16 }}>
-            Половина выдвинула этого игрока. «Да» — казнить, «Нет» — оправдать. Если больше половины
-            нажмут «нет», кандидат оправдан и можно выдвинуть другого.
-          </p>
+          <h3>Казнить {accusedName || 'кандидата'}?</h3>
           <div className="action-row">
             <button
               type="button"
@@ -100,7 +96,7 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
                   .catch(() => setVoteSubmitting(false));
               }}
             >
-              Да — казнить
+              Да
             </button>
             <button
               type="button"
@@ -115,7 +111,7 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
                   .catch(() => setVoteSubmitting(false));
               }}
             >
-              Нет — пощадить
+              Нет
             </button>
           </div>
         </div>

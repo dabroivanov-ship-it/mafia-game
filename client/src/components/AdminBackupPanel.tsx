@@ -109,7 +109,7 @@ export default function AdminBackupPanel() {
   const handleRestore = async (id: string) => {
     if (
       !confirm(
-        'Восстановить базу из этой копии? Текущие данные будут перезаписаны. Рекомендуется перезапустить сервер после восстановления.'
+        'Восстановить базу из этой копии? Текущие данные будут перезаписаны. Сервер перезапустится автоматически.'
       )
     ) {
       return;
@@ -118,7 +118,7 @@ export default function AdminBackupPanel() {
     setError('');
     try {
       await adminRestoreBackup(id);
-      alert('База восстановлена. Перезагрузите страницу.');
+      alert('База восстановлена. Сервер перезапускается — обновите страницу через 10–15 секунд.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка восстановления');
     } finally {
