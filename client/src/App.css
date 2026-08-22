@@ -2405,11 +2405,6 @@ html.telegram-webapp .app-body {
   white-space: nowrap;
 }
 
-.roles-banner {
-  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
-}
-
 .lobby-cabinet-card {
   display: flex;
   align-items: center;
@@ -3150,12 +3145,6 @@ html.telegram-webapp .app-body {
   flex-direction: column;
   gap: 12px;
   flex-shrink: 0;
-}
-
-.join-game-banner p {
-  margin: 0;
-  font-size: 0.9rem;
-  line-height: 1.45;
 }
 
 .leave-game-banner {
@@ -6555,12 +6544,6 @@ html.telegram-webapp .app-body {
     min-height: 38px;
     padding: 8px 12px;
     font-size: 0.88rem;
-  }
-
-  .roles-banner p,
-  .join-game-banner p {
-    font-size: 0.8rem;
-    line-height: 1.35;
   }
 
   .room-footer {

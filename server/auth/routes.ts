@@ -33,6 +33,7 @@ import { createRateLimitMiddleware, authRateLimiter } from '../security/rateLimi
 import { MAX_PASSWORD_LENGTH } from '../security/constants.js';
 import { recordSiteVisit } from '../stats/siteStats.js';
 import { consumeOauthLoginTicket } from './oauthTicket.js';
+import { getUserOnlineSeconds } from '../presence.js';
 
 const router = Router();
 const authRateLimit = createRateLimitMiddleware(authRateLimiter);
@@ -305,7 +306,11 @@ router.get('/me', authMiddleware, (req, res) => {
   } catch (e) {
     console.error('recordSiteVisit error:', e);
   }
-  res.json({ user: publicUser(user) });
+  const publicProfile = publicUser(user);
+  if (publicProfile) {
+    publicProfile.onlineSeconds = getUserOnlineSeconds(user.id);
+  }
+  res.json({ user: publicProfile });
 });
 
 export default router;

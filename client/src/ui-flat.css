@@ -460,20 +460,6 @@ textarea:focus-visible {
   line-height: 1;
 }
 
-.info-hub-index {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--accent) 14%, var(--bg-hover));
-  color: var(--accent);
-  font-size: 0.72rem;
-  font-weight: 800;
-}
-
 .info-hub-body strong {
   font-size: 1.02rem;
   font-weight: 600;

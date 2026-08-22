@@ -1,7 +1,9 @@
-import { findUserById, getUserLastSeen, isUserBanned, touchUserLastSeen, type UserSearchHit } from './auth/db.js';
+import { findUserById, getUserLastSeen, isUserBanned, touchUserLastSeen, addUserOnlineSeconds, getStoredOnlineSeconds, type UserSearchHit } from './auth/db.js';
 
 const activeConnections = new Map<number, number>();
 const userSections = new Map<number, string>();
+const lastFlushedAt = new Map<number, number>();
+const FLUSH_INTERVAL_MS = 30_000;
 
 const ALLOWED_SECTIONS = new Set([
   'lobby',
@@ -50,16 +52,45 @@ export function getUserLocationLabel(userId: number): string {
   return SECTION_LABELS[section] || 'На сайте';
 }
 
+function flushOnlineTime(userId: number): void {
+  const last = lastFlushedAt.get(userId);
+  if (last == null) return;
+  const now = Date.now();
+  const deltaSec = Math.floor((now - last) / 1000);
+  if (deltaSec > 0) {
+    try {
+      addUserOnlineSeconds(userId, deltaSec);
+    } catch (err) {
+      console.error('online time flush error:', err);
+      return;
+    }
+  }
+  lastFlushedAt.set(userId, now);
+}
+
+export function getUserOnlineSeconds(userId: number): number {
+  const stored = getStoredOnlineSeconds(userId);
+  const last = lastFlushedAt.get(userId);
+  const live = last != null ? Math.floor((Date.now() - last) / 1000) : 0;
+  return stored + Math.max(0, live);
+}
+
 export function markUserConnected(userId: number): void {
-  activeConnections.set(userId, (activeConnections.get(userId) || 0) + 1);
+  const count = (activeConnections.get(userId) || 0) + 1;
+  activeConnections.set(userId, count);
+  if (count === 1) {
+    lastFlushedAt.set(userId, Date.now());
+  }
   touchUserLastSeen(userId);
 }
 
 export function markUserDisconnected(userId: number): void {
   const next = (activeConnections.get(userId) || 1) - 1;
   if (next <= 0) {
+    flushOnlineTime(userId);
     activeConnections.delete(userId);
     userSections.delete(userId);
+    lastFlushedAt.delete(userId);
   } else {
     activeConnections.set(userId, next);
   }
@@ -105,3 +136,8 @@ export function getUserPresence(userId: number): { isOnline: boolean; lastSeenAt
     lastSeenAt: getUserLastSeen(userId),
   };
 }
+
+const flushTimer = setInterval(() => {
+  for (const userId of activeConnections.keys()) flushOnlineTime(userId);
+}, FLUSH_INTERVAL_MS);
+flushTimer.unref?.();

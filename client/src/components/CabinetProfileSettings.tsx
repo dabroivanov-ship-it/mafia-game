@@ -1,8 +1,9 @@
-import { useState, useRef, FormEvent, ChangeEvent } from 'react';
-import { avatarUrl, updateProfile, uploadAvatar } from '../api';
+import { useState, useRef, useEffect, FormEvent, ChangeEvent } from 'react';
+import { avatarUrl, updateProfile, uploadAvatar, fetchMe } from '../api';
 import type { User } from '../types';
 import { USER_GENDER_LABELS } from '../gender';
 import { userPositionLabel } from '../userPosition';
+import { formatOnlineDuration } from '../utils/presence';
 
 interface CabinetProfileSettingsProps {
   user: User;
@@ -28,6 +29,20 @@ export default function CabinetProfileSettings({
   const [loading, setLoading] = useState(false);
   const [avatarLoading, setAvatarLoading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchMe()
+      .then(({ user: next }) => {
+        if (!cancelled) onUpdate(next);
+      })
+      .catch(() => {
+        /* keep current user */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [onUpdate]);
 
   const handleSave = async (e: FormEvent) => {
     e.preventDefault();
@@ -116,6 +131,7 @@ export default function CabinetProfileSettings({
             <span>MMR {user.mmr ?? user.totalScore}</span>
           )}
           <span>с {new Date(user.createdAt).toLocaleDateString('ru-RU')}</span>
+          <span>Онлайн {formatOnlineDuration(user.onlineSeconds)}</span>
         </div>
 
         {error && <div className="auth-error">{error}</div>}

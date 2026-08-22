@@ -922,6 +922,10 @@ export async function adminUpdateGameRoomAi(
   });
 }
 
+export async function adminStopGameRoom(roomId: number): Promise<{ ok: boolean }> {
+  return apiRequest(`/api/admin/game-rooms/${roomId}/stop`, { method: 'POST' });
+}
+
 export interface SilencedPlayerEntry {
   userId: number;
   username: string;

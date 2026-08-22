@@ -10,6 +10,7 @@ import {
   adminCreateChatRoom,
   adminCreateGameRoom,
   adminUpdateGameRoomAi,
+  adminStopGameRoom,
   adminDeleteChatRoom,
   adminDeleteGameRoom,
   fetchAdminBanList,
@@ -233,6 +234,7 @@ export default function AdminPanel({
   const [deepseekStatus, setDeepseekStatus] = useState('');
   const [deepseekStatusError, setDeepseekStatusError] = useState(false);
   const [roomAiSavingId, setRoomAiSavingId] = useState<number | null>(null);
+  const [roomStopId, setRoomStopId] = useState<number | null>(null);
   const [roomAiStatus, setRoomAiStatus] = useState('');
   const [permissions, setPermissions] = useState<AdminPermission[]>([]);
   const [panelRole, setPanelRole] = useState<UserRole>('user');
@@ -681,6 +683,23 @@ export default function AdminPanel({
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка удаления');
+    }
+  };
+
+  const handleStopGameRoom = async (roomId: number, name: string) => {
+    if (!confirm(`Остановить игру в «${name}»? Партия будет сброшена без победителя.`)) return;
+    setRoomStopId(roomId);
+    setRoomAiStatus('');
+    try {
+      await adminStopGameRoom(roomId);
+      await load({ silent: true, syncRoomNames: true });
+      setRoomAiStatus(`Игра в «${name}» остановлена.`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Не удалось остановить игру';
+      setError(message);
+      setRoomAiStatus(message);
+    } finally {
+      setRoomStopId(null);
     }
   };
 
@@ -1263,6 +1282,14 @@ export default function AdminPanel({
                             onClick={() => void handleClearRoomMessages(r.id, r.name)}
                           >
                             Очистить чат
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-sm"
+                            disabled={r.phase === 'waiting' || roomStopId === r.id}
+                            onClick={() => void handleStopGameRoom(r.id, r.name)}
+                          >
+                            {roomStopId === r.id ? 'Останавливаю...' : 'Остановить игру'}
                           </button>
                           <button
                             type="button"

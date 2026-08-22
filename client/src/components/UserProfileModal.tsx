@@ -14,7 +14,7 @@ import {
 } from '../api';
 import type { User, ProfileStaffMeta, ChatReplyTarget, UserPresence } from '../types';
 import { USER_GENDER_LABELS, genderLabel } from '../gender';
-import { formatPresenceLabel } from '../utils/presence';
+import { formatPresenceLabel, formatOnlineDuration } from '../utils/presence';
 import { userPositionLabel } from '../userPosition';
 
 function quizAnswersLabel(count: number): string {
@@ -473,6 +473,10 @@ export default function UserProfileModal({
                   <li>
                     <span className="player-page-label">Регистрация</span>
                     <span>{new Date(user.createdAt).toLocaleDateString('ru-RU')}</span>
+                  </li>
+                  <li>
+                    <span className="player-page-label">Онлайн</span>
+                    <span>{formatOnlineDuration(user.onlineSeconds)}</span>
                   </li>
                   {user.isBanned && (
                     <li className="player-page-banned">

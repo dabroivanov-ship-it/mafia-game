@@ -425,10 +425,11 @@ export const BOT_PHRASE_DEFINITIONS: BotPhraseDefinition[] = [
   {
     key: 'voting.majority',
     group: 'Голосование',
-    label: 'Большинство за казнь',
+    label: 'Кандидат на казнь',
     type: 'text',
-    placeholders: ['{votes}', '{total}', '{name}'],
-    defaultValue: '🗳️ Половина и больше ({votes} из {total}) выдвинули {name}. Голосуйте: казнить или нет.',
+    placeholders: ['{name}', '{votes}', '{total}'],
+    defaultValue:
+      'Жители, вы уверены, что хотите казнить {name}?(да или нет) {name}, у вас есть время оправдаться.',
   },
   {
     key: 'voting.hang_choice',

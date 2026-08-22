@@ -220,15 +220,8 @@ export default function Room({
         </div>
       </header>
 
-      {!isChatRoom && state.phase === 'roles' && !state.isSpectator && (
-        <div className="join-game-banner roles-banner">
-          <p>Раздача ролей. Ведущий сообщит вашу роль в личных сообщениях [P]. Ожидайте ночи…</p>
-        </div>
-      )}
-
       {!isChatRoom && showJoin && (
         <div className="join-game-banner">
-          <p>Идёт регистрация — нажмите, чтобы участвовать в партии.</p>
           <button
             type="button"
             className="btn btn-primary btn-lg btn-block"
@@ -248,9 +241,6 @@ export default function Room({
 
       {!isChatRoom && state.isInGame && state.phase === 'registration' && (
         <div className="join-game-banner leave-game-banner">
-          <p>
-            Вы зарегистрированы ({state.registeredCount}/{state.maxPlayers}).
-          </p>
           <button
             type="button"
             className="btn btn-ghost btn-lg btn-block"

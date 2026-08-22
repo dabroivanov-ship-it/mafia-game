@@ -31,3 +31,17 @@ export function formatPresenceLabel(presence: UserPresence | undefined): string 
     minute: '2-digit',
   })}`;
 }
+
+export function formatOnlineDuration(totalSeconds: number | undefined): string {
+  const sec = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+  if (sec < 60) return 'меньше минуты';
+
+  const days = Math.floor(sec / 86400);
+  const hours = Math.floor((sec % 86400) / 3600);
+  const mins = Math.floor((sec % 3600) / 60);
+  const parts: string[] = [];
+  if (days) parts.push(`${days} дн.`);
+  if (hours) parts.push(`${hours} ч`);
+  if (mins) parts.push(`${mins} мин`);
+  return parts.join(' ') || 'меньше минуты';
+}

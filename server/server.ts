@@ -63,6 +63,7 @@ import {
   getChatMessageForModeration,
   getModerationSnapshot,
   resetRoom,
+  stopRoomGame,
   serializeRoomForPlayer,
   renameRoom,
   reorderRoomsInMemory,
@@ -488,6 +489,12 @@ app.use(
     addGameRoom: (name, options) => addGameRoom(rooms, name, options),
     updateGameRoomAi: (roomId, aiEnabled, aiCount) =>
       updateGameRoomAi(rooms, roomId, aiEnabled, aiCount),
+    stopGameRoom: (roomId) => {
+      const room = rooms.get(roomId);
+      if (!room) throw new Error('Комната не найдена');
+      stopRoomGame(room);
+      return room;
+    },
     deleteChatRoom: (id) => adminDeleteRoom(id, 'chat'),
     deleteGameRoom: (id) => adminDeleteRoom(id, 'game'),
     listSilencedPlayers: () => listSilencedPlayers(rooms),

@@ -21,12 +21,16 @@ import {
   nightTargetsForBot,
 } from './knowledge.js';
 
-const BOT_DELAY_MS = 600;
+const BOT_DELAY_MS = 400;
 const REPLY_DELAY_MS = 900;
 const REPLY_COOLDOWN_MS = 1200;
 const MAX_REPLIES_PER_MINUTE = 20;
 const DAY_OPENING_MESSAGES = 2;
 const CHAT_TIMEOUT_MS = 8000;
+/** Ходы ночи/голосования не должны ждать DeepSeek по 20+ секунд на бота. */
+const ACTION_TIMEOUT_MS = 5000;
+/** Если DeepSeek завис — через это время дожимаем оставшихся ботов эвристикой. */
+const ACTION_WATCHDOG_MS = 9_000;
 
 const REGISTRATION_LINES = [
   'Всем привет!',
@@ -131,6 +135,17 @@ export function triggerGameAi(room: GameRoom): void {
   void runAiForRoom(room)
     .catch((err) => console.error(`[ai] room ${room.id}:`, err))
     .finally(() => broadcastRoom(room.id));
+
+  // Страховка: если API завис — боты всё равно сходят эвристикой.
+  setTimeout(() => {
+    if (phaseKey(room) !== key) return;
+    try {
+      forceRemainingBotActions(room);
+      broadcastRoom(room.id);
+    } catch (err) {
+      console.error(`[ai] watchdog room ${room.id}:`, err);
+    }
+  }, ACTION_WATCHDOG_MS);
 }
 
 /** Вызывается, когда живой игрок пишет в общий чат — бот может ответить. */
@@ -147,6 +162,77 @@ export function triggerBotChatResponse(
   void runBotChatReply(room, author, text, msg).catch((err) =>
     console.error(`[ai] chat reply room ${room.id}:`, err)
   );
+}
+
+function rememberNightTarget(bot: GamePlayer, action: NightAction): void {
+  if ('targetId' in action && typeof action.targetId === 'number') {
+    bot.lastNightActionTargetId = action.targetId;
+  }
+}
+
+function preferDiverseTarget(
+  bot: GamePlayer,
+  chosen: GamePlayer | null | undefined,
+  pool: GamePlayer[]
+): GamePlayer | null {
+  if (!chosen) return null;
+  if (bot.lastNightActionTargetId == null || chosen.id !== bot.lastNightActionTargetId) {
+    return chosen;
+  }
+  const others = pool.filter((p) => p.id !== chosen.id);
+  if (!others.length) return chosen;
+  return others[Math.floor(Math.random() * others.length)] ?? chosen;
+}
+
+function submitBotNightAction(room: GameRoom, bot: GamePlayer, action: NightAction): void {
+  submitNightAction(room, bot.id, action);
+  rememberNightTarget(bot, action);
+}
+
+function forceRemainingBotActions(room: GameRoom): void {
+  if (room.phase === PHASE.NIGHT) {
+    const bots = aliveBots(room).filter((p) => !p.nightActionDone && nightInstruction(p, room));
+    for (const bot of bots) {
+      const action = heuristicNightAction(bot, room);
+      if (!action) continue;
+      try {
+        submitBotNightAction(room, bot, action);
+      } catch (err) {
+        console.error(`[ai] watchdog night bot ${bot.id}:`, err);
+      }
+    }
+    return;
+  }
+
+  if (room.phase !== PHASE.VOTING) return;
+
+  if (room.votingStage === 'confirm') {
+    const bots = aliveBots(room).filter((p) => !p.hasHangVoted);
+    for (const bot of bots) {
+      let yes = heuristicHangYes(bot, room);
+      const accused = room.players.find((p) => p.id === room.accusedId);
+      if (accused && isMafiaTeam(bot.role) && isMafiaTeam(accused.role)) yes = false;
+      if (accused?.id === bot.id) yes = false;
+      try {
+        castHangVote(room, bot.id, yes);
+      } catch (err) {
+        console.error(`[ai] watchdog hang bot ${bot.id}:`, err);
+      }
+    }
+    return;
+  }
+
+  const bots = aliveBots(room).filter((p) => !p.hasVoted);
+  for (const bot of bots) {
+    const targets = aliveTargets(room, bot.id);
+    const target = heuristicNominateTarget(bot, room, targets);
+    if (!target) continue;
+    try {
+      castDayVote(room, bot.id, target.id);
+    } catch (err) {
+      console.error(`[ai] watchdog vote bot ${bot.id}:`, err);
+    }
+  }
 }
 
 function sleep(ms: number): Promise<void> {
@@ -498,75 +584,83 @@ async function runVoting(room: GameRoom): Promise<void> {
 
 async function runNominations(room: GameRoom): Promise<void> {
   const bots = aliveBots(room).filter((p) => !p.hasVoted);
-  for (const bot of bots) {
-    if (room.phase !== PHASE.VOTING || room.votingStage === 'confirm') return;
-    await sleep(BOT_DELAY_MS + Math.random() * 1200);
+  await Promise.all(
+    bots.map(async (bot, index) => {
+      await sleep(BOT_DELAY_MS + index * 180 + Math.random() * 500);
+      if (room.phase !== PHASE.VOTING || room.votingStage === 'confirm' || bot.hasVoted) return;
 
-    const targets = aliveTargets(room, bot.id);
-    const fallback = heuristicNominateTarget(bot, room, targets);
-    if (!fallback) continue;
+      const targets = aliveTargets(room, bot.id);
+      const fallback = heuristicNominateTarget(bot, room, targets);
+      if (!fallback) return;
 
-    const response = await askDeepSeek<{ targetId?: number | null }>(
-      bot,
-      room,
-      `Выдвижение на казнь. Выбери id из списка: ${targets.map((p) => p.id).join(', ')}. Если ночью твоя проверка показала мафию/зло — обязательно голосуй за этого игрока. Учитывай сводку, чат и свою роль: мафия не сдаёт союзников. Это ещё не казнь. JSON: {"targetId":число,"reason":"..."}`,
-      undefined,
-      0.35
-    );
-    const chosen = targets.find((p) => p.id === Number(response?.targetId));
-    const safeChosen =
-      chosen && !(isMafiaTeam(bot.role) && isMafiaTeam(chosen.role)) ? chosen : null;
-    const checkedId =
-      bot.lastNightCheck?.isThreat && bot.lastNightCheck.nightNumber === room.nightNumber
-        ? bot.lastNightCheck.targetId
-        : null;
-    const forced = checkedId != null ? targets.find((p) => p.id === checkedId) : null;
-    const targetId = forced?.id ?? safeChosen?.id ?? fallback.id;
+      const response = await askDeepSeek<{ targetId?: number | null }>(
+        bot,
+        room,
+        `Выдвижение на казнь. Выбери id из списка: ${targets.map((p) => p.id).join(', ')}. Если ночью твоя проверка показала мафию/зло — обязательно голосуй за этого игрока. Учитывай сводку, чат и свою роль: мафия не сдаёт союзников. Это ещё не казнь. JSON: {"targetId":число,"reason":"..."}`,
+        undefined,
+        0.35,
+        ACTION_TIMEOUT_MS
+      );
+      const chosen = targets.find((p) => p.id === Number(response?.targetId));
+      const safeChosen =
+        chosen && !(isMafiaTeam(bot.role) && isMafiaTeam(chosen.role)) ? chosen : null;
+      const checkedId =
+        bot.lastNightCheck?.isThreat && bot.lastNightCheck.nightNumber === room.nightNumber
+          ? bot.lastNightCheck.targetId
+          : null;
+      const forced = checkedId != null ? targets.find((p) => p.id === checkedId) : null;
+      const targetId = forced?.id ?? safeChosen?.id ?? fallback.id;
 
-    try {
-      castDayVote(room, bot.id, targetId);
-    } catch (err) {
-      console.error(`[ai] vote bot ${bot.id}:`, err);
-    }
-    broadcastRoom(room.id);
-  }
+      try {
+        castDayVote(room, bot.id, targetId);
+      } catch (err) {
+        console.error(`[ai] vote bot ${bot.id}:`, err);
+      }
+      broadcastRoom(room.id);
+    })
+  );
 }
 
 async function runHangConfirm(room: GameRoom): Promise<void> {
   const accused = room.players.find((p) => p.id === room.accusedId);
   const accusedName = accused?.username || accused?.name || 'кандидат';
   const bots = aliveBots(room).filter((p) => !p.hasHangVoted);
-  for (const bot of bots) {
-    if (room.phase !== PHASE.VOTING || room.votingStage !== 'confirm') return;
-    await sleep(BOT_DELAY_MS + Math.random() * 900);
+  await Promise.all(
+    bots.map(async (bot, index) => {
+      await sleep(BOT_DELAY_MS + index * 150 + Math.random() * 400);
+      if (room.phase !== PHASE.VOTING || room.votingStage !== 'confirm' || bot.hasHangVoted) {
+        return;
+      }
 
-    const response = await askDeepSeek<{ yes?: boolean }>(
-      bot,
-      room,
-      `Кандидат ${accusedName} (id ${room.accusedId}). Казнить — yes:true, оправдать — yes:false. Мафия не вешает союзника. Город вешает, если факты против кандидата сильнее защиты. JSON: {"yes":true|false,"reason":"..."}`,
-      undefined,
-      0.3
-    );
-    let yes =
-      typeof response?.yes === 'boolean' ? response.yes : heuristicHangYes(bot, room);
-    if (accused && isMafiaTeam(bot.role) && isMafiaTeam(accused.role)) yes = false;
-    if (accused?.id === bot.id) yes = false;
-    if (
-      accused &&
-      bot.lastNightCheck?.isThreat &&
-      bot.lastNightCheck.nightNumber === room.nightNumber &&
-      accused.id === bot.lastNightCheck.targetId
-    ) {
-      yes = true;
-    }
+      const response = await askDeepSeek<{ yes?: boolean }>(
+        bot,
+        room,
+        `Кандидат ${accusedName} (id ${room.accusedId}). Казнить — yes:true, оправдать — yes:false. Мафия не вешает союзника. Город вешает, если факты против кандидата сильнее защиты. JSON: {"yes":true|false,"reason":"..."}`,
+        undefined,
+        0.3,
+        ACTION_TIMEOUT_MS
+      );
+      let yes =
+        typeof response?.yes === 'boolean' ? response.yes : heuristicHangYes(bot, room);
+      if (accused && isMafiaTeam(bot.role) && isMafiaTeam(accused.role)) yes = false;
+      if (accused?.id === bot.id) yes = false;
+      if (
+        accused &&
+        bot.lastNightCheck?.isThreat &&
+        bot.lastNightCheck.nightNumber === room.nightNumber &&
+        accused.id === bot.lastNightCheck.targetId
+      ) {
+        yes = true;
+      }
 
-    try {
-      castHangVote(room, bot.id, yes);
-    } catch (err) {
-      console.error(`[ai] hang vote bot ${bot.id}:`, err);
-    }
-    broadcastRoom(room.id);
-  }
+      try {
+        castHangVote(room, bot.id, yes);
+      } catch (err) {
+        console.error(`[ai] hang vote bot ${bot.id}:`, err);
+      }
+      broadcastRoom(room.id);
+    })
+  );
 }
 
 function parseNightAction(
@@ -578,86 +672,101 @@ function parseNightAction(
   if (!raw?.action || !bot.role) return fallback;
 
   const targets = nightTargetsForBot(bot, room);
-  const target = targets.find((p) => p.id === Number(raw.targetId));
+  const rawTarget = targets.find((p) => p.id === Number(raw.targetId));
+  const softActions = new Set(['heal', 'seduce', 'guard', 'cover', 'check']);
+  const target = softActions.has(raw.action)
+    ? preferDiverseTarget(bot, rawTarget, targets)
+    : rawTarget ?? null;
   if (!target) return fallback;
 
+  let action: NightAction | null = null;
   switch (raw.action) {
     case 'kill':
       if (bot.role === 'mafia' && bot.isDon && !isMafiaTeam(target.role)) {
-        return { type: 'kill', targetId: target.id };
-      }
-      if (bot.role === 'commissar' || bot.role === 'maniac') {
-        return { type: 'kill', targetId: target.id };
+        action = { type: 'kill', targetId: target.id };
+      } else if (bot.role === 'commissar' || bot.role === 'maniac') {
+        action = { type: 'kill', targetId: target.id };
       }
       break;
     case 'check':
       if (bot.role === 'commissar' || bot.role === 'homeless') {
-        return { type: 'check', targetId: target.id };
+        action = { type: 'check', targetId: target.id };
       }
       break;
     case 'heal':
-      if (bot.role === 'doctor') return { type: 'heal', targetId: target.id };
+      if (bot.role === 'doctor') action = { type: 'heal', targetId: target.id };
       break;
     case 'seduce':
-      if (bot.role === 'prostitute') return { type: 'seduce', targetId: target.id };
+      if (bot.role === 'prostitute') action = { type: 'seduce', targetId: target.id };
       break;
     case 'cover':
       if (bot.role === 'advocate' && target.id !== bot.id) {
-        return { type: 'cover', targetId: target.id };
+        action = { type: 'cover', targetId: target.id };
       }
       break;
     case 'guard':
       if (bot.role === 'samurai' && target.id !== bot.id) {
-        return { type: 'guard', targetId: target.id };
+        action = { type: 'guard', targetId: target.id };
       }
       break;
     case 'revenge':
-      if (bot.role === 'commissar_wife') return { type: 'revenge', targetId: target.id };
+      if (bot.role === 'commissar_wife') action = { type: 'revenge', targetId: target.id };
       break;
     case 'swap': {
       const second = targets.find((p) => p.id === Number(raw.targetId2) && p.id !== target.id);
       if (bot.role === 'clown' && second) {
-        return { type: 'swap', targetId: target.id, targetId2: second.id };
+        action = { type: 'swap', targetId: target.id, targetId2: second.id };
       }
       break;
     }
   }
-  return fallback;
+  return action ?? fallback;
+}
+
+async function runOneNightAction(room: GameRoom, bot: GamePlayer, staggerMs: number): Promise<void> {
+  await sleep(staggerMs);
+  if (room.phase !== PHASE.NIGHT || bot.nightActionDone) return;
+
+  const instruction = nightInstruction(bot, room);
+  if (!instruction) return;
+
+  const response = await askDeepSeek<{ action?: string; targetId?: number; targetId2?: number }>(
+    bot,
+    room,
+    instruction,
+    undefined,
+    0.3,
+    ACTION_TIMEOUT_MS
+  );
+  if (room.phase !== PHASE.NIGHT || bot.nightActionDone) return;
+
+  const action = parseNightAction(bot, room, response);
+  if (!action) return;
+
+  try {
+    submitBotNightAction(room, bot, action);
+  } catch (err) {
+    const fallback = heuristicNightAction(bot, room);
+    if (fallback) {
+      try {
+        submitBotNightAction(room, bot, fallback);
+      } catch (inner) {
+        console.error(`[ai] night fallback bot ${bot.id}:`, inner);
+      }
+    } else {
+      console.error(`[ai] night bot ${bot.id}:`, err);
+    }
+  }
+  broadcastRoom(room.id);
 }
 
 async function runNightActions(room: GameRoom): Promise<void> {
   const bots = aliveBots(room).filter((p) => !p.nightActionDone && nightInstruction(p, room));
-  for (const bot of bots) {
-    if (room.phase !== PHASE.NIGHT) return;
-    await sleep(BOT_DELAY_MS + Math.random() * 1500);
-
-    const instruction = nightInstruction(bot, room);
-    const response = await askDeepSeek<{ action?: string; targetId?: number; targetId2?: number }>(
-      bot,
-      room,
-      instruction,
-      undefined,
-      0.3
-    );
-    const action = parseNightAction(bot, room, response);
-    if (!action) continue;
-
-    try {
-      submitNightAction(room, bot.id, action);
-    } catch (err) {
-      const fallback = heuristicNightAction(bot, room);
-      if (fallback) {
-        try {
-          submitNightAction(room, bot.id, fallback);
-        } catch (inner) {
-          console.error(`[ai] night fallback bot ${bot.id}:`, inner);
-        }
-      } else {
-        console.error(`[ai] night bot ${bot.id}:`, err);
-      }
-    }
-    broadcastRoom(room.id);
-  }
+  await Promise.all(
+    bots.map((bot, index) =>
+      runOneNightAction(room, bot, BOT_DELAY_MS + index * 200 + Math.random() * 600)
+    )
+  );
 }
 
 async function runAiForRoom(room: GameRoom): Promise<void> {

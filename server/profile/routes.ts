@@ -30,7 +30,7 @@ import { getUserMessageCount } from '../history/store.js';
 import { getQuizCorrectAnswers, listQuizLeaderboard } from '../quiz/store.js';
 import { getUserStatistics } from '../stats/store.js';
 import { isValidThemeId } from '../settings/themes.js';
-import { getUserPresence, getOnlineUserCount, listOnlineUsers } from '../presence.js';
+import { getUserPresence, getOnlineUserCount, listOnlineUsers, getUserOnlineSeconds } from '../presence.js';
 import { getPublicSiteStats } from '../stats/siteStats.js';
 import {
   areFriends,
@@ -252,6 +252,7 @@ export function createProfileRouter({ onProfileUpdated }: ProfileRouterOptions =
         gamesPlayed: getGamesPlayed(targetId),
         reputation: getReputation(targetId),
         quizCorrectAnswers: getQuizCorrectAnswers(targetId),
+        onlineSeconds: getUserOnlineSeconds(targetId),
       },
       clan: getUserClanBrief(targetId),
       presence: getUserPresence(targetId),

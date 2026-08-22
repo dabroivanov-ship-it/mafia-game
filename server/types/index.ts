@@ -56,6 +56,7 @@ export interface User {
   games_played?: number;
   reputation?: number;
   created_at: string;
+  online_seconds?: number;
   chat_limit?: number;
   last_ip?: string | null;
   last_user_agent?: string | null;
@@ -92,6 +93,7 @@ export interface PublicUser {
   gamesPlayed: number;
   reputation: number;
   createdAt: string;
+  onlineSeconds: number;
   isBanned: boolean;
   banReason?: string | null;
   bannedUntil?: string | null;
@@ -151,6 +153,8 @@ export interface GamePlayer {
     isThreat: boolean;
     seenAs: string;
   } | null;
+  /** Последняя ночная цель бота — чтобы не ходить к одному и тому же. */
+  lastNightActionTargetId?: number | null;
 }
 
 export interface GameRoom {

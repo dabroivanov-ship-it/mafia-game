@@ -1679,6 +1679,20 @@ export function resetRoom(room: GameRoom): void {
   }));
 }
 
+export function stopRoomGame(room: GameRoom): void {
+  if (isChatRoom(room)) throw new Error('В чат-комнате нет игры');
+  if (room.phase === PHASE.WAITING) {
+    throw new Error('Игра в комнате не идёт');
+  }
+
+  saveGameEvent(room.id, room.sessionId, 'game_stop', {
+    phase: room.phase,
+  });
+  addHostMessage(room, 'Игра остановлена администратором.');
+  resetRoom(room);
+  emitRoomPhaseChange(room);
+}
+
 export function addChatMessage(
   room: GameRoom,
   playerId: number,

@@ -16,16 +16,12 @@ interface CabinetHubProps {
 }
 
 const HUB_ITEMS = [
-  {
-    title: 'Кланы',
-    desc: 'Создать клан, заявки, комната и новости',
-    action: 'clans' as const,
-  },
-  { title: 'Письма', desc: 'История переписки и новые сообщения', action: 'messages' as const },
-  { title: 'Поддержка', desc: 'Сообщить о проблеме администратору', action: 'support' as const },
-  { title: 'Поиск пользователей', desc: 'Найти игрока по логину, имени или городу', action: 'search' as const },
-  { title: 'Анкета', desc: 'Имя, город, аватар, о себе', action: 'profile' as const },
-  { title: 'Настройки', desc: 'Тема, пароль и лимит чата', action: 'account' as const },
+  { title: 'Кланы', action: 'clans' as const },
+  { title: 'Письма', action: 'messages' as const },
+  { title: 'Поддержка', action: 'support' as const },
+  { title: 'Поиск пользователей', action: 'search' as const },
+  { title: 'Анкета', action: 'profile' as const },
+  { title: 'Настройки', action: 'account' as const },
 ];
 
 export default function CabinetHub({
@@ -81,7 +77,7 @@ export default function CabinetHub({
       </div>
 
       <div className="info-hub">
-        {HUB_ITEMS.map((item, index) => {
+        {HUB_ITEMS.map((item) => {
           const handler = handlers[item.action];
           if (!handler) return null;
           return (
@@ -91,9 +87,6 @@ export default function CabinetHub({
               className="info-hub-card"
               onClick={handler}
             >
-              <span className="info-hub-index" aria-hidden="true">
-                {String(index + 1).padStart(2, '0')}
-              </span>
               <span className="info-hub-body">
                 <strong>
                   {item.title}
@@ -103,7 +96,6 @@ export default function CabinetHub({
                     </span>
                   )}
                 </strong>
-                <span className="muted">{item.desc}</span>
               </span>
               <span className="info-hub-arrow" aria-hidden="true">
                 →

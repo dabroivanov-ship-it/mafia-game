@@ -35,6 +35,17 @@ function loadOverrides(): Record<string, string> {
        ON CONFLICT(key) DO UPDATE SET value = excluded.value`
     ).run(BOT_PHRASES_KEY, JSON.stringify(cache));
   }
+  // Старая формулировка выхода на стол
+  const majority = cache['voting.majority'];
+  const oldMajority =
+    '🗳️ Половина и больше ({votes} из {total}) выдвинули {name}. Голосуйте: казнить или нет.';
+  if (typeof majority === 'string' && majority.trim() === oldMajority) {
+    delete cache['voting.majority'];
+    db.prepare(
+      `INSERT INTO app_settings (key, value) VALUES (?, ?)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value`
+    ).run(BOT_PHRASES_KEY, JSON.stringify(cache));
+  }
   return cache;
 }
 

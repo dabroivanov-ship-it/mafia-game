@@ -358,9 +358,15 @@ export function heuristicNominateTarget(
   for (const targetId of Object.values(room.votes)) {
     counts.set(targetId, (counts.get(targetId) || 0) + 1);
   }
-  pool.sort((a, b) => (counts.get(b.id) || 0) - (counts.get(a.id) || 0));
-  const lead = pool[0];
-  if (lead && (counts.get(lead.id) || 0) > 0) return lead;
+
+  // Не все боты валятся на лидера: чаще выбираем взвешенно случайно.
+  const weights = pool.map((p) => 1 + (counts.get(p.id) || 0) * 2);
+  const total = weights.reduce((sum, w) => sum + w, 0);
+  let roll = Math.random() * total;
+  for (let i = 0; i < pool.length; i++) {
+    roll -= weights[i]!;
+    if (roll <= 0) return pool[i]!;
+  }
   return pool[Math.floor(Math.random() * pool.length)] ?? null;
 }
 
@@ -419,9 +425,14 @@ export function heuristicNightAction(bot: GamePlayer, room: GameRoom): NightActi
   const targets = nightTargetsForBot(bot, room);
   if (!bot.role || !targets.length) return null;
 
-  const pick = (pool: GamePlayer[]): GamePlayer | null => {
+  const pick = (pool: GamePlayer[], avoidRepeat = true): GamePlayer | null => {
     if (!pool.length) return null;
-    return pool[Math.floor(Math.random() * pool.length)] ?? null;
+    let candidates = pool;
+    if (avoidRepeat && bot.lastNightActionTargetId != null) {
+      const fresh = pool.filter((p) => p.id !== bot.lastNightActionTargetId);
+      if (fresh.length) candidates = fresh;
+    }
+    return candidates[Math.floor(Math.random() * candidates.length)] ?? null;
   };
 
   switch (bot.role) {

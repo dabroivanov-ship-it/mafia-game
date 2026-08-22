@@ -62,6 +62,7 @@ export interface User {
   gamesPlayed?: number;
   reputation?: number;
   createdAt: string;
+  onlineSeconds?: number;
   isBanned: boolean;
   banReason: string | null;
   bannedUntil?: string | null;

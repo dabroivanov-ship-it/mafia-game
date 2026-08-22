@@ -80,6 +80,7 @@ export interface AdminRouterHandlers {
   addChatRoom: (name: string) => GameRoom;
   addGameRoom: (name: string, options?: { aiEnabled?: boolean; aiCount?: number }) => GameRoom;
   updateGameRoomAi: (roomId: number, aiEnabled: boolean, aiCount: number) => GameRoom;
+  stopGameRoom: (roomId: number) => GameRoom;
   deleteChatRoom: (id: number) => void;
   deleteGameRoom: (id: number) => void;
   listSilencedPlayers: () => import('../game/engine.js').SilencedPlayerEntry[];
@@ -246,6 +247,25 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     } catch (e) {
       const err = e as Error;
       res.status(400).json({ error: err.message || 'Не удалось обновить комнату' });
+    }
+  });
+
+  router.post('/game-rooms/:roomId/stop', requireAdminPermission('manage_game_rooms'), (req, res) => {
+    try {
+      const room = handlers.stopGameRoom(Number(req.params.roomId));
+      handlers.onRoomsChanged(room.id);
+      res.json({
+        ok: true,
+        room: {
+          id: room.id,
+          name: room.name,
+          kind: room.kind,
+          phase: room.phase,
+        },
+      });
+    } catch (e) {
+      const err = e as Error;
+      res.status(400).json({ error: err.message || 'Не удалось остановить игру' });
     }
   });
 

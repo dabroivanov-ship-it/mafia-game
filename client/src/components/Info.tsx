@@ -23,20 +23,19 @@ import type { User } from '../types';
 type InfoHubItem = {
   section: Exclude<InfoSection, 'hub'>;
   title: string;
-  desc: string;
   authOnly?: boolean;
 };
 
 const INFO_HUB_ITEMS: InfoHubItem[] = [
-  { section: 'about', title: 'Об игре', desc: 'История Мафии: от МГУ до онлайн-комнат' },
-  { section: 'roles', title: 'Игровые роли', desc: 'Мафия, город, маньяк — все способности' },
-  { section: 'rules', title: 'Правила игры', desc: 'Как начать, фазы, победа и очки' },
-  { section: 'aiAgents', title: 'Игры с AI-агентами', desc: 'Боты за столом: чат, роли и голоса' },
-  { section: 'faq', title: 'Частые вопросы', desc: 'Как начать, роли и ведущий' },
-  { section: 'chatRules', title: 'Правила чата', desc: 'Общение, профили и модерация' },
-  { section: 'rating', title: 'Рейтинг игроков', desc: 'Топ по очкам, играм и репутации' },
-  { section: 'quizLeaders', title: 'Самые умные', desc: 'Топ-10 викторины по верным ответам' },
-  { section: 'team', title: 'Команда', desc: 'Администраторы и модераторы', authOnly: true },
+  { section: 'about', title: 'Об игре' },
+  { section: 'roles', title: 'Игровые роли' },
+  { section: 'rules', title: 'Правила игры' },
+  { section: 'aiAgents', title: 'Игры с AI-агентами' },
+  { section: 'faq', title: 'Частые вопросы' },
+  { section: 'chatRules', title: 'Правила чата' },
+  { section: 'rating', title: 'Рейтинг игроков' },
+  { section: 'quizLeaders', title: 'Самые умные' },
+  { section: 'team', title: 'Команда', authOnly: true },
 ];
 
 interface InfoProps {
@@ -229,19 +228,15 @@ export default function Info({
       </header>
 
       <div className="info-hub">
-        {INFO_HUB_ITEMS.filter((item) => !item.authOnly || !publicMode).map((item, index) => (
+        {INFO_HUB_ITEMS.filter((item) => !item.authOnly || !publicMode).map((item) => (
           <button
             key={item.section}
             type="button"
             className="info-hub-card"
             onClick={() => navigate(item.section)}
           >
-            <span className="info-hub-index" aria-hidden="true">
-              {String(index + 1).padStart(2, '0')}
-            </span>
             <span className="info-hub-body">
               <strong>{item.title}</strong>
-              <span className="muted">{item.desc}</span>
             </span>
             <span className="info-hub-arrow" aria-hidden="true">
               →

@@ -62,6 +62,7 @@ function migrateColumns(): void {
   if (!cols.includes('vk_id')) add('ALTER TABLE users ADD COLUMN vk_id TEXT DEFAULT NULL');
   if (!cols.includes('vk_username')) add('ALTER TABLE users ADD COLUMN vk_username TEXT DEFAULT NULL');
   if (!cols.includes('last_seen_at')) add('ALTER TABLE users ADD COLUMN last_seen_at TEXT DEFAULT NULL');
+  if (!cols.includes('online_seconds')) add('ALTER TABLE users ADD COLUMN online_seconds INTEGER NOT NULL DEFAULT 0');
   if (!cols.includes('games_played')) add('ALTER TABLE users ADD COLUMN games_played INTEGER NOT NULL DEFAULT 0');
   if (!cols.includes('reputation')) add('ALTER TABLE users ADD COLUMN reputation INTEGER NOT NULL DEFAULT 0');
   if (!cols.includes('quiz_correct_answers')) {
@@ -207,6 +208,7 @@ export function publicUser(user: User | null | undefined): PublicUser | null {
     gamesPlayed: user.games_played ?? 0,
     reputation: user.reputation ?? 0,
     createdAt: user.created_at,
+    onlineSeconds: Math.max(0, Math.floor(Number(user.online_seconds) || 0)),
     isBanned: isUserBanned(user),
     banReason: user.ban_reason || null,
     bannedUntil: user.banned_until || null,
@@ -649,6 +651,19 @@ export function getUserLastSeen(userId: number): string | null {
   const raw = row?.last_seen_at?.trim();
   if (!raw) return null;
   return raw.includes('T') ? raw : `${raw.replace(' ', 'T')}Z`;
+}
+
+export function getStoredOnlineSeconds(userId: number): number {
+  const row = db.prepare('SELECT online_seconds FROM users WHERE id = ?').get(userId) as
+    | { online_seconds: number | null }
+    | undefined;
+  return Math.max(0, Math.floor(Number(row?.online_seconds) || 0));
+}
+
+export function addUserOnlineSeconds(userId: number, seconds: number): void {
+  const delta = Math.floor(seconds);
+  if (delta <= 0) return;
+  db.prepare('UPDATE users SET online_seconds = online_seconds + ? WHERE id = ?').run(delta, userId);
 }
 
 export function banUser(userId: number, reason: string | undefined, until: string | null = null): PublicUser | null {
