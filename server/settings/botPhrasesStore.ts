@@ -46,6 +46,18 @@ function loadOverrides(): Record<string, string> {
        ON CONFLICT(key) DO UPDATE SET value = excluded.value`
     ).run(BOT_PHRASES_KEY, JSON.stringify(cache));
   }
+  const prostitute = cache['report.prostitute'];
+  const oldProstitute = [
+    'Путана не дала {nick} заняться своими ночными делами.',
+    '{nick} этой ночью был(а) занят(а) — до своих дел так и не добрался(ась).',
+  ].join('\n');
+  if (typeof prostitute === 'string' && prostitute.trim() === oldProstitute) {
+    delete cache['report.prostitute'];
+    db.prepare(
+      `INSERT INTO app_settings (key, value) VALUES (?, ?)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value`
+    ).run(BOT_PHRASES_KEY, JSON.stringify(cache));
+  }
   return cache;
 }
 

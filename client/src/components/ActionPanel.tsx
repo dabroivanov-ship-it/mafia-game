@@ -135,11 +135,7 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
 
     return (
       <div className="action-panel">
-        <h3>Выдвиньте кандидата</h3>
-        <p className="muted" style={{ marginBottom: 12, fontSize: '0.9rem' }}>
-          Выберите, кого выдвинуть на казнь. «Да» или «нет» появятся, когда одного игрока выберут не
-          меньше половины.
-        </p>
+        <h3>Кого же залинчуем сегодня днем?</h3>
         <div className="target-grid">
           {aliveOthers.map((p) =>
             targetBtn(p, (id) => {

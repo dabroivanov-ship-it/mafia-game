@@ -202,8 +202,8 @@ export const BOT_PHRASE_DEFINITIONS: BotPhraseDefinition[] = [
     type: 'lines',
     placeholders: ['{nick}'],
     defaultValue: [
-      'Путана не дала {nick} заняться своими ночными делами.',
-      '{nick} этой ночью был(а) занят(а) — до своих дел так и не добрался(ась).',
+      'Путана не отпускала {nick} до самого рассвета.',
+      'Этой ночью {nick} был(а) не на месте — путана держала при себе.',
     ].join('\n'),
   },
   {
