@@ -50,6 +50,11 @@ import {
   formatBackupSize,
 } from '../backup/service.js';
 import { getBackupScheduleSettings, setBackupScheduleSettings } from '../backup/schedule.js';
+import {
+  getTelegramBackupSettings,
+  setTelegramBackupChatId,
+} from '../backup/telegramSettings.js';
+import { sendBackupToTelegram } from '../backup/telegram.js';
 import { pushAdminReputationNotification } from '../notifications/push.js';
 import {
   hasAdminPermission,
@@ -598,6 +603,19 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
     }
   });
 
+  router.get('/backups/telegram-settings', requireAdminPermission('manage_backups'), (_req, res) => {
+    res.json({ settings: getTelegramBackupSettings() });
+  });
+
+  router.put('/backups/telegram-settings', requireAdminPermission('manage_backups'), (req, res) => {
+    try {
+      const settings = setTelegramBackupChatId(req.body?.chatId ?? '');
+      res.json({ settings });
+    } catch (err) {
+      res.status(400).json({ error: err instanceof Error ? err.message : 'Неверный chat ID' });
+    }
+  });
+
   router.post('/backups/:id/restore', requireAdminPermission('manage_backups'), async (req, res) => {
     try {
       await restoreBackup(req.params.id);
@@ -613,6 +631,15 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
       res.json({ ok: true });
     } catch (err) {
       res.status(400).json({ error: err instanceof Error ? err.message : 'Ошибка удаления' });
+    }
+  });
+
+  router.post('/backups/:id/send-telegram', requireAdminPermission('manage_backups'), async (req, res) => {
+    try {
+      await sendBackupToTelegram(req.params.id);
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(400).json({ error: err instanceof Error ? err.message : 'Ошибка отправки в Telegram' });
     }
   });
 

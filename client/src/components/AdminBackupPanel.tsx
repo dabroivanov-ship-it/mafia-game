@@ -2,12 +2,16 @@ import { FormEvent, useEffect, useState } from 'react';
 import {
   fetchAdminBackups,
   fetchBackupSchedule,
+  fetchTelegramBackupSettings,
   adminCreateBackup,
   adminSaveBackupSchedule,
+  adminSaveTelegramBackupSettings,
   adminRestoreBackup,
   adminDeleteBackup,
+  adminSendBackupToTelegram,
   type AdminBackupInfo,
   type BackupScheduleSettings,
+  type TelegramBackupSettings,
 } from '../api';
 
 function formatSize(bytes: number): string {
@@ -34,15 +38,28 @@ export default function AdminBackupPanel() {
   const [scheduleSaving, setScheduleSaving] = useState(false);
   const [scheduleSaved, setScheduleSaved] = useState(false);
 
+  const [telegramSettings, setTelegramSettings] = useState<TelegramBackupSettings>({
+    chatId: null,
+    botConfigured: false,
+    ready: false,
+  });
+  const [telegramChatId, setTelegramChatId] = useState('');
+  const [telegramSaving, setTelegramSaving] = useState(false);
+  const [telegramSaved, setTelegramSaved] = useState(false);
+  const [sendingId, setSendingId] = useState<string | null>(null);
+
   const load = async () => {
     setError('');
     try {
-      const [{ backups: list }, { schedule: saved }] = await Promise.all([
+      const [{ backups: list }, { schedule: saved }, { settings: telegram }] = await Promise.all([
         fetchAdminBackups(),
         fetchBackupSchedule(),
+        fetchTelegramBackupSettings(),
       ]);
       setBackups(list);
       setSchedule(saved);
+      setTelegramSettings(telegram);
+      setTelegramChatId(telegram.chatId ?? '');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка загрузки');
     } finally {
@@ -120,9 +137,75 @@ export default function AdminBackupPanel() {
     }
   };
 
+  const handleSaveTelegram = async (e: FormEvent) => {
+    e.preventDefault();
+    setTelegramSaving(true);
+    setTelegramSaved(false);
+    setError('');
+    try {
+      const { settings } = await adminSaveTelegramBackupSettings(telegramChatId.trim());
+      setTelegramSettings(settings);
+      setTelegramChatId(settings.chatId ?? '');
+      setTelegramSaved(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка сохранения Telegram');
+    } finally {
+      setTelegramSaving(false);
+    }
+  };
+
+  const handleSendTelegram = async (id: string) => {
+    if (!telegramSettings.ready) {
+      setError('Настройте TELEGRAM_BOT_TOKEN на сервере и chat ID получателя');
+      return;
+    }
+    setSendingId(id);
+    setError('');
+    try {
+      await adminSendBackupToTelegram(id);
+      alert('Бэкап отправлен в Telegram');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка отправки в Telegram');
+    } finally {
+      setSendingId(null);
+    }
+  };
+
   return (
     <div className="admin-backup-panel">
       {error && <div className="auth-error">{error}</div>}
+
+      <form className="admin-backup-telegram theme-settings-block" onSubmit={handleSaveTelegram}>
+        <h4>Отправка в Telegram</h4>
+        <p className="theme-settings-hint">
+          Архив копии отправляется вашему боту. На сервере должен быть задан{' '}
+          <code>TELEGRAM_BOT_TOKEN</code>. Получатель должен написать боту /start. Chat ID можно узнать
+          через @userinfobot.
+        </p>
+        {!telegramSettings.botConfigured && (
+          <p className="theme-settings-hint">TELEGRAM_BOT_TOKEN на сервере не настроен.</p>
+        )}
+        <label>
+          Chat ID получателя
+          <input
+            type="text"
+            inputMode="numeric"
+            placeholder="123456789"
+            value={telegramChatId}
+            onChange={(e) => {
+              setTelegramChatId(e.target.value);
+              setTelegramSaved(false);
+            }}
+            disabled={telegramSaving}
+          />
+        </label>
+        <div className="profile-actions">
+          <button type="submit" className="btn btn-primary" disabled={telegramSaving}>
+            {telegramSaving ? 'Сохранение…' : 'Сохранить chat ID'}
+          </button>
+          {telegramSaved && <span className="muted">Сохранено</span>}
+        </div>
+      </form>
 
       <form className="admin-backup-schedule theme-settings-block" onSubmit={handleSaveSchedule}>
         <h4>Автоматический бэкап</h4>
@@ -245,6 +328,19 @@ export default function AdminBackupPanel() {
                   <td>{formatSize(b.sizeBytes)}</td>
                   <td>{b.includeUploads ? 'да' : 'нет'}</td>
                   <td className="admin-actions">
+                    <button
+                      type="button"
+                      className="btn btn-sm"
+                      disabled={!telegramSettings.ready || sendingId === b.id}
+                      onClick={() => void handleSendTelegram(b.id)}
+                      title={
+                        telegramSettings.ready
+                          ? 'Отправить архив в Telegram'
+                          : 'Настройте TELEGRAM_BOT_TOKEN и chat ID'
+                      }
+                    >
+                      {sendingId === b.id ? '…' : 'В Telegram'}
+                    </button>
                     <button
                       type="button"
                       className="btn btn-sm"

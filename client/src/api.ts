@@ -993,6 +993,12 @@ export interface BackupScheduleSettings {
   lastRunAt: string | null;
 }
 
+export interface TelegramBackupSettings {
+  chatId: string | null;
+  botConfigured: boolean;
+  ready: boolean;
+}
+
 export async function fetchAdminBackups(): Promise<{ backups: AdminBackupInfo[] }> {
   return apiRequest('/api/admin/backups');
 }
@@ -1023,6 +1029,23 @@ export async function adminRestoreBackup(id: string): Promise<void> {
 
 export async function adminDeleteBackup(id: string): Promise<void> {
   return apiRequest(`/api/admin/backups/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+export async function fetchTelegramBackupSettings(): Promise<{ settings: TelegramBackupSettings }> {
+  return apiRequest('/api/admin/backups/telegram-settings');
+}
+
+export async function adminSaveTelegramBackupSettings(
+  chatId: string
+): Promise<{ settings: TelegramBackupSettings }> {
+  return apiRequest('/api/admin/backups/telegram-settings', {
+    method: 'PUT',
+    body: JSON.stringify({ chatId }),
+  });
+}
+
+export async function adminSendBackupToTelegram(id: string): Promise<void> {
+  return apiRequest(`/api/admin/backups/${encodeURIComponent(id)}/send-telegram`, { method: 'POST' });
 }
 
 export async function adminUploadUserAvatar(userId: number, file: File): Promise<void> {

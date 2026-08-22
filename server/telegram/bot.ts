@@ -1,5 +1,6 @@
 import { getTelegramSettings } from '../settings/store.js';
 import { isValidWebAppUrl } from '../security/validate.js';
+import { callBotApi } from './api.js';
 
 const API_BASE = 'https://api.telegram.org';
 
@@ -24,19 +25,6 @@ function resolveWebAppUrl(): string | null {
     return url;
   }
   return null;
-}
-
-async function callBotApi<T>(token: string, method: string, body?: Record<string, unknown>): Promise<T> {
-  const res = await fetch(`${API_BASE}/bot${token}/${method}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const data = (await res.json()) as { ok: boolean; description?: string; result?: T };
-  if (!data.ok) {
-    throw new Error(data.description || `Telegram API ${method} failed`);
-  }
-  return data.result as T;
 }
 
 async function sendStartMessage(token: string, chatId: number): Promise<void> {

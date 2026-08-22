@@ -20,7 +20,7 @@ function getBackupsDir(): string {
 /** Matches ids from createBackup: ISO time with colons/dots replaced by dashes. */
 const BACKUP_ID_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z$/;
 
-function resolveBackupDir(backupId: string): string {
+export function resolveBackupDir(backupId: string): string {
   const id = String(backupId || '').trim();
   if (!BACKUP_ID_PATTERN.test(id)) {
     throw new Error('Некорректный идентификатор резервной копии');
