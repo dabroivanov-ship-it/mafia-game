@@ -26,7 +26,7 @@
 - **Кабинет** — профиль, личные сообщения, поддержка, поиск игроков, тема оформления
 - **Информация** — правила, роли, игры с AI-агентами, FAQ, рейтинг, топ викторины, команда проекта
 - **Вход** — логин/пароль, Telegram OIDC, VK ID
-- **Админ-панель** — пользователи, комнаты (в т.ч. AI), новости, модерация, DeepSeek, настройки сайта
+- **Админ-панель** — пользователи, комнаты (в т.ч. AI), новости, модерация, DeepSeek, бэкапы (в т.ч. отправка в Telegram), настройки сайта
 
 ---
 
@@ -50,6 +50,7 @@
 | Сборка сервера | `cd server && npm run build` |
 | Запуск prod локально | `cd server && npm start` (после сборки обоих) |
 | Обновление на VPS | `bash scripts/deploy.sh` или [раздел ниже](#обновление-на-сервере) |
+| **Первая установка на VPS** | `sudo bash scripts/install.sh` — [автоустановщик](#автоустановка-на-vps) |
 
 ---
 
@@ -112,9 +113,66 @@ cd ../server && npm run build && npm start
 
 ---
 
+## Автоустановка на VPS
+
+Скрипт ставит Node.js, Caddy, PM2, клонирует/собирает проект, создаёт `server/.env`, настраивает Caddy и запускает PM2.
+
+**На чистом Ubuntu/Debian (от root):**
+
+```bash
+apt install -y git
+git clone https://github.com/dabroivanov-ship-it/mafia-game.git /home/mafia-game
+cd /home/mafia-game
+chmod +x scripts/install.sh
+sudo bash scripts/install.sh
+```
+
+Скрипт спросит **домен**, **логин админа**, **Telegram-бот**, **OIDC/VK/DeepSeek** (можно пропустить), затем покажет сводку и начнёт установку. DNS (A-запись `@` и `www`) должен указывать на IP сервера.
+
+**Шаги мастера:** приветствие → домен и админ → Telegram-бот (токен, chat ID бэкапов) → Telegram OIDC → VK → DeepSeek → firewall → подтверждение → установка.
+
+**Без вопросов (CI / повторный запуск):**
+
+```bash
+sudo DOMAIN=realmafia.online ADMIN_USER=admin bash scripts/install.sh
+```
+
+**Переменные окружения для install.sh:**
+
+| Переменная | По умолчанию | Описание |
+|------------|--------------|----------|
+| `INSTALL_DIR` | `/home/mafia-game` | Каталог проекта |
+| `DOMAIN` | спросит | Домен без `www` |
+| `ADMIN_USER` | `admin` | `ADMIN_USERNAMES` в `.env` |
+| `TELEGRAM_BOT_TOKEN` | — | опционально |
+| `SKIP_APT=1` | — | не ставить пакеты через apt |
+| `SKIP_UFW=1` | — | не включать ufw |
+| `SKIP_CADDY=1` | — | не перезаписывать `/etc/caddy/Caddyfile` |
+
+После установки обновления — только `bash scripts/deploy.sh` (без sudo).
+
+---
+
 ## Установка на VPS (продакшен)
 
-Пример: Ubuntu VPS, домен **realmafia.online**, каталог **`/home/mafia-game`**.
+Пример: Ubuntu VPS, домен **realmafia.online**, каталог проекта **`/home/mafia-game`**.
+
+> **Важно про каталоги.** Почти все команды ниже выполняются из **корня проекта** `/home/mafia-game`.
+> - `Caddyfile`, `ecosystem.config.cjs`, `scripts/` — в корне
+> - `.env`, `.env.example` — в `server/`
+>
+> Если вы уже в `/home/mafia-game/server`, не добавляйте префикс `server/`:
+> ```bash
+> # из корня проекта          # уже в server/
+> cp server/.env.example server/.env    cp .env.example .env
+> ```
+>
+> Проверка, где вы находитесь:
+> ```bash
+> pwd
+> ls Caddyfile server/.env.example
+> ```
+> Оба файла должны находиться относительно текущего каталога.
 
 ### DNS
 
@@ -122,6 +180,8 @@ cd ../server && npm run build && npm start
 |-----|-----|----------|
 | A | `@` | IP VPS |
 | A | `www` | IP VPS |
+
+Убедитесь, что подключаетесь по SSH к **актуальному IP из панели хостинга** (DNS может указывать на другой адрес, чем старый VPS).
 
 ### ПО на сервере
 
@@ -147,34 +207,55 @@ npm install -g pm2
 ```bash
 cd /home
 git clone https://github.com/dabroivanov-ship-it/mafia-game.git
-cd mafia-game
+cd /home/mafia-game
 
 cd client && npm install && npm run build
 cd ../server && npm install && npm run build
+cd ..
 ```
 
 Проверка:
 
 ```bash
+cd /home/mafia-game
 test -f client/dist/index.html && echo "client OK"
 test -f server/dist/server.js && echo "server OK"
+test -f Caddyfile && echo "Caddyfile OK"
+test -f server/.env.example && echo "env example OK"
 ```
 
 ### Переменные окружения
 
 ```bash
+cd /home/mafia-game
 cp server/.env.example server/.env
 nano server/.env
+```
+
+Сгенерировать секрет:
+
+```bash
+openssl rand -hex 32
 ```
 
 Обязательно на проде:
 
 | Переменная | Описание |
 |------------|----------|
-| `JWT_SECRET` | Случайная строка **минимум 32 символа** (`openssl rand -hex 32`) |
-| `CORS_ORIGIN` | Публичный URL сайта без слэша в конце, напр. `https://realmafia.online` |
+| `JWT_SECRET` | Случайная строка **минимум 32 символа** |
+| `CORS_ORIGIN` | Публичный URL сайта без слэша, напр. `https://realmafia.online` |
+| `SITE_URL` | То же, что `CORS_ORIGIN` (для ссылок в письмах и OAuth) |
+| `TRUST_PROXY=1` | За Caddy/nginx — корректный IP клиента в логах и лимитах |
 
-Остальное — см. [переменные окружения](#переменные-окружения).
+Рекомендуется:
+
+| Переменная | Описание |
+|------------|----------|
+| `ADMIN_USERNAMES` | Логины админов через запятую (права выдаются при старте) |
+| `TELEGRAM_BOT_TOKEN` | Бот: Web App, вход, **отправка бэкапов** |
+| `TELEGRAM_BACKUP_CHAT_ID` | Chat ID для бэкапов (или задаётся в админке → Резервные копии) |
+
+Полный список — см. [переменные окружения](#переменные-окружения).
 
 PM2 читает `server/.env` через `ecosystem.config.cjs`.
 
@@ -197,12 +278,15 @@ curl http://127.0.0.1:3001/api/health
 ### Caddy
 
 ```bash
+cd /home/mafia-game
+nano Caddyfile   # замените realmafia.online на свой домен, если нужно
 cp Caddyfile /etc/caddy/Caddyfile
-# замените домен в Caddyfile на свой
 caddy validate --config /etc/caddy/Caddyfile
 systemctl reload caddy
 systemctl enable caddy
 ```
+
+Проверка снаружи: `https://ваш-домен/api/health`
 
 ### Firewall
 
@@ -215,20 +299,65 @@ ufw enable
 
 Порт **3001** наружу не открывайте — к нему ходит только Caddy локально.
 
+### Викторина (опционально)
+
+Файл вопросов: `questions.txt` в корне проекта (формат: `вопрос|ответ`).
+Путь можно переопределить: `QUIZ_QUESTIONS_PATH` в `server/.env`.
+
+### Бэкапы в Telegram (опционально)
+
+1. Задайте `TELEGRAM_BOT_TOKEN` в `server/.env`, перезапустите PM2
+2. Получатель пишет боту `/start`
+3. Узнайте chat ID (@userinfobot) и укажите в админке → **Система → Резервные копии** или в `TELEGRAM_BACKUP_CHAT_ID`
+4. Нажмите **«В Telegram»** у нужной копии (лимит Telegram — 50 МБ)
+
+### Чеклист первого запуска
+
+```bash
+cd /home/mafia-game
+# 1. код и сборка
+git pull
+cd client && npm install && npm run build
+cd ../server && npm install && npm run build
+cd ..
+# 2. env
+test -f server/.env || cp server/.env.example server/.env
+nano server/.env
+# 3. pm2
+pm2 start ecosystem.config.cjs
+pm2 save
+# 4. caddy
+cp Caddyfile /etc/caddy/Caddyfile
+caddy validate --config /etc/caddy/Caddyfile
+systemctl reload caddy
+# 5. проверка
+curl -s http://127.0.0.1:3001/api/health
+curl -sI https://realmafia.online | head -3
+```
+
 ---
 
 ## Обновление на сервере
 
-**Рекомендуемый способ** — скрипт деплоя (sync git, сборка, проверка БД, restart PM2):
+**Рекомендуемый способ** — скрипт деплоя из **корня проекта**:
 
 ```bash
 cd /home/mafia-game
 bash scripts/deploy.sh
 ```
 
-Скрипт сбрасывает локальные правки **отслеживаемых** файлов (например старый `Caddyfile` на сервере) до версии из репозитория. Файлы вне git (`server/.env`, `data/`, `uploads/`) не затрагиваются.
+Скрипт: `git pull`, сборка client/server, проверка БД, restart PM2. Локальные правки **отслеживаемых** файлов сбрасываются. Файлы вне git (`server/.env`, `server/data/`, `uploads/`) не трогаются.
 
-Если `git pull` падает с «would be overwritten by merge», выполните один раз:
+После деплоя, если менялся домен или `Caddyfile`:
+
+```bash
+cd /home/mafia-game
+cp Caddyfile /etc/caddy/Caddyfile
+caddy validate --config /etc/caddy/Caddyfile
+systemctl reload caddy
+```
+
+Если `git pull` / deploy падает с «would be overwritten by merge»:
 
 ```bash
 cd /home/mafia-game
@@ -237,26 +366,28 @@ git reset --hard origin/main
 bash scripts/deploy.sh
 ```
 
-Домен для Caddy задаётся в `Caddyfile` в репозитории; после деплоя при необходимости:
-
-```bash
-cp Caddyfile /etc/caddy/Caddyfile
-caddy validate --config /etc/caddy/Caddyfile
-systemctl reload caddy
-```
-
 **Вручную:**
 
 ```bash
-cd /home/mafia-game && git pull && \
-cd client && npm install && npm run build && \
-cd ../server && npm install && npm run build && \
+cd /home/mafia-game
+git pull
+cd client && npm install && npm run build
+cd ../server && npm install && npm run build
 cd .. && pm2 restart mafia-server
 ```
 
-В браузере — жёсткое обновление (Ctrl+F5), чтобы подтянуть новый клиент.
+В браузере — жёсткое обновление (Ctrl+F5).
 
 Файл **`server/data/mafia.db`** не удаляйте.
+
+### Частые ошибки
+
+| Ошибка | Причина | Решение |
+|--------|---------|---------|
+| `cannot stat 'server/.env.example'` | Вы в каталоге `server/`, а не в корне | `cd /home/mafia-game`, затем `cp server/.env.example server/.env` |
+| `cannot stat 'Caddyfile'` | То же: вы в `server/` | `cd /home/mafia-game`, затем `cp Caddyfile /etc/caddy/Caddyfile` |
+| `JWT_SECRET is empty` | Нет или пустой `server/.env` | `cp server/.env.example server/.env && nano server/.env` |
+| SSH connection refused | Старый IP или VPS выключен | IP из панели хостинга; проверьте, что VPS запущен |
 
 ---
 
@@ -283,24 +414,28 @@ cd .. && pm2 restart mafia-server
 
 ## Переменные окружения
 
-Файл-образец: `server/.env.example`. На VPS копируйте в `server/.env`.
+Файл-образец: `server/.env.example`. На VPS из **корня проекта**: `cp server/.env.example server/.env`.
 
 | Переменная | Обязательно | Описание |
 |------------|-------------|----------|
 | `JWT_SECRET` | да (prod) | Секрет JWT, мин. 32 символа |
 | `CORS_ORIGIN` | да (prod) | URL сайта, напр. `https://example.ru` |
+| `SITE_URL` | да (prod) | Публичный URL сайта (часто = `CORS_ORIGIN`) |
+| `TRUST_PROXY` | рекомендуется | `1` за Caddy/nginx |
 | `PORT` | нет | Порт сервера (по умолчанию 3001) |
 | `JWT_EXPIRES` | нет | Срок токена (по умолчанию 7d) |
 | `ADMIN_USERNAMES` | нет | Логины админов через запятую |
 | `DB_PATH` | нет | Путь к SQLite (по умолчанию `server/data/mafia.db`) |
 | `UPLOADS_DIR` | нет | Папка аватаров |
-| `TELEGRAM_BOT_TOKEN` | нет | Telegram-бот |
+| `TELEGRAM_BOT_TOKEN` | нет | Telegram-бот (Web App, вход, бэкапы) |
 | `TELEGRAM_WEBAPP_URL` | нет | URL Web App |
+| `TELEGRAM_BACKUP_CHAT_ID` | нет | Chat ID для отправки бэкапов (или в админке) |
 | `TELEGRAM_OIDC_CLIENT_ID` | нет | Вход через Telegram OIDC |
 | `TELEGRAM_OIDC_CLIENT_SECRET` | нет | Секрет OIDC |
 | `VK_CLIENT_ID` | нет | Вход через VK ID |
 | `VK_CLIENT_SECRET` | нет | Секрет VK ID |
 | `VK_REDIRECT_URI` | нет | Callback VK (по умолчанию `{CORS_ORIGIN}/api/auth/vk/callback`) |
+| `QUIZ_QUESTIONS_PATH` | нет | Путь к `questions.txt` для викторины |
 | `DEEPSEEK_API_KEY` | нет | Ключ DeepSeek для AI-игроков (можно задать в админке) |
 | `DEEPSEEK_BASE_URL` | нет | Базовый URL API DeepSeek (опционально, прокси) |
 | `ALLOW_INSECURE_DEV` | нет | Только локально: ослабить проверки JWT/CORS |
@@ -351,10 +486,12 @@ mafia-game/
 │   ├── data/mafia.db      # БД (создаётся автоматически)
 │   └── .env.example
 ├── scripts/
-│   ├── deploy.sh          # Деплой на VPS
+│   ├── install.sh         # Автоустановка на VPS (sudo)
+│   ├── deploy.sh          # Деплой / обновление (запускать из корня проекта)
 │   └── verify-db.mjs      # Проверка схемы SQLite
-├── Caddyfile
-├── ecosystem.config.cjs   # PM2
+├── questions.txt          # Вопросы викторины (вопрос|ответ)
+├── Caddyfile              # Конфиг Caddy (в корне, не в server/)
+├── ecosystem.config.cjs   # PM2 (в корне)
 └── README.md
 ```
 
