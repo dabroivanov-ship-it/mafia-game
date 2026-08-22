@@ -155,8 +155,29 @@ function pickRandomQuestion(state: QuizRoomState): QuizQuestion | null {
   return state.currentQuestion;
 }
 
+function countAnswerLetters(answer: string): number {
+  const matches = answer.match(/[\p{L}]/gu);
+  return matches ? matches.length : 0;
+}
+
+function formatLetterCountHint(count: number): string {
+  if (count <= 0) return '';
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  let word: string;
+  if (mod10 === 1 && mod100 !== 11) word = 'буква';
+  else if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) word = 'буквы';
+  else word = 'букв';
+  return ` (${count} ${word})`;
+}
+
 function formatQuestionMessage(question: QuizQuestion): string {
-  return `❓ ${question.question}`;
+  const base = question.question.trim();
+  if (/\(\d+\s+букв/i.test(base)) {
+    return `❓ ${base}`;
+  }
+  const hint = formatLetterCountHint(countAnswerLetters(question.answers[0] || ''));
+  return `❓ ${base}${hint}`;
 }
 
 function formatPublicAnswer(question: QuizQuestion): string {
