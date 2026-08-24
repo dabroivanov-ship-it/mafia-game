@@ -72,6 +72,7 @@ import {
   addGameRoom,
   updateGameRoomAi,
   onRoomPhaseChange,
+  onRegistrationRosterChange,
   clearUserSilenceInAllRooms,
   listSilencedPlayers,
   removeRoom,
@@ -132,13 +133,13 @@ for (const room of rooms.values()) {
   }
 }
 setOnlineRoomResolver((userId) => {
-  const names: string[] = [];
+  const locations: { id: number; name: string }[] = [];
   for (const room of rooms.values()) {
     if (room.players.some((p) => p.userId === userId && p.connected)) {
-      names.push(room.name);
+      locations.push({ id: room.id, name: room.name });
     }
   }
-  return names;
+  return locations;
 });
 const sessions = new Map<string, Session>();
 const userSocketIds = new Map<number, Set<string>>();
@@ -791,6 +792,7 @@ onRoomPhaseChange((room) => {
     broadcastRoom(roomId);
   }
 });
+onRegistrationRosterChange((room) => broadcastRoom(room.id));
 initAllQuizRooms(rooms.values());
 
 function deliverHostNotes(room: GameRoom, privateNotes: PrivateNote[] = []): void {

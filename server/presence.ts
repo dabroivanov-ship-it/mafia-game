@@ -27,10 +27,19 @@ const SECTION_LABELS: Record<string, string> = {
   room: 'В комнате',
 };
 
-let roomNamesForUser: (userId: number) => string[] = () => [];
+let roomLocationsForUser: (userId: number) => UserRoomLocation[] = () => [];
 
-export function setOnlineRoomResolver(fn: (userId: number) => string[]): void {
-  roomNamesForUser = fn;
+export interface UserRoomLocation {
+  id: number;
+  name: string;
+}
+
+export function setOnlineRoomResolver(fn: (userId: number) => UserRoomLocation[]): void {
+  roomLocationsForUser = fn;
+}
+
+export function getUserRoomLocations(userId: number): UserRoomLocation[] {
+  return roomLocationsForUser(userId);
 }
 
 export function setUserSection(userId: number, section: unknown): void {
@@ -46,8 +55,8 @@ export function clearUserSection(userId: number): void {
 }
 
 export function getUserLocationLabel(userId: number): string {
-  const roomNames = roomNamesForUser(userId);
-  if (roomNames.length > 0) return roomNames.join(', ');
+  const rooms = roomLocationsForUser(userId);
+  if (rooms.length > 0) return rooms.map((room) => room.name).join(', ');
   const section = userSections.get(userId) || 'lobby';
   return SECTION_LABELS[section] || 'На сайте';
 }
@@ -107,6 +116,7 @@ export function getOnlineUserCount(): number {
 
 export interface OnlineUserHit extends UserSearchHit {
   location: string;
+  rooms: UserRoomLocation[];
 }
 
 export function listOnlineUsers(): OnlineUserHit[] {
@@ -125,6 +135,7 @@ export function listOnlineUsers(): OnlineUserHit[] {
       isAdmin: user.role === 'admin',
       isModerator: user.role === 'moderator',
       location: getUserLocationLabel(user.id),
+      rooms: getUserRoomLocations(user.id),
     });
   }
   return users.sort((a, b) => a.username.localeCompare(b.username, 'ru'));

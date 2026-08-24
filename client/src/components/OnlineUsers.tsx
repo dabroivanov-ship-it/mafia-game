@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { fetchOnlineUsers } from '../api';
 import { ONLINE_PAGE_META, updatePageMeta } from '../seo';
 import { profileStatsPath } from '../profileRouting';
+import { roomGamePath } from '../roomRouting';
 import type { User, UserSearchHit } from '../types';
 import UserProfileModal from './UserProfileModal';
 
@@ -11,7 +12,44 @@ interface OnlineUsersProps {
   onWriteMessage?: (userId: number, username: string) => void;
   onOpenStatistics?: (userId: number) => void;
   onOpenClan?: (clanId: number) => void;
+  onJoinRoom?: (roomId: number) => void;
   backLabel?: string;
+}
+
+function renderUserLocation(
+  hit: UserSearchHit,
+  onJoinRoom?: (roomId: number) => void
+): ReactNode {
+  if (hit.rooms && hit.rooms.length > 0) {
+    return (
+      <span className="online-user-location">
+        {hit.rooms.map((room, index) => (
+          <span key={room.id}>
+            {index > 0 ? ', ' : null}
+            {onJoinRoom ? (
+              <button
+                type="button"
+                className="online-user-room-link"
+                onClick={() => onJoinRoom(room.id)}
+              >
+                {room.name}
+              </button>
+            ) : (
+              <a href={roomGamePath(room.id)} className="online-user-room-link">
+                {room.name}
+              </a>
+            )}
+          </span>
+        ))}
+      </span>
+    );
+  }
+
+  if (hit.location) {
+    return <span className="online-user-location">{hit.location}</span>;
+  }
+
+  return null;
 }
 
 export default function OnlineUsers({
@@ -20,6 +58,7 @@ export default function OnlineUsers({
   onWriteMessage,
   onOpenStatistics,
   onOpenClan,
+  onJoinRoom,
   backLabel = '← Комнаты',
 }: OnlineUsersProps) {
   const [users, setUsers] = useState<UserSearchHit[]>([]);
@@ -94,9 +133,7 @@ export default function OnlineUsers({
             >
               {hit.username}
             </button>
-            {hit.location && (
-              <span className="online-user-location">{hit.location}</span>
-            )}
+            {renderUserLocation(hit, onJoinRoom)}
           </li>
         ))}
       </ul>

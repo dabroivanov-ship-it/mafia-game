@@ -94,6 +94,11 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
   }, []);
 
   useEffect(() => {
+    // Прогрев chunk socket.io, чтобы после входа лобби не зависало на чёрном экране.
+    void import('socket.io-client').catch(() => {});
+  }, []);
+
+  useEffect(() => {
     const saved = loadRememberedLogin();
     setRememberMe(saved.remember);
     if (saved.login) {

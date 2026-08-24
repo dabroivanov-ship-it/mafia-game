@@ -104,6 +104,74 @@ export function countRegisteredPlayers(room: GameRoom): number {
   return listRegisteredPlayers(room).length;
 }
 
+const registrationDropTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+function registrationDropKey(roomId: number, playerId: number): string {
+  return `${roomId}:${playerId}`;
+}
+
+export function cancelRegistrationDrop(room: GameRoom, playerId: number): void {
+  const key = registrationDropKey(room.id, playerId);
+  const timer = registrationDropTimers.get(key);
+  if (timer) {
+    clearTimeout(timer);
+    registrationDropTimers.delete(key);
+  }
+}
+
+function cancelAllRegistrationDropsForRoom(roomId: number): void {
+  const prefix = `${roomId}:`;
+  for (const key of [...registrationDropTimers.keys()]) {
+    if (!key.startsWith(prefix)) continue;
+    clearTimeout(registrationDropTimers.get(key)!);
+    registrationDropTimers.delete(key);
+  }
+}
+
+const registrationRosterListeners: Array<(room: GameRoom) => void> = [];
+
+export function onRegistrationRosterChange(listener: (room: GameRoom) => void): void {
+  registrationRosterListeners.push(listener);
+}
+
+function emitRegistrationRosterChange(room: GameRoom): void {
+  for (const listener of registrationRosterListeners) {
+    try {
+      listener(room);
+    } catch (err) {
+      console.error('[engine] registration roster listener:', err);
+    }
+  }
+}
+
+function unregisterFromRegistration(room: GameRoom, player: GamePlayer): boolean {
+  if (room.phase !== PHASE.REGISTRATION || !player.inGame) return false;
+  player.inGame = false;
+  player.joinGameAvailableAt = Date.now() + CONFIG.JOIN_GAME_COOLDOWN_SEC * 1000;
+  addSystemMessage(room, `${playerNick(player)} вышел из игры!`);
+  emitRegistrationRosterChange(room);
+  return true;
+}
+
+/** After a short grace period, free the registration slot if the player did not reconnect. */
+export function scheduleRegistrationDrop(room: GameRoom, playerId: number): void {
+  if (room.phase !== PHASE.REGISTRATION) return;
+  const player = room.players.find((p) => p.id === playerId);
+  if (!player?.inGame) return;
+
+  cancelRegistrationDrop(room, playerId);
+  const key = registrationDropKey(room.id, playerId);
+  const timer = setTimeout(() => {
+    registrationDropTimers.delete(key);
+    const currentRoom = room;
+    if (currentRoom.phase !== PHASE.REGISTRATION) return;
+    const current = currentRoom.players.find((p) => p.id === playerId);
+    if (!current || current.connected || !current.inGame) return;
+    unregisterFromRegistration(currentRoom, current);
+  }, CONFIG.REGISTRATION_DISCONNECT_SEC * 1000);
+  registrationDropTimers.set(key, timer);
+}
+
 export function createInitialRooms(): Map<number, GameRoom> {
   const rooms = new Map<number, GameRoom>();
   const savedConfigs = loadRoomConfigs();
@@ -478,6 +546,10 @@ export function markPlayerDisconnected(room: GameRoom, socketId: string): GamePl
   player.socketId = null;
   player.disconnectedAt = Date.now();
 
+  if (room.phase === PHASE.REGISTRATION && player.inGame) {
+    scheduleRegistrationDrop(room, player.id);
+  }
+
   if (
     !isChatRoom(room) &&
     room.phase === PHASE.WAITING &&
@@ -524,6 +596,11 @@ export function removePlayer(room: GameRoom, socketId: string, applyPenalty = tr
   const player = room.players.find((p) => p.socketId === socketId);
   if (!player || player.isBot) return null;
 
+  if (room.phase === PHASE.REGISTRATION && player.inGame) {
+    cancelRegistrationDrop(room, player.id);
+    unregisterFromRegistration(room, player);
+  }
+
   const gameActive = !isLobbyPhase(room.phase);
 
   if (gameActive && applyPenalty && player.inGame && player.alive && player.connected) {
@@ -565,6 +642,7 @@ export function reconnectPlayer(
   player.socketId = socketId;
   player.connected = true;
   player.disconnectedAt = null;
+  cancelRegistrationDrop(room, player.id);
   if (name) player.name = name;
   if (username) player.username = username;
   return { player, privateNotes: [] };
@@ -588,6 +666,7 @@ export function startRegistration(room: GameRoom, _starterPlayerId: number | nul
   if (room.phase === PHASE.ENDED) {
     resetRoom(room);
   }
+  cancelAllRegistrationDropsForRoom(room.id);
   applySavedAiSettings(room);
   removeAiBots(room);
   room.aiHandledPhases = new Set();
@@ -683,9 +762,10 @@ export function leaveGame(room: GameRoom, playerId: number): GamePlayer {
     throw new Error(`Подождите ${sec} сек. перед выходом из игры`);
   }
 
-  player.inGame = false;
-  player.joinGameAvailableAt = Date.now() + CONFIG.JOIN_GAME_COOLDOWN_SEC * 1000;
-  addSystemMessage(room, `${player.username || player.name} вышел из игры!`);
+  cancelRegistrationDrop(room, player.id);
+  if (!unregisterFromRegistration(room, player)) {
+    throw new Error('Вы не в игре');
+  }
   return player;
 }
 
@@ -710,11 +790,12 @@ export function tryStartGameAfterRegistration(room: GameRoom): PrivateNote[] {
 
 export function onRegistrationTimerEnd(room: GameRoom): PrivateNote[] {
   if (room.phase !== PHASE.REGISTRATION) return [];
-  room.players.forEach((p) => {
+  cancelAllRegistrationDropsForRoom(room.id);
+  for (const p of room.players) {
     if (p.inGame && !p.connected) {
-      p.inGame = false;
+      unregisterFromRegistration(room, p);
     }
-  });
+  }
   const registered = listRegisteredPlayers(room);
   if (registered.length < CONFIG.MIN_PLAYERS) {
     room.phase = PHASE.WAITING;

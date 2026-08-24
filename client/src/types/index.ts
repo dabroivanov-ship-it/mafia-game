@@ -260,6 +260,7 @@ export interface UserSearchHit {
   isOnline: boolean;
   lastSeenAt: string | null;
   location?: string;
+  rooms?: { id: number; name: string }[];
 }
 
 export interface LeaderboardEntry {

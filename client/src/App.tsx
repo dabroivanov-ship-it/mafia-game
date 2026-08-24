@@ -137,52 +137,71 @@ export default function App() {
   });
 
   useEffect(() => {
+    let cancelled = false;
+
     async function bootstrap() {
       const themePromise = fetchThemeSettings()
         .then(({ defaultTheme, branding, lobbyAnnouncement: announcement }) => {
+          if (cancelled) return;
           setSiteDefaultTheme(defaultTheme);
           setSiteBranding(branding);
           setLobbyAnnouncement(announcement ?? { enabled: false, text: '' });
         })
         .catch(() => {});
 
+      const storedToken = localStorage.getItem('mafia_token');
+
       const webApp = await waitForTelegramWebApp();
-      if (webApp?.initData) {
+      if (cancelled) return;
+
+      // Telegram WebApp auto-login only when there is no password/session token yet.
+      if (webApp?.initData && !storedToken) {
         try {
           const { token: tgToken, user: tgUser } = await telegramWebAppLogin(webApp.initData, true);
+          if (cancelled) return;
           saveSession(tgToken, tgUser);
           setToken(tgToken);
           setUser(tgUser);
           await themePromise;
-          setAuthLoading(false);
+          if (!cancelled) setAuthLoading(false);
           return;
         } catch {
-          clearSession();
-          setToken(null);
-          setUser(null);
+          if (!cancelled) {
+            clearSession();
+            setToken(null);
+            setUser(null);
+          }
         }
       }
 
-      if (!token) {
+      if (!storedToken) {
         await themePromise;
-        setAuthLoading(false);
+        if (!cancelled) setAuthLoading(false);
         return;
       }
 
       try {
         const [{ user: me }] = await Promise.all([fetchMe(), themePromise]);
+        if (cancelled) return;
         setUser(me);
-        saveSession(token, me);
+        saveSession(storedToken, me);
+        setToken(storedToken);
       } catch {
-        clearSession();
-        setToken(null);
-        setUser(null);
+        if (!cancelled) {
+          clearSession();
+          setToken(null);
+          setUser(null);
+        }
       } finally {
-        setAuthLoading(false);
+        if (!cancelled) setAuthLoading(false);
       }
     }
+
     void bootstrap();
-  }, [token]);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     applyTheme(resolveTheme(user?.theme ?? null, siteDefaultTheme));
@@ -256,143 +275,151 @@ export default function App() {
 
     let cancelled = false;
     let active: Socket | null = null;
+    const authToken = token;
 
     void (async () => {
-      const { io } = await import('socket.io-client');
-      if (cancelled) return;
+      try {
+        const { io } = await import('socket.io-client');
+        if (cancelled) return;
 
-      const s = io(SOCKET_URL, {
-        transports: ['websocket', 'polling'],
-        auth: { token },
-      });
-      active = s;
+        const s = io(SOCKET_URL, {
+          transports: ['websocket', 'polling'],
+          auth: { token: authToken },
+        });
+        active = s;
 
-      s.on('connect_error', (err: Error) => {
-        const msg = err.message || '';
-        if (msg.includes('авториза') || msg.includes('токен') || msg.includes('заблокирован')) {
+        s.on('connect_error', (err: Error) => {
+          const msg = err.message || '';
+          if (msg.includes('авториза') || msg.includes('токен') || msg.includes('заблокирован')) {
+            clearSession();
+            setUser(null);
+            setToken(null);
+            setError(msg.includes('заблокирован') ? msg : 'Сессия истекла. Войдите снова.');
+          }
+        });
+
+        s.on('lobby:update', (payload: LobbyRoom[] | LobbyUpdate) => {
+          if (Array.isArray(payload)) {
+            setRooms(payload);
+          } else {
+            setRooms(payload.rooms);
+            setSiteOnlineCount(payload.onlineCount);
+          }
+        });
+        s.on('room:state', applyRoomState);
+        s.on('notification:private', ({ message }: { message: string }) => {
+          setNotification(message);
+          setTimeout(() => setNotification(null), 8000);
+        });
+
+        s.on('pm:unread', ({ count }: { count: number }) => {
+          setUnreadMailCount(count);
+        });
+
+        s.on(
+          'pm:read',
+          ({ readerId, messageIds }: { readerId: number; messageIds: number[] }) => {
+            setMailReadReceipt({ readerId, messageIds });
+          }
+        );
+
+        const applyNotificationSync = (list: UserNotification[], unreadCount: number) => {
+          setNotifications(list);
+          setNotificationUnreadCount(unreadCount);
+        };
+
+        s.on('connect', () => {
+          void fetchNotifications()
+            .then(({ notifications: list, unreadCount }) => applyNotificationSync(list, unreadCount))
+            .catch(() => {});
+        });
+
+        s.on(
+          'notification:sync',
+          ({ notifications: list, unreadCount }: { notifications: UserNotification[]; unreadCount: number }) => {
+            applyNotificationSync(list, unreadCount);
+          }
+        );
+
+        s.on(
+          'notification:new',
+          ({ notification, unreadCount }: { notification: UserNotification; unreadCount: number }) => {
+            setNotifications((prev) => {
+              const without = prev.filter((item) => item.id !== notification.id);
+              return [notification, ...without].slice(0, 40);
+            });
+            setNotificationUnreadCount(unreadCount);
+            if (notification.type === 'mail') {
+              const payload = notification.payload;
+              const fromUserId = typeof payload?.fromUserId === 'number' ? payload.fromUserId : undefined;
+              if (fromUserId) {
+                void fetchUnreadMailCount()
+                  .then(({ count }) => setUnreadMailCount(count))
+                  .catch(() => {});
+              }
+            }
+          }
+        );
+
+        s.on(
+          'pm:received',
+          ({ unreadCount }: { fromDisplayName: string; preview: string; unreadCount: number }) => {
+            setUnreadMailCount(unreadCount);
+            void fetchNotifications()
+              .then(({ notifications: list, unreadCount: bellUnread }) =>
+                applyNotificationSync(list, bellUnread)
+              )
+              .catch(() => {});
+          }
+        );
+
+        s.on('auth:kicked', ({ reason }: { reason?: string }) => {
           clearSession();
           setUser(null);
           setToken(null);
-          setError(msg.includes('заблокирован') ? msg : 'Сессия истекла. Войдите снова.');
-        }
-      });
+          setSocket(null);
+          currentRoomIdRef.current = null;
+          setCurrentRoomId(null);
+          setRoomState(null);
+          setRoomMinimized(false);
+          setRoomScreen('game');
+          clearStoredPlayerIds();
+          setView('lobby');
+          setError(reason || 'Сессия завершена');
+        });
 
-      s.on('lobby:update', (payload: LobbyRoom[] | LobbyUpdate) => {
-        if (Array.isArray(payload)) {
-          setRooms(payload);
-        } else {
-          setRooms(payload.rooms);
-          setSiteOnlineCount(payload.onlineCount);
-        }
-      });
-      s.on('room:state', applyRoomState);
-      s.on('notification:private', ({ message }: { message: string }) => {
-        setNotification(message);
-        setTimeout(() => setNotification(null), 8000);
-      });
-
-      s.on('pm:unread', ({ count }: { count: number }) => {
-        setUnreadMailCount(count);
-      });
-
-      s.on(
-        'pm:read',
-        ({ readerId, messageIds }: { readerId: number; messageIds: number[] }) => {
-          setMailReadReceipt({ readerId, messageIds });
-        }
-      );
-
-      const applyNotificationSync = (list: UserNotification[], unreadCount: number) => {
-        setNotifications(list);
-        setNotificationUnreadCount(unreadCount);
-      };
-
-      s.on('connect', () => {
-        void fetchNotifications()
-          .then(({ notifications: list, unreadCount }) => applyNotificationSync(list, unreadCount))
-          .catch(() => {});
-      });
-
-      s.on(
-        'notification:sync',
-        ({ notifications: list, unreadCount }: { notifications: UserNotification[]; unreadCount: number }) => {
-          applyNotificationSync(list, unreadCount);
-        }
-      );
-
-      s.on(
-        'notification:new',
-        ({ notification, unreadCount }: { notification: UserNotification; unreadCount: number }) => {
-          setNotifications((prev) => {
-            const without = prev.filter((item) => item.id !== notification.id);
-            return [notification, ...without].slice(0, 40);
-          });
-          setNotificationUnreadCount(unreadCount);
-          if (notification.type === 'mail') {
-            const payload = notification.payload;
-            const fromUserId = typeof payload?.fromUserId === 'number' ? payload.fromUserId : undefined;
-            if (fromUserId) {
-              void fetchUnreadMailCount()
-                .then(({ count }) => setUnreadMailCount(count))
-                .catch(() => {});
-            }
+        s.on('room:kicked', ({ reason, roomId }: { reason?: string; roomId?: number }) => {
+          if (roomId != null && currentRoomIdRef.current != null && roomId !== currentRoomIdRef.current) {
+            return;
           }
-        }
-      );
+          currentRoomIdRef.current = null;
+          setCurrentRoomId(null);
+          setRoomState(null);
+          setRoomMinimized(false);
+          setRoomScreen('game');
+          setView('lobby');
+          clearStoredPlayerIds();
+          setError(reason || 'Вы вышли из комнаты');
+        });
 
-      s.on(
-        'pm:received',
-        ({ unreadCount }: { fromDisplayName: string; preview: string; unreadCount: number }) => {
-          setUnreadMailCount(unreadCount);
-          void fetchNotifications()
-            .then(({ notifications: list, unreadCount: bellUnread }) =>
-              applyNotificationSync(list, bellUnread)
-            )
-            .catch(() => {});
-        }
-      );
-
-      s.on('auth:kicked', ({ reason }: { reason?: string }) => {
-        clearSession();
-        setUser(null);
-        setToken(null);
-        setSocket(null);
-        currentRoomIdRef.current = null;
-        setCurrentRoomId(null);
-        setRoomState(null);
-        setRoomMinimized(false);
-        setRoomScreen('game');
-        clearStoredPlayerIds();
-        setView('lobby');
-        setError(reason || 'Сессия завершена');
-      });
-
-      s.on('room:kicked', ({ reason, roomId }: { reason?: string; roomId?: number }) => {
-        if (roomId != null && currentRoomIdRef.current != null && roomId !== currentRoomIdRef.current) {
+        if (cancelled) {
+          s.disconnect();
           return;
         }
-        currentRoomIdRef.current = null;
-        setCurrentRoomId(null);
-        setRoomState(null);
-        setRoomMinimized(false);
-        setRoomScreen('game');
-        setView('lobby');
-        clearStoredPlayerIds();
-        setError(reason || 'Вы вышли из комнаты');
-      });
-
-      if (cancelled) {
-        s.disconnect();
-        return;
+        setSocket(s);
+      } catch (err) {
+        if (!cancelled) {
+          console.error('socket.io load failed', err);
+          setError('Не удалось подключиться. Обновите страницу.');
+        }
       }
-      setSocket(s);
     })();
 
     return () => {
       cancelled = true;
       active?.disconnect();
     };
-  }, [token, user, applyRoomState]);
+  }, [token, user?.id, applyRoomState]);
 
   useEffect(() => {
     if (!socket) return;
@@ -501,9 +528,21 @@ export default function App() {
   }, [currentRoomId]);
 
   const handleAuthSuccess = useCallback((authUser: User, authToken: string) => {
+    setError(null);
+    setLobbyScreen('rooms');
+    setProfileStatsUserId(null);
+    setClansInitialId(null);
+    currentRoomIdRef.current = null;
+    setCurrentRoomId(null);
+    setRoomState(null);
+    setRoomMinimized(false);
+    setRoomScreen('game');
+    setRooms([]);
+    setView('lobby');
     setUser(authUser);
     setToken(authToken);
-    setView('lobby');
+    setAuthLoading(false);
+    window.history.replaceState(null, '', '/');
   }, []);
 
   const handleLogout = useCallback(() => {
@@ -901,6 +940,7 @@ export default function App() {
               onWriteMessage={(userId, username) => openMessages({ userId, username })}
               onOpenStatistics={openProfileStatistics}
               onOpenClan={openClan}
+              onJoinRoom={joinRoom}
             />
           </ViewSuspense>
         )}
