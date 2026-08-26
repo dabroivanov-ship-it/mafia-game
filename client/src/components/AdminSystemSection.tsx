@@ -379,11 +379,18 @@ export default function AdminSystemSection({
                 <label>
                   API Key
                   <input
-                    type="password"
+                    type="text"
+                    className="input-secret"
+                    name="deepseek_api_key"
                     value={deepseekApiKey}
                     onChange={(e) => onDeepseekApiKeyChange(e.target.value)}
                     placeholder={deepseekApiKeyPreview ? `Текущий: ${deepseekApiKeyPreview}` : 'sk-...'}
                     autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    data-lpignore="true"
+                    data-1p-ignore="true"
+                    data-form-type="other"
                     disabled={deepseekSaving}
                   />
                 </label>

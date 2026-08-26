@@ -2580,8 +2580,7 @@ export function serializeRoomForPlayer(
       !!me &&
       (me.connected || !!me.socketId) &&
       !me.inGame &&
-      slotsAvailable &&
-      joinGameCooldownSec === 0,
+      slotsAvailable,
     joinGameCooldownSec,
     canLeaveGame: room.phase === PHASE.REGISTRATION && !!me?.inGame,
     leaveGameCooldownSec: me?.inGame ? joinGameCooldownSec : 0,

@@ -35,6 +35,7 @@ export async function apiRequest<T = unknown>(
 }
 
 const REMEMBER_LOGIN_KEY = 'mafia_remember_login';
+const REMEMBER_PASSWORD_KEY = 'mafia_remember_password';
 const REMEMBER_ME_KEY = 'mafia_remember_me';
 const PLAYER_ID_KEY_PREFIX = 'mafia_player_id:';
 
@@ -90,19 +91,42 @@ export function clearStoredPlayerIds(): void {
   for (const key of keys) localStorage.removeItem(key);
 }
 
-export function loadRememberedLogin(): { login: string; remember: boolean } {
+export function loadRememberedLogin(): {
+  login: string;
+  password: string;
+  remember: boolean;
+} {
   const remember = localStorage.getItem(REMEMBER_ME_KEY) !== '0';
-  const login = remember ? localStorage.getItem(REMEMBER_LOGIN_KEY) || '' : '';
-  return { login, remember };
+  if (!remember) return { login: '', password: '', remember: false };
+  const login = localStorage.getItem(REMEMBER_LOGIN_KEY) || '';
+  let password = '';
+  try {
+    const raw = localStorage.getItem(REMEMBER_PASSWORD_KEY) || '';
+    password = raw ? decodeURIComponent(escape(atob(raw))) : '';
+  } catch {
+    password = '';
+  }
+  return { login, password, remember };
 }
 
-export function saveRememberedLogin(login: string, remember: boolean): void {
+export function saveRememberedLogin(
+  login: string,
+  remember: boolean,
+  password?: string
+): void {
   if (remember) {
     localStorage.setItem(REMEMBER_ME_KEY, '1');
     localStorage.setItem(REMEMBER_LOGIN_KEY, login);
+    if (password != null && password !== '') {
+      localStorage.setItem(
+        REMEMBER_PASSWORD_KEY,
+        btoa(unescape(encodeURIComponent(password)))
+      );
+    }
   } else {
     localStorage.setItem(REMEMBER_ME_KEY, '0');
     localStorage.removeItem(REMEMBER_LOGIN_KEY);
+    localStorage.removeItem(REMEMBER_PASSWORD_KEY);
   }
 }
 

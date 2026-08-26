@@ -97,20 +97,36 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
   }, []);
 
   useEffect(() => {
-    const saved = loadRememberedLogin();
-    setRememberMe(saved.remember);
-    if (saved.login) {
-      setLoginForm((prev) => ({ ...prev, login: saved.login }));
-    }
+    const applySaved = () => {
+      const saved = loadRememberedLogin();
+      setRememberMe(saved.remember);
+      if (saved.login || saved.password) {
+        setLoginForm((prev) => ({
+          ...prev,
+          login: saved.login || prev.login,
+          password: saved.password || prev.password,
+        }));
+      }
+    };
+    applySaved();
+    // Браузер часто подставляет чужой пароль (например из админки) после нашего fill —
+    // ещё раз перезаписываем сохранёнными логином/паролем.
+    const t1 = window.setTimeout(applySaved, 50);
+    const t2 = window.setTimeout(applySaved, 300);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
   }, []);
 
   const completeAuth = useCallback(
     (user: User, token: string, rememberLogin: string) => {
-      saveRememberedLogin(rememberLogin, true);
+      // OAuth: логин запоминаем по галочке; пароль не трогаем (его нет).
+      saveRememberedLogin(rememberLogin, rememberMe);
       saveSession(token, user);
       onSuccess(user, token);
     },
-    [onSuccess]
+    [onSuccess, rememberMe]
   );
 
   useEffect(() => {
@@ -246,7 +262,7 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
     setLoading(true);
     try {
       const { token, user } = await login({ ...loginForm, remember: rememberMe });
-      saveRememberedLogin(loginForm.login.trim(), rememberMe);
+      saveRememberedLogin(loginForm.login.trim(), rememberMe, loginForm.password);
       saveSession(token, user);
       onSuccess(user, token);
     } catch (err) {
@@ -303,7 +319,7 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
         displayName: regForm.displayName || regForm.username,
         gender: regForm.gender,
       });
-      saveRememberedLogin(regForm.username.trim(), true);
+      saveRememberedLogin(regForm.username.trim(), true, regForm.password);
       saveSession(token, user);
       onSuccess(user, token);
     } catch (err) {
@@ -386,34 +402,59 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
         ) : (
           !(mode === 'login' && telegramWebAppMode && telegramLoading) &&
           (mode === 'login' ? (
-            <form className="auth-form" onSubmit={handleLogin}>
+            <form className="auth-form" onSubmit={handleLogin} autoComplete="off">
               <label>
                 Логин или email
                 <input
+                  id="mafia-auth-login"
+                  name="mafia_auth_login"
                   type="text"
                   value={loginForm.login}
                   onChange={(e) => setLoginForm({ ...loginForm, login: e.target.value })}
                   placeholder="username или email"
                   required
-                  autoComplete="username"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  data-form-type="other"
+                  data-autofill-guard=""
+                  readOnly
+                  onFocus={(e) => e.currentTarget.removeAttribute('readOnly')}
                 />
               </label>
               <label>
                 Пароль
                 <input
+                  id="mafia-auth-password"
+                  name="mafia_auth_password"
                   type="password"
                   value={loginForm.password}
                   onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
                   placeholder="••••••••"
                   required
-                  autoComplete="current-password"
+                  autoComplete="new-password"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  data-form-type="other"
+                  data-autofill-guard=""
+                  readOnly
+                  onFocus={(e) => e.currentTarget.removeAttribute('readOnly')}
                 />
               </label>
               <label className="auth-remember">
                 <input
                   type="checkbox"
                   checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
+                  onChange={(e) => {
+                    const next = e.target.checked;
+                    setRememberMe(next);
+                    if (!next) {
+                      saveRememberedLogin('', false);
+                    }
+                  }}
                 />
                 <span>Запомнить меня</span>
               </label>
@@ -426,11 +467,13 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
 
           ) : (
 
-            <form className="auth-form" onSubmit={handleRegister}>
+            <form className="auth-form" onSubmit={handleRegister} autoComplete="off">
 
               <label>
                 Логин
                 <input
+                  id="mafia-reg-username"
+                  name="mafia_reg_username"
                   type="text"
                   value={regForm.username}
                   onChange={(e) => setRegForm({ ...regForm, username: e.target.value })}
@@ -438,7 +481,7 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
                   required
                   minLength={3}
                   maxLength={20}
-                  autoComplete="username"
+                  autoComplete="off"
                 />
               </label>
               <label>

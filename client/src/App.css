@@ -595,9 +595,14 @@ html.telegram-webapp .app-body {
   min-height: 48px;
 }
 
-.auth-form input:read-only {
+.auth-form input:read-only:not([data-autofill-guard]) {
   color: var(--text-muted);
   cursor: default;
+}
+
+.input-secret {
+  -webkit-text-security: disc;
+  text-security: disc;
 }
 
 .auth-remember {

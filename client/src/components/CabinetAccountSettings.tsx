@@ -304,24 +304,30 @@ export default function CabinetAccountSettings({
                 Пароль
                 <input
                   type="password"
+                  name="mafia_link_password"
                   value={linkForm.password}
                   onChange={(e) => setLinkForm({ ...linkForm, password: e.target.value })}
                   placeholder="минимум 8 символов"
                   required
                   minLength={8}
                   autoComplete="new-password"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
                 />
               </label>
               <label>
                 Повтор пароля
                 <input
                   type="password"
+                  name="mafia_link_password_confirm"
                   value={linkForm.confirm}
                   onChange={(e) => setLinkForm({ ...linkForm, confirm: e.target.value })}
                   placeholder="••••••••"
                   required
                   minLength={8}
                   autoComplete="new-password"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
                 />
               </label>
               <div className="profile-actions">
@@ -342,6 +348,7 @@ export default function CabinetAccountSettings({
                 Текущий пароль
                 <input
                   type="password"
+                  name="mafia_current_password"
                   value={passwordForm.currentPassword}
                   onChange={(e) =>
                     setPasswordForm({ ...passwordForm, currentPassword: e.target.value })
@@ -349,30 +356,38 @@ export default function CabinetAccountSettings({
                   placeholder="••••••••"
                   required
                   autoComplete="current-password"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
                 />
               </label>
               <label>
                 Новый пароль
                 <input
                   type="password"
+                  name="mafia_new_password"
                   value={passwordForm.password}
                   onChange={(e) => setPasswordForm({ ...passwordForm, password: e.target.value })}
                   placeholder="минимум 8 символов"
                   required
                   minLength={8}
                   autoComplete="new-password"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
                 />
               </label>
               <label>
                 Повтор нового пароля
                 <input
                   type="password"
+                  name="mafia_new_password_confirm"
                   value={passwordForm.confirm}
                   onChange={(e) => setPasswordForm({ ...passwordForm, confirm: e.target.value })}
                   placeholder="••••••••"
                   required
                   minLength={8}
                   autoComplete="new-password"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
                 />
               </label>
               <div className="profile-actions">
