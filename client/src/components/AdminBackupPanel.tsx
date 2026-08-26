@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState, type WheelEvent } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import {
   fetchAdminBackups,
   fetchBackupSchedule,
@@ -13,18 +13,12 @@ import {
   type BackupScheduleSettings,
   type TelegramBackupSettings,
 } from '../api';
+import { blurInputOnWheel } from '../utils/wheelScroll';
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} Б`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} КБ`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} МБ`;
-}
-
-/** Не даём колёсику мыши менять значение вместо прокрутки страницы. */
-function blurInputOnWheel(e: WheelEvent<HTMLInputElement>) {
-  if (document.activeElement === e.currentTarget) {
-    e.currentTarget.blur();
-  }
 }
 
 export default function AdminBackupPanel() {

@@ -3989,6 +3989,14 @@ html.telegram-webapp .app-body {
   box-sizing: border-box;
 }
 
+.admin-page .admin-table-wrap,
+.admin-page .admin-nav,
+.admin-page .rating-table-wrap {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
 .admin-header-sub {
   line-height: 1.45;
   word-break: break-word;

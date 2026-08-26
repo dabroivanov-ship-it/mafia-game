@@ -57,6 +57,7 @@ import { isEmptyNewsBody } from './newsBodyUtils';
 import { initYandexMetrika } from '../metrika';
 import AdminSystemSection, { type SystemView } from './AdminSystemSection';
 import AdminRoomOrderList from './AdminRoomOrderList';
+import { attachAdminWheelScroll, blurInputOnWheel } from '../utils/wheelScroll';
 
 function defaultNewsForm(): NewsEditorValue {
   return {
@@ -203,6 +204,7 @@ export default function AdminPanel({
   const dirtyRoomsRef = useRef(new Set<number>());
   const roomEditsInitializedRef = useRef(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
   const [newsPosts, setNewsPosts] = useState<NewsPost[]>([]);
   const [newsLoading, setNewsLoading] = useState(false);
   const [newsForm, setNewsForm] = useState<NewsEditorValue>(defaultNewsForm());
@@ -280,6 +282,12 @@ export default function AdminPanel({
     const id = setInterval(() => void load({ silent: true }), 10000);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    const root = pageRef.current;
+    if (!root) return;
+    return attachAdminWheelScroll(root);
+  }, [loading, users.length]);
 
   useEffect(() => {
     fetchAdminPermissions()
@@ -946,11 +954,15 @@ export default function AdminPanel({
     : '';
 
   if (loading && users.length === 0) {
-    return <div className="admin-page"><p className="muted">Загрузка...</p></div>;
+    return (
+      <div className="admin-page" ref={pageRef}>
+        <p className="muted">Загрузка...</p>
+      </div>
+    );
   }
 
   return (
-    <div className="admin-page">
+    <div className="admin-page" ref={pageRef}>
       <div className="admin-header">
         <div>
           <h2>
@@ -1265,6 +1277,7 @@ export default function AdminPanel({
                                   },
                                 }))
                               }
+                              onWheel={blurInputOnWheel}
                               aria-label="Количество ИИ-игроков"
                             />
                           )}
@@ -1330,6 +1343,7 @@ export default function AdminPanel({
                     max={10}
                     value={newGameRoomAiCount}
                     onChange={(e) => setNewGameRoomAiCount(Number(e.target.value) || 1)}
+                    onWheel={blurInputOnWheel}
                     title="Количество ИИ-игроков"
                   />
                 )}
@@ -1857,6 +1871,7 @@ export default function AdminPanel({
                 min="1"
                 value={banMinutes}
                 onChange={(e) => setBanMinutes(e.target.value)}
+                onWheel={blurInputOnWheel}
                 placeholder="60"
               />
             </label>
