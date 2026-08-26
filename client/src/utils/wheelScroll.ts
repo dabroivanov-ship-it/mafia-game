@@ -21,7 +21,7 @@ function isYScrollPort(el: HTMLElement): boolean {
 }
 
 function isHorizontalScrollTrap(el: HTMLElement): boolean {
-  const { overflowX, overflowY } = getComputedStyle(el);
+  const { overflowX } = getComputedStyle(el);
   const xScrollable = overflowX === 'auto' || overflowX === 'scroll';
   if (!xScrollable) return false;
   const yScrollable = isYScrollPort(el) && el.scrollHeight > el.clientHeight + 1;
