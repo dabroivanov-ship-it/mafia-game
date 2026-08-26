@@ -1243,28 +1243,100 @@ html.telegram-webapp .app-body {
 
 .site-server-stats {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1px;
-  background: var(--border);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .site-server-stat {
-  background: var(--bg-card);
-  padding: 14px 12px 12px;
+  position: relative;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
+  padding: 14px 14px 12px;
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, var(--accent) 16%, var(--border));
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--accent) 8%, var(--bg-card)) 0%,
+    var(--bg-card) 55%
+  );
+  box-shadow: 0 0 20px color-mix(in srgb, var(--accent) 6%, transparent);
+  overflow: hidden;
+}
+
+.site-server-stat::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--stat-tone, var(--accent)) 75%, transparent),
+    transparent
+  );
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.site-server-stat--accent {
+  --stat-tone: var(--accent);
+}
+
+.site-server-stat--success {
+  --stat-tone: var(--success);
+  border-color: color-mix(in srgb, var(--success) 22%, var(--border));
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--success) 8%, var(--bg-card)) 0%,
+    var(--bg-card) 55%
+  );
+  box-shadow: 0 0 20px color-mix(in srgb, var(--success) 6%, transparent);
+}
+
+.site-server-stat--warning {
+  --stat-tone: var(--warning);
+  border-color: color-mix(in srgb, var(--warning) 22%, var(--border));
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--warning) 8%, var(--bg-card)) 0%,
+    var(--bg-card) 55%
+  );
+  box-shadow: 0 0 20px color-mix(in srgb, var(--warning) 6%, transparent);
+}
+
+.site-server-stat--danger {
+  --stat-tone: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 22%, var(--border));
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--danger) 8%, var(--bg-card)) 0%,
+    var(--bg-card) 55%
+  );
+  box-shadow: 0 0 20px color-mix(in srgb, var(--danger) 6%, transparent);
+}
+
+.site-server-stat--muted {
+  --stat-tone: var(--text-muted);
+  border-color: var(--border);
+  background: var(--bg-card);
+  box-shadow: none;
+}
+
+.site-server-stat-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .site-server-stat-value {
-  font-size: 1.25rem;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.15;
+  font-size: 1.45rem;
+  font-weight: 750;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
   font-variant-numeric: tabular-nums;
   color: var(--text);
 }
@@ -1275,10 +1347,11 @@ html.telegram-webapp .app-body {
   background: none;
   color: var(--accent);
   font: inherit;
-  font-weight: 700;
+  font-weight: 750;
   text-align: left;
   cursor: pointer;
   text-decoration: none;
+  text-shadow: 0 0 16px color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
 .site-server-stat-link:hover {
@@ -1296,20 +1369,64 @@ html.telegram-webapp .app-body {
   line-height: 1.3;
 }
 
+.site-server-stat-ring {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--stat-tone, var(--accent)) 40%, transparent));
+}
+
+.site-server-stat-ring-track {
+  stroke: color-mix(in srgb, var(--border) 85%, transparent);
+}
+
+.site-server-stat-ring-fill {
+  stroke: var(--stat-tone, var(--accent));
+}
+
+.site-server-stat-tone--accent {
+  stroke: var(--accent);
+}
+
+.site-server-stat-tone--success {
+  stroke: var(--success);
+}
+
+.site-server-stat-tone--warning {
+  stroke: var(--warning);
+}
+
+.site-server-stat-tone--danger {
+  stroke: var(--danger);
+}
+
+.site-server-stat-tone--muted {
+  stroke: var(--text-muted);
+}
+
 .site-server-stat-hint {
-  display: inline;
-  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  margin: 0 0 0 2px;
   padding: 0;
-  border: none;
-  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--bg-hover) 70%, transparent);
   color: var(--text-muted);
-  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+  vertical-align: middle;
   cursor: help;
 }
 
 .site-server-stat-hint:hover,
 .site-server-stat-hint:focus-visible {
   color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
 }
 
 .site-server-stat-hint:focus-visible {
@@ -1318,21 +1435,30 @@ html.telegram-webapp .app-body {
 }
 
 .site-server-stats-note {
-  margin: 8px 0 0;
+  margin: 10px 0 0;
+  padding: 10px 12px;
   font-size: 0.82rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
 }
 
 @media (min-width: 640px) {
   .site-server-stats {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 @media (min-width: 900px) {
   .lobby .site-server-stats {
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .site-server-stat-value {
+    font-size: 1.55rem;
   }
 }
+
 
 .lobby-online-footer {
   margin-top: 28px;
