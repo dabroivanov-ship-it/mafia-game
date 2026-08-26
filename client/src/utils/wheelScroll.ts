@@ -7,9 +7,7 @@ export function blurInputOnWheel(e: ReactWheelEvent<HTMLInputElement>) {
   }
 }
 
-function canScrollY(el: HTMLElement, deltaY: number): boolean {
-  const { overflowY } = getComputedStyle(el);
-  if (overflowY !== 'auto' && overflowY !== 'scroll' && overflowY !== 'overlay') return false;
+function canScrollElement(el: HTMLElement, deltaY: number): boolean {
   if (el.scrollHeight <= el.clientHeight + 1) return false;
   if (deltaY < 0) return el.scrollTop > 0;
   return el.scrollTop + el.clientHeight < el.scrollHeight - 1;
@@ -28,6 +26,14 @@ function isHorizontalScrollTrap(el: HTMLElement): boolean {
   return !yScrollable;
 }
 
+function resolvePageScroller(): HTMLElement | null {
+  const appBody = document.querySelector('.app-body') as HTMLElement | null;
+  if (appBody && appBody.scrollHeight > appBody.clientHeight + 1) return appBody;
+  const doc = document.scrollingElement as HTMLElement | null;
+  if (doc && doc.scrollHeight > doc.clientHeight + 1) return doc;
+  return appBody ?? doc;
+}
+
 /**
  * Прокрутка страницы колесом: горизонтальные обёртки, «пустые» overflow-auto
  * (TipTap и т.п.) и поля number/time не перехватывают скролл `.app-body`.
@@ -44,19 +50,16 @@ export function attachPageWheelScroll(root: HTMLElement): () => void {
       target.blur();
     }
 
-    const scroller =
-      (document.querySelector('.app-body') as HTMLElement | null) ??
-      (document.scrollingElement as HTMLElement | null);
-    if (!scroller || !canScrollY(scroller, e.deltaY)) return;
+    const scroller = resolvePageScroller();
+    if (!scroller || !canScrollElement(scroller, e.deltaY)) return;
 
     let el: HTMLElement | null = target instanceof HTMLElement ? target : target.parentElement;
     while (el && el !== root.parentElement) {
       if (el === scroller) break;
 
-      if (canScrollY(el, e.deltaY)) return;
+      if (isYScrollPort(el) && canScrollElement(el, e.deltaY)) return;
 
       if (isHorizontalScrollTrap(el) || (el !== root && isYScrollPort(el))) {
-        // Горизонтальная ловушка, редактор без переполнения или уже у края
         e.preventDefault();
         scroller.scrollTop += e.deltaY;
         return;

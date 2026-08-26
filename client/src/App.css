@@ -4093,6 +4093,7 @@ html.telegram-webapp .app-body {
 
 .rating-table-wrap {
   overflow-x: auto;
+  overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
   max-width: 100%;
   border: 1px solid var(--border);
@@ -7667,6 +7668,60 @@ html.telegram-webapp .app-body {
 
 .user-stats-mmr-card .muted {
   max-width: 100%;
+}
+
+.user-stats-write-btn {
+  margin-top: 8px;
+}
+
+.user-stats-overview {
+  gap: 16px;
+}
+
+.user-stats-recent-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 6px;
+  min-height: 140px;
+  padding: 8px 0 0;
+}
+
+.user-stats-recent-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  height: 120px;
+}
+
+.user-stats-recent-bar {
+  display: block;
+  width: 12px;
+  max-width: 100%;
+  min-height: 8px;
+  border-radius: 4px 4px 0 0;
+  background: var(--accent);
+}
+
+.user-stats-recent-bar--win {
+  background: var(--success);
+}
+
+.user-stats-recent-bar--loss {
+  background: var(--danger);
+}
+
+.user-stats-recent-bar--draw {
+  background: var(--warning);
+}
+
+.user-stats-recent-delta {
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
 }
 
 @media (max-width: 560px) {

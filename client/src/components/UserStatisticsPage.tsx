@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { avatarUrl, fetchUserStatistics } from '../api';
 import type { RecentGameStat, User, UserStatistics } from '../types';
 import { profileStatsPath } from '../profileRouting';
 import { updatePageMeta } from '../seo';
+import { attachPageWheelScroll } from '../utils/wheelScroll';
 
 interface UserStatisticsPageProps {
   userId: number;
