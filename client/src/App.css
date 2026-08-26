@@ -91,7 +91,7 @@
 html {
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 body {
@@ -104,7 +104,7 @@ body {
   min-height: 100vh;
   min-height: 100dvh;
   overscroll-behavior: none;
-  overflow-x: hidden;
+  overflow-x: clip;
   width: 100%;
   max-width: 100%;
 }
@@ -114,6 +114,7 @@ body {
   width: 100%;
   max-width: 100%;
   min-width: 0;
+  overflow-x: clip;
 }
 
 html.telegram-webapp,
@@ -251,7 +252,7 @@ html.telegram-webapp .app-body {
   padding-top: max(16px, var(--safe-top));
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
   background: var(--bg);
 }
 
@@ -4300,43 +4301,46 @@ html.telegram-webapp .app-body {
 .site-logo-stamp-stack {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 0;
-  line-height: 0.88;
+  line-height: 0.78;
+  width: max-content;
+  max-width: 11.5rem;
 }
 
 .site-logo-stamp-line {
+  display: block;
   font-family: var(--font);
   font-weight: 800;
-  font-size: clamp(1.55rem, 4.2vw, 2.35rem);
-  letter-spacing: 0.08em;
+  font-size: clamp(0.95rem, 2.2vw, 1.2rem);
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--text) 8%, #f2f2f0);
+  white-space: nowrap;
+  color: color-mix(in srgb, var(--text) 6%, #f0f0ee);
   text-shadow:
-    0 1px 0 color-mix(in srgb, var(--bg) 85%, transparent),
-    0 3px 10px color-mix(in srgb, var(--bg) 55%, transparent);
-  position: relative;
+    0 1px 0 color-mix(in srgb, var(--bg) 80%, transparent),
+    0 2px 6px color-mix(in srgb, var(--bg) 40%, transparent);
 }
 
-.site-logo-stamp-stack .site-logo-stamp-line:last-child::after {
-  content: '';
-  position: absolute;
-  left: 4%;
-  right: 8%;
-  top: 52%;
-  height: 2px;
-  background: color-mix(in srgb, var(--bg) 70%, transparent);
-  opacity: 0.55;
-  pointer-events: none;
+/* Короткая верхняя строка чуть раздвигается, как «КОД» над «ГОРОДА» */
+.site-logo-stamp-line--lead {
+  letter-spacing: 0.14em;
+  text-align: center;
 }
 
 .auth-brand-logo.site-logo--stamp,
 .auth-brand-logo .site-logo-stamp-stack {
-  max-width: min(100%, 280px);
+  max-width: 11.5rem;
 }
 
 .auth-page .auth-brand-logo .site-logo-stamp-line {
-  font-size: clamp(1.7rem, 5vw, 2.6rem);
+  font-size: clamp(0.98rem, 2.4vw, 1.22rem);
+}
+
+/* На правилах/FAQ и т.п. тот же штамп, цвет из темы */
+.app-public-info .site-logo-stamp-line {
+  color: var(--text);
+  text-shadow: none;
 }
 
 .site-footer {
@@ -8225,7 +8229,7 @@ html.telegram-webapp .app-body {
     padding: 12px 12px calc(16px + var(--safe-bottom));
     width: 100%;
     max-width: 100%;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 
   .auth-page-bar {
@@ -8236,7 +8240,11 @@ html.telegram-webapp .app-body {
   }
 
   .auth-brand-logo .site-logo-stamp-line {
-    font-size: clamp(1.45rem, 7vw, 1.9rem);
+    font-size: clamp(0.92rem, 4.2vw, 1.12rem);
+  }
+
+  .auth-brand-logo .site-logo-stamp-stack {
+    max-width: 10.5rem;
   }
 
   .auth-top-links.home-quick-links,

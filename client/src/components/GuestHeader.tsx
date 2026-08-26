@@ -12,21 +12,16 @@ const GUEST_NAV = [
 
 interface GuestHeaderProps {
   branding?: SiteBranding;
-  /** На авторизации — штамп; на инфо-страницах — компактный логотип. */
-  logoVariant?: 'inline' | 'stamp';
 }
 
-export default function GuestHeader({
-  branding = DEFAULT_SITE_BRANDING,
-  logoVariant = 'inline',
-}: GuestHeaderProps) {
+export default function GuestHeader({ branding = DEFAULT_SITE_BRANDING }: GuestHeaderProps) {
   const path =
     typeof window === 'undefined' ? '/' : window.location.pathname.replace(/\/+$/, '') || '/';
 
   return (
     <div className="auth-page-bar">
-      <a href="/" className="auth-brand" aria-label={branding.logoText || 'Мафия'}>
-        <SiteLogo branding={branding} className="auth-brand-logo" variant={logoVariant} />
+      <a href="/" className="auth-brand" aria-label={branding.logoText || 'Реальная мафия'}>
+        <SiteLogo branding={branding} className="auth-brand-logo" variant="stamp" />
       </a>
       <nav className="auth-top-links home-quick-links" aria-label="О сайте">
         {GUEST_NAV.map((item) => {

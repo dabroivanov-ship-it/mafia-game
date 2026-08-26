@@ -26,7 +26,7 @@ import { clearSession, fetchMe, fetchUnreadMailCount, fetchUnreadNewsCount, fetc
 import { isLikelyTelegramWebApp, waitForTelegramWebApp } from './telegramWebApp';
 import type { LobbyRoom, RoomState, User, ThemeId, LobbyUpdate, SiteBranding, UserNotification, LobbyAnnouncement } from './types';
 import { applyTheme, resolveTheme, DEFAULT_THEME } from './themes';
-import { DEFAULT_SITE_BRANDING } from './siteBranding';
+import { cacheSiteBranding, loadCachedBranding } from './siteBranding';
 import SiteFooter from './components/SiteFooter';
 import GuestLayout from './components/GuestLayout';
 import InstallAppBanner from './components/InstallAppBanner';
@@ -138,7 +138,7 @@ export default function App() {
     setRoomState(state);
   }, []);
   const [siteDefaultTheme, setSiteDefaultTheme] = useState<ThemeId>(DEFAULT_THEME);
-  const [siteBranding, setSiteBranding] = useState<SiteBranding>(DEFAULT_SITE_BRANDING);
+  const [siteBranding, setSiteBranding] = useState<SiteBranding>(loadCachedBranding);
   const [lobbyAnnouncement, setLobbyAnnouncement] = useState<LobbyAnnouncement>({
     enabled: false,
     text: '',
@@ -153,6 +153,7 @@ export default function App() {
           if (cancelled) return;
           setSiteDefaultTheme(defaultTheme);
           setSiteBranding(branding);
+          cacheSiteBranding(branding);
           setLobbyAnnouncement(announcement ?? { enabled: false, text: '' });
         })
         .catch(() => {});
@@ -1120,7 +1121,10 @@ export default function App() {
               key={adminInitialView}
               initialSystemView={adminInitialView}
               onDefaultThemeChange={setSiteDefaultTheme}
-              onBrandingChange={setSiteBranding}
+              onBrandingChange={(branding) => {
+                setSiteBranding(branding);
+                cacheSiteBranding(branding);
+              }}
               onLobbyAnnouncementChange={setLobbyAnnouncement}
               onOpenStatistics={openProfileStatistics}
             />

@@ -5,7 +5,7 @@ import type { SiteBranding } from '../types';
 interface SiteLogoProps {
   branding: SiteBranding;
   className?: string;
-  /** Крупный штамп как на лендинге (гость/авторизация). */
+  /** Компактный штамп как «КОД ГОРОДА» (гость/авторизация). */
   variant?: 'inline' | 'stamp';
 }
 
@@ -26,7 +26,7 @@ export default function SiteLogo({
 }: SiteLogoProps) {
   const filterId = useId().replace(/:/g, '');
   const logoSrc = avatarUrl(branding.logoUrl);
-  const text = branding.logoText || 'Мафия';
+  const text = branding.logoText || 'Реальная мафия';
 
   if (variant === 'stamp') {
     const lines = stampLines(text);
@@ -35,15 +35,18 @@ export default function SiteLogo({
       <div className={`site-logo site-logo--stamp ${className}`.trim()}>
         <svg className="site-logo-stamp-defs" width="0" height="0" aria-hidden="true" focusable="false">
           <defs>
-            <filter id={filterId} x="-5%" y="-5%" width="110%" height="110%">
-              <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" result="noise" />
-              <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.4" xChannelSelector="R" yChannelSelector="G" />
+            <filter id={filterId} x="-8%" y="-8%" width="116%" height="116%">
+              <feTurbulence type="fractalNoise" baseFrequency="1.15" numOctaves="3" result="noise" seed="7" />
+              <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.6" xChannelSelector="R" yChannelSelector="G" />
             </filter>
           </defs>
         </svg>
         <div className="site-logo-stamp-stack" style={{ filter: filterUrl }}>
-          {lines.map((line) => (
-            <span key={line} className="site-logo-stamp-line">
+          {lines.map((line, i) => (
+            <span
+              key={`${i}-${line}`}
+              className={`site-logo-stamp-line${i === 0 && lines.length > 1 ? ' site-logo-stamp-line--lead' : ''}`}
+            >
               {line}
             </span>
           ))}
