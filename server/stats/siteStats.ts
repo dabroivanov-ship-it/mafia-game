@@ -18,6 +18,13 @@ export interface NewUserPreview {
   authProviders: Array<'telegram' | 'vk' | 'email'>;
 }
 
+export interface AdminStatsDayPoint {
+  date: string;
+  label: string;
+  registered: number;
+  active: number;
+}
+
 export interface AdminSiteStats {
   usersTotal: number;
   usersOnline: number;
@@ -35,6 +42,10 @@ export interface AdminSiteStats {
   violationsTotal: number;
   visitsTotal: number;
   visitsToday: number;
+  /** Последние 7 дней: регистрации и активные по last_seen */
+  seriesLast7Days: AdminStatsDayPoint[];
+  authProviders: { telegram: number; vk: number; email: number };
+  gamesByWinner: { mafia: number; town: number; draw: number };
 }
 
 export interface PublicSiteStats {
@@ -212,6 +223,51 @@ export function getAdminSiteStats(): AdminSiteStats {
     db.prepare('SELECT COUNT(*) AS c FROM user_game_results').get() as { c: number }
   ).c;
 
+  const dayRows = (
+    db
+      .prepare(
+        `WITH RECURSIVE days(n, d) AS (
+           SELECT 6, date('now', '-6 days')
+           UNION ALL
+           SELECT n - 1, date(d, '+1 day') FROM days WHERE n > 0
+         )
+         SELECT
+           days.d AS day,
+           (SELECT COUNT(*) FROM users u
+             WHERE date(replace(substr(u.created_at, 1, 19), 'T', ' ')) = days.d) AS registered,
+           (SELECT COUNT(*) FROM users u
+             WHERE u.last_seen_at IS NOT NULL
+               AND date(u.last_seen_at) = days.d) AS active
+         FROM days
+         ORDER BY days.d ASC`
+      )
+      .all() as { day: string; registered: number; active: number }[]
+  );
+
+  const seriesLast7Days: AdminStatsDayPoint[] = dayRows.map((row) => {
+    const dt = new Date(`${row.day}T12:00:00Z`);
+    return {
+      date: row.day,
+      label: dt.toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'short' }),
+      registered: row.registered,
+      active: row.active,
+    };
+  });
+
+  const authProviders = (
+    db
+      .prepare(
+        `SELECT
+           SUM(CASE WHEN telegram_id IS NOT NULL AND telegram_id != '' THEN 1 ELSE 0 END) AS telegram,
+           SUM(CASE WHEN vk_id IS NOT NULL AND vk_id != '' THEN 1 ELSE 0 END) AS vk,
+           SUM(CASE
+             WHEN (telegram_id IS NULL OR telegram_id = '')
+              AND (vk_id IS NULL OR vk_id = '') THEN 1 ELSE 0 END) AS email
+         FROM users`
+      )
+      .get() as { telegram: number; vk: number; email: number }
+  );
+
   return {
     usersTotal,
     usersOnline: getOnlineUserCount(),
@@ -229,5 +285,16 @@ export function getAdminSiteStats(): AdminSiteStats {
     violationsTotal: countViolations(),
     visitsTotal: getCounter('visits_total'),
     visitsToday: getCounter('visits_today'),
+    seriesLast7Days,
+    authProviders: {
+      telegram: authProviders.telegram ?? 0,
+      vk: authProviders.vk ?? 0,
+      email: authProviders.email ?? 0,
+    },
+    gamesByWinner: {
+      mafia: countGameEnds('mafia'),
+      town: countGameEnds('town'),
+      draw: countGameEnds('draw'),
+    },
   };
 }

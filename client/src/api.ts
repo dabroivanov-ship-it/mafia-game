@@ -780,6 +780,13 @@ export interface AdminNewUserPreview {
   authProviders?: Array<'telegram' | 'vk' | 'email'>;
 }
 
+export interface AdminStatsDayPoint {
+  date: string;
+  label: string;
+  registered: number;
+  active: number;
+}
+
 export interface AdminSiteStats {
   usersTotal: number;
   usersOnline: number;
@@ -797,6 +804,9 @@ export interface AdminSiteStats {
   violationsTotal: number;
   visitsTotal: number;
   visitsToday: number;
+  seriesLast7Days: AdminStatsDayPoint[];
+  authProviders: { telegram: number; vk: number; email: number };
+  gamesByWinner: { mafia: number; town: number; draw: number };
 }
 
 export async function fetchAdminStats(): Promise<AdminSiteStats> {

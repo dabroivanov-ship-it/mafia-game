@@ -5702,6 +5702,329 @@ html.telegram-webapp .app-body {
   margin-bottom: 8px;
 }
 
+.admin-stats-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.admin-stats-overview-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.admin-stats-overview-title {
+  margin: 0 0 4px;
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.admin-stats-overview-date {
+  margin: 0;
+  text-transform: capitalize;
+  font-size: 0.9rem;
+}
+
+.admin-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.admin-stats-card {
+  grid-column: span 4;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  padding: 16px 18px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-sizing: border-box;
+}
+
+.admin-stats-card--wide {
+  grid-column: span 8;
+}
+
+.admin-stats-card--metrics {
+  grid-column: span 4;
+}
+
+.admin-stats-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-stats-card-head h5 {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 650;
+}
+
+.admin-stats-card-label {
+  display: block;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.admin-stats-card-footnote {
+  margin: 0;
+  font-size: 0.84rem;
+}
+
+.admin-stats-card-footnote strong {
+  color: var(--text);
+  font-weight: 650;
+}
+
+.admin-stats-line {
+  width: 100%;
+  height: auto;
+  max-height: 180px;
+}
+
+.admin-stats-bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.admin-stats-bars-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+  font-size: 0.88rem;
+}
+
+.admin-stats-bars-meta strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-stats-bars-track {
+  height: 6px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-hover);
+  overflow: hidden;
+}
+
+.admin-stats-bars-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+
+.admin-stats-donut-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.admin-stats-donut {
+  width: 140px;
+  height: 140px;
+}
+
+.admin-stats-donut-total {
+  fill: var(--text);
+}
+
+.admin-stats-donut-seg--accent {
+  stroke: var(--accent);
+}
+
+.admin-stats-donut-seg--success {
+  stroke: var(--success);
+}
+
+.admin-stats-donut-seg--warning {
+  stroke: var(--warning);
+}
+
+.admin-stats-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-stats-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.84rem;
+  color: var(--text-muted);
+}
+
+.admin-stats-legend li strong {
+  margin-left: auto;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-stats-legend-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  background: var(--accent);
+}
+
+.admin-stats-legend-dot--accent {
+  background: var(--accent);
+}
+
+.admin-stats-legend-dot--success {
+  background: var(--success);
+}
+
+.admin-stats-legend-dot--warning {
+  background: var(--warning);
+}
+
+.admin-stats-ring-card {
+  grid-column: span 4;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-stats-ring-value {
+  display: block;
+  margin: 4px 0;
+  font-size: 1.7rem;
+  font-weight: 750;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.admin-stats-ring-hint {
+  font-size: 0.8rem;
+}
+
+.admin-stats-ring {
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+}
+
+.admin-stats-grouped {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 160px;
+  padding-top: 8px;
+}
+
+.admin-stats-grouped-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-stats-grouped-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  height: 120px;
+}
+
+.admin-stats-grouped-bar {
+  display: block;
+  width: 8px;
+  min-height: 4px;
+  border-radius: 3px 3px 0 0;
+  background: var(--accent);
+}
+
+.admin-stats-grouped-bar--reg {
+  background: var(--accent);
+}
+
+.admin-stats-grouped-bar--act {
+  background: var(--success);
+}
+
+.admin-stats-grouped-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.admin-stats-grouped-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  font-size: 0.78rem;
+}
+
+.admin-stats-grouped-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.admin-stats-metrics {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin: 0;
+}
+
+.admin-stats-metrics > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-stats-metrics > div:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.admin-stats-metrics dt {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+}
+
+.admin-stats-metrics dd {
+  margin: 0;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
 .admin-stats-group:last-child {
   margin-bottom: 0;
 }
@@ -5713,6 +6036,8 @@ html.telegram-webapp .app-body {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
 }
 
 .admin-new-users-list li {
@@ -5721,7 +6046,7 @@ html.telegram-webapp .app-body {
   align-items: baseline;
   gap: 8px 12px;
   padding: 10px 14px;
-  background: var(--bg-card);
+  background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
 }
@@ -5735,12 +6060,42 @@ html.telegram-webapp .app-body {
   display: inline-flex;
   align-items: center;
   padding: 1px 7px;
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--accent) 18%, transparent);
   color: var(--accent);
   font-size: 0.72rem;
   font-weight: 700;
   text-transform: lowercase;
+}
+
+@media (max-width: 1100px) {
+  .admin-stats-card,
+  .admin-stats-card--wide,
+  .admin-stats-card--metrics,
+  .admin-stats-ring-card {
+    grid-column: span 6;
+  }
+}
+
+@media (max-width: 720px) {
+  .admin-stats-card,
+  .admin-stats-card--wide,
+  .admin-stats-card--metrics,
+  .admin-stats-ring-card {
+    grid-column: span 12;
+  }
+
+  .admin-stats-ring-card {
+    flex-direction: row;
+  }
+
+  .admin-stats-grouped {
+    min-height: 140px;
+  }
+
+  .admin-stats-grouped-bars {
+    height: 100px;
+  }
 }
 
 .admin-system-section h3 {
