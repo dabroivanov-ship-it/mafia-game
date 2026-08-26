@@ -54,10 +54,6 @@ export default function CabinetHub({
         </button>
       </nav>
 
-      <header className="page-header">
-        <h1>Кабинет</h1>
-      </header>
-
       <div className="cabinet-hub-user">
         {user.avatar ? (
           <img src={avatarUrl(user.avatar) ?? undefined} alt="" className="cabinet-hub-avatar" />
