@@ -3904,8 +3904,20 @@ html.telegram-webapp .app-body {
 }
 
 .menu-icon {
-  font-size: 1.15rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
   line-height: 1;
+  color: inherit;
+}
+
+.menu-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .menu-label {
@@ -6347,7 +6359,8 @@ html.telegram-webapp .app-body {
   }
 
   .menu-icon {
-    font-size: 1.35rem;
+    width: 1.35rem;
+    height: 1.35rem;
   }
 
   .menu-label {

@@ -1,12 +1,12 @@
 import type { User, SiteBranding } from '../types';
 import SiteLogo from './SiteLogo';
+import MenuIcon from './MenuIcon';
 import { DEFAULT_SITE_BRANDING } from '../siteBranding';
 
 export type MenuView = 'lobby' | 'news' | 'clans' | 'cabinet' | 'info' | 'admin';
 
 interface MenuItem {
-  id: MenuView;
-  icon: string;
+  id: Exclude<MenuView, 'admin'>;
   label: string;
   mobileLabel?: string;
   mobileBottom?: boolean;
@@ -14,11 +14,11 @@ interface MenuItem {
 }
 
 const ITEMS: MenuItem[] = [
-  { id: 'lobby', icon: '', label: 'Комнаты', mobileBottom: true },
-  { id: 'news', icon: '', label: 'Новости', mobileBottom: true },
-  { id: 'clans', icon: '', label: 'Кланы', desktopOnly: true },
-  { id: 'cabinet', icon: '', label: 'Кабинет', mobileLabel: 'Кабинет', mobileBottom: true },
-  { id: 'info', icon: '', label: 'Информация', mobileLabel: 'Инфо', mobileBottom: true },
+  { id: 'lobby', label: 'Комнаты', mobileBottom: true },
+  { id: 'news', label: 'Новости', mobileBottom: true },
+  { id: 'clans', label: 'Кланы', desktopOnly: true },
+  { id: 'cabinet', label: 'Кабинет', mobileLabel: 'Кабинет', mobileBottom: true },
+  { id: 'info', label: 'Информация', mobileLabel: 'Инфо', mobileBottom: true },
 ];
 
 interface MenuProps {
@@ -53,7 +53,9 @@ export default function Menu({
             }${item.desktopOnly ? ' menu-item-desktop-only' : ''}`}
             onClick={() => onNavigate(item.id)}
           >
-            <span className="menu-icon">{item.icon}</span>
+            <span className="menu-icon" aria-hidden="true">
+              <MenuIcon id={item.id} />
+            </span>
             <span className="menu-label menu-label-full">{item.label}</span>
             <span className="menu-label menu-label-short">{item.mobileLabel ?? item.label}</span>
             {item.id === 'cabinet' && unreadMailCount > 0 && (
@@ -72,14 +74,18 @@ export default function Menu({
             }`}
             onClick={() => onNavigate('admin')}
           >
-            <span className="menu-icon" aria-hidden="true" />
+            <span className="menu-icon" aria-hidden="true">
+              <MenuIcon id="admin" />
+            </span>
             <span className="menu-label">
               {user.isAdmin ? 'Админ' : user.isModerator ? 'Модер' : 'Смотр'}
             </span>
           </button>
         )}
         <button type="button" className="menu-item logout menu-item-desktop-only" onClick={onLogout}>
-          <span className="menu-icon" aria-hidden="true" />
+          <span className="menu-icon" aria-hidden="true">
+            <MenuIcon id="logout" />
+          </span>
           <span className="menu-label">Выйти</span>
         </button>
       </div>
