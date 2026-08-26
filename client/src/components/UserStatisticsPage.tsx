@@ -116,7 +116,6 @@ export default function UserStatisticsPage({
               <div>
                 <h1>{user.displayName || user.username}</h1>
                 <p className="muted">@{user.username}</p>
-                {user.city && <p className="muted">{user.city}</p>}
               </div>
             </div>
             <div className="user-stats-mmr-card">
