@@ -8262,6 +8262,17 @@ html.telegram-webapp .app-body {
   text-underline-offset: 3px;
 }
 
+.cabinet-hub-profile .cabinet-hub-mmr-link {
+  margin-top: 2px;
+  font-size: 0.9rem;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.cabinet-hub-profile .cabinet-hub-mmr-link:hover {
+  text-decoration: underline;
+}
+
 .player-page-mmr-link:hover,
 .cabinet-hub-mmr-link:hover {
   color: var(--accent-hover, var(--accent));
