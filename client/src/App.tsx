@@ -265,6 +265,7 @@ export default function App() {
         setProfileStatsUserId(profileUserIdFromPath(path));
         setView('lobby');
       } else if (path === '/' || path === '') {
+        setLobbyScreen('rooms');
         setView('lobby');
         setProfileStatsUserId(null);
         statsReturnRef.current = null;
@@ -558,6 +559,13 @@ export default function App() {
     window.history.replaceState(null, '', '/');
   }, []);
 
+  const goToLobbyRooms = useCallback(() => {
+    setLobbyScreen('rooms');
+    setComposeToUserId(null);
+    setComposeToUsername(null);
+    setView('lobby');
+  }, []);
+
   const handleLogout = useCallback(() => {
     socket?.disconnect();
     clearSession();
@@ -610,6 +618,7 @@ export default function App() {
           setError(res.error);
           if (!previousId) {
             setRoomState(null);
+            setLobbyScreen('rooms');
             setView('lobby');
             window.history.pushState(null, '', '/');
           }
@@ -631,6 +640,7 @@ export default function App() {
     setRoomState(null);
     setRoomMinimized(false);
     setRoomScreen('game');
+    setLobbyScreen('rooms');
     setView('lobby');
     window.history.pushState(null, '', '/');
   }, [socket]);
@@ -638,6 +648,7 @@ export default function App() {
   const minimizeMafiaRoom = useCallback(() => {
     setRoomMinimized(true);
     setRoomScreen('game');
+    setLobbyScreen('rooms');
     setView('lobby');
     window.history.pushState(null, '', '/');
   }, []);
@@ -961,7 +972,7 @@ export default function App() {
           <ViewSuspense label="Новости…">
             <News
               user={user}
-              onBack={() => setView('lobby')}
+              onBack={() => goToLobbyRooms()}
               onRead={() => setUnreadNewsCount(0)}
             />
           </ViewSuspense>
@@ -973,7 +984,7 @@ export default function App() {
               initialClanId={clansInitialId}
               onBack={() => {
                 setClansInitialId(null);
-                setView('lobby');
+                goToLobbyRooms();
               }}
               onJoinRoom={joinRoom}
             />
@@ -1062,7 +1073,7 @@ export default function App() {
             }}
             onOpenStatistics={() => openProfileStatistics(user.id)}
             onLogout={handleLogout}
-            onBack={() => setView('lobby')}
+            onBack={() => goToLobbyRooms()}
           />
         )}
         {view === 'info' && (
@@ -1081,7 +1092,7 @@ export default function App() {
             <BlogPage
               onBack={() => {
                 window.history.pushState(null, '', '/');
-                setView('lobby');
+                goToLobbyRooms();
               }}
               backLabel="← Комнаты"
             />
