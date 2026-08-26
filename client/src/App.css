@@ -6861,12 +6861,12 @@ html.telegram-webapp .app-body {
     border-color: transparent;
     box-shadow: none;
     z-index: 2;
-    width: 52px;
-    height: 52px;
-    margin-right: -10px;
-    border-radius: 26px 0 0 26px;
-    justify-content: flex-start;
-    padding-left: 14px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    justify-content: center;
+    padding-left: 0;
+    margin-right: -8px;
   }
 
   /* «Волна» вокруг активного пункта */
@@ -6874,7 +6874,7 @@ html.telegram-webapp .app-body {
   .app-shell[data-mobile-nav='side'] .menu-item.active::after {
     content: '';
     position: absolute;
-    right: 0;
+    right: -2px;
     width: 16px;
     height: 16px;
     background: transparent;
