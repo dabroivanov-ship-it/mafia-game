@@ -235,10 +235,11 @@ html.telegram-webapp .app-body {
 /* Auth */
 .auth-page {
   --auth-hero-image: url('/auth-hero.jpg');
-  --auth-hero-pos: center top;
-  --auth-overlay-top: 35%;
-  --auth-overlay-mid: 55%;
-  --auth-overlay-bottom: 100%;
+  /* Ниже центр — на широком экране видны лица под рваным краем */
+  --auth-hero-pos: center 42%;
+  --auth-overlay-top: 42%;
+  --auth-overlay-mid: 62%;
+  --auth-overlay-bottom: 78%;
   position: relative;
   isolation: isolate;
   min-height: 100dvh;
@@ -265,6 +266,7 @@ html.telegram-webapp .app-body {
   background-size: cover;
   background-repeat: no-repeat;
   filter: grayscale(0.12) contrast(1.04);
+  transform: scale(1.02);
 }
 
 .auth-page::after {
@@ -277,8 +279,13 @@ html.telegram-webapp .app-body {
       180deg,
       color-mix(in srgb, var(--bg) var(--auth-overlay-top), transparent) 0%,
       color-mix(in srgb, var(--bg) var(--auth-overlay-mid), transparent) 48%,
-      var(--bg) 88%,
-      var(--bg) 100%
+      color-mix(in srgb, var(--bg) var(--auth-overlay-bottom), transparent) 78%,
+      color-mix(in srgb, var(--bg) 92%, transparent) 100%
+    ),
+    radial-gradient(
+      ellipse 95% 70% at 50% 28%,
+      transparent 0%,
+      color-mix(in srgb, var(--bg) 45%, transparent) 100%
     );
   pointer-events: none;
 }
@@ -286,25 +293,33 @@ html.telegram-webapp .app-body {
 @media (max-width: 720px) {
   .auth-page {
     --auth-hero-image: url('/auth-hero-sm.jpg');
-    --auth-hero-pos: center top;
-    --auth-overlay-top: 45%;
-    --auth-overlay-mid: 65%;
+    /* Портретный кроп: силуэт сверху, лица снизу */
+    --auth-hero-pos: center 28%;
+    --auth-overlay-top: 52%;
+    --auth-overlay-mid: 70%;
+    --auth-overlay-bottom: 86%;
+  }
+
+  .auth-page::before {
+    transform: none;
   }
 }
 
 @media (min-width: 721px) and (max-width: 1099px) {
   .auth-page {
-    --auth-hero-pos: center top;
-    --auth-overlay-top: 38%;
-    --auth-overlay-mid: 58%;
+    --auth-hero-pos: center 38%;
+    --auth-overlay-top: 46%;
+    --auth-overlay-mid: 66%;
+    --auth-overlay-bottom: 82%;
   }
 }
 
 @media (min-width: 1100px) {
   .auth-page {
-    --auth-hero-pos: center top;
-    --auth-overlay-top: 30%;
-    --auth-overlay-mid: 52%;
+    --auth-hero-pos: center 48%;
+    --auth-overlay-top: 38%;
+    --auth-overlay-mid: 58%;
+    --auth-overlay-bottom: 74%;
   }
 
   .guest-layout--centered.auth-page .guest-layout-body {
@@ -316,7 +331,7 @@ html.telegram-webapp .app-body {
 
 @media (max-height: 720px) and (min-width: 721px) {
   .auth-page {
-    --auth-hero-pos: center top;
+    --auth-hero-pos: center 35%;
   }
 
   .guest-layout--centered.auth-page .guest-layout-body {
@@ -4269,6 +4284,61 @@ html.telegram-webapp .app-body {
   border-radius: 12px;
 }
 
+.site-logo--stamp {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0;
+}
+
+.site-logo-stamp-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.site-logo-stamp-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  line-height: 0.88;
+}
+
+.site-logo-stamp-line {
+  font-family: var(--font);
+  font-weight: 800;
+  font-size: clamp(1.55rem, 4.2vw, 2.35rem);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--text) 8%, #f2f2f0);
+  text-shadow:
+    0 1px 0 color-mix(in srgb, var(--bg) 85%, transparent),
+    0 3px 10px color-mix(in srgb, var(--bg) 55%, transparent);
+  position: relative;
+}
+
+.site-logo-stamp-stack .site-logo-stamp-line:last-child::after {
+  content: '';
+  position: absolute;
+  left: 4%;
+  right: 8%;
+  top: 52%;
+  height: 2px;
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.auth-brand-logo.site-logo--stamp,
+.auth-brand-logo .site-logo-stamp-stack {
+  max-width: min(100%, 280px);
+}
+
+.auth-page .auth-brand-logo .site-logo-stamp-line {
+  font-size: clamp(1.7rem, 5vw, 2.6rem);
+}
+
 .site-footer {
   flex-shrink: 0;
   max-width: 900px;
@@ -8163,6 +8233,10 @@ html.telegram-webapp .app-body {
     align-items: flex-start;
     gap: 8px;
     margin-bottom: 16px;
+  }
+
+  .auth-brand-logo .site-logo-stamp-line {
+    font-size: clamp(1.45rem, 7vw, 1.9rem);
   }
 
   .auth-top-links.home-quick-links,

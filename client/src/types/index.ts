@@ -533,6 +533,10 @@ export interface ClanNewsItem {
 export interface ClanEligibility {
   canCreate: boolean;
   messageCount: number;
+  gamesPlayed: number;
+  requiredPosts: number;
+  requiredGames: number;
+  /** @deprecated */
   required: number;
   alreadyInClan: boolean;
 }

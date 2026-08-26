@@ -18,6 +18,14 @@ function isYScrollPort(el: HTMLElement): boolean {
   return overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay';
 }
 
+function isHorizontalScrollTrap(el: HTMLElement): boolean {
+  const { overflowX } = getComputedStyle(el);
+  const xScrollable = overflowX === 'auto' || overflowX === 'scroll';
+  if (!xScrollable) return false;
+  const yScrollable = isYScrollPort(el) && el.scrollHeight > el.clientHeight + 1;
+  return !yScrollable;
+}
+
 function normalizeDeltaY(e: WheelEvent): number {
   if (e.deltaMode === 1) return e.deltaY * 16;
   if (e.deltaMode === 2) return e.deltaY * (window.innerHeight || 800);
@@ -38,9 +46,8 @@ function resolvePageScroller(preferredRoot?: HTMLElement | null): HTMLElement | 
 
 /**
  * Прокрутка страницы колесом.
- * Вложенный overflow-y (чат, тред писем, TipTap) крутится сам;
- * таблицы/горизонтальные обёртки и «пустые» overflow-auto не глотают жест —
- * крутится `.app-body` (или document у гостевых страниц).
+ * Вмешиваемся только когда жест глотают горизонтальные обёртки
+ * или «пустые» overflow-auto — иначе оставляем нативный скролл.
  */
 export function attachPageWheelScroll(root: HTMLElement): () => void {
   const onWheel = (e: WheelEvent) => {
@@ -60,30 +67,27 @@ export function attachPageWheelScroll(root: HTMLElement): () => void {
     if (deltaY === 0) return;
 
     const scroller = resolvePageScroller(root);
-    if (!scroller) return;
+    if (!scroller || !canScrollElement(scroller, deltaY)) return;
 
-    let nestedCanScroll = false;
     let el: HTMLElement | null = target instanceof HTMLElement ? target : target.parentElement;
+    while (el && el !== root.parentElement) {
+      if (el === scroller) break;
 
-    while (el && el !== scroller && el !== root.parentElement) {
-      if (isYScrollPort(el) && canScrollElement(el, deltaY)) {
-        nestedCanScroll = true;
-        break;
+      if (isYScrollPort(el) && canScrollElement(el, deltaY)) return;
+
+      if (isHorizontalScrollTrap(el) || (el !== root && isYScrollPort(el))) {
+        e.preventDefault();
+        scroller.scrollTop += deltaY;
+        return;
       }
+
       if (el === root) break;
       el = el.parentElement;
     }
-
-    if (nestedCanScroll) return;
-    if (!canScrollElement(scroller, deltaY)) return;
-
-    // Берём жест на себя: иначе таблицы/пустые overflow-auto глотают колесо.
-    e.preventDefault();
-    scroller.scrollTop += deltaY;
   };
 
-  root.addEventListener('wheel', onWheel, { passive: false, capture: true });
-  return () => root.removeEventListener('wheel', onWheel, true);
+  root.addEventListener('wheel', onWheel, { passive: false });
+  return () => root.removeEventListener('wheel', onWheel);
 }
 
 /** @deprecated используйте attachPageWheelScroll */

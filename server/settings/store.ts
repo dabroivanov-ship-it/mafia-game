@@ -23,7 +23,7 @@ const SITE_FOOTER_TEXT_KEY = 'site_footer_text';
 const LOBBY_ANNOUNCEMENT_KEY = 'lobby_announcement';
 const LEGACY_METRIKA_ID = 109982503;
 
-const DEFAULT_LOGO_TEXT = 'Mafia';
+const DEFAULT_LOGO_TEXT = 'Мафия онлайн';
 const DEFAULT_LOGO_MARK = '♠';
 
 export interface SiteBranding {

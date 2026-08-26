@@ -7,6 +7,7 @@ import {
   blacklistMember,
   removeFromBlacklist,
   CLAN_CREATE_MIN_POSTS,
+  CLAN_CREATE_MIN_GAMES,
   createClan,
   createClanNews,
   decideApplication,
@@ -40,6 +41,7 @@ export function createClansRouter(handlers: ClanRouteHandlers) {
   router.get('/meta', (req, res) => {
     res.json({
       createMinPosts: CLAN_CREATE_MIN_POSTS,
+      createMinGames: CLAN_CREATE_MIN_GAMES,
       eligibility: getCreateClanEligibility(req.userId!),
     });
   });
@@ -50,6 +52,7 @@ export function createClansRouter(handlers: ClanRouteHandlers) {
         clans: listClans(req.userId!),
         eligibility: getCreateClanEligibility(req.userId!),
         createMinPosts: CLAN_CREATE_MIN_POSTS,
+        createMinGames: CLAN_CREATE_MIN_GAMES,
       });
     } catch (e) {
       const err = e as Error;

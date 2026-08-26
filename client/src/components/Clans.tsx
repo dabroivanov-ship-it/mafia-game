@@ -38,6 +38,7 @@ export default function Clans({
   const [clans, setClans] = useState<ClanListItem[]>([]);
   const [eligibility, setEligibility] = useState<ClanEligibility | null>(null);
   const [createMinPosts, setCreateMinPosts] = useState(50);
+  const [createMinGames, setCreateMinGames] = useState(100);
   const [clan, setClan] = useState<ClanDetail | null>(null);
   const [news, setNews] = useState<ClanNewsItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,6 +61,7 @@ export default function Clans({
       setClans(res.clans);
       setEligibility(res.eligibility);
       setCreateMinPosts(res.createMinPosts);
+      setCreateMinGames(res.createMinGames ?? 100);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Не удалось загрузить кланы');
     } finally {
@@ -150,8 +152,8 @@ export default function Clans({
                 Игрок может состоять только в <strong>одном</strong> клане.
               </li>
               <li>
-                Создать клан можно после <strong>{createMinPosts}</strong> сообщений в чате. Создатель
-                становится главой.
+                Создать клан можно после <strong>{createMinPosts}</strong> сообщений в чате и{' '}
+                <strong>{createMinGames}</strong> игр. Создатель становится главой.
               </li>
               <li>
                 Вступление: <strong>открытое</strong> (вход сразу) или <strong>по заявке</strong>{' '}
@@ -203,8 +205,8 @@ export default function Clans({
                 </button>
               ) : (
                 <p className="muted">
-                  Создать клан можно после {createMinPosts} сообщений в чате (у вас{' '}
-                  {eligibility.messageCount}).
+                  Создать клан можно после {createMinPosts} сообщений в чате и {createMinGames} игр
+                  (у вас {eligibility.messageCount} сообщ., {eligibility.gamesPlayed ?? 0} игр).
                 </p>
               )}
             </div>

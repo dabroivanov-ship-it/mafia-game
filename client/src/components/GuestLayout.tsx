@@ -29,7 +29,7 @@ export default function GuestLayout({
       className={`guest-layout${centered ? ' guest-layout--centered auth-page' : ' app-public-info'}`}
       ref={bodyRef}
     >
-      <GuestHeader branding={branding} />
+      <GuestHeader branding={branding} logoVariant={centered ? 'stamp' : 'inline'} />
       <div className="guest-layout-body">{children}</div>
       <SiteFooter variant="auth" text={branding.footerText} />
     </div>

@@ -124,7 +124,7 @@ export default function AdminSiteBrandingEditor({ onBrandingChange }: AdminSiteB
         ) : (
           <span className="admin-branding-logo-mark">{draft.logoMark || '♠'}</span>
         )}
-        <span className="admin-branding-logo-text">{draft.logoText || 'Mafia'}</span>
+        <span className="admin-branding-logo-text">{draft.logoText || 'Мафия'}</span>
       </div>
 
       <div className="admin-branding-logo-actions">

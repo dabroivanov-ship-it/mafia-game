@@ -1,8 +1,11 @@
 import db, { findUserById } from '../auth/db.js';
 import { getUserMessageCount } from '../history/store.js';
+import { getGamesPlayed } from '../social/store.js';
 
 /** Минимум сообщений в чате, чтобы создать клан. */
 export const CLAN_CREATE_MIN_POSTS = 50;
+/** Минимум сыгранных партий, чтобы создать клан. */
+export const CLAN_CREATE_MIN_GAMES = 100;
 export const CLAN_NAME_MAX = 40;
 export const CLAN_DESC_MAX = 400;
 export const CLAN_NEWS_TITLE_MAX = 120;
@@ -195,14 +198,26 @@ export function canUserAccessClanRoom(roomId: number, userId: number): boolean {
 export function getCreateClanEligibility(userId: number): {
   canCreate: boolean;
   messageCount: number;
+  gamesPlayed: number;
+  requiredPosts: number;
+  requiredGames: number;
+  /** @deprecated используйте requiredPosts */
   required: number;
   alreadyInClan: boolean;
 } {
   const messageCount = getUserMessageCount(userId);
+  const gamesPlayed = getGamesPlayed(userId);
   const alreadyInClan = getUserClanId(userId) != null;
+  const canCreate =
+    !alreadyInClan &&
+    messageCount >= CLAN_CREATE_MIN_POSTS &&
+    gamesPlayed >= CLAN_CREATE_MIN_GAMES;
   return {
-    canCreate: !alreadyInClan && messageCount >= CLAN_CREATE_MIN_POSTS,
+    canCreate,
     messageCount,
+    gamesPlayed,
+    requiredPosts: CLAN_CREATE_MIN_POSTS,
+    requiredGames: CLAN_CREATE_MIN_GAMES,
     required: CLAN_CREATE_MIN_POSTS,
     alreadyInClan,
   };
@@ -354,8 +369,19 @@ export function createClan(
     throw new Error('Вы уже состоите в клане');
   }
   if (!eligibility.canCreate) {
+    const parts: string[] = [];
+    if (eligibility.messageCount < CLAN_CREATE_MIN_POSTS) {
+      parts.push(
+        `${CLAN_CREATE_MIN_POSTS} сообщений в чате (сейчас ${eligibility.messageCount})`
+      );
+    }
+    if (eligibility.gamesPlayed < CLAN_CREATE_MIN_GAMES) {
+      parts.push(`${CLAN_CREATE_MIN_GAMES} игр (сейчас ${eligibility.gamesPlayed})`);
+    }
     throw new Error(
-      `Чтобы создать клан, нужно минимум ${CLAN_CREATE_MIN_POSTS} сообщений в чате (сейчас ${eligibility.messageCount})`
+      parts.length
+        ? `Чтобы создать клан, нужно минимум ${parts.join(' и ')}`
+        : 'Сейчас нельзя создать клан'
     );
   }
 

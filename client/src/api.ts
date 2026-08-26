@@ -1079,6 +1079,7 @@ export async function fetchClans(): Promise<{
   clans: ClanListItem[];
   eligibility: ClanEligibility;
   createMinPosts: number;
+  createMinGames: number;
 }> {
   return apiRequest('/api/clans');
 }
