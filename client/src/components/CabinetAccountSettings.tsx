@@ -2,6 +2,11 @@ import { useState, useEffect, FormEvent } from 'react';
 import { updateProfile, fetchThemeSettings, linkTelegramEmail, changePassword } from '../api';
 import type { User, ThemeId, UserGender } from '../types';
 import { applyTheme, resolveTheme, THEMES, themeDisplayName } from '../themes';
+import {
+  getMobileNavPlacement,
+  setMobileNavPlacement,
+  type MobileNavPlacement,
+} from '../utils/mobileNav';
 
 const CHAT_LIMIT_OPTIONS = [15, 30, 50, 100];
 
@@ -9,12 +14,16 @@ interface CabinetAccountSettingsProps {
   user: User;
   onUpdate: (user: User) => void;
   onBack: () => void;
+  mobileNav?: MobileNavPlacement;
+  onMobileNavChange?: (value: MobileNavPlacement) => void;
 }
 
 export default function CabinetAccountSettings({
   user,
   onUpdate,
   onBack,
+  mobileNav: mobileNavProp,
+  onMobileNavChange,
 }: CabinetAccountSettingsProps) {
   const [chatLimit, setChatLimit] = useState(user.chatLimit ?? 15);
   const [error, setError] = useState('');
@@ -28,6 +37,15 @@ export default function CabinetAccountSettings({
   const [useSiteTheme, setUseSiteTheme] = useState(!user.theme);
   const [personalTheme, setPersonalTheme] = useState<ThemeId>(resolveTheme(user.theme, 'midnight'));
   const [themeSaving, setThemeSaving] = useState(false);
+  const [mobileNavLocal, setMobileNavLocal] = useState<MobileNavPlacement>(() => getMobileNavPlacement());
+  const mobileNav = mobileNavProp ?? mobileNavLocal;
+
+  const handleMobileNav = (value: MobileNavPlacement) => {
+    setMobileNavPlacement(value);
+    setMobileNavLocal(value);
+    onMobileNavChange?.(value);
+    setSuccess(value === 'side' ? 'Меню слева на телефоне' : 'Меню снизу на телефоне');
+  };
 
   useEffect(() => {
     fetchThemeSettings()
@@ -154,12 +172,44 @@ export default function CabinetAccountSettings({
 
       <header className="page-header">
         <h1>Настройки</h1>
-        <p className="muted">Тема, пароль и лимит чата</p>
+        <p className="muted">Тема, меню на телефоне, пароль и лимит чата</p>
       </header>
 
       <div className="profile-card cabinet-card">
         {error && <div className="auth-error">{error}</div>}
         {success && <div className="auth-success">{success}</div>}
+
+        <section className="theme-settings-block">
+          <h3>Меню на телефоне</h3>
+          <p className="theme-settings-hint">
+            На компьютере меню всегда слева. На телефоне можно выбрать нижнюю панель или узкую полоску
+            слева с иконками.
+          </p>
+          <div className="mobile-nav-picker" role="radiogroup" aria-label="Расположение меню на телефоне">
+            <button
+              type="button"
+              role="radio"
+              aria-checked={mobileNav === 'bottom'}
+              className={`mobile-nav-picker-card ${mobileNav === 'bottom' ? 'active' : ''}`}
+              onClick={() => handleMobileNav('bottom')}
+            >
+              <span className="mobile-nav-picker-preview mobile-nav-picker-preview--bottom" aria-hidden />
+              <span className="mobile-nav-picker-name">Снизу</span>
+              <span className="mobile-nav-picker-desc">Классическая панель внизу экрана</span>
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={mobileNav === 'side'}
+              className={`mobile-nav-picker-card ${mobileNav === 'side' ? 'active' : ''}`}
+              onClick={() => handleMobileNav('side')}
+            >
+              <span className="mobile-nav-picker-preview mobile-nav-picker-preview--side" aria-hidden />
+              <span className="mobile-nav-picker-name">Слева</span>
+              <span className="mobile-nav-picker-desc">Узкая полоска с иконками</span>
+            </button>
+          </div>
+        </section>
 
         <section className="theme-settings-block">
           <h3>Тема</h3>

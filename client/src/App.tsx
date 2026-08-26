@@ -31,6 +31,10 @@ import SiteFooter from './components/SiteFooter';
 import GuestLayout from './components/GuestLayout';
 import InstallAppBanner from './components/InstallAppBanner';
 import NotificationBell from './components/NotificationBell';
+import {
+  getMobileNavPlacement,
+  type MobileNavPlacement,
+} from './utils/mobileNav';
 
 const OnlineUsers = lazy(() => import('./components/OnlineUsers'));
 const News = lazy(() => import('./components/News'));
@@ -102,6 +106,7 @@ export default function App() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [lobbyScreen, setLobbyScreen] = useState<LobbyScreen>('rooms');
+  const [mobileNav, setMobileNav] = useState<MobileNavPlacement>(() => getMobileNavPlacement());
   const [clansInitialId, setClansInitialId] = useState<number | null>(null);
   const [composeToUserId, setComposeToUserId] = useState<number | null>(null);
   const [composeToUsername, setComposeToUsername] = useState<string | null>(null);
@@ -895,7 +900,7 @@ export default function App() {
   }
 
   return (
-    <div className="app app-shell">
+    <div className="app app-shell" data-mobile-nav={mobileNav}>
       {notification && (
         <div className="toast" onClick={() => setNotification(null)}>
           🔒 {notification}
@@ -982,6 +987,8 @@ export default function App() {
               user={user}
               onUpdate={handleUserUpdate}
               onBack={() => setLobbyScreen('cabinet')}
+              mobileNav={mobileNav}
+              onMobileNavChange={setMobileNav}
             />
           </ViewSuspense>
         )}

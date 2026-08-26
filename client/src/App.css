@@ -6068,6 +6068,97 @@ html.telegram-webapp .app-body {
   text-transform: lowercase;
 }
 
+.mobile-nav-picker {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.mobile-nav-picker-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mobile-nav-picker-card:hover {
+  background: var(--bg-hover);
+}
+
+.mobile-nav-picker-card.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.mobile-nav-picker-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.mobile-nav-picker-preview {
+  position: relative;
+  width: 100%;
+  height: 72px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.mobile-nav-picker-preview--bottom::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 6px;
+  height: 10px;
+  border-radius: 6px;
+  background: var(--accent);
+}
+
+.mobile-nav-picker-preview--side::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 14px;
+  background: var(--accent);
+}
+
+.mobile-nav-picker-preview--side::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 28px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--bg);
+  box-shadow:
+    0 -14px 0 0 color-mix(in srgb, #fff 55%, transparent),
+    0 14px 0 0 color-mix(in srgb, #fff 55%, transparent);
+}
+
+.mobile-nav-picker-name {
+  font-weight: 650;
+  font-size: 0.95rem;
+}
+
+.mobile-nav-picker-desc {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
 @media (max-width: 1100px) {
   .admin-stats-card,
   .admin-stats-card--wide,
@@ -6651,6 +6742,167 @@ html.telegram-webapp .app-body {
 
   .app-shell .site-footer {
     padding-bottom: calc(16px + var(--nav-height) + var(--safe-bottom));
+  }
+
+  /* Мобильное меню слева (полоска с иконками) */
+  .app-shell[data-mobile-nav='side'] {
+    --sidebar-rail: 64px;
+    --nav-height: 0px;
+    flex-direction: row;
+  }
+
+  .app-shell[data-mobile-nav='side'] .app-main {
+    width: calc(100% - var(--sidebar-rail));
+    max-width: calc(100% - var(--sidebar-rail));
+    margin-left: var(--sidebar-rail);
+  }
+
+  .app-shell[data-mobile-nav='side'] .app-body {
+    padding-bottom: calc(16px + var(--safe-bottom));
+  }
+
+  .app-shell[data-mobile-nav='side'] .site-footer {
+    padding-bottom: calc(16px + var(--safe-bottom));
+  }
+
+  .app-shell[data-mobile-nav='side'] .main-menu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: auto;
+    z-index: 200;
+    width: var(--sidebar-rail);
+    max-width: var(--sidebar-rail);
+    height: 100dvh;
+    margin: 0;
+    padding: calc(10px + var(--safe-top)) 0 calc(12px + var(--safe-bottom));
+    border: none;
+    border-right: none;
+    border-top: none;
+    background: var(--accent);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-sizing: border-box;
+    overflow: visible;
+  }
+
+  .app-shell[data-mobile-nav='side'] .menu-logo {
+    display: none;
+  }
+
+  .app-shell[data-mobile-nav='side'] .menu-items {
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    padding: 8px 0;
+    overflow-y: auto;
+    overflow-x: visible;
+  }
+
+  .app-shell[data-mobile-nav='side'] .menu-item {
+    position: relative;
+    flex: 0 0 auto;
+    width: 48px;
+    height: 48px;
+    min-height: 48px;
+    padding: 0;
+    margin: 4px 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: color-mix(in srgb, #fff 88%, transparent);
+    justify-content: center;
+    align-items: center;
+    z-index: 1;
+  }
+
+  .app-shell[data-mobile-nav='side'] .menu-item .menu-icon {
+    width: 1.35rem;
+    height: 1.35rem;
+  }
+
+  .app-shell[data-mobile-nav='side'] .menu-label {
+    display: none !important;
+  }
+
+  .app-shell[data-mobile-nav='side'] .menu-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    min-width: 16px;
+    padding: 0 4px;
+    font-size: 0.6rem;
+    line-height: 16px;
+  }
+
+  .app-shell[data-mobile-nav='side'] .menu-item-desktop-only:not(.logout) {
+    display: inline-flex !important;
+  }
+
+  .app-shell[data-mobile-nav='side'] .menu-item.logout {
+    display: none !important;
+  }
+
+  .app-shell[data-mobile-nav='side'] .menu-item:hover:not(.active) {
+    background: color-mix(in srgb, #fff 14%, transparent);
+    color: #fff;
+  }
+
+  .app-shell[data-mobile-nav='side'] .menu-item.active {
+    background: var(--bg);
+    color: var(--accent);
+    border-color: transparent;
+    box-shadow: none;
+    z-index: 2;
+    width: 52px;
+    height: 52px;
+    margin-right: -10px;
+    border-radius: 26px 0 0 26px;
+    justify-content: flex-start;
+    padding-left: 14px;
+  }
+
+  /* «Волна» вокруг активного пункта */
+  .app-shell[data-mobile-nav='side'] .menu-item.active::before,
+  .app-shell[data-mobile-nav='side'] .menu-item.active::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    width: 16px;
+    height: 16px;
+    background: transparent;
+    pointer-events: none;
+  }
+
+  .app-shell[data-mobile-nav='side'] .menu-item.active::before {
+    top: -16px;
+    border-bottom-right-radius: 16px;
+    box-shadow: 5px 5px 0 0 var(--bg);
+  }
+
+  .app-shell[data-mobile-nav='side'] .menu-item.active::after {
+    bottom: -16px;
+    border-top-right-radius: 16px;
+    box-shadow: 5px -5px 0 0 var(--bg);
+  }
+
+  .app-shell[data-mobile-nav='side'] .menu-item.admin.active,
+  .app-shell[data-mobile-nav='side'] .menu-item.mod.active,
+  .app-shell[data-mobile-nav='side'] .menu-item.watcher.active {
+    background: var(--bg);
+    color: var(--accent);
+    border-color: transparent;
+  }
+
+  .app-shell[data-mobile-nav='side'] .install-app-banner {
+    left: calc(var(--sidebar-rail) + 12px);
   }
 
   .main-menu {
