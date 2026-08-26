@@ -23,7 +23,7 @@ export default function NewsComments({
   const [comments, setComments] = useState<NewsComment[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [open, setOpen] = useState(initialCount > 0);
+  const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
   const [replyTo, setReplyTo] = useState<NewsComment | null>(null);
   const [submitting, setSubmitting] = useState(false);
