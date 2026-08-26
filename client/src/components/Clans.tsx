@@ -23,11 +23,17 @@ interface ClansProps {
   onBack: () => void;
   onJoinRoom: (roomId: number) => void;
   initialClanId?: number | null;
+  backLabel?: string;
 }
 
 type Screen = 'list' | 'create' | 'detail';
 
-export default function Clans({ onBack, onJoinRoom, initialClanId = null }: ClansProps) {
+export default function Clans({
+  onBack,
+  onJoinRoom,
+  initialClanId = null,
+  backLabel = '← Комнаты',
+}: ClansProps) {
   const [screen, setScreen] = useState<Screen>('list');
   const [clans, setClans] = useState<ClanListItem[]>([]);
   const [eligibility, setEligibility] = useState<ClanEligibility | null>(null);
@@ -127,7 +133,7 @@ export default function Clans({ onBack, onJoinRoom, initialClanId = null }: Clan
             }
           }}
         >
-          ← {screen === 'list' ? 'Назад' : 'К кланам'}
+          {screen === 'list' ? backLabel : '← К кланам'}
         </button>
       </nav>
 

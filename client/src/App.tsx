@@ -109,6 +109,7 @@ export default function App() {
   const [lobbyScreen, setLobbyScreen] = useState<LobbyScreen>('rooms');
   const [mobileNav, setMobileNav] = useState<MobileNavPlacement>(() => getMobileNavPlacement());
   const [clansInitialId, setClansInitialId] = useState<number | null>(null);
+  const [clansBackTo, setClansBackTo] = useState<'rooms' | 'cabinet'>('rooms');
   const appBodyRef = useRef<HTMLDivElement>(null);
   const [composeToUserId, setComposeToUserId] = useState<number | null>(null);
   const [composeToUsername, setComposeToUsername] = useState<string | null>(null);
@@ -523,10 +524,13 @@ export default function App() {
       setRoomMinimized(true);
     }
     setProfileStatsUserId(null);
+    setClansBackTo(
+      view === 'cabinet' || String(lobbyScreen).startsWith('cabinet') ? 'cabinet' : 'rooms'
+    );
     setClansInitialId(clanId);
     setView('clans');
     window.history.pushState(null, '', '/');
-  }, []);
+  }, [view, lobbyScreen]);
 
   const closeProfileStatistics = useCallback(() => {
     setProfileStatsUserId(null);
@@ -564,6 +568,22 @@ export default function App() {
     setComposeToUserId(null);
     setComposeToUsername(null);
     setView('lobby');
+  }, []);
+
+  const leaveClans = useCallback(() => {
+    setClansInitialId(null);
+    if (clansBackTo === 'cabinet') {
+      setLobbyScreen('cabinet');
+      setView('cabinet');
+      return;
+    }
+    goToLobbyRooms();
+  }, [clansBackTo, goToLobbyRooms]);
+
+  const openClansBrowse = useCallback((from: 'rooms' | 'cabinet' = 'rooms') => {
+    setClansBackTo(from);
+    setClansInitialId(null);
+    setView('clans');
   }, []);
 
   const handleLogout = useCallback(() => {
@@ -778,6 +798,7 @@ export default function App() {
           setCurrentRoomId(null);
           setRoomState(null);
           clearStoredPlayerIds();
+          setLobbyScreen('rooms');
           setView('lobby');
           return;
         }
@@ -982,10 +1003,8 @@ export default function App() {
             <Clans
               key={clansInitialId ?? 'browse'}
               initialClanId={clansInitialId}
-              onBack={() => {
-                setClansInitialId(null);
-                goToLobbyRooms();
-              }}
+              backLabel={clansBackToRef.current === 'cabinet' ? '← Кабинет' : '← Комнаты'}
+              onBack={leaveClans}
               onJoinRoom={joinRoom}
             />
           </ViewSuspense>
@@ -1067,10 +1086,7 @@ export default function App() {
             onOpenMessages={() => openMessages({ openUnread: unreadMailCount > 0 })}
             onOpenSupport={() => setLobbyScreen('cabinet-support')}
             onOpenUserSearch={() => setLobbyScreen('cabinet-search')}
-            onOpenClans={() => {
-              setClansInitialId(null);
-              setView('clans');
-            }}
+            onOpenClans={() => openClansBrowse('cabinet')}
             onOpenStatistics={() => openProfileStatistics(user.id)}
             onLogout={handleLogout}
             onBack={() => goToLobbyRooms()}
@@ -1144,6 +1160,7 @@ export default function App() {
             window.history.pushState(null, '', '/news');
           }
           if (v === 'clans') {
+            clansBackToRef.current = 'rooms';
             setClansInitialId(null);
             window.history.pushState(null, '', '/');
           }
