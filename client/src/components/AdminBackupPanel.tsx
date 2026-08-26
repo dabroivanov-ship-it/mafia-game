@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useState, type WheelEvent } from 'react';
 import {
   fetchAdminBackups,
   fetchBackupSchedule,
@@ -18,6 +18,13 @@ function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} Б`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} КБ`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} МБ`;
+}
+
+/** Не даём колёсику мыши менять значение вместо прокрутки страницы. */
+function blurInputOnWheel(e: WheelEvent<HTMLInputElement>) {
+  if (document.activeElement === e.currentTarget) {
+    e.currentTarget.blur();
+  }
 }
 
 export default function AdminBackupPanel() {
@@ -236,6 +243,7 @@ export default function AdminBackupPanel() {
               setSchedule((prev) => ({ ...prev, time: e.target.value }));
               setScheduleSaved(false);
             }}
+            onWheel={blurInputOnWheel}
             disabled={scheduleSaving || !schedule.enabled}
             required
           />
@@ -268,6 +276,7 @@ export default function AdminBackupPanel() {
               }));
               setScheduleSaved(false);
             }}
+            onWheel={blurInputOnWheel}
             disabled={scheduleSaving || !schedule.enabled}
           />
         </label>

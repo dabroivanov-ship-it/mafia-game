@@ -132,6 +132,9 @@ html.telegram-webapp .app-body {
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
   width: 100%;
 }
 
@@ -140,6 +143,8 @@ html.telegram-webapp .app-body {
   flex: 1 1 auto;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
   width: 100%;
 }
 
@@ -150,8 +155,10 @@ html.telegram-webapp .app-body {
 .app-body {
   flex: 1 1 auto;
   overflow-y: auto;
+  overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  min-height: 40vh;
+  overscroll-behavior: contain;
+  min-height: 0;
   width: 100%;
 }
 
@@ -5190,6 +5197,13 @@ html.telegram-webapp .app-body {
   margin: 0;
 }
 
+.admin-backup-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
 .admin-backup-panel .admin-backup-create {
   display: flex;
   flex-direction: column;
@@ -5197,6 +5211,11 @@ html.telegram-webapp .app-body {
   margin-bottom: 20px;
   padding-bottom: 20px;
   border-bottom: 1px solid var(--border);
+}
+
+.admin-backup-panel .admin-table-wrap {
+  /* Горизонтальный скролл таблицы не должен перехватывать колесо мыши */
+  overscroll-behavior: auto;
 }
 
 .admin-badge {
@@ -5848,6 +5867,7 @@ html.telegram-webapp .app-body {
   width: 100%;
   max-width: 100%;
   overflow-x: auto;
+  overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -6228,10 +6248,20 @@ html.telegram-webapp .app-body {
 @media (max-width: 768px) {
   .app-shell {
     flex-direction: column;
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
     --nav-height: 56px;
   }
 
+  .app-main {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
   .app-shell .app-body {
+    min-height: 0;
     padding-bottom: calc(var(--nav-height) + var(--safe-bottom));
   }
 
@@ -6806,7 +6836,8 @@ html.telegram-webapp .app-body {
 
   .app-main {
     flex: 1;
-    min-height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
   }
 
   .main-menu {
@@ -6858,6 +6889,7 @@ html.telegram-webapp .app-body {
   .app-body {
     flex: 1;
     min-width: 0;
+    min-height: 0;
     padding-bottom: 0;
   }
 
