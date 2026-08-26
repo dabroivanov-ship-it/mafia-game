@@ -234,6 +234,11 @@ html.telegram-webapp .app-body {
 
 /* Auth */
 .auth-page {
+  --auth-hero-image: url('/auth-hero.jpg');
+  --auth-hero-pos: center 24%;
+  --auth-overlay-top: 48%;
+  --auth-overlay-mid: 68%;
+  --auth-overlay-bottom: 86%;
   position: relative;
   isolation: isolate;
   min-height: 100dvh;
@@ -254,10 +259,10 @@ html.telegram-webapp .app-body {
   position: absolute;
   inset: 0;
   z-index: -2;
-  background:
-    url('/auth-hero.jpg') center 28% / cover no-repeat;
-  filter: grayscale(0.15) contrast(1.05);
-  transform: scale(1.04);
+  background: var(--auth-hero-image) var(--auth-hero-pos) / cover no-repeat;
+  filter: grayscale(0.12) contrast(1.04);
+  transform: scale(1.03);
+  will-change: transform;
 }
 
 .auth-page::after {
@@ -268,16 +273,64 @@ html.telegram-webapp .app-body {
   background:
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--bg) 55%, transparent) 0%,
-      color-mix(in srgb, var(--bg) 72%, transparent) 42%,
-      color-mix(in srgb, var(--bg) 88%, transparent) 100%
+      color-mix(in srgb, var(--bg) var(--auth-overlay-top), transparent) 0%,
+      color-mix(in srgb, var(--bg) var(--auth-overlay-mid), transparent) 45%,
+      color-mix(in srgb, var(--bg) var(--auth-overlay-bottom), transparent) 100%
     ),
     radial-gradient(
-      ellipse 90% 70% at 50% 35%,
+      ellipse 95% 75% at 50% 28%,
       transparent 0%,
-      color-mix(in srgb, var(--bg) 55%, transparent) 100%
+      color-mix(in srgb, var(--bg) 50%, transparent) 100%
     );
   pointer-events: none;
+}
+
+@media (max-width: 720px) {
+  .auth-page {
+    --auth-hero-image: url('/auth-hero-sm.jpg');
+    --auth-hero-pos: center 16%;
+    --auth-overlay-top: 62%;
+    --auth-overlay-mid: 78%;
+    --auth-overlay-bottom: 92%;
+  }
+
+  .auth-page::before {
+    transform: scale(1.08);
+  }
+}
+
+@media (min-width: 721px) and (max-width: 1099px) {
+  .auth-page {
+    --auth-hero-pos: center 22%;
+    --auth-overlay-top: 52%;
+    --auth-overlay-mid: 72%;
+    --auth-overlay-bottom: 88%;
+  }
+}
+
+@media (min-width: 1100px) {
+  .auth-page {
+    --auth-hero-pos: center 30%;
+    --auth-overlay-top: 42%;
+    --auth-overlay-mid: 62%;
+    --auth-overlay-bottom: 82%;
+  }
+
+  .guest-layout--centered.auth-page .guest-layout-body {
+    flex: 1;
+    justify-content: center;
+    padding-block: 12px 8px;
+  }
+}
+
+@media (max-height: 720px) and (min-width: 721px) {
+  .auth-page {
+    --auth-hero-pos: center 20%;
+  }
+
+  .guest-layout--centered.auth-page .guest-layout-body {
+    justify-content: flex-start;
+  }
 }
 
 .auth-page-bar {
@@ -332,6 +385,9 @@ html.telegram-webapp .app-body {
 .guest-layout--centered.auth-page .guest-layout-body {
   position: relative;
   z-index: 1;
+  width: 100%;
+  max-width: 480px;
+  margin-inline: auto;
 }
 
 .auth-card {
@@ -343,6 +399,12 @@ html.telegram-webapp .app-body {
   padding: 28px 24px;
   min-width: 0;
   box-shadow: 0 16px 40px color-mix(in srgb, var(--bg) 55%, transparent);
+}
+
+@media (max-width: 720px) {
+  .auth-card {
+    background: color-mix(in srgb, var(--bg-card) 96%, transparent);
+  }
 }
 
 .auth-header {
