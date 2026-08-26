@@ -57,7 +57,7 @@ import { isEmptyNewsBody } from './newsBodyUtils';
 import { initYandexMetrika } from '../metrika';
 import AdminSystemSection, { type SystemView } from './AdminSystemSection';
 import AdminRoomOrderList from './AdminRoomOrderList';
-import { attachPageWheelScroll, blurInputOnWheel } from '../utils/wheelScroll';
+import { blurInputOnWheel } from '../utils/wheelScroll';
 
 function defaultNewsForm(): NewsEditorValue {
   return {
@@ -202,7 +202,6 @@ export default function AdminPanel({
   const dirtyRoomsRef = useRef(new Set<number>());
   const roomEditsInitializedRef = useRef(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
-  const pageRef = useRef<HTMLDivElement>(null);
   const [newsPosts, setNewsPosts] = useState<NewsPost[]>([]);
   const [newsLoading, setNewsLoading] = useState(false);
   const [newsForm, setNewsForm] = useState<NewsEditorValue>(defaultNewsForm());
@@ -280,12 +279,6 @@ export default function AdminPanel({
     const id = setInterval(() => void load({ silent: true }), 10000);
     return () => clearInterval(id);
   }, []);
-
-  useEffect(() => {
-    const root = pageRef.current;
-    if (!root) return;
-    return attachPageWheelScroll(root);
-  }, [loading, users.length]);
 
   useEffect(() => {
     fetchAdminPermissions()
@@ -953,14 +946,14 @@ export default function AdminPanel({
 
   if (loading && users.length === 0) {
     return (
-      <div className="admin-page" ref={pageRef}>
+      <div className="admin-page">
         <p className="muted">Загрузка...</p>
       </div>
     );
   }
 
   return (
-    <div className="admin-page" ref={pageRef}>
+    <div className="admin-page">
       <div className="admin-header">
         <div>
           <h2>

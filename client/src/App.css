@@ -5743,9 +5743,14 @@ html.telegram-webapp .app-body {
   gap: 14px;
   min-width: 0;
   padding: 16px 18px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--accent) 8%, var(--bg-card)) 0%,
+    var(--bg-card) 48%
+  );
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--border));
   border-radius: var(--radius);
+  box-shadow: 0 0 24px color-mix(in srgb, var(--accent) 8%, transparent);
   box-sizing: border-box;
 }
 
@@ -5785,6 +5790,269 @@ html.telegram-webapp .app-body {
 .admin-stats-card-footnote strong {
   color: var(--text);
   font-weight: 650;
+}
+
+/* ——— Glow charts (админка + статистика игрока) ——— */
+.stats-chart-line {
+  width: 100%;
+  height: auto;
+  max-height: 200px;
+}
+
+.stats-chart-under-bar {
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 35%, transparent));
+}
+
+.stats-chart-grid {
+  stroke: color-mix(in srgb, var(--border) 70%, transparent);
+  stroke-width: 1;
+  stroke-dasharray: 4 6;
+}
+
+.stats-chart-dot {
+  fill: var(--bg-card);
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.stats-chart-tooltip {
+  fill: var(--bg-elevated);
+  stroke: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+
+.stats-chart-tooltip-text {
+  fill: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.stats-chart-donut-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.stats-chart-donut {
+  width: 148px;
+  height: 148px;
+}
+
+.stats-chart-donut-track {
+  stroke: color-mix(in srgb, var(--border) 80%, transparent);
+}
+
+.stats-chart-donut-hole {
+  fill: var(--bg-card);
+}
+
+.stats-chart-donut-total {
+  fill: var(--text);
+  font-size: 18px;
+  font-weight: 750;
+}
+
+.stats-chart-donut-caption {
+  fill: var(--text-muted);
+  font-size: 10px;
+}
+
+.stats-chart-tone--accent {
+  stroke: var(--accent);
+}
+
+.stats-chart-tone--success {
+  stroke: var(--success);
+}
+
+.stats-chart-tone--warning {
+  stroke: var(--warning);
+}
+
+.stats-chart-tone--danger {
+  stroke: var(--danger);
+}
+
+.stats-chart-tone--secondary {
+  stroke: var(--warning);
+}
+
+.stats-chart-tone-bg--accent {
+  background: var(--accent);
+}
+
+.stats-chart-tone-bg--success {
+  background: var(--success);
+}
+
+.stats-chart-tone-bg--warning {
+  background: var(--warning);
+}
+
+.stats-chart-tone-bg--danger {
+  background: var(--danger);
+}
+
+.stats-chart-tone-bg--secondary {
+  background: var(--warning);
+}
+
+.stats-chart-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stats-chart-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.84rem;
+  color: var(--text-muted);
+}
+
+.stats-chart-legend li strong {
+  margin-left: auto;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.stats-chart-legend-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  box-shadow: 0 0 8px color-mix(in srgb, currentColor 50%, transparent);
+}
+
+.stats-chart-ring {
+  width: 76px;
+  height: 76px;
+  flex-shrink: 0;
+}
+
+.stats-chart-ring-text {
+  fill: var(--text);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.stats-chart-bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.stats-chart-bars-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+  font-size: 0.88rem;
+}
+
+.stats-chart-bars-meta strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.stats-chart-bars-track {
+  height: 8px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--bg-hover) 80%, transparent);
+  overflow: hidden;
+}
+
+.stats-chart-bars-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--accent) 55%, transparent),
+    var(--accent) 55%,
+    var(--warning)
+  );
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.stats-chart-grouped-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.stats-chart-grouped-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  font-size: 0.78rem;
+}
+
+.stats-chart-grouped-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stats-chart-grouped {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 168px;
+  padding-top: 8px;
+}
+
+.stats-chart-grouped-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.stats-chart-grouped-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  height: 128px;
+}
+
+.stats-chart-grouped-bar {
+  display: block;
+  width: 10px;
+  min-height: 4px;
+  border-radius: 4px 4px 0 0;
+}
+
+.stats-chart-grouped-bar--a {
+  background: linear-gradient(180deg, var(--warning), var(--accent));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.stats-chart-grouped-bar--b {
+  background: linear-gradient(180deg, var(--success), color-mix(in srgb, var(--success) 40%, #000));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--success) 35%, transparent);
+}
+
+.stats-chart-grouped-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .admin-stats-line {
@@ -7708,15 +7976,18 @@ html.telegram-webapp .app-body {
 }
 
 .user-stats-recent-bar--win {
-  background: var(--success);
+  background: linear-gradient(180deg, var(--success), color-mix(in srgb, var(--success) 40%, #000));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--success) 40%, transparent);
 }
 
 .user-stats-recent-bar--loss {
-  background: var(--danger);
+  background: linear-gradient(180deg, var(--danger), color-mix(in srgb, var(--danger) 40%, #000));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--danger) 35%, transparent);
 }
 
 .user-stats-recent-bar--draw {
-  background: var(--warning);
+  background: linear-gradient(180deg, var(--warning), color-mix(in srgb, var(--warning) 40%, #000));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--warning) 35%, transparent);
 }
 
 .user-stats-recent-delta {

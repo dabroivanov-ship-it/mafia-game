@@ -35,6 +35,7 @@ import {
   getMobileNavPlacement,
   type MobileNavPlacement,
 } from './utils/mobileNav';
+import { attachPageWheelScroll } from './utils/wheelScroll';
 
 const OnlineUsers = lazy(() => import('./components/OnlineUsers'));
 const News = lazy(() => import('./components/News'));
@@ -108,6 +109,7 @@ export default function App() {
   const [lobbyScreen, setLobbyScreen] = useState<LobbyScreen>('rooms');
   const [mobileNav, setMobileNav] = useState<MobileNavPlacement>(() => getMobileNavPlacement());
   const [clansInitialId, setClansInitialId] = useState<number | null>(null);
+  const appBodyRef = useRef<HTMLDivElement>(null);
   const [composeToUserId, setComposeToUserId] = useState<number | null>(null);
   const [composeToUsername, setComposeToUsername] = useState<string | null>(null);
   const [messageThreadUserId, setMessageThreadUserId] = useState<number | null>(null);
@@ -211,6 +213,12 @@ export default function App() {
   useEffect(() => {
     applyTheme(resolveTheme(user?.theme ?? null, siteDefaultTheme));
   }, [user?.theme, siteDefaultTheme]);
+
+  useEffect(() => {
+    const el = appBodyRef.current;
+    if (!el) return;
+    return attachPageWheelScroll(el);
+  }, [user, token]);
 
   useEffect(() => {
     if (!user) return;
@@ -914,7 +922,7 @@ export default function App() {
 
       <div className="app-main">
         {notificationBar}
-        <div className="app-body">
+        <div className="app-body" ref={appBodyRef}>
         {profileStatsUserId != null ? (
           <ViewSuspense label="Статистика…">
             <UserStatisticsPage
