@@ -235,12 +235,6 @@ html.telegram-webapp .app-body {
 
 /* Auth */
 .auth-page {
-  --auth-hero-image: url('/auth-hero.jpg');
-  /* Ниже центр — на широком экране видны лица под рваным краем */
-  --auth-hero-pos: center 42%;
-  --auth-overlay-top: 42%;
-  --auth-overlay-mid: 62%;
-  --auth-overlay-bottom: 78%;
   position: relative;
   isolation: isolate;
   min-height: 100dvh;
@@ -256,71 +250,74 @@ html.telegram-webapp .app-body {
   background: var(--bg);
 }
 
-.auth-page::before {
-  content: '';
+/* Как у «Код города»: реальный кадр, на мобилке шире экрана */
+.auth-hero {
   position: absolute;
-  inset: 0;
-  z-index: -2;
-  background-color: var(--bg);
-  background-image: var(--auth-hero-image);
-  background-position: var(--auth-hero-pos);
-  background-size: cover;
-  background-repeat: no-repeat;
-  filter: grayscale(0.12) contrast(1.04);
-  transform: scale(1.02);
-}
-
-.auth-page::after {
-  content: '';
-  position: absolute;
-  inset: 0;
   z-index: -1;
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--bg) var(--auth-overlay-top), transparent) 0%,
-      color-mix(in srgb, var(--bg) var(--auth-overlay-mid), transparent) 48%,
-      color-mix(in srgb, var(--bg) var(--auth-overlay-bottom), transparent) 78%,
-      color-mix(in srgb, var(--bg) 92%, transparent) 100%
-    ),
-    radial-gradient(
-      ellipse 95% 70% at 50% 28%,
-      transparent 0%,
-      color-mix(in srgb, var(--bg) 45%, transparent) 100%
-    );
+  inset: 0;
+  overflow: hidden;
   pointer-events: none;
 }
 
+.auth-hero picture,
+.auth-hero-media {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.auth-hero-media {
+  object-fit: cover;
+  object-position: center 42%;
+}
+
+.auth-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, var(--bg) 0%, transparent 16%),
+    linear-gradient(0deg, var(--bg) 0%, transparent 22%);
+}
+
 @media (max-width: 720px) {
-  .auth-page {
-    --auth-hero-image: url('/auth-hero-sm.jpg');
-    /* Портретный кроп: силуэт сверху, лица снизу */
-    --auth-hero-pos: center 28%;
-    --auth-overlay-top: 52%;
-    --auth-overlay-mid: 70%;
-    --auth-overlay-bottom: 86%;
+  .auth-hero {
+    inset: 0 0 auto;
+    height: min(760px, 92vh);
   }
 
-  .auth-page::before {
-    transform: none;
+  .auth-hero picture {
+    width: 100%;
+    height: 100%;
+  }
+
+  .auth-hero-media {
+    width: 210%;
+    max-width: none;
+    height: 100%;
+    margin-left: 50%;
+    transform: translateX(-50%);
+    object-fit: cover;
+    object-position: center top;
+  }
+
+  .auth-hero::after {
+    background:
+      linear-gradient(180deg, var(--bg) 0%, transparent 14%),
+      linear-gradient(0deg, var(--bg) 0%, transparent 26%);
   }
 }
 
 @media (min-width: 721px) and (max-width: 1099px) {
-  .auth-page {
-    --auth-hero-pos: center 38%;
-    --auth-overlay-top: 46%;
-    --auth-overlay-mid: 66%;
-    --auth-overlay-bottom: 82%;
+  .auth-hero-media {
+    object-position: center 38%;
   }
 }
 
 @media (min-width: 1100px) {
-  .auth-page {
-    --auth-hero-pos: center 48%;
-    --auth-overlay-top: 38%;
-    --auth-overlay-mid: 58%;
-    --auth-overlay-bottom: 74%;
+  .auth-hero-media {
+    object-position: center 48%;
   }
 
   .guest-layout--centered.auth-page .guest-layout-body {
@@ -331,8 +328,8 @@ html.telegram-webapp .app-body {
 }
 
 @media (max-height: 720px) and (min-width: 721px) {
-  .auth-page {
-    --auth-hero-pos: center 35%;
+  .auth-hero-media {
+    object-position: center 35%;
   }
 
   .guest-layout--centered.auth-page .guest-layout-body {

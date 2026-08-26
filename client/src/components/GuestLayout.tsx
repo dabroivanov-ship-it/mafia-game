@@ -19,6 +19,14 @@ export default function GuestLayout({
     <div
       className={`guest-layout${centered ? ' guest-layout--centered auth-page' : ' app-public-info'}`}
     >
+      {centered && (
+        <div className="auth-hero" aria-hidden="true">
+          <picture>
+            <source media="(max-width: 720px)" srcSet="/auth-hero-sm.jpg" />
+            <img className="auth-hero-media" src="/auth-hero.jpg" alt="" decoding="async" />
+          </picture>
+        </div>
+      )}
       <GuestHeader branding={branding} />
       <div className="guest-layout-body">{children}</div>
       <SiteFooter variant="auth" text={branding.footerText} />
