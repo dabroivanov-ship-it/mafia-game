@@ -156,7 +156,7 @@ html.telegram-webapp .app-body {
 }
 
 .app-main .site-footer {
-  margin-top: auto;
+  margin-top: 8px;
 }
 
 .app-body {
@@ -384,7 +384,7 @@ html.telegram-webapp .app-body {
   z-index: 1;
   width: 100%;
   max-width: 900px;
-  margin-top: auto;
+  margin-top: 24px;
   padding-top: 24px;
   align-self: center;
 }

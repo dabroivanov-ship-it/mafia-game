@@ -1132,9 +1132,8 @@ export default function App() {
         )}
           </>
         )}
-        </div>
-
         <SiteFooter text={siteBranding.footerText} />
+        </div>
       </div>
 
       <InstallAppBanner />
