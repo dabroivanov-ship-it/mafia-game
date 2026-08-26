@@ -311,16 +311,20 @@ export default function UserProfileModal({
   const canRoomSilence =
     inRoom && viewerCanSilence && userId !== currentUserId && !!onSilence;
   const canWriteMail = userId !== currentUserId;
+  const isOwnProfile = userId === currentUserId;
   const displayTitle = user?.username || replyTarget?.playerName || 'Игрок';
 
   return (
     <div className="modal-overlay player-page-overlay" onClick={onClose}>
-      <div className="modal player-page-modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        className={`modal player-page-modal${isOwnProfile ? ' player-page-modal--own' : ''}`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="player-page-top">
           <button type="button" className="btn btn-ghost btn-sm player-page-close" onClick={onClose}>
             ✕ Закрыть
           </button>
-          <h2 className="player-page-name">{displayTitle}</h2>
+          {!isOwnProfile && <h2 className="player-page-name">{displayTitle}</h2>}
 
           {showChatCompose && (
             <form className="player-page-compose" onSubmit={handleSendChat}>
@@ -367,15 +371,19 @@ export default function UserProfileModal({
           <div className="player-page-body">
             {!editMode ? (
               <>
-                <div className="player-page-avatar-row">
+                <div
+                  className={`player-page-avatar-row${isOwnProfile ? ' player-page-avatar-row--own' : ''}`}
+                >
                   {user.avatar ? (
                     <img src={avatarUrl(user.avatar) ?? undefined} alt="" className="profile-avatar" />
                   ) : (
                     <div className="profile-avatar placeholder" aria-hidden="true" />
                   )}
-                  <div>
-                    <strong>@{user.username}</strong>
-                  </div>
+                  {!isOwnProfile && (
+                    <div>
+                      <strong>@{user.username}</strong>
+                    </div>
+                  )}
                 </div>
 
                 <ul className="player-page-info">

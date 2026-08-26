@@ -5939,6 +5939,28 @@ html.telegram-webapp .app-body {
   font-size: 1.35rem;
 }
 
+.player-page-modal--own .player-page-top {
+  border-bottom: none;
+  padding-bottom: 4px;
+}
+
+.player-page-avatar-row--own {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  margin: 4px 0 20px;
+}
+
+.player-page-avatar-row--own .profile-avatar,
+.player-page-avatar-row--own .profile-avatar.placeholder {
+  width: 112px;
+  height: 112px;
+  font-size: 2rem;
+  border: 3px solid color-mix(in srgb, var(--bg-card) 85%, var(--accent));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 22%, var(--border));
+}
+
 .player-page-info {
   list-style: none;
   margin: 0 0 16px;
