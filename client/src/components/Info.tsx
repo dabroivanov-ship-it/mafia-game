@@ -105,7 +105,7 @@ export default function Info({
 
   if (section === 'rules') {
     return (
-      <div className="info-page">
+      <div className="info-page info-page--rules">
         {backNav('hub', 'Информация')}
         <header className="page-header">
           <h1>Правила игры</h1>

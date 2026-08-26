@@ -26,6 +26,11 @@ function isHorizontalScrollTrap(el: HTMLElement): boolean {
   return !yScrollable;
 }
 
+/** overflow-y порт без реального вертикального скролла (пустой TipTap и т.п.). */
+function isEmptyYScrollPort(el: HTMLElement): boolean {
+  return isYScrollPort(el) && el.scrollHeight <= el.clientHeight + 1;
+}
+
 function normalizeDeltaY(e: WheelEvent): number {
   if (e.deltaMode === 1) return e.deltaY * 16;
   if (e.deltaMode === 2) return e.deltaY * (window.innerHeight || 800);
@@ -46,8 +51,8 @@ function resolvePageScroller(preferredRoot?: HTMLElement | null): HTMLElement | 
 
 /**
  * Прокрутка страницы колесом.
- * Вмешиваемся только когда жест глотают горизонтальные обёртки
- * или «пустые» overflow-auto — иначе оставляем нативный скролл.
+ * Чат и другие живые overflow-y крутятся сами (в т.ч. у края — без перехвата).
+ * Вмешиваемся только у горизонтальных ловушек и «пустых» overflow-auto.
  */
 export function attachPageWheelScroll(root: HTMLElement): () => void {
   const onWheel = (e: WheelEvent) => {
@@ -73,9 +78,10 @@ export function attachPageWheelScroll(root: HTMLElement): () => void {
     while (el && el !== root.parentElement) {
       if (el === scroller) break;
 
-      if (isYScrollPort(el) && canScrollElement(el, deltaY)) return;
+      // Живой вертикальный скроллер (чат и т.п.) — не трогаем, даже у края.
+      if (isYScrollPort(el) && el.scrollHeight > el.clientHeight + 1) return;
 
-      if (isHorizontalScrollTrap(el) || (el !== root && isYScrollPort(el))) {
+      if (isHorizontalScrollTrap(el) || (el !== root && isEmptyYScrollPort(el))) {
         e.preventDefault();
         scroller.scrollTop += deltaY;
         return;

@@ -144,7 +144,6 @@ setOnlineRoomResolver((userId) => {
 const sessions = new Map<string, Session>();
 const userSocketIds = new Map<number, Set<string>>();
 const DEFAULT_CHAT_LIMIT = 15;
-const CHAT_LOAD_STEP = 30;
 const MAX_CHAT_LIMIT = 300;
 
 const disconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -1044,9 +1043,11 @@ io.on('connection', (socket) => {
     if (!ctx) return;
     const { session, room } = ctx;
 
+    // Шаг = настройка «сообщений на страницу» (15/30/50/100).
+    const pageSize = getUserChatLimit(socket.userId);
     session.chatLimit = Math.min(
       MAX_CHAT_LIMIT,
-      resolveSessionChatLimit(session, socket.userId) + CHAT_LOAD_STEP
+      resolveSessionChatLimit(session, socket.userId) + pageSize
     );
     socket.emit(
       'room:state',

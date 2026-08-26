@@ -76,12 +76,11 @@ export default function Chat({
   const [deleteTarget, setDeleteTarget] = useState<ChatMessage | null>(null);
   const [showHostProfile, setShowHostProfile] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const atBottomRef = useRef(true);
   const prevLenRef = useRef(0);
   const loadingMoreRef = useRef(false);
-  const [atTop, setAtTop] = useState(true);
+  const [showLoadMore, setShowLoadMore] = useState(true);
 
   const checkAtBottom = () => {
     const el = listRef.current;
@@ -89,15 +88,27 @@ export default function Chat({
     return el.scrollHeight - el.scrollTop - el.clientHeight < 80;
   };
 
-  const checkAtTop = () => {
+  const scrollToBottom = (smooth: boolean) => {
     const el = listRef.current;
-    if (!el) return true;
-    return el.scrollTop <= 8;
+    if (!el) return;
+    if (smooth) {
+      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+    } else {
+      el.scrollTop = el.scrollHeight;
+    }
   };
 
   const handleScroll = () => {
+    const el = listRef.current;
+    if (!el) return;
     atBottomRef.current = checkAtBottom();
-    setAtTop(checkAtTop());
+    // Гистерезис: не мигать кнопкой «ранее» на каждом пикселе у верха.
+    const top = el.scrollTop;
+    setShowLoadMore((prev) => {
+      if (top <= 8) return true;
+      if (top >= 48) return false;
+      return prev;
+    });
   };
 
   useEffect(() => {
@@ -112,21 +123,21 @@ export default function Chat({
       const prevHeight = el.scrollHeight;
       requestAnimationFrame(() => {
         el.scrollTop += el.scrollHeight - prevHeight;
-        setAtTop(checkAtTop());
+        handleScroll();
       });
     } else if (atBottomRef.current) {
-      bottomRef.current?.scrollIntoView({ behavior: grew ? 'smooth' : 'auto' });
-      setAtTop(checkAtTop());
+      // Только внутри чата — scrollIntoView дёргал весь экран комнаты.
+      scrollToBottom(grew);
+      handleScroll();
     } else {
-      setAtTop(checkAtTop());
+      handleScroll();
     }
 
     prevLenRef.current = messages.length;
   }, [messages]);
 
   useEffect(() => {
-    // Короткий список без скролла — кнопка «ранее» тоже видна.
-    setAtTop(checkAtTop());
+    handleScroll();
   }, [hasMoreChat, messages.length]);
 
   useEffect(() => {
@@ -256,7 +267,7 @@ export default function Chat({
   return (
     <div className={`chat ${replyTo ? 'chat-has-reply' : ''}`}>
       <div className="chat-messages" ref={listRef} onScroll={handleScroll}>
-        {hasMoreChat && onLoadMore && atTop && (
+        {hasMoreChat && onLoadMore && showLoadMore && (
           <div className="chat-load-more">
             <button
               type="button"
@@ -301,7 +312,6 @@ export default function Chat({
             )}
           </div>
         ))}
-        <div ref={bottomRef} />
       </div>
 
       {replyTo && (

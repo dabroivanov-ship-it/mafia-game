@@ -21,16 +21,16 @@ import {
   nightTargetsForBot,
 } from './knowledge.js';
 
-const BOT_DELAY_MS = 400;
-const REPLY_DELAY_MS = 900;
-const REPLY_COOLDOWN_MS = 1200;
-const MAX_REPLIES_PER_MINUTE = 20;
+const BOT_DELAY_MS = 1400;
+const REPLY_DELAY_MS = 2800;
+const REPLY_COOLDOWN_MS = 4500;
+const MAX_REPLIES_PER_MINUTE = 8;
 const DAY_OPENING_MESSAGES = 2;
 const CHAT_TIMEOUT_MS = 8000;
 /** Ходы ночи/голосования не должны ждать DeepSeek по 20+ секунд на бота. */
 const ACTION_TIMEOUT_MS = 5000;
 /** Если DeepSeek завис — через это время дожимаем оставшихся ботов эвристикой. */
-const ACTION_WATCHDOG_MS = 9_000;
+const ACTION_WATCHDOG_MS = 22_000;
 
 const REGISTRATION_LINES = [
   'Всем привет!',
@@ -430,7 +430,7 @@ async function runBotChatReply(
 
   replyInFlightByRoom.add(room.id);
   try {
-    await sleep(REPLY_DELAY_MS + Math.random() * 1400);
+    await sleep(REPLY_DELAY_MS + Math.random() * 3500);
     if (!isBotChatPhase(room)) return;
 
     const trigger = {
@@ -532,7 +532,7 @@ async function runInspectorReveals(room: GameRoom): Promise<void> {
   const bots = inspectorRevealBots(room);
   for (const bot of bots) {
     if (room.phase !== PHASE.DAY && room.phase !== PHASE.VOTING) return;
-    await sleep(400 + Math.random() * 700);
+    await sleep(1200 + Math.random() * 1800);
     addChatMessage(room, bot.id, inspectorRevealText(bot), 'public');
     broadcastRoom(room.id);
   }
@@ -551,7 +551,7 @@ async function runTableTalk(room: GameRoom): Promise<void> {
   const speakers = [...bots].sort(() => Math.random() - 0.5).slice(0, count);
   for (const bot of speakers) {
     if (!isBotChatPhase(room)) return;
-    await sleep(800 + Math.random() * 1600);
+    await sleep(2000 + Math.random() * 3500);
     if (!isBotChatPhase(room)) return;
 
     const response = await askDeepSeek<{ message?: string }>(
@@ -586,7 +586,7 @@ async function runNominations(room: GameRoom): Promise<void> {
   const bots = aliveBots(room).filter((p) => !p.hasVoted);
   await Promise.all(
     bots.map(async (bot, index) => {
-      await sleep(BOT_DELAY_MS + index * 180 + Math.random() * 500);
+      await sleep(BOT_DELAY_MS + index * 500 + Math.random() * 1400);
       if (room.phase !== PHASE.VOTING || room.votingStage === 'confirm' || bot.hasVoted) return;
 
       const targets = aliveTargets(room, bot.id);
@@ -627,7 +627,7 @@ async function runHangConfirm(room: GameRoom): Promise<void> {
   const bots = aliveBots(room).filter((p) => !p.hasHangVoted);
   await Promise.all(
     bots.map(async (bot, index) => {
-      await sleep(BOT_DELAY_MS + index * 150 + Math.random() * 400);
+      await sleep(BOT_DELAY_MS + index * 450 + Math.random() * 1200);
       if (room.phase !== PHASE.VOTING || room.votingStage !== 'confirm' || bot.hasHangVoted) {
         return;
       }
@@ -764,7 +764,7 @@ async function runNightActions(room: GameRoom): Promise<void> {
   const bots = aliveBots(room).filter((p) => !p.nightActionDone && nightInstruction(p, room));
   await Promise.all(
     bots.map((bot, index) =>
-      runOneNightAction(room, bot, BOT_DELAY_MS + index * 200 + Math.random() * 600)
+      runOneNightAction(room, bot, BOT_DELAY_MS + index * 550 + Math.random() * 1600)
     )
   );
 }

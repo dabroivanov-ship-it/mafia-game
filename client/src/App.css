@@ -5311,6 +5311,101 @@ html.telegram-webapp .app-body {
   flex-direction: column;
 }
 
+/* Фон «Правила» — кадр с corporate kodgoroda */
+.guest-layout--rules-bg {
+  position: relative;
+  isolation: isolate;
+  background: var(--bg);
+}
+
+.rules-hero {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.rules-hero picture,
+.rules-hero-media {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.rules-hero-media {
+  object-fit: cover;
+  object-position: center top;
+}
+
+.rules-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--bg) 55%, transparent) 0%, transparent 22%),
+    linear-gradient(0deg, var(--bg) 0%, transparent 28%);
+}
+
+.guest-layout--rules-bg .rules-card {
+  background: color-mix(in srgb, var(--bg-card) 92%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.guest-layout--rules-bg .page-header h1,
+.guest-layout--rules-bg .page-header .muted {
+  text-shadow: 0 1px 12px color-mix(in srgb, var(--bg) 80%, transparent);
+}
+
+/* Правила внутри кабинета / после входа */
+.info-page--rules {
+  position: relative;
+  isolation: isolate;
+  max-width: 900px;
+}
+
+.info-page--rules::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  left: 50%;
+  top: -24px;
+  bottom: -24px;
+  width: 100vw;
+  transform: translateX(-50%);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--bg) 40%, transparent) 0%, transparent 18%),
+    linear-gradient(0deg, var(--bg) 0%, transparent 24%),
+    url('/rules-hero.jpg') center top / cover no-repeat;
+  pointer-events: none;
+}
+
+.info-page--rules .rules-card {
+  background: color-mix(in srgb, var(--bg-card) 92%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+@media (max-width: 720px) {
+  .rules-hero-media {
+    width: 180%;
+    max-width: none;
+    height: 100%;
+    margin-left: 50%;
+    transform: translateX(-50%);
+    object-position: center 20%;
+  }
+
+  .info-page--rules::before {
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--bg) 40%, transparent) 0%, transparent 18%),
+      linear-gradient(0deg, var(--bg) 0%, transparent 24%),
+      url('/rules-hero-sm.jpg') center 20% / cover no-repeat;
+  }
+}
+
 .guest-layout {
   min-height: 100dvh;
   display: flex;
