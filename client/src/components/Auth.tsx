@@ -36,11 +36,9 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
-  const [telegramOidcRedirectUri, setTelegramOidcRedirectUri] = useState<string | null>(null);
   const [telegramLoginReady, setTelegramLoginReady] = useState(false);
   const [telegramLoading, setTelegramLoading] = useState(false);
   const [telegramWebAppMode, setTelegramWebAppMode] = useState(false);
-  const [vkRedirectUri, setVkRedirectUri] = useState<string | null>(null);
   const [vkLoginReady, setVkLoginReady] = useState(false);
   const [vkLoading, setVkLoading] = useState(false);
   const [vkSetup, setVkSetup] = useState<{
@@ -117,22 +115,18 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
 
   useEffect(() => {
     fetchTelegramSettings()
-      .then(({ oidcRedirectUri, loginReady }) => {
-        setTelegramOidcRedirectUri(oidcRedirectUri);
+      .then(({ loginReady }) => {
         setTelegramLoginReady(loginReady);
       })
       .catch(() => {
-        setTelegramOidcRedirectUri(null);
         setTelegramLoginReady(false);
       });
 
     fetchVkSettings()
-      .then(({ redirectUri, loginReady }) => {
-        setVkRedirectUri(redirectUri);
+      .then(({ loginReady }) => {
         setVkLoginReady(loginReady);
       })
       .catch(() => {
-        setVkRedirectUri(null);
         setVkLoginReady(false);
       });
   }, []);
@@ -524,22 +518,24 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
             <p className="auth-social-or">
               <span>или</span>
             </p>
-            <div className="auth-social-row">
-              <TelegramLoginWidget
-                loginReady={telegramLoginReady}
-                oidcRedirectUri={telegramOidcRedirectUri}
-                remember={rememberMe}
-                loading={telegramLoading || vkLoading}
-                onError={setError}
-              />
-              <VkLoginWidget
-                loginReady={vkLoginReady}
-                redirectUri={vkRedirectUri}
-                remember={rememberMe}
-                loading={telegramLoading || vkLoading}
-                onError={setError}
-              />
-            </div>
+            {telegramLoginReady || vkLoginReady ? (
+              <div className="auth-social-row">
+                <TelegramLoginWidget
+                  loginReady={telegramLoginReady}
+                  remember={rememberMe}
+                  loading={telegramLoading || vkLoading}
+                  onError={setError}
+                />
+                <VkLoginWidget
+                  loginReady={vkLoginReady}
+                  remember={rememberMe}
+                  loading={telegramLoading || vkLoading}
+                  onError={setError}
+                />
+              </div>
+            ) : (
+              <p className="muted auth-social-unavailable">Авторизация временно недоступна</p>
+            )}
           </div>
         )}
 

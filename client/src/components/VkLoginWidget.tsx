@@ -2,7 +2,6 @@ import VkIcon from './VkIcon';
 
 interface VkLoginWidgetProps {
   loginReady: boolean;
-  redirectUri?: string | null;
   remember: boolean;
   loading: boolean;
   onError: (message: string) => void;
@@ -10,11 +9,12 @@ interface VkLoginWidgetProps {
 
 export default function VkLoginWidget({
   loginReady,
-  redirectUri,
   remember,
   loading,
   onError,
 }: VkLoginWidgetProps) {
+  if (!loginReady) return null;
+
   const handleLogin = () => {
     onError('');
     const base =
@@ -22,29 +22,6 @@ export default function VkLoginWidget({
     const rememberParam = remember ? '1' : '0';
     window.location.href = `${base}/api/auth/vk/start?remember=${rememberParam}`;
   };
-
-  if (!loginReady) {
-    return (
-      <div className="auth-vk-block auth-vk-hint">
-        <p className="muted">
-          Вход через VK временно недоступен. Создайте приложение в{' '}
-          <a href="https://id.vk.com" target="_blank" rel="noreferrer">
-            VK ID
-          </a>{' '}
-          и добавьте в <code>server/.env</code> переменные <code>VK_CLIENT_ID</code> и{' '}
-          <code>VK_CLIENT_SECRET</code>.
-          {redirectUri ? (
-            <>
-              {' '}
-              Зарегистрируйте redirect URI: <code>{redirectUri}</code>
-            </>
-          ) : (
-            <> Также укажите домен сайта и redirect URI в настройках приложения.</>
-          )}
-        </p>
-      </div>
-    );
-  }
 
   return (
     <button
