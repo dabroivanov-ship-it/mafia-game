@@ -1077,10 +1077,6 @@ export default function App() {
             <AdminPanel
               key={adminInitialView}
               initialSystemView={adminInitialView}
-              onBack={() => {
-                setAdminInitialView('hub');
-                setView('lobby');
-              }}
               onDefaultThemeChange={setSiteDefaultTheme}
               onBrandingChange={setSiteBranding}
               onLobbyAnnouncementChange={setLobbyAnnouncement}
