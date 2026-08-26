@@ -1821,6 +1821,7 @@ html.telegram-webapp .app-body {
   border-radius: var(--radius);
   background: var(--bg-card);
   overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .news-tiptap-editor .ProseMirror code {
@@ -1887,6 +1888,7 @@ html.telegram-webapp .app-body {
   border-radius: var(--radius);
   background: var(--bg);
   overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .news-editor-toolbar {
@@ -1986,6 +1988,7 @@ html.telegram-webapp .app-body {
   border-radius: var(--radius);
   background: var(--bg);
   overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .news-body h1,

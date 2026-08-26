@@ -57,7 +57,7 @@ import { isEmptyNewsBody } from './newsBodyUtils';
 import { initYandexMetrika } from '../metrika';
 import AdminSystemSection, { type SystemView } from './AdminSystemSection';
 import AdminRoomOrderList from './AdminRoomOrderList';
-import { attachAdminWheelScroll, blurInputOnWheel } from '../utils/wheelScroll';
+import { attachPageWheelScroll, blurInputOnWheel } from '../utils/wheelScroll';
 
 function defaultNewsForm(): NewsEditorValue {
   return {
@@ -286,7 +286,7 @@ export default function AdminPanel({
   useEffect(() => {
     const root = pageRef.current;
     if (!root) return;
-    return attachAdminWheelScroll(root);
+    return attachPageWheelScroll(root);
   }, [loading, users.length]);
 
   useEffect(() => {

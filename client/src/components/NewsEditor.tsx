@@ -3,6 +3,7 @@ import { adminUploadNewsImage, avatarUrl } from '../api';
 import { isEmptyNewsBody } from './newsBodyUtils';
 import NewsRichEditor from './NewsRichEditor';
 import ToggleSwitch from './ToggleSwitch';
+import { blurInputOnWheel } from '../utils/wheelScroll';
 
 const EMPTY_POLL_OPTIONS = ['', ''];
 
@@ -230,6 +231,7 @@ export default function NewsEditor({
               type="datetime-local"
               value={value.pollEndsAt}
               onChange={(e) => onChange({ ...value, pollEndsAt: e.target.value })}
+              onWheel={blurInputOnWheel}
             />
           </label>
         </div>

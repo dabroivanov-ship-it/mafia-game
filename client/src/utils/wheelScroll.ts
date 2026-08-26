@@ -15,26 +15,32 @@ function canScrollY(el: HTMLElement, deltaY: number): boolean {
   return el.scrollTop + el.clientHeight < el.scrollHeight - 1;
 }
 
+function isYScrollPort(el: HTMLElement): boolean {
+  const { overflowY } = getComputedStyle(el);
+  return overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay';
+}
+
 function isHorizontalScrollTrap(el: HTMLElement): boolean {
   const { overflowX, overflowY } = getComputedStyle(el);
   const xScrollable = overflowX === 'auto' || overflowX === 'scroll';
   if (!xScrollable) return false;
-  const yScrollable =
-    (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay') &&
-    el.scrollHeight > el.clientHeight + 1;
+  const yScrollable = isYScrollPort(el) && el.scrollHeight > el.clientHeight + 1;
   return !yScrollable;
 }
 
 /**
- * Прокрутка админки колесом: горизонтальные обёртки и поля number/time
- * не перехватывают вертикальный скролл `.app-body`.
+ * Прокрутка страницы колесом: горизонтальные обёртки, «пустые» overflow-auto
+ * (TipTap и т.п.) и поля number/time не перехватывают скролл `.app-body`.
  */
-export function attachAdminWheelScroll(root: HTMLElement): () => void {
+export function attachPageWheelScroll(root: HTMLElement): () => void {
   const onWheel = (e: WheelEvent) => {
     const target = e.target;
     if (!(target instanceof Element)) return;
 
-    if (target instanceof HTMLInputElement && (target.type === 'number' || target.type === 'time')) {
+    if (
+      target instanceof HTMLInputElement &&
+      (target.type === 'number' || target.type === 'time' || target.type === 'datetime-local')
+    ) {
       target.blur();
     }
 
@@ -46,12 +52,16 @@ export function attachAdminWheelScroll(root: HTMLElement): () => void {
     let el: HTMLElement | null = target instanceof HTMLElement ? target : target.parentElement;
     while (el && el !== root.parentElement) {
       if (el === scroller) break;
+
       if (canScrollY(el, e.deltaY)) return;
-      if (isHorizontalScrollTrap(el)) {
+
+      if (isHorizontalScrollTrap(el) || (el !== root && isYScrollPort(el))) {
+        // Горизонтальная ловушка, редактор без переполнения или уже у края
         e.preventDefault();
         scroller.scrollTop += e.deltaY;
         return;
       }
+
       if (el === root) break;
       el = el.parentElement;
     }
@@ -60,3 +70,6 @@ export function attachAdminWheelScroll(root: HTMLElement): () => void {
   root.addEventListener('wheel', onWheel, { passive: false });
   return () => root.removeEventListener('wheel', onWheel);
 }
+
+/** @deprecated используйте attachPageWheelScroll */
+export const attachAdminWheelScroll = attachPageWheelScroll;

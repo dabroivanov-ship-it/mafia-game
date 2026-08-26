@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { fetchNews, markNewsRead, avatarUrl } from '../api';
 
@@ -7,6 +7,7 @@ import type { NewsPoll, NewsPost, User } from '../types';
 import NewsBody from './NewsBody';
 import NewsPollBlock from './NewsPollBlock';
 import NewsComments from './NewsComments';
+import { attachPageWheelScroll } from '../utils/wheelScroll';
 
 interface NewsProps {
   user: User;
@@ -18,6 +19,7 @@ export default function News({ user, onBack, onRead }: NewsProps) {
   const [news, setNews] = useState<NewsPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const pageRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     void (async () => {
@@ -38,12 +40,18 @@ export default function News({ user, onBack, onRead }: NewsProps) {
     })();
   }, []);
 
+  useEffect(() => {
+    const root = pageRef.current;
+    if (!root) return;
+    return attachPageWheelScroll(root);
+  }, [loading]);
+
   const handlePollChange = (newsId: number, poll: NewsPoll) => {
     setNews((prev) => prev.map((item) => (item.id === newsId ? { ...item, poll } : item)));
   };
 
   return (
-    <div className="cabinet-page news-page">
+    <div className="cabinet-page news-page" ref={pageRef}>
       <nav className="info-back">
         <button type="button" className="btn btn-ghost btn-sm" onClick={onBack}>
           ← Комнаты
