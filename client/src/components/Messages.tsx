@@ -315,6 +315,8 @@ export default function Messages({
     }
   };
 
+  const unreadTotal = conversations.reduce((sum, c) => sum + c.unreadCount, 0);
+
   return (
     <div className="cabinet-page messages-page">
       <nav className="info-back messages-page-nav">
@@ -339,35 +341,51 @@ export default function Messages({
         )}
       </nav>
 
-      <header className="page-header">
-        <h1>
-          {view === 'thread' && threadUser
-            ? threadUser.username
-            : view === 'compose'
-              ? 'Новое письмо'
-              : 'Письма'}
-        </h1>
-        {view === 'thread' && threadUser && (
-          <p className="muted">
-            @{threadUser.username}
-            {threadTotal > 0 && ` · ${threadTotal} сообщ.`}
-          </p>
+      <header className="messages-hero">
+        <div>
+          <h1>
+            {view === 'thread' && threadUser
+              ? threadUser.displayName || threadUser.username
+              : view === 'compose'
+                ? 'Новое письмо'
+                : 'Письма'}
+          </h1>
+          {view === 'thread' && threadUser && (
+            <p className="muted">
+              @{threadUser.username}
+              {threadTotal > 0 && ` · ${threadTotal.toLocaleString('ru-RU')} сообщ.`}
+            </p>
+          )}
+          {view === 'list' && (
+            <p className="muted">
+              {unreadTotal > 0
+                ? `Непрочитанных: ${unreadTotal.toLocaleString('ru-RU')}`
+                : 'Диалоги и друзья'}
+            </p>
+          )}
+          {view === 'compose' && <p className="muted">Личное сообщение игроку</p>}
+        </div>
+        {view === 'list' && unreadTotal > 0 && (
+          <span className="messages-hero-badge">{unreadTotal}</span>
         )}
-        {view === 'list' && <p className="muted">Диалоги и друзья</p>}
       </header>
 
       {view === 'list' && (
-        <div className="messages-tabs">
+        <div className="messages-tabs" role="tablist" aria-label="Разделы писем">
           <button
             type="button"
-            className={`btn btn-sm ${listTab === 'dialogs' ? 'btn-primary' : 'btn-ghost'}`}
+            role="tab"
+            aria-selected={listTab === 'dialogs'}
+            className={listTab === 'dialogs' ? 'active' : undefined}
             onClick={() => setListTab('dialogs')}
           >
             Диалоги
           </button>
           <button
             type="button"
-            className={`btn btn-sm ${listTab === 'friends' ? 'btn-primary' : 'btn-ghost'}`}
+            role="tab"
+            aria-selected={listTab === 'friends'}
+            className={listTab === 'friends' ? 'active' : undefined}
             onClick={() => setListTab('friends')}
           >
             Друзья
@@ -379,7 +397,7 @@ export default function Messages({
       {success && <div className="auth-success">{success}</div>}
 
       {view === 'compose' && (
-        <form className="auth-form mail-compose profile-card" onSubmit={handleSend}>
+        <form className="auth-form mail-compose mail-compose-card" onSubmit={handleSend}>
           <label>
             {composeToUserId ? (
               <>
@@ -426,11 +444,13 @@ export default function Messages({
       )}
 
       {view === 'list' && (
-        <>
+        <div className="messages-panel">
           {loading && <p className="muted">Загрузка...</p>}
           {!loading && listTab === 'dialogs' && (
             <div className="mail-list mail-conversation-list">
-              {conversations.length === 0 && <p className="muted">Диалогов пока нет</p>}
+              {conversations.length === 0 && (
+                <p className="muted messages-empty">Диалогов пока нет</p>
+              )}
               {conversations.map((conv) => (
                 <ConversationItem
                   key={conv.otherUser.id}
@@ -443,7 +463,9 @@ export default function Messages({
           {!loading && listTab === 'friends' && (
             <div className="mail-list friends-list">
               {friends.length === 0 && (
-                <p className="muted">Друзей пока нет. Добавляйте игроков из профиля.</p>
+                <p className="muted messages-empty">
+                  Друзей пока нет. Добавляйте игроков из профиля.
+                </p>
               )}
               {friends.map((friend) => (
                 <FriendItem
@@ -454,11 +476,11 @@ export default function Messages({
               ))}
             </div>
           )}
-        </>
+        </div>
       )}
 
       {view === 'thread' && threadUser && (
-        <>
+        <div className="mail-thread-shell">
           {loading && <p className="muted">Загрузка...</p>}
           {!loading && (
             <div className="mail-thread" ref={threadRef}>
@@ -474,7 +496,7 @@ export default function Messages({
                   </button>
                 </div>
               )}
-              {thread.length === 0 && <p className="muted">Переписки пока нет</p>}
+              {thread.length === 0 && <p className="muted messages-empty">Переписки пока нет</p>}
               {thread.map((msg) => (
                 <ThreadBubble
                   key={msg.id}
@@ -494,7 +516,7 @@ export default function Messages({
               </div>
             </div>
           )}
-        </>
+        </div>
       )}
 
       {reportTarget && (
@@ -528,7 +550,7 @@ function FriendItem({
         )}
         <div className="mail-conversation-body">
           <div className="mail-conversation-top">
-            <strong>{friend.username}</strong>
+            <strong>{friend.displayName || friend.username}</strong>
             <span className={`presence-label ${friend.isOnline ? 'presence-online' : 'presence-offline'}`}>
               {friend.isOnline ? 'в сети' : 'не в сети'}
             </span>
@@ -568,7 +590,7 @@ function ConversationItem({
         )}
         <div className="mail-conversation-body">
           <div className="mail-conversation-top">
-            <strong>{otherUser.username}</strong>
+            <strong>{otherUser.displayName || otherUser.username}</strong>
             <span className="muted mail-time">
               {new Date(lastMessage.createdAt).toLocaleString('ru-RU', {
                 day: 'numeric',

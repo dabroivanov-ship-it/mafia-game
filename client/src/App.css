@@ -1182,8 +1182,14 @@ html.telegram-webapp .app-body {
 
 .messages-tabs {
   display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 6px;
+  margin-bottom: 14px;
+  padding: 4px;
+  width: fit-content;
+  max-width: 100%;
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, var(--accent) 16%, var(--border));
+  background: color-mix(in srgb, var(--bg-card) 88%, transparent);
 }
 
 .friend-item .mail-item-header {
@@ -2650,6 +2656,82 @@ html.telegram-webapp .app-body {
   margin-bottom: 8px;
 }
 
+.messages-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 16px;
+  padding: 16px 18px;
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border));
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--accent) 10%, var(--bg-card)) 0%,
+    var(--bg-card) 52%
+  );
+  box-shadow: 0 0 24px color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.messages-hero h1 {
+  margin: 0 0 4px;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.messages-hero p {
+  margin: 0;
+}
+
+.messages-hero-badge {
+  flex-shrink: 0;
+  min-width: 2rem;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  color: var(--accent);
+  font-size: 0.9rem;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.messages-empty {
+  margin: 0;
+  padding: 18px 14px;
+  text-align: center;
+  border-radius: var(--radius);
+  border: 1px dashed var(--border);
+  background: color-mix(in srgb, var(--bg-card) 70%, transparent);
+}
+
+.mail-compose-card {
+  padding: 18px;
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border));
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--accent) 7%, var(--bg-card)) 0%,
+    var(--bg-card) 48%
+  );
+  box-shadow: 0 0 24px color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.mail-thread-shell {
+  padding: 12px;
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, var(--accent) 14%, var(--border));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 5%, var(--bg-card)) 0%,
+    var(--bg-card) 40%
+  );
+  box-shadow: 0 0 20px color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
 .mail-history-item {
   display: block;
   width: 100%;
@@ -2673,13 +2755,13 @@ html.telegram-webapp .app-body {
   font-size: 0.75rem;
   font-weight: 700;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   flex-shrink: 0;
 }
 
 .mail-direction.in {
-  background: rgba(46, 204, 113, 0.15);
-  color: #2ecc71;
+  background: color-mix(in srgb, var(--success) 15%, transparent);
+  color: var(--success);
 }
 
 .mail-direction.out {
@@ -2703,35 +2785,59 @@ html.telegram-webapp .app-body {
   position: sticky;
   top: 0;
   z-index: 1;
-  background: linear-gradient(var(--bg) 60%, transparent);
+  background: linear-gradient(var(--bg-card) 60%, transparent);
 }
 
 .mail-conversation-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .mail-conversation-item {
   display: block;
   width: 100%;
   text-align: left;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--bg-card);
+  border: 1px solid color-mix(in srgb, var(--accent) 14%, var(--border));
+  border-radius: var(--radius);
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--accent) 6%, var(--bg-card)) 0%,
+    var(--bg-card) 55%
+  );
   color: inherit;
   font: inherit;
   cursor: pointer;
-  padding: 12px 14px;
+  padding: 14px 14px;
+  box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 5%, transparent);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.mail-conversation-item:hover {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+  box-shadow: 0 0 20px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.mail-conversation-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .mail-conversation-item.unread {
-  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 48%, transparent);
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--accent) 14%, var(--bg-card)) 0%,
+    var(--bg-card) 60%
+  );
+  box-shadow: 0 0 22px color-mix(in srgb, var(--accent) 14%, transparent);
 }
 
 .mail-conversation-item .mail-item-header {
   align-items: flex-start;
+  margin-bottom: 0;
 }
 
 .mail-conversation-body {
@@ -2748,6 +2854,7 @@ html.telegram-webapp .app-body {
 
 .mail-conversation-top strong {
   font-size: 1rem;
+  letter-spacing: -0.02em;
 }
 
 .mail-conversation-login {
@@ -2768,33 +2875,42 @@ html.telegram-webapp .app-body {
 .mail-conversation-badge {
   flex-shrink: 0;
   min-width: 22px;
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: var(--accent);
-  color: #fff;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  color: var(--accent);
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
   text-align: center;
   align-self: center;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 28%, transparent);
 }
 
 .mail-thread-bubble {
   max-width: 88%;
-  padding: 10px 14px;
+  padding: 11px 14px;
   border-radius: var(--radius);
   line-height: 1.45;
+  box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 5%, transparent);
 }
 
 .mail-thread-bubble.in {
   align-self: flex-start;
-  background: var(--bg-card);
+  background: var(--bg-elevated, var(--bg-card));
   border: 1px solid var(--border);
 }
 
 .mail-thread-bubble.out {
   align-self: flex-end;
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--accent) 22%, var(--bg-card)) 0%,
+    color-mix(in srgb, var(--accent) 10%, var(--bg-card)) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 14%, transparent);
 }
 
 .mail-thread-meta {
@@ -2809,7 +2925,7 @@ html.telegram-webapp .app-body {
 
 .mail-report-btn {
   margin-left: auto;
-  border: none;
+  border: 1px solid transparent;
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
@@ -2821,6 +2937,7 @@ html.telegram-webapp .app-body {
 
 .mail-report-btn:hover {
   color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 35%, transparent);
   background: color-mix(in srgb, var(--danger) 12%, transparent);
 }
 
@@ -4466,16 +4583,14 @@ html.telegram-webapp .app-body {
   font: inherit;
 }
 
-.profile-tabs,
-.messages-tabs {
+.profile-tabs {
   display: flex;
   gap: 8px;
   margin-bottom: 18px;
   flex-wrap: wrap;
 }
 
-.profile-tabs button,
-.messages-tabs button {
+.profile-tabs button {
   padding: 8px 14px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
@@ -4485,11 +4600,37 @@ html.telegram-webapp .app-body {
   font: inherit;
 }
 
-.profile-tabs button.active,
-.messages-tabs button.active {
+.profile-tabs button.active {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
+}
+
+.messages-page .messages-tabs button {
+  padding: 8px 14px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.messages-page .messages-tabs button:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--bg-hover) 80%, transparent);
+}
+
+.messages-page .messages-tabs button.active {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.messages-page .messages-tabs button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .messages-panel {
@@ -4503,15 +4644,20 @@ html.telegram-webapp .app-body {
 }
 
 .mail-item {
-  background: var(--bg-hover);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 12px;
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--accent) 6%, var(--bg-card)) 0%,
+    var(--bg-card) 55%
+  );
+  border: 1px solid color-mix(in srgb, var(--accent) 14%, var(--border));
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 5%, transparent);
 }
 
 .mail-item.unread {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
 .mail-item-header {
@@ -4522,19 +4668,21 @@ html.telegram-webapp .app-body {
 }
 
 .mail-avatar {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   object-fit: cover;
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--border));
+  flex-shrink: 0;
 }
 
 .mail-avatar.placeholder {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  background: var(--bg-card);
+  width: 40px;
+  height: 40px;
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-elevated, var(--bg-card)));
   border-radius: 50%;
 }
 
