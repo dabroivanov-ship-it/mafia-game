@@ -157,7 +157,6 @@ function userRoleSearchText(u: User): string {
 }
 
 interface AdminPanelProps {
-  onBack: () => void;
   onDefaultThemeChange?: (theme: ThemeId) => void;
   onBrandingChange?: (branding: SiteBranding) => void;
   onLobbyAnnouncementChange?: (announcement: LobbyAnnouncement) => void;
@@ -166,7 +165,6 @@ interface AdminPanelProps {
 }
 
 export default function AdminPanel({
-  onBack,
   onDefaultThemeChange,
   onBrandingChange,
   onLobbyAnnouncementChange,
@@ -983,10 +981,6 @@ export default function AdminPanel({
               Комнат: <strong>{rooms.length}</strong>
             </p>
           )}
-        </div>
-        <div className="admin-header-actions">
-          <button type="button" className="btn btn-ghost" onClick={() => void load()}>Обновить</button>
-          <button type="button" className="btn btn-ghost" onClick={onBack}>Назад</button>
         </div>
       </div>
 
