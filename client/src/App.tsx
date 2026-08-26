@@ -1003,7 +1003,7 @@ export default function App() {
             <Clans
               key={clansInitialId ?? 'browse'}
               initialClanId={clansInitialId}
-              backLabel={clansBackToRef.current === 'cabinet' ? '← Кабинет' : '← Комнаты'}
+              backLabel={clansBackTo === 'cabinet' ? '← Кабинет' : '← Комнаты'}
               onBack={leaveClans}
               onJoinRoom={joinRoom}
             />
@@ -1160,7 +1160,7 @@ export default function App() {
             window.history.pushState(null, '', '/news');
           }
           if (v === 'clans') {
-            clansBackToRef.current = 'rooms';
+            setClansBackTo('rooms');
             setClansInitialId(null);
             window.history.pushState(null, '', '/');
           }
