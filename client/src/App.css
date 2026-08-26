@@ -641,6 +641,12 @@ html.telegram-webapp .app-body {
   gap: 8px;
 }
 
+.auth-social-unavailable {
+  margin: 0;
+  text-align: center;
+  font-size: 0.92rem;
+}
+
 .auth-social-btn {
   flex: 1;
   min-width: 4.5rem;
