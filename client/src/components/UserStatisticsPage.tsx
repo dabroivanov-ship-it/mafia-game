@@ -248,6 +248,13 @@ export default function UserStatisticsPage({
   const [stats, setStats] = useState<UserStatistics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const pageRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const root = pageRef.current;
+    if (!root) return;
+    return attachPageWheelScroll(root);
+  }, [loading, userId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -283,7 +290,7 @@ export default function UserStatisticsPage({
   const roleMax = Math.max(...(stats?.roles.map((r) => r.games) ?? [0]), 1);
 
   return (
-    <div className="cabinet-page user-stats-page">
+    <div className="cabinet-page user-stats-page" ref={pageRef}>
       <nav className="info-back">
         <button type="button" className="btn btn-ghost btn-sm" onClick={onBack}>
           ← Назад
