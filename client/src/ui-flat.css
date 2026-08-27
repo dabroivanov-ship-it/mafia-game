@@ -192,56 +192,99 @@ textarea:focus-visible {
 }
 
 @media (min-width: 769px) {
+  .main-menu {
+    background: var(--accent);
+    border: none;
+    box-shadow: var(--shadow-soft);
+  }
+
   .menu-items {
     gap: 6px;
-    padding: 0;
+    padding: 8px 0 12px 12px;
     border: none;
     border-radius: 0;
     background: transparent;
     box-shadow: none;
+    overflow: visible;
   }
 
   .menu-item {
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     font-weight: 600;
-    border-radius: 14px;
-    padding: 11px 14px;
-    border: 1px solid transparent;
+    padding: 14px 18px;
+    border: none;
     background: transparent;
-    color: var(--text-muted);
+    color: color-mix(in srgb, #fff 88%, transparent);
     justify-content: flex-start;
-    gap: 12px;
+    gap: 14px;
     width: 100%;
   }
 
-  .menu-item:hover:not(.active) {
-    background: var(--bg-hover);
-    color: var(--text);
+  .menu-item:not(.active):not(.logout) {
+    margin-right: 12px;
+    border-radius: 16px;
+    color: color-mix(in srgb, #fff 88%, transparent);
+  }
+
+  .menu-item:hover:not(.active):not(.logout) {
+    background: color-mix(in srgb, #fff 14%, transparent);
+    color: #fff;
   }
 
   .menu-item.active {
-    background: transparent;
-    border-color: var(--accent);
+    z-index: 2;
+    margin-right: 0;
+    padding-right: 22px;
+    border-radius: 22px 0 0 22px;
+    background: var(--bg);
+    border-color: transparent;
     color: var(--accent);
     box-shadow: none;
   }
 
-  .menu-item.admin.active {
+  .menu-item.active::before,
+  .menu-item.active::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    width: 22px;
+    height: 22px;
     background: transparent;
-    border-color: #f59e0b;
-    color: #fbbf24;
+    pointer-events: none;
   }
 
-  .menu-item.mod.active {
-    background: transparent;
-    border-color: #2d7a4f;
-    color: #4ade80;
+  .menu-item.active::before {
+    top: -22px;
+    border-bottom-right-radius: 22px;
+    box-shadow: 6px 6px 0 0 var(--bg);
   }
 
+  .menu-item.active::after {
+    bottom: -22px;
+    border-top-right-radius: 22px;
+    box-shadow: 6px -6px 0 0 var(--bg);
+  }
+
+  .menu-item.admin.active,
+  .menu-item.mod.active,
   .menu-item.watcher.active {
-    background: transparent;
-    border-color: #64748b;
-    color: #94a3b8;
+    background: var(--bg);
+    border-color: transparent;
+    color: var(--accent);
+  }
+
+  .menu-item.logout {
+    margin: auto 12px 4px 0;
+    width: auto;
+    justify-content: center;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--bg) 22%, transparent);
+    color: #fff;
+  }
+
+  .menu-item.logout:hover {
+    background: color-mix(in srgb, var(--bg) 32%, transparent);
+    color: #fff;
   }
 }
 

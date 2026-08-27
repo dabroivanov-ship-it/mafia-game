@@ -6130,9 +6130,6 @@ html.telegram-webapp .app-body {
 }
 
 .player-page-top {
-  position: sticky;
-  top: 0;
-  z-index: 1;
   display: flex;
   flex-direction: column;
   padding: 16px 20px 12px;
@@ -8465,7 +8462,11 @@ html.telegram-webapp .app-body {
 @media (min-width: 769px) {
   .app-shell {
     flex-direction: row;
-    --sidebar-width: 232px;
+    --sidebar-inset: 14px;
+    --sidebar-panel: 228px;
+    --sidebar-gap: 12px;
+    --sidebar-width: calc(var(--sidebar-inset) + var(--sidebar-panel) + var(--sidebar-gap));
+    --sidebar-cut: 22px;
   }
 
   .cabinet-hub-item-mobile-only {
@@ -8484,34 +8485,42 @@ html.telegram-webapp .app-body {
 
   .main-menu {
     position: fixed;
-    top: 0;
-    left: 0;
-    bottom: 0;
+    top: var(--sidebar-inset);
+    left: var(--sidebar-inset);
+    bottom: var(--sidebar-inset);
     z-index: 120;
     order: -1;
     display: flex;
     flex-direction: column;
-    width: var(--sidebar-width);
-    max-width: var(--sidebar-width);
-    height: 100vh;
-    height: 100dvh;
+    width: var(--sidebar-panel);
+    max-width: var(--sidebar-panel);
+    height: auto;
     margin: 0;
-    padding: 24px 16px;
-    border-right: 1px solid var(--border);
-    border-bottom: none;
-    border-top: none;
-    background: color-mix(in srgb, var(--bg-card) 96%, transparent);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
+    padding: 22px 0 16px;
+    border: none;
+    border-radius: var(--radius-xl);
+    background: var(--accent);
+    box-shadow: var(--shadow-soft);
     box-sizing: border-box;
+    overflow: visible;
   }
 
   .menu-logo {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin: 2px 4px 28px;
+    margin: 2px 18px 28px;
     flex-shrink: 0;
+  }
+
+  .menu-logo .site-logo-text,
+  .menu-logo .site-logo-stamp-line {
+    color: #fff;
+    text-shadow: none;
+  }
+
+  .menu-logo .site-logo-mark {
+    box-shadow: 0 8px 22px color-mix(in srgb, #000 22%, transparent);
   }
 
   .menu-items {
@@ -8521,24 +8530,133 @@ html.telegram-webapp .app-body {
     flex-direction: column;
     align-items: stretch;
     flex-wrap: nowrap;
-    overflow-y: auto;
-    overflow-x: hidden;
-    -webkit-overflow-scrolling: touch;
+    gap: 6px;
+    padding: 8px 0 12px 12px;
+    overflow: visible;
   }
 
   .menu-item {
+    position: relative;
     justify-content: flex-start;
     width: 100%;
     flex-shrink: 0;
+    gap: 14px;
+    padding: 14px 18px;
+    min-height: 48px;
+    border: none;
+    border-radius: 16px 0 0 16px;
+    background: transparent;
+    color: color-mix(in srgb, #fff 88%, transparent);
+    font-size: 0.95rem;
+    font-weight: 600;
+    transition:
+      background 0.15s ease,
+      color 0.15s ease;
+  }
+
+  .menu-item .menu-icon {
+    width: 1.35rem;
+    height: 1.35rem;
+  }
+
+  .menu-item:not(.active):not(.logout) {
+    margin-right: 12px;
+    border-radius: 16px;
+    color: color-mix(in srgb, #fff 88%, transparent);
+  }
+
+  .menu-item:hover:not(.active):not(.logout) {
+    background: color-mix(in srgb, #fff 14%, transparent);
+    color: #fff;
+  }
+
+  .menu-item:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+  }
+
+  .menu-item.active {
+    z-index: 2;
+    margin-right: 0;
+    padding-right: 22px;
+    border-radius: var(--sidebar-cut) 0 0 var(--sidebar-cut);
+    background: var(--bg);
+    color: var(--accent);
+    border-color: transparent;
+    box-shadow: none;
+  }
+
+  .menu-item.active:focus-visible {
+    outline-color: var(--accent);
+  }
+
+  .menu-item.active .menu-badge {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  /* Вырез активного пункта — как вкладка в контент */
+  .menu-item.active::before,
+  .menu-item.active::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    width: var(--sidebar-cut);
+    height: var(--sidebar-cut);
+    background: transparent;
+    pointer-events: none;
+  }
+
+  .menu-item.active::before {
+    top: calc(var(--sidebar-cut) * -1);
+    border-bottom-right-radius: var(--sidebar-cut);
+    box-shadow: 6px 6px 0 0 var(--bg);
+  }
+
+  .menu-item.active::after {
+    bottom: calc(var(--sidebar-cut) * -1);
+    border-top-right-radius: var(--sidebar-cut);
+    box-shadow: 6px -6px 0 0 var(--bg);
+  }
+
+  .menu-item.admin.active,
+  .menu-item.mod.active,
+  .menu-item.watcher.active {
+    background: var(--bg);
+    color: var(--accent);
+    border-color: transparent;
+    box-shadow: none;
   }
 
   .menu-item.logout {
-    margin-top: auto;
-    margin-left: 0;
+    margin: auto 12px 4px 0;
+    width: auto;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px 18px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--bg) 22%, transparent);
+    color: #fff;
+    border: none;
+  }
+
+  .menu-item.logout:hover {
+    background: color-mix(in srgb, var(--bg) 32%, transparent);
+    color: #fff;
+  }
+
+  .menu-item.logout:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
   }
 
   .menu-item.menu-item-desktop-only {
     display: inline-flex;
+  }
+
+  .menu-badge {
+    background: color-mix(in srgb, #fff 22%, transparent);
+    color: #fff;
   }
 
   .app-body {
