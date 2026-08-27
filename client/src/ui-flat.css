@@ -193,8 +193,8 @@ textarea:focus-visible {
 
 @media (min-width: 769px) {
   .main-menu {
-    background: var(--accent);
-    border: none;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
     box-shadow: var(--shadow-soft);
   }
 
@@ -214,7 +214,7 @@ textarea:focus-visible {
     padding: 14px 18px;
     border: none;
     background: transparent;
-    color: color-mix(in srgb, #fff 88%, transparent);
+    color: var(--text-muted);
     justify-content: flex-start;
     gap: 14px;
     width: 100%;
@@ -223,12 +223,12 @@ textarea:focus-visible {
   .menu-item:not(.active):not(.logout) {
     margin-right: 12px;
     border-radius: 16px;
-    color: color-mix(in srgb, #fff 88%, transparent);
+    color: var(--text-muted);
   }
 
   .menu-item:hover:not(.active):not(.logout) {
-    background: color-mix(in srgb, #fff 14%, transparent);
-    color: #fff;
+    background: var(--bg-hover);
+    color: var(--text);
   }
 
   .menu-item.active {
@@ -278,13 +278,14 @@ textarea:focus-visible {
     width: auto;
     justify-content: center;
     border-radius: 999px;
-    background: color-mix(in srgb, var(--bg) 22%, transparent);
-    color: #fff;
+    background: var(--bg-hover);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
   }
 
   .menu-item.logout:hover {
-    background: color-mix(in srgb, var(--bg) 32%, transparent);
-    color: #fff;
+    background: var(--bg-elevated);
+    color: var(--text);
   }
 }
 

@@ -8497,9 +8497,9 @@ html.telegram-webapp .app-body {
     height: auto;
     margin: 0;
     padding: 22px 0 16px;
-    border: none;
+    border: 1px solid var(--border);
     border-radius: var(--radius-xl);
-    background: var(--accent);
+    background: var(--bg-card);
     box-shadow: var(--shadow-soft);
     box-sizing: border-box;
     overflow: visible;
@@ -8515,12 +8515,7 @@ html.telegram-webapp .app-body {
 
   .menu-logo .site-logo-text,
   .menu-logo .site-logo-stamp-line {
-    color: #fff;
-    text-shadow: none;
-  }
-
-  .menu-logo .site-logo-mark {
-    box-shadow: 0 8px 22px color-mix(in srgb, #000 22%, transparent);
+    color: var(--text);
   }
 
   .menu-items {
@@ -8546,7 +8541,7 @@ html.telegram-webapp .app-body {
     border: none;
     border-radius: 16px 0 0 16px;
     background: transparent;
-    color: color-mix(in srgb, #fff 88%, transparent);
+    color: var(--text-muted);
     font-size: 0.95rem;
     font-weight: 600;
     transition:
@@ -8562,16 +8557,16 @@ html.telegram-webapp .app-body {
   .menu-item:not(.active):not(.logout) {
     margin-right: 12px;
     border-radius: 16px;
-    color: color-mix(in srgb, #fff 88%, transparent);
+    color: var(--text-muted);
   }
 
   .menu-item:hover:not(.active):not(.logout) {
-    background: color-mix(in srgb, #fff 14%, transparent);
-    color: #fff;
+    background: var(--bg-hover);
+    color: var(--text);
   }
 
   .menu-item:focus-visible {
-    outline: 2px solid #fff;
+    outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
 
@@ -8635,18 +8630,18 @@ html.telegram-webapp .app-body {
     gap: 10px;
     padding: 12px 18px;
     border-radius: 999px;
-    background: color-mix(in srgb, var(--bg) 22%, transparent);
-    color: #fff;
-    border: none;
+    background: var(--bg-hover);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
   }
 
   .menu-item.logout:hover {
-    background: color-mix(in srgb, var(--bg) 32%, transparent);
-    color: #fff;
+    background: var(--bg-elevated);
+    color: var(--text);
   }
 
   .menu-item.logout:focus-visible {
-    outline: 2px solid #fff;
+    outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
 
@@ -8655,7 +8650,7 @@ html.telegram-webapp .app-body {
   }
 
   .menu-badge {
-    background: color-mix(in srgb, #fff 22%, transparent);
+    background: var(--accent);
     color: #fff;
   }
 
