@@ -1039,8 +1039,6 @@ export default function App() {
             siteOnlineCount={siteOnlineCount}
             announcement={lobbyAnnouncement}
             onJoin={joinRoom}
-            unreadMailCount={unreadMailCount}
-            onOpenMessages={() => openMessages({ openUnread: true })}
             onOpenOnlineUsers={() => setLobbyScreen('online-users')}
           />
         )}

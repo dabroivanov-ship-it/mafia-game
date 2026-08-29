@@ -20,6 +20,7 @@ import {
   findPrivateMessageForModeration,
   moderateDeletePrivateMessage,
 } from './store.js';
+import { isWelcomeLetterText } from './welcome.js';
 
 export interface MessagesRouterOptions {
   onMessageSent?: (recipientId: number, payload: {
@@ -168,6 +169,9 @@ export function createMessagesRouter({ onMessageSent, onMessageRead, onOutgoingR
     }
     if (found.senderId === reporterId) {
       return res.status(400).json({ error: 'Нельзя отметить своё письмо' });
+    }
+    if (isWelcomeLetterText(found.text)) {
+      return res.status(400).json({ error: 'Это системное письмо, его нельзя отметить' });
     }
 
     const deleted = moderateDeletePrivateMessage(messageId);

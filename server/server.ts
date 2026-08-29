@@ -105,6 +105,7 @@ import { initAllQuizRooms, initQuizRoom, handleQuizAnswer, isQuizRoom, setQuizBr
 import { initGameAiRunner, triggerGameAi, triggerBotChatResponse } from './game/ai/runner.js';
 import { buildRobotsTxt, buildSecurityTxt, buildSitemapXml } from './seo/siteSeo.js';
 import { sendSpaIndex } from './seo/spaHtml.js';
+import { getProjectRoot } from './paths.js';
 
 assertProductionEnv();
 
@@ -286,7 +287,7 @@ app.use(
 app.use(
   '/uploads/avatars',
   (_req, res, next) => {
-    res.setHeader('Content-Disposition', 'attachment');
+    res.setHeader('Content-Disposition', 'inline');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     next();
   },
@@ -1441,6 +1442,20 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const serverRoot = __dirname.endsWith(`${path.sep}dist`) ? path.join(__dirname, '..') : __dirname;
 const clientDist = path.join(serverRoot, '..', 'client', 'dist');
 
+const defaultAvatarsDir = [path.join(clientDist, 'avatars'), path.join(getProjectRoot(), 'client', 'public', 'avatars')].find(
+  (dir) => fs.existsSync(dir)
+);
+if (defaultAvatarsDir) {
+  app.use(
+    '/avatars',
+    express.static(defaultAvatarsDir, {
+      setHeaders(res) {
+        res.setHeader('Cache-Control', 'public, max-age=604800');
+      },
+    })
+  );
+}
+
 app.use(
   express.static(clientDist, {
     setHeaders(res, filePath) {
@@ -1456,7 +1471,12 @@ app.use(
   })
 );
 app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api') || req.path.startsWith('/socket.io') || req.path.startsWith('/uploads')) {
+  if (
+    req.path.startsWith('/api') ||
+    req.path.startsWith('/socket.io') ||
+    req.path.startsWith('/uploads') ||
+    req.path.startsWith('/avatars/')
+  ) {
     return next();
   }
   sendSpaIndex(req, res, clientDist);

@@ -1,16 +1,6 @@
 import type { GamePhase, LobbyRoom, LobbyAnnouncement } from '../types';
 import SiteOnlineStatus from './SiteOnlineStatus';
 
-function mailNoticeLabel(count: number): string {
-  if (count === 1) return 'У вас 1 новое сообщение';
-  const mod10 = count % 10;
-  const mod100 = count % 100;
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
-    return `У вас ${count} новых сообщения`;
-  }
-  return `У вас ${count} новых сообщений`;
-}
-
 const PHASE_LABELS: Record<GamePhase, string> = {
   waiting: 'Ожидание',
   registration: 'Регистрация',
@@ -37,8 +27,6 @@ interface LobbyProps {
   siteOnlineCount?: number;
   announcement?: LobbyAnnouncement | null;
   onJoin: (roomId: number) => void;
-  unreadMailCount?: number;
-  onOpenMessages?: () => void;
   onOpenOnlineUsers?: () => void;
 }
 
@@ -83,8 +71,6 @@ export default function Lobby({
   siteOnlineCount = 0,
   announcement = null,
   onJoin,
-  unreadMailCount = 0,
-  onOpenMessages,
   onOpenOnlineUsers,
 }: LobbyProps) {
   const gameRooms = rooms.filter((r) => r.kind === 'game');
@@ -106,14 +92,6 @@ export default function Lobby({
           </span>
           <p>{announcement.text}</p>
         </div>
-      )}
-
-      {unreadMailCount > 0 && (
-        <button type="button" className="lobby-mail-notice" onClick={onOpenMessages}>
-          <span>
-            {mailNoticeLabel(unreadMailCount)} — открыть
-          </span>
-        </button>
       )}
 
       <section className="lobby-rooms-section">

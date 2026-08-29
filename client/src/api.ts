@@ -8,6 +8,8 @@ const API_BASE =
 export function avatarUrl(path: string | null | undefined): string | null {
   if (!path) return null;
   if (path.startsWith('http')) return path;
+  // Default avatars are static assets from the SPA host, not API uploads.
+  if (path.startsWith('/avatars/')) return path;
   return `${API_BASE}${path}`;
 }
 

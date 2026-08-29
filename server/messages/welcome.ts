@@ -9,6 +9,10 @@ function greeting(user: User): string {
   return `Привет, ${user.username}!`;
 }
 
+export function isWelcomeLetterText(text: string): boolean {
+  return text.includes('Рады видеть тебя за столом') && text.includes('Удачи за столом');
+}
+
 export function buildWelcomeLetter(user: User, admin: User): string {
   return [
     greeting(user),

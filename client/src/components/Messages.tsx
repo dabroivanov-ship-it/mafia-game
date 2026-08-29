@@ -5,10 +5,8 @@ import {
   fetchMailThread,
   fetchUnreadMailCount,
   sendPrivateMessage,
-  reportPrivateMessage,
 } from '../api';
 import type { MailConversation, PrivateMessage } from '../types';
-import DeleteMessageModal, { type ViolationType } from './DeleteMessageModal';
 import { INFO_PATHS } from '../infoRouting';
 
 const THREAD_PAGE_SIZE = 10;
@@ -93,7 +91,6 @@ export default function Messages({
   );
   const [composeText, setComposeText] = useState('');
   const [sending, setSending] = useState(false);
-  const [reportTarget, setReportTarget] = useState<PrivateMessage | null>(null);
   const threadRef = useRef<HTMLDivElement>(null);
   const prependingRef = useRef(false);
 
@@ -275,23 +272,6 @@ export default function Messages({
     setView('compose');
   };
 
-  const handleReportMessage = async (violationType: ViolationType) => {
-    if (!reportTarget) return;
-    const id = reportTarget.id;
-    setError('');
-    try {
-      await reportPrivateMessage(id, violationType);
-      setThread((prev) =>
-        prev.map((m) => (m.id === id ? { ...m, text: DELETED_MAIL_TEXT } : m))
-      );
-      setReportTarget(null);
-      setSuccess('Сообщение отмечено и попало в журнал модерации');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не удалось отметить сообщение');
-      setReportTarget(null);
-    }
-  };
-
   const unreadTotal = conversations.reduce((sum, c) => sum + c.unreadCount, 0);
 
   return (
@@ -436,16 +416,7 @@ export default function Messages({
               )}
               {thread.length === 0 && <p className="muted messages-empty">Переписки пока нет</p>}
               {thread.map((msg) => (
-                <ThreadBubble
-                  key={msg.id}
-                  msg={msg}
-                  onOpenFaq={onOpenFaq}
-                  onReport={
-                    msg.direction === 'in' && msg.text !== DELETED_MAIL_TEXT
-                      ? () => setReportTarget(msg)
-                      : undefined
-                  }
-                />
+                <ThreadBubble key={msg.id} msg={msg} onOpenFaq={onOpenFaq} />
               ))}
               <div className="mail-thread-actions">
                 <button type="button" className="btn btn-primary btn-sm" onClick={replyInThread}>
@@ -455,17 +426,6 @@ export default function Messages({
             </div>
           )}
         </div>
-      )}
-
-      {reportTarget && (
-        <DeleteMessageModal
-          authorName={reportTarget.otherUser.username}
-          messageText={reportTarget.text}
-          onConfirm={(violationType) => {
-            void handleReportMessage(violationType);
-          }}
-          onCancel={() => setReportTarget(null)}
-        />
       )}
     </div>
   );
@@ -522,11 +482,9 @@ function ConversationItem({
 
 function ThreadBubble({
   msg,
-  onReport,
   onOpenFaq,
 }: {
   msg: PrivateMessage;
-  onReport?: () => void;
   onOpenFaq?: () => void;
 }) {
   const isOut = msg.direction === 'out';
@@ -546,16 +504,6 @@ function ThreadBubble({
             minute: '2-digit',
           })}
         </span>
-        {onReport && (
-          <button
-            type="button"
-            className="mail-report-btn"
-            title="Отметить нарушение"
-            onClick={onReport}
-          >
-            ✕
-          </button>
-        )}
       </div>
       <p>{deleted ? msg.text : renderMailText(msg.text, onOpenFaq)}</p>
       {isOut && (
