@@ -46,7 +46,6 @@ import type { User, NewsPost, BlogPost, ThemeId, ViolationLogEntry, ViolationTyp
 import { AuthProviderBadges } from './AuthProviderBadges';
 import { USER_GENDER_LABELS } from '../gender';
 import {
-  adminPanelRoleLabel,
   hasAdminPermission,
   type AdminPermission,
 } from '../adminPermissions';
@@ -173,7 +172,6 @@ export default function AdminPanel({
 }: AdminPanelProps) {
   const [systemView, setSystemView] = useState<SystemView>(initialSystemView);
   const [users, setUsers] = useState<User[]>([]);
-  const [usersRegisteredToday, setUsersRegisteredToday] = useState(0);
   const [rooms, setRooms] = useState<AdminRoom[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -244,7 +242,6 @@ export default function AdminPanel({
     try {
       const data = await fetchAdminOverview();
       setUsers(data.users || []);
-      setUsersRegisteredToday(data.usersRegisteredToday ?? 0);
       setRooms(data.rooms || []);
 
       if (!roomEditsInitializedRef.current || syncRoomNames) {
@@ -963,17 +960,6 @@ export default function AdminPanel({
                 ? 'Панель модератора'
                 : 'Панель администратора'}
           </h2>
-          {systemView === 'hub' && (
-            <p className="admin-header-sub">
-              {adminPanelRoleLabel(panelRole)}
-              {' · '}
-              Пользователей: <strong>{users.length}</strong>
-              {' · '}
-              Новых за сутки: <strong>{usersRegisteredToday}</strong>
-              {' · '}
-              Комнат: <strong>{rooms.length}</strong>
-            </p>
-          )}
         </div>
       </div>
 
