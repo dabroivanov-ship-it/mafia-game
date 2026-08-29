@@ -423,9 +423,11 @@ export function updateUserProfile(
     nextGender = normalizeGender(gender);
     fields.push('gender = ?');
     values.push(nextGender);
-    if (shouldUseGenderDefaultAvatar(existing.avatar)) {
+    const nextAvatar = defaultAvatarForGender(nextGender);
+    if (nextAvatar) {
+      if (isCustomAvatar(existing.avatar)) deleteAvatarFile(existing.avatar);
       fields.push('avatar = ?');
-      values.push(defaultAvatarForGender(nextGender));
+      values.push(nextAvatar);
     }
   } else if (shouldUseGenderDefaultAvatar(existing.avatar) && nextGender) {
     fields.push('avatar = ?');
@@ -523,6 +525,7 @@ export function updateUserDefaultAvatar(
 ): PublicUser | null {
   const existing = findUserById(userId);
   if (!existing) return null;
+  if (normalizeGender(existing.gender) !== choice) return null;
   const avatar = defaultAvatarForGender(choice);
   if (!avatar) return null;
   if (isCustomAvatar(existing.avatar)) deleteAvatarFile(existing.avatar);

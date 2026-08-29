@@ -1,13 +1,9 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { avatarUrl, updateProfile, selectDefaultAvatar, fetchMe } from '../api';
+import { avatarUrl, updateProfile, fetchMe } from '../api';
 import type { User } from '../types';
 import { USER_GENDER_LABELS } from '../gender';
 import { userPositionLabel, isStaffPosition } from '../userPosition';
-import {
-  DEFAULT_AVATAR_OPTIONS,
-  avatarChoiceFromPath,
-  type DefaultAvatarChoice,
-} from '../defaultAvatars';
+import { defaultAvatarPathForGender } from '../defaultAvatars';
 
 interface CabinetProfileSettingsProps {
   user: User;
@@ -29,7 +25,6 @@ export default function CabinetProfileSettings({
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
-  const [avatarLoading, setAvatarLoading] = useState<DefaultAvatarChoice | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -64,23 +59,8 @@ export default function CabinetProfileSettings({
     }
   };
 
-  const handleAvatarSelect = async (choice: DefaultAvatarChoice) => {
-    if (avatarChoiceFromPath(user.avatar) === choice) return;
-    setAvatarLoading(choice);
-    setError('');
-    setSuccess('');
-    try {
-      const { user: updated } = await selectDefaultAvatar(choice);
-      onUpdate(updated);
-      setSuccess('Аватар обновлён');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не удалось сменить аватар');
-    } finally {
-      setAvatarLoading(null);
-    }
-  };
-
-  const selectedAvatar = avatarChoiceFromPath(user.avatar);
+  const previewGender = form.gender || user.gender;
+  const previewAvatar = defaultAvatarPathForGender(previewGender);
 
   return (
     <div className="cabinet-page">
@@ -92,48 +72,29 @@ export default function CabinetProfileSettings({
 
       <header className="page-header">
         <h1>Профиль</h1>
-        <p className="muted">Имя, город, аватар и о себе</p>
+        <p className="muted">Имя, пол, город и о себе</p>
       </header>
 
       <div className="profile-card cabinet-card">
         <div className="profile-avatar-block profile-avatar-block--picker">
           <div className="profile-avatar-wrap">
-            {user.avatar ? (
-              <img src={avatarUrl(user.avatar) ?? undefined} alt="Аватар" className="profile-avatar" />
+            {previewAvatar ? (
+              <img
+                src={avatarUrl(previewAvatar) ?? undefined}
+                alt="Аватар"
+                className="profile-avatar"
+              />
             ) : (
               <div className="profile-avatar placeholder" aria-hidden="true" />
             )}
           </div>
           <div className="profile-avatar-info">
             <p className="profile-avatar-picker-label">Аватар</p>
-            <div className="profile-avatar-picker" role="radiogroup" aria-label="Выбор аватара">
-              {DEFAULT_AVATAR_OPTIONS.map((option) => {
-                const active = selectedAvatar === option.id;
-                const pending = avatarLoading === option.id;
-                return (
-                  <button
-                    key={option.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={active}
-                    className={`profile-avatar-option${active ? ' active' : ''}`}
-                    disabled={!!avatarLoading}
-                    onClick={() => {
-                      void handleAvatarSelect(option.id);
-                    }}
-                  >
-                    <img
-                      src={avatarUrl(option.path) ?? undefined}
-                      alt=""
-                      className="profile-avatar-option-image"
-                    />
-                    <span className="profile-avatar-option-label">
-                      {pending ? 'Сохранение...' : option.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+            <p className="muted small">
+              {previewGender
+                ? `Для ${USER_GENDER_LABELS[previewGender].toLowerCase()} пола`
+                : 'Выберите пол — аватар подставится автоматически'}
+            </p>
           </div>
         </div>
 

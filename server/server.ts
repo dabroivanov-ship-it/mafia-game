@@ -262,7 +262,7 @@ app.get('/api/default-avatars/:filename', (req, res) => {
     return;
   }
   res.setHeader('Cache-Control', 'public, max-age=604800');
-  res.type('image/svg+xml');
+  res.type(file.endsWith('.png') ? 'image/png' : 'image/svg+xml');
   res.sendFile(file);
 });
 

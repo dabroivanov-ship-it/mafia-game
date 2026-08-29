@@ -2,7 +2,12 @@ import fs from 'fs';
 import path from 'path';
 import { getProjectRoot, getServerRoot } from '../paths.js';
 
-const ALLOWED_DEFAULT_AVATARS = new Set(['default-male.svg', 'default-female.svg']);
+const ALLOWED_DEFAULT_AVATARS = new Set([
+  'default-male.png',
+  'default-female.png',
+  'default-male.svg',
+  'default-female.svg',
+]);
 
 export function resolveDefaultAvatarFile(filename: string): string | null {
   const base = path.basename(filename);

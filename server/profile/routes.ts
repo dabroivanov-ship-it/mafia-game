@@ -85,6 +85,11 @@ export function createProfileRouter({ onProfileUpdated }: ProfileRouterOptions =
     if (choice !== 'male' && choice !== 'female') {
       return res.status(400).json({ error: 'Выберите аватар' });
     }
+    const existing = findUserById(req.userId!);
+    if (!existing) return res.status(404).json({ error: 'Пользователь не найден' });
+    if (normalizeGender(existing.gender) !== choice) {
+      return res.status(400).json({ error: 'Аватар должен соответствовать полу в профиле' });
+    }
     const user = updateUserDefaultAvatar(req.userId!, choice);
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
     onProfileUpdated?.(req.userId!, user);
