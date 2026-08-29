@@ -478,13 +478,20 @@ export default function App() {
   }, [token]);
 
   const openMessages = useCallback(
-    (opts?: { userId?: number; username?: string; thread?: boolean; openUnread?: boolean }) => {
+    (opts?: {
+      userId?: number;
+      username?: string;
+      thread?: boolean;
+      openUnread?: boolean;
+      openFriends?: boolean;
+    }) => {
       if (opts?.thread && opts.userId) {
         setMessageThreadUserId(opts.userId);
         setMessageThreadUsername(opts.username ?? null);
         setComposeToUserId(null);
         setComposeToUsername(null);
         setMessagesOpenUnread(false);
+        setMessagesOpenFriends(false);
       } else if (opts?.openUnread) {
         setMessageThreadUserId(null);
         setMessageThreadUsername(null);
