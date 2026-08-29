@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, FormEvent, ChangeEvent } from 'react';
 import { avatarUrl, updateProfile, uploadAvatar, fetchMe } from '../api';
 import type { User } from '../types';
 import { USER_GENDER_LABELS } from '../gender';
-import { userPositionLabel } from '../userPosition';
+import { userPositionLabel, isStaffPosition } from '../userPosition';
 import { formatOnlineDuration } from '../utils/presence';
 
 interface CabinetProfileSettingsProps {
@@ -55,7 +55,7 @@ export default function CabinetProfileSettings({
         chatLimit: user.chatLimit ?? 15,
       });
       onUpdate(updated);
-      setSuccess('Анкета сохранена');
+      setSuccess('Профиль сохранён');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка сохранения');
     } finally {
@@ -89,7 +89,7 @@ export default function CabinetProfileSettings({
       </nav>
 
       <header className="page-header">
-        <h1>Анкета</h1>
+        <h1>Профиль</h1>
         <p className="muted">Имя, город, аватар и о себе</p>
       </header>
 
@@ -138,10 +138,12 @@ export default function CabinetProfileSettings({
         {success && <div className="auth-success">{success}</div>}
 
         <form className="auth-form" onSubmit={handleSave}>
-          <label>
-            Должность
-            <input value={userPositionLabel(user)} readOnly />
-          </label>
+          {isStaffPosition(user) && (
+            <label>
+              Должность
+              <input value={userPositionLabel(user)} readOnly />
+            </label>
+          )}
           <label>
             Имя
             <input

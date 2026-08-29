@@ -24,7 +24,7 @@ const HUB_ITEMS: { title: string; action: HubAction; icon: HubIconId }[] = [
   { title: 'Кланы', action: 'clans', icon: 'clans' },
   { title: 'Поддержка', action: 'support', icon: 'support' },
   { title: 'Санкции', action: 'sanctions', icon: 'sanctions' },
-  { title: 'Анкета', action: 'profile', icon: 'profile' },
+  { title: 'Профиль', action: 'profile', icon: 'profile' },
   { title: 'Настройки', action: 'account', icon: 'settings' },
 ];
 
@@ -186,8 +186,8 @@ export default function CabinetHub({
             type="button"
             className="cabinet-hub-edit-btn"
             onClick={onOpenProfileSettings}
-            aria-label="Редактировать анкету"
-            title="Анкета"
+            aria-label="Редактировать профиль"
+            title="Профиль"
           >
             <HubIcon id="edit" />
           </button>

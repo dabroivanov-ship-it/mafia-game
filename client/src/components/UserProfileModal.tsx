@@ -15,7 +15,7 @@ import {
 import type { User, ProfileStaffMeta, ChatReplyTarget, UserPresence } from '../types';
 import { USER_GENDER_LABELS, genderLabel } from '../gender';
 import { formatPresenceLabel, formatOnlineDuration } from '../utils/presence';
-import { userPositionLabel } from '../userPosition';
+import { userPositionLabel, isStaffPosition } from '../userPosition';
 
 function quizAnswersLabel(count: number): string {
   const mod10 = count % 10;
@@ -481,10 +481,12 @@ export default function UserProfileModal({
                     <span className="player-page-label">Викторина</span>
                     <span>{quizAnswersLabel(data?.user.quizCorrectAnswers ?? 0)}</span>
                   </li>
-                  <li>
-                    <span className="player-page-label">Должность</span>
-                    <span>{userPositionLabel(user)}</span>
-                  </li>
+                  {isStaffPosition(user) && (
+                    <li>
+                      <span className="player-page-label">Должность</span>
+                      <span>{userPositionLabel(user)}</span>
+                    </li>
+                  )}
                   <li>
                     <span className="player-page-label">Регистрация</span>
                     <span>{new Date(user.createdAt).toLocaleDateString('ru-RU')}</span>
@@ -628,10 +630,12 @@ export default function UserProfileModal({
               </>
             ) : (
               <div className="auth-form">
-                <label>
-                  Должность
-                  <input value={userPositionLabel(user)} readOnly />
-                </label>
+                {isStaffPosition(user) && (
+                  <label>
+                    Должность
+                    <input value={userPositionLabel(user)} readOnly />
+                  </label>
+                )}
                 <label>
                   Имя
                   <input

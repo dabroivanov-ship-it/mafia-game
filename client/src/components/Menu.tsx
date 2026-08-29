@@ -11,13 +11,14 @@ interface MenuItem {
   mobileLabel?: string;
   mobileBottom?: boolean;
   desktopOnly?: boolean;
+  mobileOnly?: boolean;
 }
 
 const ITEMS: MenuItem[] = [
   { id: 'lobby', label: 'Комнаты', mobileBottom: true },
   { id: 'news', label: 'Новости', mobileBottom: true },
   { id: 'clans', label: 'Кланы', desktopOnly: true },
-  { id: 'cabinet', label: 'Кабинет', mobileLabel: 'Кабинет', mobileBottom: true },
+  { id: 'cabinet', label: 'Кабинет', mobileLabel: 'Кабинет', mobileBottom: true, mobileOnly: true },
   { id: 'info', label: 'Информация', mobileLabel: 'Инфо', mobileBottom: true },
 ];
 
@@ -46,7 +47,9 @@ export default function Menu({
             type="button"
             className={`menu-item ${view === item.id ? 'active' : ''}${
               item.mobileBottom ? ' menu-item-mobile-nav' : ''
-            }${item.desktopOnly ? ' menu-item-desktop-only' : ''}`}
+            }${item.desktopOnly ? ' menu-item-desktop-only' : ''}${
+              item.mobileOnly ? ' menu-item-mobile-only' : ''
+            }`}
             onClick={() => onNavigate(item.id)}
           >
             <span className="menu-icon" aria-hidden="true">

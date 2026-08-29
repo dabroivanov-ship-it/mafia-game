@@ -8616,6 +8616,10 @@ html.telegram-webapp .app-body {
     display: none !important;
   }
 
+  .menu-item.menu-item-mobile-only {
+    display: none !important;
+  }
+
   .app-main {
     flex: 1 1 auto;
     width: calc(100% - var(--sidebar-width));

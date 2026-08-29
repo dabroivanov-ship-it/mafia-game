@@ -1077,7 +1077,7 @@ export default function App() {
           </ViewSuspense>
         )}
         {view === 'cabinet' && lobbyScreen === 'cabinet-settings' && (
-          <ViewSuspense label="Анкета…">
+          <ViewSuspense label="Профиль…">
             <CabinetProfileSettings
               user={user}
               onUpdate={handleUserUpdate}

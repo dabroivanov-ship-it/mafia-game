@@ -11,3 +11,21 @@ export function userPositionLabel(user: {
   if (user.isWatcher || user.role === 'watcher') return 'Смотрящий';
   return 'Пользователь';
 }
+
+export function isStaffPosition(user: {
+  role?: UserRole | string;
+  isAdmin?: boolean;
+  isModerator?: boolean;
+  isWatcher?: boolean;
+  isStaff?: boolean;
+}): boolean {
+  return (
+    !!user.isStaff ||
+    user.isAdmin ||
+    user.isModerator ||
+    user.isWatcher ||
+    user.role === 'admin' ||
+    user.role === 'moderator' ||
+    user.role === 'watcher'
+  );
+}
