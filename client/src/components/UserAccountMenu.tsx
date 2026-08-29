@@ -5,17 +5,23 @@ import type { User } from '../types';
 interface UserAccountMenuProps {
   user: User;
   onOpenProfile: () => void;
+  onOpenMessages: () => void;
   onOpenFriends: () => void;
   onOpenStatistics: () => void;
   onOpenSettings: () => void;
+  onLogout: () => void;
+  unreadMailCount?: number;
 }
 
 export default function UserAccountMenu({
   user,
   onOpenProfile,
+  onOpenMessages,
   onOpenFriends,
   onOpenStatistics,
   onOpenSettings,
+  onLogout,
+  unreadMailCount = 0,
 }: UserAccountMenuProps) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -80,6 +86,19 @@ export default function UserAccountMenu({
           </button>
           <button
             type="button"
+            className="user-account-menu-item user-account-menu-item--with-badge"
+            role="menuitem"
+            onClick={() => run(onOpenMessages)}
+          >
+            <span>Сообщения</span>
+            {unreadMailCount > 0 && (
+              <span className="user-account-menu-badge">
+                {unreadMailCount > 99 ? '99+' : unreadMailCount}
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
             className="user-account-menu-item"
             role="menuitem"
             onClick={() => run(onOpenFriends)}
@@ -101,6 +120,14 @@ export default function UserAccountMenu({
             onClick={() => run(onOpenSettings)}
           >
             Настройки
+          </button>
+          <button
+            type="button"
+            className="user-account-menu-item user-account-menu-item--danger"
+            role="menuitem"
+            onClick={() => run(onLogout)}
+          >
+            Выйти
           </button>
         </div>
       )}

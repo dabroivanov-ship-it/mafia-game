@@ -26,8 +26,6 @@ interface MenuProps {
   branding?: SiteBranding;
   view: MenuView;
   onNavigate: (view: MenuView) => void;
-  onLogout: () => void;
-  unreadMailCount?: number;
   unreadNewsCount?: number;
 }
 
@@ -36,8 +34,6 @@ export default function Menu({
   branding = DEFAULT_SITE_BRANDING,
   view,
   onNavigate,
-  onLogout,
-  unreadMailCount = 0,
   unreadNewsCount = 0,
 }: MenuProps) {
   return (
@@ -58,9 +54,6 @@ export default function Menu({
             </span>
             <span className="menu-label menu-label-full">{item.label}</span>
             <span className="menu-label menu-label-short">{item.mobileLabel ?? item.label}</span>
-            {item.id === 'cabinet' && unreadMailCount > 0 && (
-              <span className="menu-badge">{unreadMailCount > 99 ? '99+' : unreadMailCount}</span>
-            )}
             {item.id === 'news' && unreadNewsCount > 0 && (
               <span className="menu-badge">+{unreadNewsCount > 99 ? '99' : unreadNewsCount}</span>
             )}
@@ -82,12 +75,6 @@ export default function Menu({
             </span>
           </button>
         )}
-        <button type="button" className="menu-item logout menu-item-desktop-only" onClick={onLogout}>
-          <span className="menu-icon" aria-hidden="true">
-            <MenuIcon id="logout" />
-          </span>
-          <span className="menu-label">Выйти</span>
-        </button>
       </div>
     </nav>
   );

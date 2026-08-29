@@ -30,7 +30,7 @@ export type LobbyScreen =
   | 'cabinet-messages'
   | 'cabinet-support'
   | 'cabinet-sanctions'
-  | 'cabinet-search';
+  | 'cabinet-friends';
 
 interface LobbyProps {
   rooms: LobbyRoom[];

@@ -47,11 +47,11 @@ const AdminPanel = lazy(() => import('./components/AdminPanel'));
 const Room = lazy(() => import('./components/Room'));
 const RoomMembersPage = lazy(() => import('./components/RoomMembersPage'));
 const Messages = lazy(() => import('./components/Messages'));
-const UserSearch = lazy(() => import('./components/UserSearch'));
 const CabinetProfileSettings = lazy(() => import('./components/CabinetProfileSettings'));
 const CabinetAccountSettings = lazy(() => import('./components/CabinetAccountSettings'));
 const CabinetSupport = lazy(() => import('./components/CabinetSupport'));
 const CabinetSanctions = lazy(() => import('./components/CabinetSanctions'));
+const CabinetFriends = lazy(() => import('./components/CabinetFriends'));
 const Clans = lazy(() => import('./components/Clans'));
 const UserStatisticsPage = lazy(() => import('./components/UserStatisticsPage'));
 
@@ -119,7 +119,6 @@ export default function App() {
   const [messageThreadUserId, setMessageThreadUserId] = useState<number | null>(null);
   const [messageThreadUsername, setMessageThreadUsername] = useState<string | null>(null);
   const [messagesOpenUnread, setMessagesOpenUnread] = useState(false);
-  const [messagesOpenFriends, setMessagesOpenFriends] = useState(false);
   const [adminInitialView, setAdminInitialView] = useState<'hub' | 'violations'>('hub');
   const [mailReadReceipt, setMailReadReceipt] = useState<{
     readerId: number;
@@ -484,7 +483,6 @@ export default function App() {
       username?: string;
       thread?: boolean;
       openUnread?: boolean;
-      openFriends?: boolean;
     }) => {
       if (opts?.thread && opts.userId) {
         setMessageThreadUserId(opts.userId);
@@ -492,28 +490,18 @@ export default function App() {
         setComposeToUserId(null);
         setComposeToUsername(null);
         setMessagesOpenUnread(false);
-        setMessagesOpenFriends(false);
       } else if (opts?.openUnread) {
         setMessageThreadUserId(null);
         setMessageThreadUsername(null);
         setComposeToUserId(null);
         setComposeToUsername(null);
         setMessagesOpenUnread(true);
-        setMessagesOpenFriends(false);
-      } else if (opts?.openFriends) {
-        setMessageThreadUserId(null);
-        setMessageThreadUsername(null);
-        setComposeToUserId(null);
-        setComposeToUsername(null);
-        setMessagesOpenUnread(false);
-        setMessagesOpenFriends(true);
       } else {
         setMessageThreadUserId(null);
         setMessageThreadUsername(null);
         setComposeToUserId(opts?.userId ?? null);
         setComposeToUsername(opts?.username ?? null);
         setMessagesOpenUnread(false);
-        setMessagesOpenFriends(false);
       }
       // Room UI is a full-screen branch — leave it so cabinet mail can render.
       if (currentRoomIdRef.current != null) {
@@ -797,9 +785,19 @@ export default function App() {
     window.history.pushState(null, '', '/');
   }, []);
 
-  const openFriends = useCallback(() => {
-    openMessages({ openFriends: true });
-  }, [openMessages]);
+  const openFriendsPage = useCallback(() => {
+    if (currentRoomIdRef.current != null) {
+      setRoomMinimized(true);
+    }
+    setProfileStatsUserId(null);
+    setView('cabinet');
+    setLobbyScreen('cabinet-friends');
+    window.history.pushState(null, '', '/');
+  }, []);
+
+  const openMessagesInbox = useCallback(() => {
+    openMessages({ openUnread: unreadMailCount > 0 });
+  }, [openMessages, unreadMailCount]);
 
   const supportFab = user ? <SupportFeedbackFab onClick={openCabinetSupport} /> : null;
 
@@ -832,9 +830,12 @@ export default function App() {
         <UserAccountMenu
           user={user}
           onOpenProfile={openCabinetProfile}
-          onOpenFriends={openFriends}
+          onOpenMessages={openMessagesInbox}
+          onOpenFriends={openFriendsPage}
           onOpenStatistics={() => openProfileStatistics(user.id)}
           onOpenSettings={openCabinetSettings}
+          onLogout={handleLogout}
+          unreadMailCount={unreadMailCount}
         />
       )}
     </header>
@@ -1104,7 +1105,6 @@ export default function App() {
               threadUserId={messageThreadUserId}
               threadUsername={messageThreadUsername}
               openUnread={messagesOpenUnread}
-              openFriends={messagesOpenFriends}
               mailReadReceipt={mailReadReceipt}
               onUnreadChange={setUnreadMailCount}
               onOpenFaq={() => {
@@ -1116,7 +1116,6 @@ export default function App() {
                 setMessageThreadUserId(null);
                 setMessageThreadUsername(null);
                 setMessagesOpenUnread(false);
-                setMessagesOpenFriends(false);
               }}
               onBack={() => {
                 setComposeToUserId(null);
@@ -1124,20 +1123,8 @@ export default function App() {
                 setMessageThreadUserId(null);
                 setMessageThreadUsername(null);
                 setMessagesOpenUnread(false);
-                setMessagesOpenFriends(false);
                 setLobbyScreen('cabinet');
               }}
-            />
-          </ViewSuspense>
-        )}
-        {view === 'cabinet' && lobbyScreen === 'cabinet-search' && (
-          <ViewSuspense label="Поиск…">
-            <UserSearch
-              currentUser={user}
-              onBack={() => setLobbyScreen('cabinet')}
-              onWriteMessage={(userId, username) => openMessages({ userId, username })}
-              onOpenStatistics={openProfileStatistics}
-              onOpenClan={openClan}
             />
           </ViewSuspense>
         )}
@@ -1151,16 +1138,27 @@ export default function App() {
             <CabinetSanctions onBack={() => setLobbyScreen('cabinet')} />
           </ViewSuspense>
         )}
+        {view === 'cabinet' && lobbyScreen === 'cabinet-friends' && (
+          <ViewSuspense label="Друзья…">
+            <CabinetFriends
+              currentUser={user}
+              onBack={() => setLobbyScreen('cabinet')}
+              onWriteMessage={(userId, username) => openMessages({ userId, username })}
+              onOpenStatistics={openProfileStatistics}
+              onOpenClan={openClan}
+            />
+          </ViewSuspense>
+        )}
         {view === 'cabinet' && lobbyScreen === 'cabinet' && (
           <CabinetHub
             user={user}
             unreadMailCount={unreadMailCount}
             onOpenProfileSettings={() => setLobbyScreen('cabinet-settings')}
             onOpenAccountSettings={() => setLobbyScreen('cabinet-account-settings')}
-            onOpenMessages={() => openMessages({ openUnread: unreadMailCount > 0 })}
+            onOpenMessages={openMessagesInbox}
+            onOpenFriends={openFriendsPage}
             onOpenSupport={() => setLobbyScreen('cabinet-support')}
             onOpenSanctions={() => setLobbyScreen('cabinet-sanctions')}
-            onOpenUserSearch={() => setLobbyScreen('cabinet-search')}
             onOpenClans={() => openClansBrowse('cabinet')}
             onOpenStatistics={() => openProfileStatistics(user.id)}
             onLogout={handleLogout}
@@ -1248,8 +1246,6 @@ export default function App() {
           }
           setView(v);
         }}
-        onLogout={handleLogout}
-        unreadMailCount={unreadMailCount}
         unreadNewsCount={unreadNewsCount}
       />
     </div>

@@ -520,7 +520,7 @@ export default function UserProfileModal({
                             }
                           }}
                         >
-                          Написать письмо
+                          Написать сообщение
                         </button>
                       </div>
                     ) : (

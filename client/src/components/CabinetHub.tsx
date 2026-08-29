@@ -8,23 +8,21 @@ interface CabinetHubProps {
   onOpenProfileSettings: () => void;
   onOpenAccountSettings: () => void;
   onOpenMessages: () => void;
+  onOpenFriends: () => void;
   onOpenSupport: () => void;
   onOpenSanctions: () => void;
-  onOpenUserSearch: () => void;
   onOpenClans?: () => void;
   onOpenStatistics?: () => void;
   onLogout: () => void;
   onBack: () => void;
 }
 
-type HubAction = 'clans' | 'messages' | 'support' | 'search' | 'sanctions' | 'profile' | 'account';
-type HubIconId = 'clans' | 'mail' | 'support' | 'search' | 'sanctions' | 'profile' | 'settings' | 'edit' | 'logout' | 'chevron';
+type HubAction = 'clans' | 'support' | 'sanctions' | 'profile' | 'account';
+type HubIconId = 'clans' | 'mail' | 'friends' | 'support' | 'search' | 'sanctions' | 'profile' | 'settings' | 'edit' | 'logout' | 'chevron';
 
 const HUB_ITEMS: { title: string; action: HubAction; icon: HubIconId }[] = [
   { title: 'Кланы', action: 'clans', icon: 'clans' },
-  { title: 'Письма', action: 'messages', icon: 'mail' },
   { title: 'Поддержка', action: 'support', icon: 'support' },
-  { title: 'Поиск пользователей', action: 'search', icon: 'search' },
   { title: 'Санкции', action: 'sanctions', icon: 'sanctions' },
   { title: 'Анкета', action: 'profile', icon: 'profile' },
   { title: 'Настройки', action: 'account', icon: 'settings' },
@@ -56,6 +54,16 @@ function HubIcon({ id }: { id: HubIconId }) {
         <>
           <rect {...stroke} x="3" y="5" width="18" height="14" rx="2" />
           <path {...stroke} d="m3 7 9 6 9-6" />
+        </>
+      );
+      break;
+    case 'friends':
+      children = (
+        <>
+          <path {...stroke} d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+          <circle {...stroke} cx="9" cy="7" r="4" />
+          <path {...stroke} d="M22 21v-2a4 4 0 0 0-3-3.87" />
+          <path {...stroke} d="M16 3.13a4 4 0 0 1 0 7.75" />
         </>
       );
       break;
@@ -140,9 +148,9 @@ export default function CabinetHub({
   onOpenProfileSettings,
   onOpenAccountSettings,
   onOpenMessages,
+  onOpenFriends,
   onOpenSupport,
   onOpenSanctions,
-  onOpenUserSearch,
   onOpenClans,
   onOpenStatistics,
   onLogout,
@@ -150,9 +158,7 @@ export default function CabinetHub({
 }: CabinetHubProps) {
   const handlers: Record<HubAction, (() => void) | undefined> = {
     clans: onOpenClans,
-    messages: onOpenMessages,
     support: onOpenSupport,
-    search: onOpenUserSearch,
     sanctions: onOpenSanctions,
     profile: onOpenProfileSettings,
     account: onOpenAccountSettings,
@@ -200,6 +206,41 @@ export default function CabinetHub({
       </section>
 
       <div className="cabinet-hub-menu">
+        <button
+          type="button"
+          className="cabinet-hub-menu-item cabinet-hub-item-mobile-only"
+          onClick={onOpenFriends}
+        >
+          <span className="cabinet-hub-menu-icon" aria-hidden="true">
+            <HubIcon id="friends" />
+          </span>
+          <span className="cabinet-hub-menu-label">Друзья</span>
+          <span className="cabinet-hub-menu-chevron" aria-hidden="true">
+            <HubIcon id="chevron" />
+          </span>
+        </button>
+
+        <button
+          type="button"
+          className="cabinet-hub-menu-item cabinet-hub-item-mobile-only"
+          onClick={onOpenMessages}
+        >
+          <span className="cabinet-hub-menu-icon" aria-hidden="true">
+            <HubIcon id="mail" />
+          </span>
+          <span className="cabinet-hub-menu-label">
+            Сообщения
+            {unreadMailCount > 0 && (
+              <span className="cabinet-hub-badge">
+                {unreadMailCount > 99 ? '99+' : unreadMailCount}
+              </span>
+            )}
+          </span>
+          <span className="cabinet-hub-menu-chevron" aria-hidden="true">
+            <HubIcon id="chevron" />
+          </span>
+        </button>
+
         {HUB_ITEMS.map((item) => {
           const handler = handlers[item.action];
           if (!handler) return null;
@@ -213,14 +254,7 @@ export default function CabinetHub({
               <span className="cabinet-hub-menu-icon" aria-hidden="true">
                 <HubIcon id={item.icon} />
               </span>
-              <span className="cabinet-hub-menu-label">
-                {item.title}
-                {item.action === 'messages' && unreadMailCount > 0 && (
-                  <span className="cabinet-hub-badge">
-                    {unreadMailCount > 99 ? '99+' : unreadMailCount}
-                  </span>
-                )}
-              </span>
+              <span className="cabinet-hub-menu-label">{item.title}</span>
               <span className="cabinet-hub-menu-chevron" aria-hidden="true">
                 <HubIcon id="chevron" />
               </span>

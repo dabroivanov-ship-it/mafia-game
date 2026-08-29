@@ -1131,6 +1131,34 @@ textarea:focus-visible {
   outline-offset: -2px;
 }
 
+.user-account-menu-item--with-badge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.user-account-menu-badge {
+  flex-shrink: 0;
+  min-width: 22px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-contrast, #fff);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.user-account-menu-item--danger {
+  color: var(--danger, #e85d5d);
+}
+
+.user-account-menu-item--danger:hover {
+  background: color-mix(in srgb, var(--danger, #e85d5d) 12%, var(--bg-hover));
+}
+
 .support-feedback-fab {
   display: none;
 }

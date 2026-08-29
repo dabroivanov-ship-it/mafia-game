@@ -5,10 +5,9 @@ import {
   fetchMailThread,
   fetchUnreadMailCount,
   sendPrivateMessage,
-  fetchFriends,
   reportPrivateMessage,
 } from '../api';
-import type { MailConversation, PrivateMessage, FriendUser } from '../types';
+import type { MailConversation, PrivateMessage } from '../types';
 import DeleteMessageModal, { type ViolationType } from './DeleteMessageModal';
 import { INFO_PATHS } from '../infoRouting';
 
@@ -51,7 +50,6 @@ function renderMailText(text: string, onOpenFaq?: () => void): ReactNode {
 }
 
 type MailView = 'list' | 'thread' | 'compose';
-type ListTab = 'dialogs' | 'friends';
 
 interface MessagesProps {
   composeToUserId?: number | null;
@@ -59,7 +57,6 @@ interface MessagesProps {
   threadUserId?: number | null;
   threadUsername?: string | null;
   openUnread?: boolean;
-  openFriends?: boolean;
   onUnreadChange?: (count: number) => void;
   mailReadReceipt?: { readerId: number; messageIds: number[] } | null;
   onBack: () => void;
@@ -73,7 +70,6 @@ export default function Messages({
   threadUserId = null,
   threadUsername = null,
   openUnread = false,
-  openFriends = false,
   onUnreadChange,
   mailReadReceipt = null,
   onBack,
@@ -83,9 +79,7 @@ export default function Messages({
   const [view, setView] = useState<MailView>(
     threadUserId ? 'thread' : composeToUserId || composeToUsername ? 'compose' : 'list'
   );
-  const [listTab, setListTab] = useState<ListTab>('dialogs');
   const [conversations, setConversations] = useState<MailConversation[]>([]);
-  const [friends, setFriends] = useState<FriendUser[]>([]);
   const [thread, setThread] = useState<PrivateMessage[]>([]);
   const [threadUser, setThreadUser] = useState<PrivateMessage['otherUser'] | null>(null);
   const [threadHasMore, setThreadHasMore] = useState(false);
@@ -102,19 +96,6 @@ export default function Messages({
   const [reportTarget, setReportTarget] = useState<PrivateMessage | null>(null);
   const threadRef = useRef<HTMLDivElement>(null);
   const prependingRef = useRef(false);
-
-  const loadFriends = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const res = await fetchFriends();
-      setFriends(res.friends);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка загрузки друзей');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const loadConversations = async () => {
     setLoading(true);
@@ -174,17 +155,9 @@ export default function Messages({
   };
 
   useEffect(() => {
-    if (threadUserId || openUnread || openFriends) return;
-    if (listTab === 'dialogs') void loadConversations();
-    else void loadFriends();
-  }, [listTab, threadUserId, openUnread, openFriends]);
-
-  useEffect(() => {
-    if (!openFriends || threadUserId) return;
-    setListTab('friends');
-    setView('list');
-    void loadFriends().finally(() => onInitialNavigationHandled?.());
-  }, [openFriends, threadUserId]);
+    if (threadUserId || openUnread) return;
+    void loadConversations();
+  }, [threadUserId, openUnread]);
 
   useEffect(() => {
     if (composeToUserId) {
@@ -296,11 +269,6 @@ export default function Messages({
     void loadThread(conv.otherUser);
   };
 
-  const openComposeToFriend = (friend: FriendUser) => {
-    setComposeTo(`@${friend.username}`);
-    setView('compose');
-  };
-
   const replyInThread = () => {
     if (!threadUser) return;
     setComposeTo(`@${threadUser.username}`);
@@ -356,8 +324,8 @@ export default function Messages({
             {view === 'thread' && threadUser
               ? threadUser.displayName || threadUser.username
               : view === 'compose'
-                ? 'Новое письмо'
-                : 'Письма'}
+                ? 'Новое сообщение'
+                : 'Сообщения'}
           </h1>
           {view === 'thread' && threadUser && (
             <p className="muted">
@@ -369,7 +337,7 @@ export default function Messages({
             <p className="muted">
               {unreadTotal > 0
                 ? `Непрочитанных: ${unreadTotal.toLocaleString('ru-RU')}`
-                : 'Диалоги и друзья'}
+                : 'Личные диалоги'}
             </p>
           )}
           {view === 'compose' && <p className="muted">Личное сообщение игроку</p>}
@@ -378,29 +346,6 @@ export default function Messages({
           <span className="messages-hero-badge">{unreadTotal}</span>
         )}
       </header>
-
-      {view === 'list' && (
-        <div className="messages-tabs" role="tablist" aria-label="Разделы писем">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={listTab === 'dialogs'}
-            className={listTab === 'dialogs' ? 'active' : undefined}
-            onClick={() => setListTab('dialogs')}
-          >
-            Диалоги
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={listTab === 'friends'}
-            className={listTab === 'friends' ? 'active' : undefined}
-            onClick={() => setListTab('friends')}
-          >
-            Друзья
-          </button>
-        </div>
-      )}
 
       {error && <div className="auth-error">{error}</div>}
       {success && <div className="auth-success">{success}</div>}
@@ -437,7 +382,7 @@ export default function Messages({
               onChange={(e) => setComposeText(e.target.value)}
               rows={6}
               maxLength={2000}
-              placeholder="Текст письма..."
+              placeholder="Текст сообщения..."
               required
             />
           </label>
@@ -455,7 +400,7 @@ export default function Messages({
       {view === 'list' && (
         <div className="messages-panel">
           {loading && <p className="muted">Загрузка...</p>}
-          {!loading && listTab === 'dialogs' && (
+          {!loading && (
             <div className="mail-list mail-conversation-list">
               {conversations.length === 0 && (
                 <p className="muted messages-empty">Диалогов пока нет</p>
@@ -465,22 +410,6 @@ export default function Messages({
                   key={conv.otherUser.id}
                   conv={conv}
                   onOpen={() => openConversation(conv)}
-                />
-              ))}
-            </div>
-          )}
-          {!loading && listTab === 'friends' && (
-            <div className="mail-list friends-list">
-              {friends.length === 0 && (
-                <p className="muted messages-empty">
-                  Друзей пока нет. Добавляйте игроков из профиля.
-                </p>
-              )}
-              {friends.map((friend) => (
-                <FriendItem
-                  key={friend.id}
-                  friend={friend}
-                  onWrite={() => openComposeToFriend(friend)}
                 />
               ))}
             </div>
@@ -538,38 +467,6 @@ export default function Messages({
           onCancel={() => setReportTarget(null)}
         />
       )}
-    </div>
-  );
-}
-
-function FriendItem({
-  friend,
-  onWrite,
-}: {
-  friend: FriendUser;
-  onWrite: () => void;
-}) {
-  return (
-    <div className="mail-item friend-item">
-      <div className="mail-item-header">
-        {friend.avatar ? (
-          <img src={avatarUrl(friend.avatar) ?? undefined} alt="" className="mail-avatar" />
-        ) : (
-          <span className="mail-avatar placeholder" aria-hidden="true" />
-        )}
-        <div className="mail-conversation-body">
-          <div className="mail-conversation-top">
-            <strong>{friend.displayName || friend.username}</strong>
-            <span className={`presence-label ${friend.isOnline ? 'presence-online' : 'presence-offline'}`}>
-              {friend.isOnline ? 'в сети' : 'не в сети'}
-            </span>
-          </div>
-          <span className="muted mail-conversation-login">@{friend.username}</span>
-        </div>
-        <button type="button" className="btn btn-primary btn-sm" onClick={onWrite}>
-          Написать
-        </button>
-      </div>
     </div>
   );
 }

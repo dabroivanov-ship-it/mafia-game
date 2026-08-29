@@ -1379,6 +1379,68 @@ html.telegram-webapp .app-body {
   margin: 0 0 8px;
 }
 
+.cabinet-friends-header {
+  margin: 0 0 20px;
+}
+
+.cabinet-friends-header h1 {
+  margin: 0 0 8px;
+}
+
+.cabinet-friends-empty {
+  text-align: center;
+  padding: 28px 20px;
+}
+
+.cabinet-friends-empty p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.cabinet-friends-list {
+  padding: 8px 0;
+}
+
+.cabinet-friends-page .cabinet-friends-search {
+  margin-bottom: 20px;
+}
+
+.cabinet-friends-section + .cabinet-friends-section {
+  margin-top: 24px;
+}
+
+.cabinet-friends-section-title {
+  margin: 0 0 12px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cabinet-friend-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cabinet-friend-profile:disabled {
+  cursor: default;
+}
+
+.cabinet-friend-profile:not(:disabled):hover strong {
+  color: var(--accent);
+}
+
 .cabinet-sanctions-empty {
   text-align: center;
   padding: 28px 20px;
