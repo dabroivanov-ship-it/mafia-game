@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authMiddleware, staffMiddleware } from '../auth/jwt.js';
 import { findUserById, findUserPublic, banUser, clearBan, canBanTarget } from '../auth/db.js';
 import { normalizeModerationReason } from '../security/validate.js';
+import { addUserSanction, liftUserSanctions } from './sanctionLog.js';
 
 export interface ModerationRouterOptions {
   onUserBanned?: (userId: number, reason: string, until: string | null) => void;
@@ -26,6 +27,14 @@ export function createModerationRouter({ onUserBanned }: ModerationRouterOptions
     }
     const reasonText = normalizeModerationReason(reason);
     const user = banUser(targetId, reasonText, until);
+    addUserSanction({
+      userId: targetId,
+      sanctionType: 'ban',
+      reason: reasonText,
+      moderatorId: req.user!.id,
+      moderatorName: req.user!.display_name || req.user!.username,
+      untilAt: until,
+    });
     onUserBanned?.(targetId, reasonText, until);
     res.json({ user });
   });
@@ -38,6 +47,7 @@ export function createModerationRouter({ onUserBanned }: ModerationRouterOptions
       return res.status(403).json({ error: 'Нет прав для разбана' });
     }
     const user = clearBan(targetId);
+    if (user) liftUserSanctions(targetId, 'ban');
     res.json({ user });
   });
 

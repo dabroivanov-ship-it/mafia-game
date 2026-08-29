@@ -207,6 +207,23 @@ export async function fetchMe(): Promise<{ user: User }> {
   return apiRequest('/api/auth/me');
 }
 
+export interface UserSanctionEntry {
+  id: number;
+  sanctionType: 'ban' | 'silence';
+  reason: string;
+  moderatorId: number | null;
+  moderatorName: string;
+  roomId: number | null;
+  roomName: string | null;
+  untilAt: string | null;
+  liftedAt: string | null;
+  createdAt: string;
+}
+
+export async function fetchMySanctions(): Promise<{ sanctions: UserSanctionEntry[] }> {
+  return apiRequest('/api/auth/sanctions');
+}
+
 export async function fetchThemeSettings(): Promise<{
   defaultTheme: ThemeId;
   themes: { id: ThemeId; name: string }[];

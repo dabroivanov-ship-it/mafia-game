@@ -51,6 +51,7 @@ const UserSearch = lazy(() => import('./components/UserSearch'));
 const CabinetProfileSettings = lazy(() => import('./components/CabinetProfileSettings'));
 const CabinetAccountSettings = lazy(() => import('./components/CabinetAccountSettings'));
 const CabinetSupport = lazy(() => import('./components/CabinetSupport'));
+const CabinetSanctions = lazy(() => import('./components/CabinetSanctions'));
 const Clans = lazy(() => import('./components/Clans'));
 const UserStatisticsPage = lazy(() => import('./components/UserStatisticsPage'));
 
@@ -804,15 +805,6 @@ export default function App() {
 
   const notificationBar = (
     <header className="app-topbar">
-      {user && (
-        <UserAccountMenu
-          user={user}
-          onOpenProfile={openCabinetProfile}
-          onOpenFriends={openFriends}
-          onOpenStatistics={() => openProfileStatistics(user.id)}
-          onOpenSettings={openCabinetSettings}
-        />
-      )}
       <NotificationBell
         notifications={notifications}
         unreadCount={notificationUnreadCount}
@@ -836,6 +828,15 @@ export default function App() {
         onMarkAllRead={() => void handleMarkAllNotificationsRead()}
         onSelect={(item) => void handleNotificationSelect(item)}
       />
+      {user && (
+        <UserAccountMenu
+          user={user}
+          onOpenProfile={openCabinetProfile}
+          onOpenFriends={openFriends}
+          onOpenStatistics={() => openProfileStatistics(user.id)}
+          onOpenSettings={openCabinetSettings}
+        />
+      )}
     </header>
   );
 
@@ -1146,6 +1147,11 @@ export default function App() {
             <CabinetSupport onBack={() => setLobbyScreen('cabinet')} />
           </ViewSuspense>
         )}
+        {view === 'cabinet' && lobbyScreen === 'cabinet-sanctions' && (
+          <ViewSuspense label="Санкции…">
+            <CabinetSanctions onBack={() => setLobbyScreen('cabinet')} />
+          </ViewSuspense>
+        )}
         {view === 'cabinet' && lobbyScreen === 'cabinet' && (
           <CabinetHub
             user={user}
@@ -1154,6 +1160,7 @@ export default function App() {
             onOpenAccountSettings={() => setLobbyScreen('cabinet-account-settings')}
             onOpenMessages={() => openMessages({ openUnread: unreadMailCount > 0 })}
             onOpenSupport={() => setLobbyScreen('cabinet-support')}
+            onOpenSanctions={() => setLobbyScreen('cabinet-sanctions')}
             onOpenUserSearch={() => setLobbyScreen('cabinet-search')}
             onOpenClans={() => openClansBrowse('cabinet')}
             onOpenStatistics={() => openProfileStatistics(user.id)}

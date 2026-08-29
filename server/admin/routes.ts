@@ -38,6 +38,7 @@ import {
 } from '../blog/store.js';
 import { upsertPollForNews, type PollInput } from '../news/polls.js';
 import { listViolations, clearViolations } from '../moderation/violationLog.js';
+import { addUserSanction, liftUserSanctions } from '../moderation/sanctionLog.js';
 import { newsImageUpload, newsImagePublicPath } from '../upload/newsImage.js';
 import { adminSetReputation, getReputation } from '../social/store.js';
 import { listBotPhrasesForAdmin, updateBotPhrasesFromAdmin } from '../game/botPhrases.js';
@@ -398,6 +399,14 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
       until = new Date(Date.now() + Number(minutes) * 60000).toISOString();
     }
     const user = banUser(targetId, normalizeModerationReason(reason), until);
+    addUserSanction({
+      userId: targetId,
+      sanctionType: 'ban',
+      reason: normalizeModerationReason(reason),
+      moderatorId: req.user!.id,
+      moderatorName: req.user!.display_name || req.user!.username,
+      untilAt: until,
+    });
     handlers.onUserBanned?.(targetId, normalizeModerationReason(reason), until);
     res.json({ user });
   });
@@ -405,6 +414,7 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
   router.post('/unban', requireAdminPermission('ban_users'), (req, res) => {
     const { userId } = req.body;
     const user = clearBan(Number(userId));
+    if (user) liftUserSanctions(Number(userId), 'ban');
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
     res.json({ user });
   });

@@ -34,6 +34,7 @@ import { MAX_PASSWORD_LENGTH } from '../security/constants.js';
 import { recordSiteVisit } from '../stats/siteStats.js';
 import { consumeOauthLoginTicket } from './oauthTicket.js';
 import { getUserOnlineSeconds } from '../presence.js';
+import { listSanctionsForUser } from '../moderation/sanctionLog.js';
 
 const router = Router();
 const authRateLimit = createRateLimitMiddleware(authRateLimiter);
@@ -311,6 +312,15 @@ router.get('/me', authMiddleware, (req, res) => {
     publicProfile.onlineSeconds = getUserOnlineSeconds(user.id);
   }
   res.json({ user: publicProfile });
+});
+
+router.get('/sanctions', authMiddleware, (req, res) => {
+  const user = req.user;
+  if (!user) {
+    res.status(401).json({ error: 'Требуется авторизация' });
+    return;
+  }
+  res.json({ sanctions: listSanctionsForUser(user.id) });
 });
 
 export default router;

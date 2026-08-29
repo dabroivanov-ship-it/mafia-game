@@ -9,6 +9,7 @@ interface CabinetHubProps {
   onOpenAccountSettings: () => void;
   onOpenMessages: () => void;
   onOpenSupport: () => void;
+  onOpenSanctions: () => void;
   onOpenUserSearch: () => void;
   onOpenClans?: () => void;
   onOpenStatistics?: () => void;
@@ -16,14 +17,15 @@ interface CabinetHubProps {
   onBack: () => void;
 }
 
-type HubAction = 'clans' | 'messages' | 'support' | 'search' | 'profile' | 'account';
-type HubIconId = 'clans' | 'mail' | 'support' | 'search' | 'profile' | 'settings' | 'edit' | 'logout' | 'chevron';
+type HubAction = 'clans' | 'messages' | 'support' | 'search' | 'sanctions' | 'profile' | 'account';
+type HubIconId = 'clans' | 'mail' | 'support' | 'search' | 'sanctions' | 'profile' | 'settings' | 'edit' | 'logout' | 'chevron';
 
 const HUB_ITEMS: { title: string; action: HubAction; icon: HubIconId }[] = [
   { title: 'Кланы', action: 'clans', icon: 'clans' },
   { title: 'Письма', action: 'messages', icon: 'mail' },
   { title: 'Поддержка', action: 'support', icon: 'support' },
   { title: 'Поиск пользователей', action: 'search', icon: 'search' },
+  { title: 'Санкции', action: 'sanctions', icon: 'sanctions' },
   { title: 'Анкета', action: 'profile', icon: 'profile' },
   { title: 'Настройки', action: 'account', icon: 'settings' },
 ];
@@ -71,6 +73,14 @@ function HubIcon({ id }: { id: HubIconId }) {
         <>
           <circle {...stroke} cx="11" cy="11" r="7" />
           <path {...stroke} d="m20 20-3.5-3.5" />
+        </>
+      );
+      break;
+    case 'sanctions':
+      children = (
+        <>
+          <path {...stroke} d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
+          <path {...stroke} d="M9 12l2 2 4-4" />
         </>
       );
       break;
@@ -131,6 +141,7 @@ export default function CabinetHub({
   onOpenAccountSettings,
   onOpenMessages,
   onOpenSupport,
+  onOpenSanctions,
   onOpenUserSearch,
   onOpenClans,
   onOpenStatistics,
@@ -142,6 +153,7 @@ export default function CabinetHub({
     messages: onOpenMessages,
     support: onOpenSupport,
     search: onOpenUserSearch,
+    sanctions: onOpenSanctions,
     profile: onOpenProfileSettings,
     account: onOpenAccountSettings,
   };

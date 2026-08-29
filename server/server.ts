@@ -95,6 +95,7 @@ import { securityHeadersMiddleware } from './security/headers.js';
 import { chatSocketRateLimiter } from './security/rateLimit.js';
 import { normalizeChatText, normalizeModerationReason, parseViolationType } from './security/validate.js';
 import { addViolation } from './moderation/violationLog.js';
+import { addUserSanction, liftUserSanctions } from './moderation/sanctionLog.js';
 import { AUTO_BLOCK_MESSAGES, detectChatViolation } from './moderation/advertising.js';
 import fs from 'fs';
 import { ensureNewsUploadsDir } from './upload/newsImage.js';
@@ -1358,6 +1359,20 @@ io.on('connection', (socket) => {
         room,
         `🔇 ${target.username || target.name} получил(а) молчание (${duration}). Причина: ${reasonText}.`
       );
+      let untilAt: string | null = null;
+      if (minutesNum && minutesNum > 0) {
+        untilAt = new Date(Date.now() + minutesNum * 60000).toISOString();
+      }
+      addUserSanction({
+        userId: target.userId,
+        sanctionType: 'silence',
+        reason: reasonText,
+        moderatorId: staffUser.id,
+        moderatorName: staffUser.display_name || staffUser.username,
+        roomId: room.id,
+        roomName: room.name,
+        untilAt,
+      });
       broadcastRoom(room.id);
       cb?.({ ok: true });
     } catch (e) {
@@ -1388,6 +1403,7 @@ io.on('connection', (socket) => {
 
     try {
       clearPlayerSilenceForUser(room, { playerId: target.id, userId: target.userId });
+      liftUserSanctions(target.userId, 'silence');
       addSystemMessage(
         room,
         `🔊 С ${target.username || target.name} снято молчание.`

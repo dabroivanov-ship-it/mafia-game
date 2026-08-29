@@ -1371,6 +1371,84 @@ html.telegram-webapp .app-body {
   height: 18px;
 }
 
+.cabinet-sanctions-header {
+  margin: 0 0 20px;
+}
+
+.cabinet-sanctions-header h1 {
+  margin: 0 0 8px;
+}
+
+.cabinet-sanctions-empty {
+  text-align: center;
+  padding: 28px 20px;
+}
+
+.cabinet-sanctions-empty p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.cabinet-sanctions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cabinet-sanction-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.cabinet-sanction-card-top h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.cabinet-sanction-badge {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--warning) 18%, transparent);
+  color: var(--warning);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cabinet-sanction-meta {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.cabinet-sanction-meta div {
+  display: grid;
+  gap: 2px;
+}
+
+.cabinet-sanction-meta dt {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cabinet-sanction-meta dd {
+  margin: 0;
+  color: var(--text);
+}
+
+.cabinet-sanction-card--active {
+  border-color: color-mix(in srgb, var(--warning) 28%, var(--border));
+}
+
 .user-search-field {
   margin-bottom: 16px;
 }

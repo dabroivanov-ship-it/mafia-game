@@ -1028,9 +1028,11 @@ textarea:focus-visible {
 .user-account-menu-btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  max-width: min(220px, 34vw);
-  padding: 8px 12px 8px 14px;
+  gap: 10px;
+  max-width: min(240px, 36vw);
+  min-width: 44px;
+  min-height: 44px;
+  padding: 4px 8px 4px 4px;
   border: 1px solid color-mix(in srgb, var(--border) 90%, var(--accent) 10%);
   border-radius: 14px;
   background: var(--surface-card, var(--bg-card));
@@ -1039,15 +1041,31 @@ textarea:focus-visible {
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
+  box-shadow: var(--shadow-soft);
   transition:
     border-color 0.15s ease,
-    background 0.15s ease;
+    background 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.user-account-menu-avatar {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.user-account-menu-avatar.placeholder {
+  display: inline-block;
+  background: color-mix(in srgb, var(--bg-hover) 88%, var(--accent) 12%);
 }
 
 .user-account-menu-btn:hover,
 .user-account-menu-btn.open {
   border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
   background: var(--bg-hover);
+  box-shadow: var(--shadow-soft), 0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
 .user-account-menu-btn:focus-visible {
@@ -1170,7 +1188,13 @@ textarea:focus-visible {
 }
 
 .app-in-room .room-header {
-  padding-right: calc(14px + 40px + 10px);
+  padding-right: calc(14px + 44px + 10px);
+}
+
+@media (min-width: 769px) {
+  .app-in-room .room-header {
+    padding-right: calc(14px + 44px + 8px + min(240px, 36vw) + 12px);
+  }
 }
 
 .app-in-room .room-header-actions {
