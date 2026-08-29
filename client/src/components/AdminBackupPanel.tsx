@@ -34,6 +34,7 @@ export default function AdminBackupPanel() {
     time: '03:00',
     includeUploads: true,
     keepCount: 7,
+    sendToTelegram: false,
     lastRunAt: null,
   });
   const [scheduleSaving, setScheduleSaving] = useState(false);
@@ -97,6 +98,7 @@ export default function AdminBackupPanel() {
         time: schedule.time,
         includeUploads: schedule.includeUploads,
         keepCount: schedule.keepCount,
+        sendToTelegram: schedule.sendToTelegram,
       });
       setSchedule(saved);
       setScheduleSaved(true);
@@ -212,7 +214,8 @@ export default function AdminBackupPanel() {
         <h4>Автоматический бэкап</h4>
         <p className="theme-settings-hint">
           Копия создаётся ежедневно в указанное время по часам сервера. Если сервер был выключен — копия
-          создастся при следующем запуске после этого времени.
+          создастся при следующем запуске после этого времени. При включённой автоотправке архив сразу
+          уходит в Telegram (нужны chat ID и TELEGRAM_BOT_TOKEN).
         </p>
 
         <label className="theme-use-default">
@@ -255,6 +258,25 @@ export default function AdminBackupPanel() {
           />
           <span>Включать uploads в автокопию</span>
         </label>
+
+        <label className="theme-use-default">
+          <input
+            type="checkbox"
+            checked={schedule.sendToTelegram}
+            onChange={(e) => {
+              setSchedule((prev) => ({ ...prev, sendToTelegram: e.target.checked }));
+              setScheduleSaved(false);
+            }}
+            disabled={scheduleSaving || !schedule.enabled}
+          />
+          <span>Отправлять автокопию в Telegram</span>
+        </label>
+        {schedule.sendToTelegram && !telegramSettings.ready && (
+          <p className="theme-settings-hint">
+            Для автоотправки нужны TELEGRAM_BOT_TOKEN и chat ID выше. Лимит архива Telegram — 50 МБ
+            (при большом uploads лучше выключить uploads в автокопии).
+          </p>
+        )}
 
         <label>
           Хранить последних копий (0 — все)

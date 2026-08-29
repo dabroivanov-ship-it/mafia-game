@@ -200,10 +200,10 @@ export const BOT_PHRASE_DEFINITIONS: BotPhraseDefinition[] = [
     group: 'Сводка дня',
     label: 'Путана соблазнила',
     type: 'lines',
-    placeholders: ['{nick}'],
+    placeholders: ['{role}'],
     defaultValue: [
-      'Путана не отпускала {nick} до самого рассвета.',
-      'Этой ночью {nick} был(а) не на месте — путана держала при себе.',
+      '{role} этой ночью был(а) занят(а) путаной — до своих дел так и не добрался(ась).',
+      'Этой ночью {role} был(а) не на месте — путана держала при себе.',
     ].join('\n'),
   },
   {

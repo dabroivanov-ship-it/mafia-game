@@ -59,6 +59,7 @@ interface MessagesProps {
   threadUserId?: number | null;
   threadUsername?: string | null;
   openUnread?: boolean;
+  openFriends?: boolean;
   onUnreadChange?: (count: number) => void;
   mailReadReceipt?: { readerId: number; messageIds: number[] } | null;
   onBack: () => void;
@@ -72,6 +73,7 @@ export default function Messages({
   threadUserId = null,
   threadUsername = null,
   openUnread = false,
+  openFriends = false,
   onUnreadChange,
   mailReadReceipt = null,
   onBack,
@@ -172,10 +174,17 @@ export default function Messages({
   };
 
   useEffect(() => {
-    if (threadUserId || openUnread) return;
+    if (threadUserId || openUnread || openFriends) return;
     if (listTab === 'dialogs') void loadConversations();
     else void loadFriends();
-  }, [listTab, threadUserId, openUnread]);
+  }, [listTab, threadUserId, openUnread, openFriends]);
+
+  useEffect(() => {
+    if (!openFriends || threadUserId) return;
+    setListTab('friends');
+    setView('list');
+    void loadFriends().finally(() => onInitialNavigationHandled?.());
+  }, [openFriends, threadUserId]);
 
   useEffect(() => {
     if (composeToUserId) {

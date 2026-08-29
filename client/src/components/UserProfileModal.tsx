@@ -379,11 +379,6 @@ export default function UserProfileModal({
                   ) : (
                     <div className="profile-avatar placeholder" aria-hidden="true" />
                   )}
-                  {!isOwnProfile && (
-                    <div>
-                      <strong>@{user.username}</strong>
-                    </div>
-                  )}
                 </div>
 
                 <ul className="player-page-info">

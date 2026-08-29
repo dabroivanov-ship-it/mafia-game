@@ -427,7 +427,14 @@ export function buildMorningReportMessage(
   }
 
   if (report.prostituteSeduced) {
-    parts.push(pickPhraseLine('report.prostitute', { nick: playerNick(report.prostituteSeduced) }));
+    const seduced = report.prostituteSeduced;
+    const role = seduced.isDon
+      ? 'Главарь мафии'
+      : seduced.role
+        ? getRoleLabel(seduced.role)
+        : 'Игрок';
+    // {nick} оставляем как алиас роли — старые шаблоны в админке тоже покажут роль, не логин.
+    parts.push(pickPhraseLine('report.prostitute', { role, nick: role }));
   }
 
   if (report.advocateCovered) {

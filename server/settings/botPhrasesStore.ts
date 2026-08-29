@@ -47,12 +47,26 @@ function loadOverrides(): Record<string, string> {
     ).run(BOT_PHRASES_KEY, JSON.stringify(cache));
   }
   const prostitute = cache['report.prostitute'];
-  const oldProstitute = [
-    'Путана не дала {nick} заняться своими ночными делами.',
-    '{nick} этой ночью был(а) занят(а) — до своих дел так и не добрался(ась).',
-  ].join('\n');
-  if (typeof prostitute === 'string' && prostitute.trim() === oldProstitute) {
+  const oldProstituteVariants = [
+    [
+      'Путана не дала {nick} заняться своими ночными делами.',
+      '{nick} этой ночью был(а) занят(а) — до своих дел так и не добрался(ась).',
+    ].join('\n'),
+    [
+      'Путана не отпускала {nick} до самого рассвета.',
+      'Этой ночью {nick} был(а) не на месте — путана держала при себе.',
+    ].join('\n'),
+    '{nick} этой ночью был(а) занят(а) путаной — до своих дел так и не добрался.',
+    '{nick} этой ночью был(а) занят(а) путаной — до своих дел так и не добрался(ась).',
+  ];
+  if (typeof prostitute === 'string' && oldProstituteVariants.includes(prostitute.trim())) {
     delete cache['report.prostitute'];
+    db.prepare(
+      `INSERT INTO app_settings (key, value) VALUES (?, ?)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value`
+    ).run(BOT_PHRASES_KEY, JSON.stringify(cache));
+  } else if (typeof prostitute === 'string' && prostitute.includes('{nick}')) {
+    cache['report.prostitute'] = prostitute.split('{nick}').join('{role}');
     db.prepare(
       `INSERT INTO app_settings (key, value) VALUES (?, ?)
        ON CONFLICT(key) DO UPDATE SET value = excluded.value`

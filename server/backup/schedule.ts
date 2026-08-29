@@ -1,10 +1,13 @@
 import db from '../auth/db.js';
 import { createBackup, deleteBackup, listBackups } from './service.js';
+import { getTelegramBackupSettings } from './telegramSettings.js';
+import { sendBackupToTelegram } from './telegram.js';
 
 const KEY_ENABLED = 'backup_schedule_enabled';
 const KEY_TIME = 'backup_schedule_time';
 const KEY_INCLUDE_UPLOADS = 'backup_schedule_include_uploads';
 const KEY_KEEP_COUNT = 'backup_schedule_keep_count';
+const KEY_SEND_TELEGRAM = 'backup_schedule_send_telegram';
 const KEY_LAST_RUN = 'backup_schedule_last_run';
 
 const DEFAULT_TIME = '03:00';
@@ -16,6 +19,7 @@ export interface BackupScheduleSettings {
   time: string;
   includeUploads: boolean;
   keepCount: number;
+  sendToTelegram: boolean;
   lastRunAt: string | null;
 }
 
@@ -60,6 +64,7 @@ export function getBackupScheduleSettings(): BackupScheduleSettings {
     time: timeRaw && TIME_RE.test(timeRaw) ? timeRaw : DEFAULT_TIME,
     includeUploads: parseBool(readSetting(KEY_INCLUDE_UPLOADS), true),
     keepCount: parseKeepCount(readSetting(KEY_KEEP_COUNT)),
+    sendToTelegram: parseBool(readSetting(KEY_SEND_TELEGRAM), false),
     lastRunAt: readSetting(KEY_LAST_RUN),
   };
 }
@@ -69,6 +74,7 @@ export function setBackupScheduleSettings(input: {
   time?: string;
   includeUploads?: boolean;
   keepCount?: number;
+  sendToTelegram?: boolean;
 }): BackupScheduleSettings {
   if (input.enabled !== undefined) {
     writeSetting(KEY_ENABLED, input.enabled ? 'true' : 'false');
@@ -85,6 +91,9 @@ export function setBackupScheduleSettings(input: {
       throw new Error('Хранить копий: от 0 до 100 (0 — все)');
     }
     writeSetting(KEY_KEEP_COUNT, String(keepCount));
+  }
+  if (input.sendToTelegram !== undefined) {
+    writeSetting(KEY_SEND_TELEGRAM, input.sendToTelegram ? 'true' : 'false');
   }
 
   return getBackupScheduleSettings();
@@ -135,7 +144,7 @@ async function tick(): Promise<void> {
 
   running = true;
   try {
-    await createBackup(settings.includeUploads);
+    const backup = await createBackup(settings.includeUploads);
     writeSetting(KEY_LAST_RUN, new Date().toISOString());
     const removed = pruneOldBackups(settings.keepCount);
     console.log(
@@ -143,6 +152,22 @@ async function tick(): Promise<void> {
         removed > 0 ? `, удалено старых: ${removed}` : ''
       })`
     );
+
+    if (settings.sendToTelegram) {
+      const telegram = getTelegramBackupSettings();
+      if (!telegram.ready) {
+        console.warn(
+          '[backup] Автоотправка в Telegram включена, но бот или chat ID не настроены — пропуск'
+        );
+      } else {
+        try {
+          await sendBackupToTelegram(backup.id);
+          console.log('[backup] Автокопия отправлена в Telegram');
+        } catch (err) {
+          console.error('[backup] Не удалось отправить автокопию в Telegram:', err);
+        }
+      }
+    }
   } catch (err) {
     console.error('[backup] Ошибка автокопии:', err);
   } finally {

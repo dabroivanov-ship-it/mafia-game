@@ -31,6 +31,8 @@ import SiteFooter from './components/SiteFooter';
 import GuestLayout from './components/GuestLayout';
 import InstallAppBanner from './components/InstallAppBanner';
 import NotificationBell from './components/NotificationBell';
+import UserAccountMenu from './components/UserAccountMenu';
+import SupportFeedbackFab from './components/SupportFeedbackFab';
 import {
   getMobileNavPlacement,
   type MobileNavPlacement,
@@ -116,6 +118,7 @@ export default function App() {
   const [messageThreadUserId, setMessageThreadUserId] = useState<number | null>(null);
   const [messageThreadUsername, setMessageThreadUsername] = useState<string | null>(null);
   const [messagesOpenUnread, setMessagesOpenUnread] = useState(false);
+  const [messagesOpenFriends, setMessagesOpenFriends] = useState(false);
   const [adminInitialView, setAdminInitialView] = useState<'hub' | 'violations'>('hub');
   const [mailReadReceipt, setMailReadReceipt] = useState<{
     readerId: number;
@@ -488,12 +491,21 @@ export default function App() {
         setComposeToUserId(null);
         setComposeToUsername(null);
         setMessagesOpenUnread(true);
+        setMessagesOpenFriends(false);
+      } else if (opts?.openFriends) {
+        setMessageThreadUserId(null);
+        setMessageThreadUsername(null);
+        setComposeToUserId(null);
+        setComposeToUsername(null);
+        setMessagesOpenUnread(false);
+        setMessagesOpenFriends(true);
       } else {
         setMessageThreadUserId(null);
         setMessageThreadUsername(null);
         setComposeToUserId(opts?.userId ?? null);
         setComposeToUsername(opts?.username ?? null);
         setMessagesOpenUnread(false);
+        setMessagesOpenFriends(false);
       }
       // Room UI is a full-screen branch — leave it so cabinet mail can render.
       if (currentRoomIdRef.current != null) {
@@ -747,8 +759,53 @@ export default function App() {
     }
   }, []);
 
+  const openCabinetProfile = useCallback(() => {
+    if (currentRoomIdRef.current != null) {
+      setRoomMinimized(true);
+    }
+    setProfileStatsUserId(null);
+    setView('cabinet');
+    setLobbyScreen('cabinet-settings');
+    window.history.pushState(null, '', '/');
+  }, []);
+
+  const openCabinetSettings = useCallback(() => {
+    if (currentRoomIdRef.current != null) {
+      setRoomMinimized(true);
+    }
+    setProfileStatsUserId(null);
+    setView('cabinet');
+    setLobbyScreen('cabinet-account-settings');
+    window.history.pushState(null, '', '/');
+  }, []);
+
+  const openCabinetSupport = useCallback(() => {
+    if (currentRoomIdRef.current != null) {
+      setRoomMinimized(true);
+    }
+    setProfileStatsUserId(null);
+    setView('cabinet');
+    setLobbyScreen('cabinet-support');
+    window.history.pushState(null, '', '/');
+  }, []);
+
+  const openFriends = useCallback(() => {
+    openMessages({ openFriends: true });
+  }, [openMessages]);
+
+  const supportFab = user ? <SupportFeedbackFab onClick={openCabinetSupport} /> : null;
+
   const notificationBar = (
     <header className="app-topbar">
+      {user && (
+        <UserAccountMenu
+          user={user}
+          onOpenProfile={openCabinetProfile}
+          onOpenFriends={openFriends}
+          onOpenStatistics={() => openProfileStatistics(user.id)}
+          onOpenSettings={openCabinetSettings}
+        />
+      )}
       <NotificationBell
         notifications={notifications}
         unreadCount={notificationUnreadCount}
@@ -936,6 +993,7 @@ export default function App() {
             />
           </ViewSuspense>
         )}
+        {supportFab}
       </div>
     );
   }
@@ -1039,6 +1097,7 @@ export default function App() {
               threadUserId={messageThreadUserId}
               threadUsername={messageThreadUsername}
               openUnread={messagesOpenUnread}
+              openFriends={messagesOpenFriends}
               mailReadReceipt={mailReadReceipt}
               onUnreadChange={setUnreadMailCount}
               onOpenFaq={() => {
@@ -1050,6 +1109,7 @@ export default function App() {
                 setMessageThreadUserId(null);
                 setMessageThreadUsername(null);
                 setMessagesOpenUnread(false);
+                setMessagesOpenFriends(false);
               }}
               onBack={() => {
                 setComposeToUserId(null);
@@ -1057,6 +1117,7 @@ export default function App() {
                 setMessageThreadUserId(null);
                 setMessageThreadUsername(null);
                 setMessagesOpenUnread(false);
+                setMessagesOpenFriends(false);
                 setLobbyScreen('cabinet');
               }}
             />
@@ -1137,6 +1198,8 @@ export default function App() {
       </div>
 
       <InstallAppBanner />
+
+      {supportFab}
 
       <Menu
         user={user}

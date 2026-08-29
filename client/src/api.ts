@@ -1024,6 +1024,7 @@ export interface BackupScheduleSettings {
   time: string;
   includeUploads: boolean;
   keepCount: number;
+  sendToTelegram: boolean;
   lastRunAt: string | null;
 }
 
@@ -1042,7 +1043,12 @@ export async function fetchBackupSchedule(): Promise<{ schedule: BackupScheduleS
 }
 
 export async function adminSaveBackupSchedule(
-  schedule: Partial<Pick<BackupScheduleSettings, 'enabled' | 'time' | 'includeUploads' | 'keepCount'>>
+  schedule: Partial<
+    Pick<
+      BackupScheduleSettings,
+      'enabled' | 'time' | 'includeUploads' | 'keepCount' | 'sendToTelegram'
+    >
+  >
 ): Promise<{ schedule: BackupScheduleSettings }> {
   return apiRequest('/api/admin/backups/schedule', {
     method: 'PUT',
