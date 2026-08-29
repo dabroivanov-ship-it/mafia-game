@@ -32,7 +32,7 @@ export function createModerationRouter({ onUserBanned }: ModerationRouterOptions
       sanctionType: 'ban',
       reason: reasonText,
       moderatorId: req.user!.id,
-      moderatorName: req.user!.display_name || req.user!.username,
+      moderatorName: req.user!.username,
       untilAt: until,
     });
     onUserBanned?.(targetId, reasonText, until);

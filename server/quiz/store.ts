@@ -1,4 +1,5 @@
 import db from '../auth/db.js';
+import { resolveUserAvatar } from '../auth/defaultAvatars.js';
 
 export interface QuizLeaderboardEntry {
   id: number;
@@ -23,7 +24,7 @@ export function incrementQuizCorrectAnswers(userId: number): number {
 export function listQuizLeaderboard(limit = 10): QuizLeaderboardEntry[] {
   const rows = db
     .prepare(
-      `SELECT id, username, display_name, avatar, quiz_correct_answers
+      `SELECT id, username, display_name, gender, avatar, quiz_correct_answers
        FROM users
        WHERE quiz_correct_answers > 0 AND is_banned = 0
        ORDER BY quiz_correct_answers DESC, id ASC
@@ -33,6 +34,7 @@ export function listQuizLeaderboard(limit = 10): QuizLeaderboardEntry[] {
     id: number;
     username: string;
     display_name: string;
+    gender: string | null;
     avatar: string | null;
     quiz_correct_answers: number;
   }[];
@@ -41,7 +43,7 @@ export function listQuizLeaderboard(limit = 10): QuizLeaderboardEntry[] {
     id: row.id,
     username: row.username,
     displayName: row.display_name,
-    avatar: row.avatar,
+    avatar: resolveUserAvatar(row.avatar, row.gender),
     quizCorrectAnswers: row.quiz_correct_answers,
   }));
 }

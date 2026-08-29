@@ -3,6 +3,12 @@ import path from 'path';
 import fs from 'fs';
 import type { AuthProvider, PublicUser, User, StaffMember, UserGender } from '../types/index.js';
 import { normalizeGender } from './gender.js';
+import {
+  defaultAvatarForGender,
+  isCustomAvatar,
+  resolveUserAvatar,
+  shouldUseGenderDefaultAvatar,
+} from './defaultAvatars.js';
 import { getDataDir, getDbPath, getUploadsDir } from '../paths.js';
 
 const dataDir = getDataDir();
@@ -76,7 +82,24 @@ function migrateColumns(): void {
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_vk_id ON users(vk_id)');
 }
 
+function backfillGenderDefaultAvatars(): void {
+  const rows = db
+    .prepare(
+      `SELECT id, gender FROM users
+       WHERE gender IN ('male', 'female')
+         AND (avatar IS NULL OR avatar = '')`
+    )
+    .all() as { id: number; gender: string }[];
+  if (!rows.length) return;
+  const update = db.prepare('UPDATE users SET avatar = ? WHERE id = ?');
+  for (const row of rows) {
+    const avatar = defaultAvatarForGender(row.gender);
+    if (avatar) update.run(avatar, row.id);
+  }
+}
+
 migrateColumns();
+backfillGenderDefaultAvatars();
 
 function syncAdminRoles(): void {
   const admins = (process.env.ADMIN_USERNAMES || 'admin').split(',').map((s) => s.trim()).filter(Boolean);
@@ -195,7 +218,7 @@ export function publicUser(user: User | null | undefined): PublicUser | null {
     gender: normalizeGender(user.gender),
     city: user.city || '',
     bio: user.bio || '',
-    avatar: user.avatar || null,
+    avatar: resolveUserAvatar(user.avatar, user.gender),
     role: user.role || 'user',
     isAdmin: user.role === 'admin',
     isModerator: user.role === 'moderator',
@@ -302,12 +325,13 @@ export function createUser({
   invitedByUserId?: number | null;
 }): User | undefined {
   const role = 'user';
+  const avatar = defaultAvatarForGender(gender);
 
   const result = db
     .prepare(
       `INSERT INTO users
-      (username, email, password_hash, display_name, gender, role, telegram_id, telegram_username, vk_id, vk_username, invited_by_user_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      (username, email, password_hash, display_name, gender, role, avatar, telegram_id, telegram_username, vk_id, vk_username, invited_by_user_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       username,
@@ -316,6 +340,7 @@ export function createUser({
       displayName,
       normalizeGender(gender),
       role,
+      avatar,
       telegramId || null,
       telegramUsername || null,
       vkId || null,
@@ -340,12 +365,23 @@ export function fillEmptyProfileFields(
   const nameIsPlaceholder = !currentName || PLACEHOLDER_DISPLAY_NAME.test(currentName);
   const nextName = nameIsPlaceholder && incomingName ? incomingName : user.display_name;
   const nextGender = !normalizeGender(user.gender) && incomingGender ? incomingGender : user.gender;
+  const nextAvatar =
+    shouldUseGenderDefaultAvatar(user.avatar) && incomingGender
+      ? defaultAvatarForGender(incomingGender)
+      : user.avatar;
 
-  if (nextName === user.display_name && nextGender === user.gender) return user;
+  if (
+    nextName === user.display_name &&
+    nextGender === user.gender &&
+    nextAvatar === user.avatar
+  ) {
+    return user;
+  }
 
-  db.prepare('UPDATE users SET display_name = ?, gender = ? WHERE id = ?').run(
+  db.prepare('UPDATE users SET display_name = ?, gender = ?, avatar = ? WHERE id = ?').run(
     nextName,
     nextGender,
+    nextAvatar,
     userId
   );
   return findUserById(userId);
@@ -369,11 +405,21 @@ export function updateUserProfile(
     theme?: string | null;
   }
 ): PublicUser | null {
+  const existing = findUserById(userId);
+  if (!existing) return null;
+
   const fields = ['display_name = ?', 'city = ?', 'bio = ?'];
   const values: (string | number | null)[] = [displayName, city || '', bio || ''];
+  let nextGender = normalizeGender(existing.gender);
+
   if (gender !== undefined) {
+    nextGender = normalizeGender(gender);
     fields.push('gender = ?');
-    values.push(normalizeGender(gender));
+    values.push(nextGender);
+    if (shouldUseGenderDefaultAvatar(existing.avatar)) {
+      fields.push('avatar = ?');
+      values.push(defaultAvatarForGender(nextGender));
+    }
   }
   if (chatLimit != null) {
     fields.push('chat_limit = ?');
@@ -447,16 +493,17 @@ export function updateUserPasswordHash(userId: number, passwordHash: string): Pu
 }
 
 export function deleteAvatarFile(avatarPath: string | null | undefined): void {
-  if (avatarPath?.startsWith('/uploads/')) {
-    const filePath = path.join(uploadsDir, path.basename(avatarPath));
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-  }
+  if (!isCustomAvatar(avatarPath)) return;
+  const filePath = path.join(uploadsDir, path.basename(avatarPath!));
+  if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 }
 
 export function removeUserAvatar(userId: number): PublicUser | null {
   const user = findUserById(userId);
-  if (user?.avatar) deleteAvatarFile(user.avatar);
-  db.prepare('UPDATE users SET avatar = NULL WHERE id = ?').run(userId);
+  if (!user) return null;
+  if (isCustomAvatar(user.avatar)) deleteAvatarFile(user.avatar);
+  const avatar = defaultAvatarForGender(user.gender);
+  db.prepare('UPDATE users SET avatar = ? WHERE id = ?').run(avatar, userId);
   return findUserPublic(userId);
 }
 
@@ -497,7 +544,7 @@ export function searchPublicUsers(query: string, limit = 25): UserSearchHit[] {
   const prefix = `${q}%`;
   const rows = db
     .prepare(
-      `SELECT id, username, display_name, city, avatar, role, total_score, mmr
+      `SELECT id, username, display_name, city, gender, avatar, role, total_score, mmr
        FROM users
        WHERE username LIKE ? COLLATE NOCASE
           OR display_name LIKE ? COLLATE NOCASE
@@ -513,7 +560,7 @@ export function searchPublicUsers(query: string, limit = 25): UserSearchHit[] {
     )
     .all(term, term, term, prefix, prefix, limit) as Pick<
     User,
-    'id' | 'username' | 'display_name' | 'city' | 'avatar' | 'role' | 'total_score' | 'mmr'
+    'id' | 'username' | 'display_name' | 'city' | 'gender' | 'avatar' | 'role' | 'total_score' | 'mmr'
   >[];
 
   return rows.map((row) => ({
@@ -521,7 +568,7 @@ export function searchPublicUsers(query: string, limit = 25): UserSearchHit[] {
     username: row.username,
     displayName: row.display_name,
     city: row.city || '',
-    avatar: row.avatar || null,
+    avatar: resolveUserAvatar(row.avatar, row.gender),
     totalScore: row.total_score,
     mmr: row.mmr ?? 1000,
     isAdmin: row.role === 'admin',
@@ -550,7 +597,7 @@ export function listLeaderboard(limit = 100, offset = 0): LeaderboardEntry[] {
 
   const rows = db
     .prepare(
-      `SELECT id, username, display_name, city, avatar, role, total_score, mmr, games_played, reputation
+      `SELECT id, username, display_name, city, gender, avatar, role, total_score, mmr, games_played, reputation
        FROM users
        WHERE is_banned = 0
        ORDER BY mmr DESC, games_played DESC, id ASC
@@ -562,6 +609,7 @@ export function listLeaderboard(limit = 100, offset = 0): LeaderboardEntry[] {
     | 'username'
     | 'display_name'
     | 'city'
+    | 'gender'
     | 'avatar'
     | 'role'
     | 'total_score'
@@ -576,7 +624,7 @@ export function listLeaderboard(limit = 100, offset = 0): LeaderboardEntry[] {
     username: row.username,
     displayName: row.display_name,
     city: row.city || '',
-    avatar: row.avatar || null,
+    avatar: resolveUserAvatar(row.avatar, row.gender),
     totalScore: row.total_score,
     mmr: row.mmr ?? 1000,
     gamesPlayed: row.games_played ?? 0,
@@ -613,17 +661,17 @@ export function findPrimaryAdminId(): number | null {
 export function listStaffUsers(): StaffMember[] {
   const rows = db
     .prepare(
-      `SELECT id, username, display_name, city, avatar, role
+      `SELECT id, username, display_name, city, gender, avatar, role
        FROM users WHERE role IN ('admin', 'moderator', 'watcher')
        ORDER BY CASE role WHEN 'admin' THEN 0 WHEN 'moderator' THEN 1 ELSE 2 END, display_name COLLATE NOCASE`
     )
-    .all() as Pick<User, 'id' | 'username' | 'display_name' | 'city' | 'avatar' | 'role'>[];
+    .all() as Pick<User, 'id' | 'username' | 'display_name' | 'city' | 'gender' | 'avatar' | 'role'>[];
   return rows.map((row) => ({
     id: row.id,
     username: row.username,
     displayName: row.display_name,
     city: row.city || '',
-    avatar: row.avatar || null,
+    avatar: resolveUserAvatar(row.avatar, row.gender),
     role: row.role as 'admin' | 'moderator' | 'watcher',
   }));
 }

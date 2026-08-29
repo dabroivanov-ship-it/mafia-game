@@ -404,7 +404,7 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
       sanctionType: 'ban',
       reason: normalizeModerationReason(reason),
       moderatorId: req.user!.id,
-      moderatorName: req.user!.display_name || req.user!.username,
+      moderatorName: req.user!.username,
       untilAt: until,
     });
     handlers.onUserBanned?.(targetId, normalizeModerationReason(reason), until);

@@ -1001,7 +1001,6 @@ export default function App() {
             />
           </ViewSuspense>
         )}
-        {supportFab}
       </div>
     );
   }

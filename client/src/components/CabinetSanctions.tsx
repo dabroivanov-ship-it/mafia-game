@@ -38,6 +38,11 @@ function isActive(entry: UserSanctionEntry): boolean {
   return !Number.isNaN(until.getTime()) && until.getTime() > Date.now();
 }
 
+function formatModeratorName(name: string): string {
+  if (!name || name === 'Модерация' || name === 'Авто') return name;
+  return `@${name.replace(/^@/, '')}`;
+}
+
 export default function CabinetSanctions({ onBack }: CabinetSanctionsProps) {
   const [sanctions, setSanctions] = useState<UserSanctionEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,7 +100,7 @@ export default function CabinetSanctions({ onBack }: CabinetSanctionsProps) {
                 </div>
                 <div>
                   <dt>Кем</dt>
-                  <dd>{entry.moderatorName}</dd>
+                  <dd>{formatModeratorName(entry.moderatorName)}</dd>
                 </div>
                 <div>
                   <dt>Срок</dt>

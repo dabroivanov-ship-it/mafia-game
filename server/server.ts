@@ -1368,7 +1368,7 @@ io.on('connection', (socket) => {
         sanctionType: 'silence',
         reason: reasonText,
         moderatorId: staffUser.id,
-        moderatorName: staffUser.display_name || staffUser.username,
+        moderatorName: staffUser.username,
         roomId: room.id,
         roomName: room.name,
         untilAt,

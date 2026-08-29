@@ -1,4 +1,5 @@
 import db, { findUserById } from '../auth/db.js';
+import { resolveUserAvatar } from '../auth/defaultAvatars.js';
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS private_messages (
@@ -96,7 +97,7 @@ function mapOtherUser(userId: number) {
     id: userId,
     username: user?.username || '?',
     displayName: user?.display_name || '?',
-    avatar: user?.avatar || null,
+    avatar: resolveUserAvatar(user?.avatar, user?.gender),
   };
 }
 

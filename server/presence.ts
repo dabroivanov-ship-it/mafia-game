@@ -1,4 +1,5 @@
 import { findUserById, getUserLastSeen, isUserBanned, touchUserLastSeen, addUserOnlineSeconds, getStoredOnlineSeconds, type UserSearchHit } from './auth/db.js';
+import { resolveUserAvatar } from './auth/defaultAvatars.js';
 
 const activeConnections = new Map<number, number>();
 const userSections = new Map<number, string>();
@@ -129,7 +130,7 @@ export function listOnlineUsers(): OnlineUserHit[] {
       username: user.username,
       displayName: user.display_name,
       city: user.city || '',
-      avatar: user.avatar || null,
+      avatar: resolveUserAvatar(user.avatar, user.gender),
       totalScore: user.total_score,
       mmr: user.mmr ?? 1000,
       isAdmin: user.role === 'admin',

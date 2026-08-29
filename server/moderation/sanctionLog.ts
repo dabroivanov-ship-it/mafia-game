@@ -39,6 +39,7 @@ interface SanctionRow {
   reason: string;
   moderator_id: number | null;
   moderator_name: string;
+  moderator_username?: string | null;
   room_id: number | null;
   room_name: string | null;
   until_at: string | null;
@@ -52,7 +53,7 @@ function mapRow(row: SanctionRow): UserSanctionEntry {
     sanctionType: row.sanction_type as SanctionType,
     reason: row.reason,
     moderatorId: row.moderator_id,
-    moderatorName: row.moderator_name,
+    moderatorName: row.moderator_username || row.moderator_name,
     roomId: row.room_id,
     roomName: row.room_name,
     untilAt: row.until_at,
@@ -105,9 +106,11 @@ export function liftUserSanctions(userId: number, sanctionType: SanctionType): v
 export function listSanctionsForUser(userId: number, limit = 200): UserSanctionEntry[] {
   const rows = db
     .prepare(
-      `SELECT * FROM user_sanctions
-       WHERE user_id = ?
-       ORDER BY datetime(created_at) DESC
+      `SELECT s.*, m.username AS moderator_username
+       FROM user_sanctions s
+       LEFT JOIN users m ON m.id = s.moderator_id
+       WHERE s.user_id = ?
+       ORDER BY datetime(s.created_at) DESC
        LIMIT ?`
     )
     .all(userId, limit) as SanctionRow[];

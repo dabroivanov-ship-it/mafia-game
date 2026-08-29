@@ -1,4 +1,5 @@
 import db, { findUserById } from '../auth/db.js';
+import { resolveUserAvatar } from '../auth/defaultAvatars.js';
 import { MAX_NEWS_COMMENT_LENGTH } from '../security/constants.js';
 
 db.exec(`
@@ -78,7 +79,7 @@ function rowToComment(row: CommentRow): NewsComment {
     createdAt: formatDate(row.created_at),
     authorName: author?.display_name || author?.username || 'Игрок',
     authorUsername: author?.username || '',
-    authorAvatar: author?.avatar || null,
+    authorAvatar: resolveUserAvatar(author?.avatar, author?.gender),
   };
 }
 

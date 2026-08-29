@@ -1023,6 +1023,10 @@ textarea:focus-visible {
   .user-account-menu {
     display: block;
   }
+
+  .app-in-room .user-account-menu {
+    display: none;
+  }
 }
 
 .user-account-menu-btn {
@@ -1175,6 +1179,10 @@ textarea:focus-visible {
   .support-feedback-fab-label {
     white-space: nowrap;
   }
+
+  .app-in-room .support-feedback-fab {
+    display: none;
+  }
 }
 
 .app-in-room .app-topbar {
@@ -1193,7 +1201,7 @@ textarea:focus-visible {
 
 @media (min-width: 769px) {
   .app-in-room .room-header {
-    padding-right: calc(14px + 44px + 8px + min(240px, 36vw) + 12px);
+    padding-right: calc(14px + 44px + 10px);
   }
 }
 

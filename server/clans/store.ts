@@ -1,4 +1,5 @@
 import db, { findUserById } from '../auth/db.js';
+import { resolveUserAvatar } from '../auth/defaultAvatars.js';
 import { getUserMessageCount } from '../history/store.js';
 import { getGamesPlayed } from '../social/store.js';
 
@@ -301,7 +302,7 @@ export function listClanMembers(clanId: number): ClanMemberView[] {
       userId: row.user_id,
       username: user?.username || '?',
       displayName: user?.display_name || user?.username || '?',
-      avatar: user?.avatar || null,
+      avatar: resolveUserAvatar(user?.avatar, user?.gender),
       role: row.role === 'leader' ? 'leader' : 'member',
       joinedAt: iso(row.joined_at),
     };
@@ -322,7 +323,7 @@ export function listClanBlacklist(clanId: number): ClanDetail['blacklist'] {
       userId: row.user_id,
       username: user?.username || '?',
       displayName: user?.display_name || user?.username || '?',
-      avatar: user?.avatar || null,
+      avatar: resolveUserAvatar(user?.avatar, user?.gender),
       createdAt: iso(row.created_at),
     };
   });
@@ -350,7 +351,7 @@ export function getClanDetail(clanId: number, viewerId: number): ClanDetail | nu
         userId: app.user_id,
         username: user?.username || '?',
         displayName: user?.display_name || user?.username || '?',
-        avatar: user?.avatar || null,
+        avatar: resolveUserAvatar(user?.avatar, user?.gender),
         createdAt: iso(app.created_at),
       };
     });

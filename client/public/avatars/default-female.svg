@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="5=A:89 020B0@">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2f2438"/>
+      <stop offset="100%" stop-color="#18131f"/>
+    </linearGradient>
+    <linearGradient id="skin" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f2c7a8"/>
+      <stop offset="100%" stop-color="#dba07f"/>
+    </linearGradient>
+    <linearGradient id="hair" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1f1410"/>
+      <stop offset="100%" stop-color="#0d0908"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="url(#bg)"/>
+  <ellipse cx="64" cy="118" rx="34" ry="18" fill="#10141c"/>
+  <path fill="#34283f" d="M34 118c8-18 24-28 30-28s22 10 30 28H34z"/>
+  <circle cx="64" cy="58" r="28" fill="url(#skin)"/>
+  <path fill="url(#hair)" d="M30 70c-2-24 12-42 34-42s36 18 34 42c-10-18-24-28-34-28S40 52 30 70z"/>
+  <path fill="url(#hair)" d="M30 70c4 24 16 38 34 38s30-14 34-38c-8 10-20 16-34 16S38 80 30 70z"/>
+  <ellipse cx="52" cy="60" rx="4" ry="5" fill="#2b2118"/>
+  <ellipse cx="76" cy="60" rx="4" ry="5" fill="#2b2118"/>
+  <path d="M56 72c4 4 12 4 16 0" fill="none" stroke="#c07a58" stroke-width="2.5" stroke-linecap="round"/>
+</svg>
