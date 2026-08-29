@@ -6283,9 +6283,48 @@ html.telegram-webapp .app-body {
 }
 
 .player-page-name {
-  margin: 0 0 12px;
+  margin: 0;
   text-align: center;
   font-size: 1.35rem;
+}
+
+.player-page-identity {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.player-page-identity--own {
+  margin-bottom: 4px;
+}
+
+.player-page-modal--own .player-page-top {
+  border-bottom: none;
+  padding-bottom: 4px;
+}
+
+.player-page-display-name {
+  margin: -4px 0 0;
+  text-align: center;
+  font-size: 0.95rem;
+}
+
+.player-page-identity-avatar .profile-avatar,
+.player-page-identity-avatar .profile-avatar.placeholder {
+  width: 72px;
+  height: 72px;
+  font-size: 1.5rem;
+}
+
+.player-page-identity-avatar--own .profile-avatar,
+.player-page-identity-avatar--own .profile-avatar.placeholder {
+  width: 112px;
+  height: 112px;
+  font-size: 2rem;
+  border: 3px solid color-mix(in srgb, var(--bg-card) 85%, var(--accent));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 22%, var(--border));
 }
 
 .player-page-compose textarea {
@@ -6334,42 +6373,6 @@ html.telegram-webapp .app-body {
 
 .player-page-body {
   padding: 16px 20px 20px;
-}
-
-.player-page-avatar-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.player-page-avatar-row .profile-avatar,
-.player-page-avatar-row .profile-avatar.placeholder {
-  width: 56px;
-  height: 56px;
-  font-size: 1.35rem;
-}
-
-.player-page-modal--own .player-page-top {
-  border-bottom: none;
-  padding-bottom: 4px;
-}
-
-.player-page-avatar-row--own {
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  margin: 4px 0 20px;
-}
-
-.player-page-avatar-row--own .profile-avatar,
-.player-page-avatar-row--own .profile-avatar.placeholder {
-  width: 112px;
-  height: 112px;
-  font-size: 2rem;
-  border: 3px solid color-mix(in srgb, var(--bg-card) 85%, var(--accent));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 22%, var(--border));
 }
 
 .player-page-info {

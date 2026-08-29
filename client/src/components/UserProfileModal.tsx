@@ -314,6 +314,20 @@ export default function UserProfileModal({
   const isOwnProfile = userId === currentUserId;
   const displayTitle = user?.username || replyTarget?.playerName || 'Игрок';
 
+  const profileAvatar = (
+    <div
+      className={`player-page-identity-avatar${
+        isOwnProfile ? ' player-page-identity-avatar--own' : ''
+      }`}
+    >
+      {user?.avatar ? (
+        <img src={avatarUrl(user.avatar) ?? undefined} alt="" className="profile-avatar" />
+      ) : (
+        <div className="profile-avatar placeholder" aria-hidden="true" />
+      )}
+    </div>
+  );
+
   return (
     <div className="modal-overlay player-page-overlay" onClick={onClose}>
       <div
@@ -324,7 +338,15 @@ export default function UserProfileModal({
           <button type="button" className="btn btn-ghost btn-sm player-page-close" onClick={onClose}>
             ✕ Закрыть
           </button>
-          {!isOwnProfile && <h2 className="player-page-name">{displayTitle}</h2>}
+          <div
+            className={`player-page-identity${isOwnProfile ? ' player-page-identity--own' : ''}`}
+          >
+            {(user || !loading) && profileAvatar}
+            <h2 className="player-page-name">{displayTitle}</h2>
+            {user?.displayName && user.displayName !== user.username && (
+              <p className="muted player-page-display-name">{user.displayName}</p>
+            )}
+          </div>
 
           {showChatCompose && (
             <form className="player-page-compose" onSubmit={handleSendChat}>
@@ -371,16 +393,6 @@ export default function UserProfileModal({
           <div className="player-page-body">
             {!editMode ? (
               <>
-                <div
-                  className={`player-page-avatar-row${isOwnProfile ? ' player-page-avatar-row--own' : ''}`}
-                >
-                  {user.avatar ? (
-                    <img src={avatarUrl(user.avatar) ?? undefined} alt="" className="profile-avatar" />
-                  ) : (
-                    <div className="profile-avatar placeholder" aria-hidden="true" />
-                  )}
-                </div>
-
                 <ul className="player-page-info">
                   <li>
                     <span className="player-page-label">Имя</span>

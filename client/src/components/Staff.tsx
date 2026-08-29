@@ -101,9 +101,6 @@ function StaffCard({ member }: { member: StaffMember }) {
       <div className="staff-card-body">
         <strong>{member.displayName}</strong>
         <span className="muted">@{member.username}</span>
-        {member.city && member.role !== 'admin' && (
-          <span className="muted staff-city">📍 {member.city}</span>
-        )}
         {member.role === 'admin' ? (
           <span className="admin-badge">admin</span>
         ) : member.role === 'moderator' ? (

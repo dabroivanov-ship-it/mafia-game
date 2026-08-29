@@ -84,17 +84,22 @@ function migrateColumns(): void {
 
 function backfillGenderDefaultAvatars(): void {
   const rows = db
-    .prepare(
-      `SELECT id, gender FROM users
-       WHERE gender IN ('male', 'female')
-         AND (avatar IS NULL OR avatar = '')`
-    )
-    .all() as { id: number; gender: string }[];
+    .prepare(`SELECT id, gender, avatar FROM users WHERE gender IN ('male', 'female')`)
+    .all() as { id: number; gender: string; avatar: string | null }[];
   if (!rows.length) return;
+
   const update = db.prepare('UPDATE users SET avatar = ? WHERE id = ?');
+  let updated = 0;
   for (const row of rows) {
+    if (!shouldUseGenderDefaultAvatar(row.avatar)) continue;
     const avatar = defaultAvatarForGender(row.gender);
-    if (avatar) update.run(avatar, row.id);
+    if (avatar && row.avatar !== avatar) {
+      update.run(avatar, row.id);
+      updated += 1;
+    }
+  }
+  if (updated > 0) {
+    console.log(`🖼️ Gender avatars backfilled for ${updated} users`);
   }
 }
 
@@ -325,7 +330,8 @@ export function createUser({
   invitedByUserId?: number | null;
 }): User | undefined {
   const role = 'user';
-  const avatar = defaultAvatarForGender(gender);
+  const normalizedGender = normalizeGender(gender);
+  const avatar = defaultAvatarForGender(normalizedGender);
 
   const result = db
     .prepare(
@@ -338,7 +344,7 @@ export function createUser({
       email,
       passwordHash,
       displayName,
-      normalizeGender(gender),
+      normalizedGender,
       role,
       avatar,
       telegramId || null,
@@ -365,9 +371,10 @@ export function fillEmptyProfileFields(
   const nameIsPlaceholder = !currentName || PLACEHOLDER_DISPLAY_NAME.test(currentName);
   const nextName = nameIsPlaceholder && incomingName ? incomingName : user.display_name;
   const nextGender = !normalizeGender(user.gender) && incomingGender ? incomingGender : user.gender;
+  const effectiveGender = incomingGender || normalizeGender(user.gender);
   const nextAvatar =
-    shouldUseGenderDefaultAvatar(user.avatar) && incomingGender
-      ? defaultAvatarForGender(incomingGender)
+    shouldUseGenderDefaultAvatar(user.avatar) && effectiveGender
+      ? defaultAvatarForGender(effectiveGender)
       : user.avatar;
 
   if (
@@ -420,6 +427,9 @@ export function updateUserProfile(
       fields.push('avatar = ?');
       values.push(defaultAvatarForGender(nextGender));
     }
+  } else if (shouldUseGenderDefaultAvatar(existing.avatar) && nextGender) {
+    fields.push('avatar = ?');
+    values.push(defaultAvatarForGender(nextGender));
   }
   if (chatLimit != null) {
     fields.push('chat_limit = ?');
