@@ -14,18 +14,14 @@ import {
   updateUserPasswordHash,
   searchPublicUsers,
   updateUserProfile,
-  updateUserAvatar,
-  deleteAvatarFile,
+  updateUserDefaultAvatar,
   CHAT_LIMIT_OPTIONS,
   userNeedsEmailLink,
 } from '../auth/db.js';
 import { normalizeGender } from '../auth/gender.js';
-import { createAvatarUpload } from '../upload/avatar.js';
-import { validateImageFile } from '../security/validate.js';
 import { createRateLimitMiddleware, searchRateLimiter } from '../security/rateLimit.js';
 import { MAX_PASSWORD_LENGTH } from '../security/constants.js';
 import bcrypt from 'bcryptjs';
-import fs from 'fs';
 import { getUserMessageCount } from '../history/store.js';
 import { getQuizCorrectAnswers, listQuizLeaderboard } from '../quiz/store.js';
 import { getUserStatistics } from '../stats/store.js';
@@ -49,7 +45,6 @@ interface ProfileRouterOptions {
 
 export function createProfileRouter({ onProfileUpdated }: ProfileRouterOptions = {}) {
   const router = Router();
-  const upload = createAvatarUpload((req) => req.userId!);
   const searchRateLimit = createRateLimitMiddleware(searchRateLimiter, (req) =>
     String(req.userId || 'anon')
   );
@@ -85,20 +80,15 @@ export function createProfileRouter({ onProfileUpdated }: ProfileRouterOptions =
     res.json({ user, chatLimitOptions: CHAT_LIMIT_OPTIONS });
   });
 
-  router.post('/avatar', authMiddleware, (req, res) => {
-    upload.single('avatar')(req, res, (err) => {
-      if (err) return res.status(400).json({ error: err.message || 'Ошибка загрузки' });
-      if (!req.file) return res.status(400).json({ error: 'Файл не выбран' });
-      if (!validateImageFile(req.file.path, req.file.mimetype)) {
-        fs.unlinkSync(req.file.path);
-        return res.status(400).json({ error: 'Файл не является допустимым изображением' });
-      }
-
-      const avatarUrl = `/uploads/avatars/${req.file.filename}`;
-      const { oldAvatar, user } = updateUserAvatar(req.userId!, avatarUrl);
-      if (oldAvatar) deleteAvatarFile(oldAvatar);
-      res.json({ user, avatar: avatarUrl });
-    });
+  router.put('/default-avatar', authMiddleware, (req, res) => {
+    const choice = req.body?.avatar;
+    if (choice !== 'male' && choice !== 'female') {
+      return res.status(400).json({ error: 'Выберите аватар' });
+    }
+    const user = updateUserDefaultAvatar(req.userId!, choice);
+    if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
+    onProfileUpdated?.(req.userId!, user);
+    res.json({ user });
   });
 
   router.post('/link-email', authMiddleware, async (req, res) => {

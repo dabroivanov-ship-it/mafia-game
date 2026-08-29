@@ -517,6 +517,19 @@ export function removeUserAvatar(userId: number): PublicUser | null {
   return findUserPublic(userId);
 }
 
+export function updateUserDefaultAvatar(
+  userId: number,
+  choice: 'male' | 'female'
+): PublicUser | null {
+  const existing = findUserById(userId);
+  if (!existing) return null;
+  const avatar = defaultAvatarForGender(choice);
+  if (!avatar) return null;
+  if (isCustomAvatar(existing.avatar)) deleteAvatarFile(existing.avatar);
+  db.prepare('UPDATE users SET avatar = ? WHERE id = ?').run(avatar, userId);
+  return findUserPublic(userId);
+}
+
 export function updateUserAvatar(
   userId: number,
   avatarPath: string

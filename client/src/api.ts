@@ -8,8 +8,9 @@ const API_BASE =
 export function avatarUrl(path: string | null | undefined): string | null {
   if (!path) return null;
   if (path.startsWith('http')) return path;
-  // Default avatars are static assets from the SPA host, not API uploads.
-  if (path.startsWith('/avatars/')) return path;
+  if (path.startsWith('/avatars/')) {
+    return `${API_BASE}/api/default-avatars/${path.slice('/avatars/'.length)}`;
+  }
   return `${API_BASE}${path}`;
 }
 
@@ -414,18 +415,13 @@ export async function updateProfile(payload: {
   });
 }
 
-export async function uploadAvatar(file: File): Promise<{ user: User }> {
-  const form = new FormData();
-  form.append('avatar', file);
-  const token = localStorage.getItem('mafia_token');
-  const res = await fetch(`${API_BASE}/api/profile/avatar`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-    body: form,
+export async function selectDefaultAvatar(
+  avatar: 'male' | 'female'
+): Promise<{ user: User }> {
+  return apiRequest('/api/profile/default-avatar', {
+    method: 'PUT',
+    body: JSON.stringify({ avatar }),
   });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error((data as { error?: string }).error || 'Ошибка загрузки');
-  return data as { user: User };
 }
 
 export async function fetchUnreadMailCount(): Promise<{ count: number }> {

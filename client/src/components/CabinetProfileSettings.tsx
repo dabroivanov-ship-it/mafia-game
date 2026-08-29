@@ -1,21 +1,23 @@
-import { useState, useRef, useEffect, FormEvent, ChangeEvent } from 'react';
-import { avatarUrl, updateProfile, uploadAvatar, fetchMe } from '../api';
+import { useState, useEffect, FormEvent } from 'react';
+import { avatarUrl, updateProfile, selectDefaultAvatar, fetchMe } from '../api';
 import type { User } from '../types';
 import { USER_GENDER_LABELS } from '../gender';
 import { userPositionLabel, isStaffPosition } from '../userPosition';
-import { formatOnlineDuration } from '../utils/presence';
+import {
+  DEFAULT_AVATAR_OPTIONS,
+  avatarChoiceFromPath,
+  type DefaultAvatarChoice,
+} from '../defaultAvatars';
 
 interface CabinetProfileSettingsProps {
   user: User;
   onUpdate: (user: User) => void;
-  onOpenStatistics?: () => void;
   onBack: () => void;
 }
 
 export default function CabinetProfileSettings({
   user,
   onUpdate,
-  onOpenStatistics,
   onBack,
 }: CabinetProfileSettingsProps) {
   const [form, setForm] = useState({
@@ -27,8 +29,7 @@ export default function CabinetProfileSettings({
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
-  const [avatarLoading, setAvatarLoading] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [avatarLoading, setAvatarLoading] = useState<DefaultAvatarChoice | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -63,22 +64,23 @@ export default function CabinetProfileSettings({
     }
   };
 
-  const handleAvatar = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setAvatarLoading(true);
+  const handleAvatarSelect = async (choice: DefaultAvatarChoice) => {
+    if (avatarChoiceFromPath(user.avatar) === choice) return;
+    setAvatarLoading(choice);
     setError('');
+    setSuccess('');
     try {
-      const { user: updated } = await uploadAvatar(file);
+      const { user: updated } = await selectDefaultAvatar(choice);
       onUpdate(updated);
       setSuccess('Аватар обновлён');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка загрузки');
+      setError(err instanceof Error ? err.message : 'Не удалось сменить аватар');
     } finally {
-      setAvatarLoading(false);
-      if (fileRef.current) fileRef.current.value = '';
+      setAvatarLoading(null);
     }
   };
+
+  const selectedAvatar = avatarChoiceFromPath(user.avatar);
 
   return (
     <div className="cabinet-page">
@@ -94,7 +96,7 @@ export default function CabinetProfileSettings({
       </header>
 
       <div className="profile-card cabinet-card">
-        <div className="profile-avatar-block">
+        <div className="profile-avatar-block profile-avatar-block--picker">
           <div className="profile-avatar-wrap">
             {user.avatar ? (
               <img src={avatarUrl(user.avatar) ?? undefined} alt="Аватар" className="profile-avatar" />
@@ -103,35 +105,36 @@ export default function CabinetProfileSettings({
             )}
           </div>
           <div className="profile-avatar-info">
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif"
-              onChange={handleAvatar}
-              hidden
-              id="cabinet-avatar-upload"
-            />
-            <label htmlFor="cabinet-avatar-upload" className="btn btn-ghost btn-sm">
-              {avatarLoading ? 'Загрузка...' : 'Сменить аватар'}
-            </label>
-            <p className="muted small">JPG, PNG, WebP до 2 МБ</p>
+            <p className="profile-avatar-picker-label">Аватар</p>
+            <div className="profile-avatar-picker" role="radiogroup" aria-label="Выбор аватара">
+              {DEFAULT_AVATAR_OPTIONS.map((option) => {
+                const active = selectedAvatar === option.id;
+                const pending = avatarLoading === option.id;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    className={`profile-avatar-option${active ? ' active' : ''}`}
+                    disabled={!!avatarLoading}
+                    onClick={() => {
+                      void handleAvatarSelect(option.id);
+                    }}
+                  >
+                    <img
+                      src={avatarUrl(option.path) ?? undefined}
+                      alt=""
+                      className="profile-avatar-option-image"
+                    />
+                    <span className="profile-avatar-option-label">
+                      {pending ? 'Сохранение...' : option.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
-
-        <div className="profile-stats">
-          <span>@{user.username}</span>
-          {user.telegramUsername && <span>Telegram @{user.telegramUsername}</span>}
-          {user.vkUsername && <span>VK {user.vkUsername}</span>}
-          {user.email && !user.needsEmailLink && <span>{user.email}</span>}
-          {onOpenStatistics ? (
-            <button type="button" className="cabinet-hub-mmr-link" onClick={onOpenStatistics}>
-              MMR {user.mmr ?? user.totalScore}
-            </button>
-          ) : (
-            <span>MMR {user.mmr ?? user.totalScore}</span>
-          )}
-          <span>с {new Date(user.createdAt).toLocaleDateString('ru-RU')}</span>
-          <span>Онлайн {formatOnlineDuration(user.onlineSeconds)}</span>
         </div>
 
         {error && <div className="auth-error">{error}</div>}

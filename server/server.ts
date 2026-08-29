@@ -106,6 +106,7 @@ import { initGameAiRunner, triggerGameAi, triggerBotChatResponse } from './game/
 import { buildRobotsTxt, buildSecurityTxt, buildSitemapXml } from './seo/siteSeo.js';
 import { sendSpaIndex } from './seo/spaHtml.js';
 import { getProjectRoot } from './paths.js';
+import { resolveDefaultAvatarFile } from './auth/defaultAvatarFiles.js';
 
 assertProductionEnv();
 
@@ -252,6 +253,17 @@ app.get(['/.well-known/security.txt', '/security.txt'], (_req, res) => {
   res.type('text/plain; charset=utf-8');
   res.setHeader('Cache-Control', 'public, max-age=86400');
   res.send(buildSecurityTxt());
+});
+
+app.get('/api/default-avatars/:filename', (req, res) => {
+  const file = resolveDefaultAvatarFile(req.params.filename);
+  if (!file) {
+    res.status(404).end();
+    return;
+  }
+  res.setHeader('Cache-Control', 'public, max-age=604800');
+  res.type('image/svg+xml');
+  res.sendFile(file);
 });
 
 app.use('/api/auth', authRoutes);

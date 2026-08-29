@@ -1079,7 +1079,6 @@ export default function App() {
             <CabinetProfileSettings
               user={user}
               onUpdate={handleUserUpdate}
-              onOpenStatistics={() => openProfileStatistics(user.id)}
               onBack={() => setLobbyScreen('cabinet')}
             />
           </ViewSuspense>
