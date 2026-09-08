@@ -8,6 +8,7 @@ import Staff from './Staff';
 import PlayerRating from './PlayerRating';
 import Faq from './Faq';
 import QuizLeaders from './QuizLeaders';
+import PrivacyPolicy from './PrivacyPolicy';
 import {
   type InfoSection,
   infoSectionFromPath,
@@ -15,6 +16,7 @@ import {
 } from '../infoRouting';
 import { INFO_PAGE_META, updatePageMeta } from '../seo';
 import { ABOUT_GAME_INTRO } from '../content/aboutGameContent';
+import { PRIVACY_POLICY_INTRO } from '../content/privacyPolicyContent';
 import { ROLES_INTRO } from '../content/rolesContent';
 import { AI_AGENTS_INTRO } from '../content/aiAgentsContent';
 
@@ -32,6 +34,7 @@ const INFO_HUB_ITEMS: InfoHubItem[] = [
   { section: 'rules', title: 'Правила игры' },
   { section: 'aiAgents', title: 'Игры с AI-агентами' },
   { section: 'faq', title: 'Частые вопросы' },
+  { section: 'privacy', title: 'Политика конфиденциальности' },
   { section: 'chatRules', title: 'Правила чата' },
   { section: 'rating', title: 'Рейтинг игроков' },
   { section: 'quizLeaders', title: 'Самые умные' },
@@ -207,6 +210,19 @@ export default function Info({
       <div className="info-page">
         {backNav('hub', 'Информация')}
         <Faq />
+      </div>
+    );
+  }
+
+  if (section === 'privacy') {
+    return (
+      <div className="info-page">
+        {backNav('hub', 'Информация')}
+        <header className="page-header">
+          <h1>Политика конфиденциальности</h1>
+          <p className="muted">{PRIVACY_POLICY_INTRO}</p>
+        </header>
+        <PrivacyPolicy embedded />
       </div>
     );
   }

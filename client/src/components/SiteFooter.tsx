@@ -1,4 +1,5 @@
 import TelegramIcon from './TelegramIcon';
+import { SITE_COPYRIGHT_NOTICE } from '../content/privacyPolicyContent';
 
 interface SiteFooterProps {
   text?: string;
@@ -32,8 +33,12 @@ export default function SiteFooter({ text = '', variant = 'minimal' }: SiteFoote
           >
             <TelegramIcon />
           </a>
+          <nav className="site-footer-legal" aria-label="Правовая информация">
+            <a href="/info/privacy">Политика конфиденциальности</a>
+          </nav>
         </section>
       )}
+      {showSocial && <p className="site-footer-copyright">{SITE_COPYRIGHT_NOTICE}</p>}
       {hasExtra && <p className="site-footer-extra">{text}</p>}
     </footer>
   );

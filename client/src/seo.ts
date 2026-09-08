@@ -149,6 +149,12 @@ export const INFO_PAGE_META: Record<string, PageMeta> = {
     description: 'Топ-10 игроков по верным ответам в викторине на сайте.',
     path: '/info/quiz',
   },
+  privacy: {
+    title: 'Политика конфиденциальности',
+    description:
+      'Как онлайн-игра «Мафия» на realmafia.online обрабатывает персональные данные: аккаунт, чат, cookies и права игрока.',
+    path: '/info/privacy',
+  },
 };
 
 export const BLOG_PAGE_META: PageMeta = {

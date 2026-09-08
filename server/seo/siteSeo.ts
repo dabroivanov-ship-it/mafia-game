@@ -29,6 +29,7 @@ export const SITEMAP_ENTRIES: SitemapEntry[] = [
   { path: '/info/chat', changefreq: 'monthly', priority: 0.8 },
   { path: '/info/rating', changefreq: 'daily', priority: 0.85 },
   { path: '/info/faq', changefreq: 'monthly', priority: 0.8 },
+  { path: '/info/privacy', changefreq: 'yearly', priority: 0.6 },
   { path: '/info/team', changefreq: 'monthly', priority: 0.7 },
   { path: '/info/quiz', changefreq: 'weekly', priority: 0.75 },
   { path: '/blog', changefreq: 'weekly', priority: 0.8 },
@@ -92,6 +93,12 @@ const PUBLIC_PAGE_META: Record<string, PublicPageMeta> = {
     description:
       'Ответы на частые вопросы об онлайн-игре «Мафия»: как начать, сколько игроков нужно, роли, AI-агенты и ведущий.',
     path: '/info/faq',
+  },
+  '/info/privacy': {
+    title: 'Политика конфиденциальности',
+    description:
+      'Как онлайн-игра «Мафия» на realmafia.online обрабатывает персональные данные: аккаунт, чат, cookies и права игрока.',
+    path: '/info/privacy',
   },
   '/info/quiz': {
     title: 'Самые умные',

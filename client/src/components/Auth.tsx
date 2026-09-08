@@ -21,6 +21,7 @@ import TelegramIcon from './TelegramIcon';
 import VkLoginWidget from './VkLoginWidget';
 import GuestLayout from './GuestLayout';
 import SiteServerStats from './SiteServerStats';
+import { SITE_COPYRIGHT_NOTICE } from '../content/privacyPolicyContent';
 import SiteOnlineStatus from './SiteOnlineStatus';
 import { DEFAULT_PAGE_META, updatePageMeta } from '../seo';
 import type { SiteBranding } from '../types';
@@ -591,6 +592,7 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
         ) : (
           <SiteOnlineStatus count={onlineCount} href="/online" />
         )}
+        <p className="auth-copyright">{SITE_COPYRIGHT_NOTICE}</p>
       </footer>
     </GuestLayout>
   );

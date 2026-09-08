@@ -1987,6 +1987,13 @@ html.telegram-webapp .app-body {
   text-align: center;
 }
 
+.auth-copyright {
+  margin: 16px 0 0;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
 .online-users-page {
   max-width: 720px;
   margin: 0 auto;
@@ -4538,6 +4545,31 @@ html.telegram-webapp .app-body {
   align-items: center;
 }
 
+.site-footer-legal {
+  margin-top: 4px;
+}
+
+.site-footer-legal a {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  text-decoration: none;
+}
+
+.site-footer-legal a:hover,
+.site-footer-legal a:focus-visible {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+.site-footer-copyright {
+  margin: 12px 0 0;
+  max-width: 42rem;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
 .site-footer-title {
   margin: 0;
   color: var(--text);
@@ -5279,6 +5311,46 @@ html.telegram-webapp .app-body {
   color: var(--text);
 }
 
+.privacy-policy-updated {
+  margin: -12px 0 20px;
+}
+
+.privacy-policy-card .rules-section + .rules-section {
+  padding-top: 4px;
+}
+
+.privacy-policy-table-wrap {
+  overflow-x: auto;
+  margin: 12px 0;
+}
+
+.privacy-policy-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.privacy-policy-table th,
+.privacy-policy-table td {
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+
+.privacy-policy-table th {
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+}
+
+.privacy-policy-table tbody tr:last-child th,
+.privacy-policy-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
 .rules-section p + p {
   margin-top: 10px;
 }
@@ -5635,6 +5707,11 @@ html.telegram-webapp .app-body {
 
 .profile-avatar-block--picker {
   align-items: flex-start;
+}
+
+.profile-avatar-block--preview {
+  justify-content: center;
+  margin-bottom: 18px;
 }
 
 .profile-avatar-picker-label {

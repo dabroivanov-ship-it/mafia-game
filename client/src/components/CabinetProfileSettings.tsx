@@ -76,7 +76,7 @@ export default function CabinetProfileSettings({
       </header>
 
       <div className="profile-card cabinet-card">
-        <div className="profile-avatar-block profile-avatar-block--picker">
+        <div className="profile-avatar-block profile-avatar-block--preview">
           <div className="profile-avatar-wrap">
             {previewAvatar ? (
               <img
@@ -87,14 +87,6 @@ export default function CabinetProfileSettings({
             ) : (
               <div className="profile-avatar placeholder" aria-hidden="true" />
             )}
-          </div>
-          <div className="profile-avatar-info">
-            <p className="profile-avatar-picker-label">Аватар</p>
-            <p className="muted small">
-              {previewGender
-                ? `Для ${USER_GENDER_LABELS[previewGender].toLowerCase()} пола`
-                : 'Выберите пол — аватар подставится автоматически'}
-            </p>
           </div>
         </div>
 
