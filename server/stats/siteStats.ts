@@ -36,6 +36,7 @@ export interface AdminSiteStats {
   usersRegisteredToday: number;
   usersRegisteredWeek: number;
   usersNewLast24h: NewUserPreview[];
+  usersActiveLast24h: NewUserPreview[];
   gamesPlayedTotal: number;
   gamesFinishedTotal: number;
   newsPublished: number;
@@ -154,6 +155,29 @@ export function getPublicSiteStats(): PublicSiteStats {
   };
 }
 
+function mapUserPreview(row: {
+  id: number;
+  username: string;
+  display_name: string;
+  created_at?: string;
+  last_seen_at?: string | null;
+  telegram_id: string | null;
+  vk_id: string | null;
+}): NewUserPreview {
+  const authProviders: Array<'telegram' | 'vk' | 'email'> = [];
+  if (row.telegram_id) authProviders.push('telegram');
+  if (row.vk_id) authProviders.push('vk');
+  if (!authProviders.length) authProviders.push('email');
+  const stamp = row.last_seen_at || row.created_at || '';
+  return {
+    id: row.id,
+    username: row.username,
+    displayName: row.display_name,
+    createdAt: stamp.includes('T') ? stamp : `${stamp.replace(' ', 'T')}Z`,
+    authProviders,
+  };
+}
+
 export function getAdminSiteStats(): AdminSiteStats {
   const usersTotal = (db.prepare('SELECT COUNT(*) AS c FROM users').get() as { c: number }).c;
   const usersBanned = (
@@ -201,21 +225,26 @@ export function getAdminSiteStats(): AdminSiteStats {
         telegram_id: string | null;
         vk_id: string | null;
       }[]
-  ).map((row) => {
-    const authProviders: Array<'telegram' | 'vk' | 'email'> = [];
-    if (row.telegram_id) authProviders.push('telegram');
-    if (row.vk_id) authProviders.push('vk');
-    if (!authProviders.length) authProviders.push('email');
-    return {
-      id: row.id,
-      username: row.username,
-      displayName: row.display_name,
-      createdAt: row.created_at.includes('T')
-        ? row.created_at
-        : `${row.created_at.replace(' ', 'T')}Z`,
-      authProviders,
-    };
-  });
+  ).map(mapUserPreview);
+  const usersActiveLast24h = (
+    db
+      .prepare(
+        `SELECT id, username, display_name, last_seen_at, telegram_id, vk_id
+         FROM users
+         WHERE last_seen_at IS NOT NULL
+           AND last_seen_at >= datetime('now', '-1 day')
+         ORDER BY last_seen_at DESC, id DESC
+         LIMIT 80`
+      )
+      .all() as {
+        id: number;
+        username: string;
+        display_name: string;
+        last_seen_at: string | null;
+        telegram_id: string | null;
+        vk_id: string | null;
+      }[]
+  ).map(mapUserPreview);
   const gamesPlayedTotal = (
     db.prepare('SELECT COALESCE(SUM(games_played), 0) AS s FROM users').get() as { s: number }
   ).s;
@@ -279,6 +308,7 @@ export function getAdminSiteStats(): AdminSiteStats {
     usersRegisteredToday,
     usersRegisteredWeek,
     usersNewLast24h,
+    usersActiveLast24h,
     gamesPlayedTotal,
     gamesFinishedTotal,
     newsPublished: countPublishedNews(),

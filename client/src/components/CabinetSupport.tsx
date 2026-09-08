@@ -63,7 +63,7 @@ export default function CabinetSupport({ onBack }: CabinetSupportProps) {
 
       <header className="page-header">
         <h1>Поддержка</h1>
-        <p className="muted">Опишите проблему — сообщение придёт главному администратору</p>
+        <p className="muted">Опишите проблему — мы постараемся ее решить как можно скорее.</p>
       </header>
 
       <div className="profile-card cabinet-card support-form-card">

@@ -29,7 +29,7 @@ export const SITEMAP_ENTRIES: SitemapEntry[] = [
   { path: '/info/chat', changefreq: 'monthly', priority: 0.8 },
   { path: '/info/rating', changefreq: 'daily', priority: 0.85 },
   { path: '/info/faq', changefreq: 'monthly', priority: 0.8 },
-  { path: '/info/privacy', changefreq: 'yearly', priority: 0.6 },
+  { path: '/info/privacy', changefreq: 'monthly', priority: 0.6 },
   { path: '/info/team', changefreq: 'monthly', priority: 0.7 },
   { path: '/info/quiz', changefreq: 'weekly', priority: 0.75 },
   { path: '/blog', changefreq: 'weekly', priority: 0.8 },

@@ -31,6 +31,7 @@ import SiteFooter from './components/SiteFooter';
 import GuestLayout from './components/GuestLayout';
 import InstallAppBanner from './components/InstallAppBanner';
 import NotificationBell from './components/NotificationBell';
+import LobbyPlayerSearch from './components/LobbyPlayerSearch';
 import UserAccountMenu from './components/UserAccountMenu';
 import SupportFeedbackFab from './components/SupportFeedbackFab';
 import {
@@ -803,6 +804,14 @@ export default function App() {
 
   const notificationBar = (
     <header className="app-topbar">
+      {user && view === 'lobby' && lobbyScreen === 'rooms' && !profileStatsUserId && (
+        <LobbyPlayerSearch
+          currentUser={user}
+          onWriteMessage={(userId, username) => openMessages({ userId, username })}
+          onOpenStatistics={openProfileStatistics}
+          onOpenClan={openClan}
+        />
+      )}
       <NotificationBell
         notifications={notifications}
         unreadCount={notificationUnreadCount}

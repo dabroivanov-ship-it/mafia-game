@@ -837,6 +837,7 @@ export interface AdminSiteStats {
   usersRegisteredToday: number;
   usersRegisteredWeek: number;
   usersNewLast24h: AdminNewUserPreview[];
+  usersActiveLast24h: AdminNewUserPreview[];
   gamesPlayedTotal: number;
   gamesFinishedTotal: number;
   newsPublished: number;

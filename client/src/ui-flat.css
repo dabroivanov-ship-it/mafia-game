@@ -1242,6 +1242,122 @@ textarea:focus-visible {
   pointer-events: auto;
 }
 
+.lobby-player-search {
+  display: none;
+  position: relative;
+}
+
+@media (min-width: 769px) {
+  .lobby-player-search {
+    display: block;
+  }
+}
+
+.lobby-player-search-field {
+  display: block;
+  margin: 0;
+}
+
+.lobby-player-search-input {
+  width: min(260px, 28vw);
+  min-width: 180px;
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid color-mix(in srgb, var(--border) 90%, var(--accent) 10%);
+  border-radius: 14px;
+  background: var(--surface-card, var(--bg-card));
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9rem;
+  box-shadow: var(--shadow-soft);
+}
+
+.lobby-player-search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.lobby-player-search-input:hover,
+.lobby-player-search-input:focus {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+}
+
+.lobby-player-search-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.lobby-player-search-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 170;
+  width: min(360px, calc(100vw - 48px));
+  max-height: min(420px, 70vh);
+  overflow-y: auto;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-soft);
+}
+
+.lobby-player-search-hint {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+}
+
+.lobby-player-search-hit {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lobby-player-search-hit:hover,
+.lobby-player-search-hit:focus-visible {
+  background: var(--bg-hover);
+}
+
+.lobby-player-search-hit:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.lobby-player-search-avatar {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  object-fit: cover;
+  background: var(--bg-hover);
+}
+
+.lobby-player-search-avatar.placeholder {
+  display: inline-block;
+}
+
+.lobby-player-search-hit-body {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lobby-player-search-hit-body strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .notification-bell-wrap {
   position: relative;
 }

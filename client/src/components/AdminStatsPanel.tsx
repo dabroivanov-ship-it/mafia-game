@@ -166,6 +166,10 @@ export default function AdminStatsPanel() {
               <dd>{formatChartInt(stats.usersTotal)}</dd>
             </div>
             <div>
+              <dt>Заходили сегодня</dt>
+              <dd>{formatChartInt(stats.usersActiveToday)}</dd>
+            </div>
+            <div>
               <dt>Посещения сегодня</dt>
               <dd>{formatChartInt(stats.visitsToday)}</dd>
             </div>
@@ -197,6 +201,34 @@ export default function AdminStatsPanel() {
               </dd>
             </div>
           </dl>
+        </article>
+
+        <article className="admin-stats-card admin-stats-card--wide">
+          <div className="admin-stats-card-head">
+            <h5>Заходили за сутки</h5>
+            <span className="muted">{formatChartInt(stats.usersActiveToday)}</span>
+          </div>
+          {!(stats.usersActiveLast24h?.length) ? (
+            <p className="muted">За последние 24 часа входов нет.</p>
+          ) : (
+            <ul className="admin-new-users-list">
+              {(stats.usersActiveLast24h ?? []).map((user) => (
+                <li key={user.id}>
+                  <strong>{user.displayName || user.username}</strong>
+                  <span className="muted">@{user.username}</span>
+                  <AuthProviderBadges providers={user.authProviders} />
+                  <time className="muted" dateTime={user.createdAt}>
+                    {new Date(user.createdAt).toLocaleString('ru-RU', {
+                      day: 'numeric',
+                      month: 'short',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </time>
+                </li>
+              ))}
+            </ul>
+          )}
         </article>
 
         <article className="admin-stats-card admin-stats-card--wide">
