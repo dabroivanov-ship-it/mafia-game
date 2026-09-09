@@ -406,16 +406,22 @@ export function GlowBarRows({ rows }: GlowBarRowsProps) {
 }
 
 interface GlowGroupedBarsProps {
-  columns: { key: string; label: string; a: number; b: number }[];
+  columns: { key: string; label: string; title?: string; a: number; b: number }[];
   aLabel: string;
   bLabel: string;
   idPrefix: string;
 }
 
 export function GlowGroupedBars({ columns, aLabel, bLabel, idPrefix }: GlowGroupedBarsProps) {
+  const [hoverKey, setHoverKey] = useState<string | null>(null);
   const max = Math.max(...columns.flatMap((c) => [c.a, c.b]), 1);
+  const hoverIdx = hoverKey ? columns.findIndex((c) => c.key === hoverKey) : -1;
+  const hovered = hoverIdx >= 0 ? columns[hoverIdx] : null;
+  const tipLeftPct =
+    columns.length <= 1 || hoverIdx < 0 ? 50 : (hoverIdx / Math.max(columns.length - 1, 1)) * 100;
+
   return (
-    <div className="stats-chart-grouped-wrap">
+    <div className="stats-chart-grouped-wrap" onMouseLeave={() => setHoverKey(null)}>
       <div className="stats-chart-grouped-legend muted">
         <span>
           <i className="stats-chart-legend-dot stats-chart-tone-bg--accent" /> {aLabel}
@@ -429,23 +435,52 @@ export function GlowGroupedBars({ columns, aLabel, bLabel, idPrefix }: GlowGroup
           <ChartGlowDefs idPrefix={idPrefix} />
         </svg>
         {columns.map((col) => (
-          <div key={col.key} className="stats-chart-grouped-col">
+          <div
+            key={col.key}
+            className={`stats-chart-grouped-col${
+              hoverKey && hoverKey !== col.key ? ' is-dim' : hoverKey === col.key ? ' is-active' : ''
+            }`}
+            onMouseEnter={() => setHoverKey(col.key)}
+            onFocus={() => setHoverKey(col.key)}
+            tabIndex={0}
+            aria-label={`${col.title || col.label}. ${aLabel}: ${formatChartInt(col.a)}. ${bLabel}: ${formatChartInt(col.b)}`}
+          >
             <div className="stats-chart-grouped-bars" aria-hidden="true">
               <span
                 className="stats-chart-grouped-bar stats-chart-grouped-bar--a"
                 style={{ height: `${(col.a / max) * 100}%` }}
-                title={`${aLabel}: ${col.a}`}
               />
               <span
                 className="stats-chart-grouped-bar stats-chart-grouped-bar--b"
                 style={{ height: `${(col.b / max) * 100}%` }}
-                title={`${bLabel}: ${col.b}`}
               />
             </div>
             <span className="stats-chart-grouped-label">{col.label}</span>
           </div>
         ))}
       </div>
+      {hovered && (
+        <div
+          className="stats-chart-hover-tip"
+          style={{
+            left: `${tipLeftPct}%`,
+            transform:
+              hoverIdx === 0
+                ? 'translateX(0)'
+                : hoverIdx === columns.length - 1
+                  ? 'translateX(-100%)'
+                  : 'translateX(-50%)',
+          }}
+        >
+          <strong>{hovered.title || hovered.label}</strong>
+          <span>
+            {aLabel}: {formatChartInt(hovered.a)}
+          </span>
+          <span>
+            {bLabel}: {formatChartInt(hovered.b)}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

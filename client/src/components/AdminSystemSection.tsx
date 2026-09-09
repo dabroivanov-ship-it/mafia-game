@@ -218,6 +218,20 @@ export default function AdminSystemSection({
     links: category.links.filter((link) => canOpenSystemView(permissions, link.view)),
   })).filter((category) => category.links.length > 0);
 
+  if (view !== 'hub' && permissions.length === 0) {
+    return (
+      <section className="admin-section admin-system-section admin-system-detail">
+        <div className="admin-system-detail-head">
+          <button type="button" className="btn btn-ghost btn-sm admin-back-btn" onClick={() => setView('hub')}>
+            ← К разделам
+          </button>
+          <h3>{VIEW_TITLES[view] || 'Раздел'}</h3>
+        </div>
+        <p className="muted">Загрузка...</p>
+      </section>
+    );
+  }
+
   if (view !== 'hub' && !canOpenSystemView(permissions, view)) {
     return (
       <section className="admin-section admin-system-section admin-system-detail">

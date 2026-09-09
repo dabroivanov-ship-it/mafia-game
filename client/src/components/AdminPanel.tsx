@@ -284,6 +284,10 @@ export default function AdminPanel({
   };
 
   useEffect(() => {
+    setSystemView(initialSystemView);
+  }, [initialSystemView, initialSupportTicketId]);
+
+  useEffect(() => {
     void load();
     const id = setInterval(() => void load({ silent: true }), 10000);
     return () => clearInterval(id);

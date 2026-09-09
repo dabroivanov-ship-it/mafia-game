@@ -159,7 +159,10 @@ export default function AdminStatsPanel() {
             bLabel="активны"
             columns={series.map((p) => ({
               key: p.date,
-              label: p.label.split(',')[0] || p.label,
+              label: new Date(`${p.date}T12:00:00`).toLocaleDateString('ru-RU', {
+                weekday: 'short',
+              }),
+              title: p.label,
               a: p.registered,
               b: p.active,
             }))}

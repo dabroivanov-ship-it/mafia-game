@@ -89,6 +89,15 @@ interface RoomJoinResponse {
   state?: RoomState;
 }
 
+function notificationPayloadId(
+  payload: Record<string, unknown> | null | undefined,
+  key: string
+): number | null {
+  const raw = payload?.[key];
+  const n = typeof raw === 'number' ? raw : typeof raw === 'string' ? Number(raw) : NaN;
+  return Number.isFinite(n) && n > 0 ? Math.trunc(n) : null;
+}
+
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('mafia_token'));
@@ -122,7 +131,9 @@ export default function App() {
   const [messagesOpenUnread, setMessagesOpenUnread] = useState(false);
   const [adminInitialView, setAdminInitialView] = useState<'hub' | 'violations' | 'support'>('hub');
   const [adminSupportTicketId, setAdminSupportTicketId] = useState<number | null>(null);
+  const [adminJumpKey, setAdminJumpKey] = useState(0);
   const [supportFocusTicketId, setSupportFocusTicketId] = useState<number | null>(null);
+  const [supportJumpKey, setSupportJumpKey] = useState(0);
   const [mailReadReceipt, setMailReadReceipt] = useState<{
     readerId: number;
     messageIds: number[];
@@ -720,11 +731,10 @@ export default function App() {
 
       if (notification.action === 'admin_violations') {
         if (user?.canAccessAdminPanel) {
-          if (currentRoomId && !roomMinimized) {
-            if ((roomState?.kind === 'chat' || roomState?.kind === 'clan')) leaveRoom();
-            else minimizeMafiaRoom();
-          }
+          setProfileStatsUserId(null);
+          setAdminSupportTicketId(null);
           setAdminInitialView('violations');
+          setAdminJumpKey((k) => k + 1);
           setView('admin');
         }
         return;
@@ -732,27 +742,22 @@ export default function App() {
 
       if (notification.action === 'admin_support') {
         if (user?.canAccessAdminPanel) {
-          if (currentRoomId && !roomMinimized) {
-            if ((roomState?.kind === 'chat' || roomState?.kind === 'clan')) leaveRoom();
-            else minimizeMafiaRoom();
-          }
-          const ticketId =
-            typeof notification.payload?.ticketId === 'number' ? notification.payload.ticketId : null;
-          setAdminSupportTicketId(ticketId);
+          setProfileStatsUserId(null);
+          setAdminSupportTicketId(notificationPayloadId(notification.payload, 'ticketId'));
           setAdminInitialView('support');
+          setAdminJumpKey((k) => k + 1);
           setView('admin');
         }
         return;
       }
 
       if (notification.action === 'cabinet_support') {
-        const ticketId =
-          typeof notification.payload?.ticketId === 'number' ? notification.payload.ticketId : null;
-        setSupportFocusTicketId(ticketId);
+        setProfileStatsUserId(null);
+        setSupportFocusTicketId(notificationPayloadId(notification.payload, 'ticketId'));
+        setSupportJumpKey((k) => k + 1);
         if (currentRoomIdRef.current != null) {
           setRoomMinimized(true);
         }
-        setProfileStatsUserId(null);
         setView('cabinet');
         setLobbyScreen('cabinet-support');
         window.history.pushState(null, '', '/');
@@ -1170,6 +1175,7 @@ export default function App() {
         {view === 'cabinet' && lobbyScreen === 'cabinet-support' && (
           <ViewSuspense label="Поддержка…">
             <CabinetSupport
+              key={supportJumpKey}
               onBack={() => {
                 setSupportFocusTicketId(null);
                 setLobbyScreen('cabinet');
@@ -1238,7 +1244,7 @@ export default function App() {
         {view === 'admin' && user.canAccessAdminPanel && (
           <ViewSuspense label="Админка…">
             <AdminPanel
-              key={`${adminInitialView}-${adminSupportTicketId ?? ''}`}
+              key={adminJumpKey}
               initialSystemView={adminInitialView}
               initialSupportTicketId={adminSupportTicketId}
               onDefaultThemeChange={setSiteDefaultTheme}
@@ -1296,6 +1302,7 @@ export default function App() {
           if (v === 'admin') {
             setAdminInitialView('hub');
             setAdminSupportTicketId(null);
+            setAdminJumpKey((k) => k + 1);
           }
           setView(v);
         }}
