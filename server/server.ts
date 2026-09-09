@@ -25,7 +25,7 @@ import { createBlogRouter } from './blog/routes.js';
 import { getPublicSiteStats } from './stats/siteStats.js';
 import settingsRoutes from './settings/routes.js';
 import notificationRoutes from './notifications/routes.js';
-import { initNotificationPush, pushMailNotification, pushStaffAutoModerationAlert, pushStaffSupportAlert } from './notifications/push.js';
+import { initNotificationPush, pushMailNotification, pushStaffAutoModerationAlert, pushStaffSupportAlert, pushPlayerSupportReply } from './notifications/push.js';
 import { getUnreadNotificationCount, listNotifications } from './notifications/store.js';
 import { getUnreadCount } from './messages/store.js';
 import { socketAuthMiddleware, refreshSocketUser } from './auth/jwt.js';
@@ -578,6 +578,30 @@ app.use(
         });
       } catch (err) {
         console.error('Failed to store support notification:', err);
+      }
+    },
+    onTicketReply: (payload) => {
+      try {
+        if (payload.isStaffReply) {
+          if (payload.authorUserId !== payload.ticketOwnerId) {
+            pushPlayerSupportReply({
+              userId: payload.ticketOwnerId,
+              ticketId: payload.ticketId,
+              preview: payload.preview,
+            });
+          }
+          return;
+        }
+        pushStaffSupportAlert({
+          ticketId: payload.ticketId,
+          authorName: payload.authorName || 'Игрок',
+          authorUserId: payload.authorUserId,
+          preview: payload.preview,
+          staffUserIds: payload.staffUserIds,
+          isReply: true,
+        });
+      } catch (err) {
+        console.error('Failed to store support reply notification:', err);
       }
     },
   })

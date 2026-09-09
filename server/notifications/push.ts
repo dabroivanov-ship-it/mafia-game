@@ -121,6 +121,7 @@ export function pushStaffSupportAlert(input: {
   authorUserId: number;
   preview: string;
   staffUserIds: number[];
+  isReply?: boolean;
 }): void {
   const preview = input.preview.trim().slice(0, 120);
   const body = `${input.authorName}: ${preview || '—'}`;
@@ -128,7 +129,7 @@ export function pushStaffSupportAlert(input: {
     if (staffId === input.authorUserId) continue;
     pushNotification(staffId, {
       type: 'system',
-      title: 'Обращение в поддержку',
+      title: input.isReply ? 'Ответ в обращении' : 'Обращение в поддержку',
       body,
       action: 'admin_support',
       payload: {
@@ -137,4 +138,19 @@ export function pushStaffSupportAlert(input: {
       },
     });
   }
+}
+
+export function pushPlayerSupportReply(input: {
+  userId: number;
+  ticketId: number;
+  preview: string;
+}): UserNotification {
+  const preview = input.preview.trim().slice(0, 120);
+  return pushNotification(input.userId, {
+    type: 'system',
+    title: 'Ответ поддержки',
+    body: preview || 'Новое сообщение в обращении',
+    action: 'cabinet_support',
+    payload: { ticketId: input.ticketId },
+  });
 }

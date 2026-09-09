@@ -54,7 +54,7 @@ import BlogEditor, { type BlogEditorValue } from './BlogEditor';
 import NewsBody from './NewsBody';
 import { isEmptyNewsBody } from './newsBodyUtils';
 import { initYandexMetrika } from '../metrika';
-import AdminSystemSection, { type SystemView } from './AdminSystemSection';
+import UserProfileModal from './UserProfileModal';
 import AdminRoomOrderList from './AdminRoomOrderList';
 import { blurInputOnWheel } from '../utils/wheelScroll';
 
@@ -160,8 +160,11 @@ interface AdminPanelProps {
   onBrandingChange?: (branding: SiteBranding) => void;
   onLobbyAnnouncementChange?: (announcement: LobbyAnnouncement) => void;
   onOpenStatistics?: (userId: number) => void;
-  onReplyToUser?: (userId: number, username: string) => void;
+  onWriteMessage?: (userId: number, username: string) => void;
+  onOpenClan?: (clanId: number) => void;
+  viewer?: User;
   initialSystemView?: SystemView;
+  initialSupportTicketId?: number | null;
 }
 
 export default function AdminPanel({
@@ -169,8 +172,11 @@ export default function AdminPanel({
   onBrandingChange,
   onLobbyAnnouncementChange,
   onOpenStatistics,
-  onReplyToUser,
+  onWriteMessage,
+  onOpenClan,
+  viewer,
   initialSystemView = 'hub',
+  initialSupportTicketId = null,
 }: AdminPanelProps) {
   const [systemView, setSystemView] = useState<SystemView>(initialSystemView);
   const [users, setUsers] = useState<User[]>([]);
@@ -182,6 +188,7 @@ export default function AdminPanel({
   const [banMinutes, setBanMinutes] = useState('');
   const [userSearch, setUserSearch] = useState('');
   const [userPage, setUserPage] = useState(0);
+  const [profileUserId, setProfileUserId] = useState<number | null>(null);
   const [editUser, setEditUser] = useState<User | null>(null);
   const [editForm, setEditForm] = useState({
     displayName: '',
@@ -987,7 +994,7 @@ export default function AdminPanel({
         onBrandingChange={onBrandingChange}
         onAnnouncementChange={onLobbyAnnouncementChange}
         onOpenStatistics={onOpenStatistics}
-        onReplyToUser={onReplyToUser}
+        initialSupportTicketId={initialSupportTicketId}
         onSupportOpenCountChange={setSupportOpenCount}
         telegramForm={telegramForm}
         telegramSaving={telegramSaving}
@@ -1032,7 +1039,7 @@ export default function AdminPanel({
               <ul className="admin-users-list">
                 {paginatedUsers.map((u) => (
                   <li key={u.id} className="admin-users-list-item">
-                    <button type="button" className="admin-users-list-btn" onClick={() => openEditUser(u)}>
+                    <button type="button" className="admin-users-list-btn" onClick={() => setProfileUserId(u.id)}>
                       {u.avatar ? (
                         <img src={avatarUrl(u.avatar) ?? undefined} alt="" className="admin-avatar" />
                       ) : (
@@ -1689,6 +1696,30 @@ export default function AdminPanel({
           ),
         }}
       />
+
+      {profileUserId != null && viewer && (
+        <UserProfileModal
+          userId={profileUserId}
+          currentUserId={viewer.id}
+          viewerIsAdmin={!!viewer.isAdmin}
+          viewerCanModerate={!!(viewer.isAdmin || viewer.isModerator)}
+          onClose={() => setProfileUserId(null)}
+          onAdminAction={() => void load()}
+          onOpenStatistics={onOpenStatistics}
+          onWriteMessage={onWriteMessage}
+          onOpenClan={onOpenClan}
+          onRequestEdit={
+            canEditUsers
+              ? () => {
+                  const u = users.find((item) => item.id === profileUserId);
+                  if (!u) return;
+                  setProfileUserId(null);
+                  openEditUser(u);
+                }
+              : undefined
+          }
+        />
+      )}
 
       {editUser && (
         <div className="modal-overlay" onClick={() => setEditUser(null)}>

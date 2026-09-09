@@ -1,4 +1,4 @@
-import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, NewsPoll, NewsPollInput, NewsComment, BlogPost, MailConversation, RoomKind, ThemeId, ViolationLogEntry, ViolationType, UserSearchHit, UserPresence, FriendUser, LeaderboardEntry, QuizLeaderboardEntry, SiteBranding, LobbyAnnouncement, UserStatisticsResponse, UserNotification, PublicSiteStats, ClanDetail, ClanEligibility, ClanListItem, ClanNewsItem, ClanJoinMode, SupportTicket, SupportTicketStatus } from './types';
+import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, NewsPoll, NewsPollInput, NewsComment, BlogPost, MailConversation, RoomKind, ThemeId, ViolationLogEntry, ViolationType, UserSearchHit, UserPresence, FriendUser, LeaderboardEntry, QuizLeaderboardEntry, SiteBranding, LobbyAnnouncement, UserStatisticsResponse, UserNotification, PublicSiteStats, ClanDetail, ClanEligibility, ClanListItem, ClanNewsItem, ClanJoinMode, SupportTicket, SupportTicketStatus, SupportTicketMessage } from './types';
 import type { AdminPermission } from './adminPermissions';
 
 const API_BASE =
@@ -484,11 +484,36 @@ export async function sendPrivateMessage(
   });
 }
 
-export async function sendSupportMessage(text: string, photo?: File): Promise<{ ok: true }> {
+export async function sendSupportMessage(text: string, photo?: File): Promise<{
+  ok: true;
+  ticket: SupportTicket;
+  messages: SupportTicketMessage[];
+}> {
   const fd = new FormData();
   fd.append('text', text);
   if (photo) fd.append('photo', photo);
   return apiRequest('/api/support', { method: 'POST', body: fd });
+}
+
+export async function fetchMySupportTickets(): Promise<{ tickets: SupportTicket[] }> {
+  return apiRequest('/api/support/mine');
+}
+
+export async function fetchSupportTicket(
+  id: number
+): Promise<{ ticket: SupportTicket; messages: SupportTicketMessage[] }> {
+  return apiRequest(`/api/support/tickets/${id}`);
+}
+
+export async function sendSupportTicketReply(
+  id: number,
+  text: string,
+  photo?: File
+): Promise<{ ticket: SupportTicket; messages: SupportTicketMessage[]; openCount?: number }> {
+  const fd = new FormData();
+  fd.append('text', text);
+  if (photo) fd.append('photo', photo);
+  return apiRequest(`/api/support/tickets/${id}/messages`, { method: 'POST', body: fd });
 }
 
 export async function fetchAdminSupportTickets(

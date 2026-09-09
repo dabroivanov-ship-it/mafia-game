@@ -51,7 +51,7 @@ interface AdminSystemSectionProps {
   onBrandingChange?: (branding: SiteBranding) => void;
   onAnnouncementChange?: (announcement: LobbyAnnouncement) => void;
   onOpenStatistics?: (userId: number) => void;
-  onReplyToUser?: (userId: number, username: string) => void;
+  initialSupportTicketId?: number | null;
   onSupportOpenCountChange?: (count: number) => void;
   telegramForm: { botUsername: string; webAppUrl: string };
   telegramSaving: boolean;
@@ -168,7 +168,7 @@ export default function AdminSystemSection({
   onBrandingChange,
   onAnnouncementChange,
   onOpenStatistics,
-  onReplyToUser,
+  initialSupportTicketId = null,
   onSupportOpenCountChange,
   telegramForm,
   telegramSaving,
@@ -264,8 +264,8 @@ export default function AdminSystemSection({
           <div className="admin-system-detail-panel admin-system-wide">
             <AdminSupportPanel
               onOpenStatistics={onOpenStatistics}
-              onReplyToUser={onReplyToUser}
               onOpenCountChange={onSupportOpenCountChange}
+              initialTicketId={initialSupportTicketId}
             />
           </div>
         )}

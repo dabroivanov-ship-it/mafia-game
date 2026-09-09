@@ -1,6 +1,13 @@
+import { useState } from 'react';
+
 /** Общие SVG-графики для админки и статистики игрока (glow / градиенты на токенах темы). */
 
 export type ChartTone = 'accent' | 'success' | 'warning' | 'danger' | 'secondary';
+
+export interface ChartPointTip {
+  title: string;
+  lines: string[];
+}
 
 export function formatChartInt(n: number): string {
   return n.toLocaleString('ru-RU');
@@ -17,11 +24,12 @@ export function smoothLinePath(
   width: number,
   height: number,
   pad = 12,
-  mode: 'zero' | 'minmax' = 'zero'
+  mode: 'zero' | 'minmax' = 'zero',
+  bounds?: { min: number; max: number }
 ): string {
   if (values.length === 0) return '';
-  const min = mode === 'minmax' ? Math.min(...values) : 0;
-  const max = mode === 'minmax' ? Math.max(...values) : Math.max(...values, 1);
+  const min = bounds?.min ?? (mode === 'minmax' ? Math.min(...values) : 0);
+  const max = bounds?.max ?? (mode === 'minmax' ? Math.max(...values) : Math.max(...values, 1));
   const span = Math.max(max - min, 1);
   const pts = values.map((v, i) => {
     const x = pad + (values.length === 1 ? 0 : i / (values.length - 1)) * (width - pad * 2);
@@ -86,6 +94,9 @@ interface GlowLineChartProps {
   secondaryValues?: number[];
   /** Столбцы под кривой (как на neon-дашбордах). */
   withBars?: boolean;
+  /** Подписи точек (дни) и строки подсказки при наведении. */
+  tips?: ChartPointTip[];
+  axisLabels?: string[];
 }
 
 export function GlowLineChart({
@@ -96,110 +107,167 @@ export function GlowLineChart({
   mode = 'zero',
   secondaryValues,
   withBars = false,
+  tips,
+  axisLabels,
 }: GlowLineChartProps) {
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const w = 440;
   const h = 168;
   const pad = 14;
-  const path = smoothLinePath(values, w, h, pad, mode);
-  const path2 = secondaryValues ? smoothLinePath(secondaryValues, w, h, pad, mode) : '';
-  const min = mode === 'minmax' ? Math.min(...values) : 0;
-  const max = mode === 'minmax' ? Math.max(...values) : Math.max(...values, 1);
+  const allValues = secondaryValues ? [...values, ...secondaryValues] : values;
+  const min = mode === 'minmax' ? Math.min(...allValues) : 0;
+  const max = mode === 'minmax' ? Math.max(...allValues) : Math.max(...allValues, 1);
   const span = Math.max(max - min, 1);
+  const bounds = { min, max };
+  const path = smoothLinePath(values, w, h, pad, mode, bounds);
+  const path2 = secondaryValues ? smoothLinePath(secondaryValues, w, h, pad, mode, bounds) : '';
   const lastIdx = Math.max(values.length - 1, 0);
-  const lastX =
-    values.length <= 1 ? w / 2 : pad + (lastIdx / Math.max(values.length - 1, 1)) * (w - pad * 2);
-  const lastY = pad + (1 - ((values[lastIdx] ?? 0) - min) / span) * (h - pad * 2);
+  const tipIdx = hoverIdx ?? lastIdx;
   const barW = values.length <= 1 ? 28 : Math.min(22, ((w - pad * 2) / values.length) * 0.55);
+  const colW = values.length <= 1 ? w - pad * 2 : (w - pad * 2) / Math.max(values.length - 1, 1);
+  const tip = tips?.[tipIdx];
+  const tipLines = tip?.lines?.length
+    ? tip.lines
+    : [
+        formatChartInt(values[tipIdx] ?? highlight),
+        ...(secondaryValues ? [`${formatChartInt(secondaryValues[tipIdx] ?? 0)}`] : []),
+      ];
+  const tipLeftPct =
+    values.length <= 1 ? 50 : (tipIdx / Math.max(values.length - 1, 1)) * 100;
+
+  const xAt = (i: number) =>
+    values.length <= 1 ? w / 2 : pad + (i / Math.max(values.length - 1, 1)) * (w - pad * 2);
+  const yAt = (v: number) => pad + (1 - (v - min) / span) * (h - pad * 2);
 
   return (
-    <svg className="stats-chart-line" viewBox={`0 0 ${w} ${h}`} role="img" aria-label={label}>
-      <ChartGlowDefs idPrefix={idPrefix} />
-      {[0.25, 0.5, 0.75].map((t) => (
-        <line
-          key={t}
-          className="stats-chart-grid"
-          x1={pad}
-          x2={w - pad}
-          y1={pad + t * (h - pad * 2)}
-          y2={pad + t * (h - pad * 2)}
-        />
-      ))}
-      {withBars &&
-        values.map((v, i) => {
-          const x =
-            values.length <= 1
-              ? w / 2 - barW / 2
-              : pad + (i / Math.max(values.length - 1, 1)) * (w - pad * 2) - barW / 2;
-          const y = pad + (1 - (v - min) / span) * (h - pad * 2);
-          const barH = Math.max(4, h - pad - y);
+    <div
+      className="stats-chart-line-wrap"
+      onMouseLeave={() => setHoverIdx(null)}
+    >
+      <svg className="stats-chart-line" viewBox={`0 0 ${w} ${h}`} role="img" aria-label={label}>
+        <ChartGlowDefs idPrefix={idPrefix} />
+        {[0.25, 0.5, 0.75].map((t) => (
+          <line
+            key={t}
+            className="stats-chart-grid"
+            x1={pad}
+            x2={w - pad}
+            y1={pad + t * (h - pad * 2)}
+            y2={pad + t * (h - pad * 2)}
+          />
+        ))}
+        {withBars &&
+          values.map((v, i) => {
+            const x = xAt(i) - barW / 2;
+            const y = yAt(v);
+            const barH = Math.max(4, h - pad - y);
+            return (
+              <rect
+                key={`bar-${i}`}
+                className="stats-chart-under-bar"
+                x={x}
+                y={y}
+                width={barW}
+                height={barH}
+                rx="4"
+                fill={`url(#${idPrefix}-bar)`}
+                opacity={hoverIdx == null || hoverIdx === i ? 0.7 : 0.28}
+              />
+            );
+          })}
+        {path && !withBars && (
+          <path
+            d={`${path} L ${w - pad} ${h - pad} L ${pad} ${h - pad} Z`}
+            fill={`url(#${idPrefix}-fill-accent)`}
+            stroke="none"
+          />
+        )}
+        {path2 && (
+          <path
+            d={path2}
+            fill="none"
+            stroke="var(--warning)"
+            strokeWidth="2"
+            strokeLinejoin="round"
+            filter={`url(#${idPrefix}-glow)`}
+            opacity="0.9"
+          />
+        )}
+        {path && (
+          <path
+            d={path}
+            fill="none"
+            stroke="var(--accent)"
+            strokeWidth="2.75"
+            strokeLinejoin="round"
+            filter={`url(#${idPrefix}-glow)`}
+          />
+        )}
+        {values.length > 0 &&
+          values.map((v, i) => {
+            if (values.length > 12 && i % 2 === 1 && i !== lastIdx && i !== hoverIdx) return null;
+            return (
+              <circle
+                key={i}
+                cx={xAt(i)}
+                cy={yAt(v)}
+                r={hoverIdx === i ? 5 : 3}
+                className="stats-chart-dot"
+                filter={hoverIdx === i ? `url(#${idPrefix}-glow)` : undefined}
+              />
+            );
+          })}
+        {values.map((_, i) => {
+          const x = xAt(i);
           return (
             <rect
-              key={`bar-${i}`}
-              className="stats-chart-under-bar"
-              x={x}
-              y={y}
-              width={barW}
-              height={barH}
-              rx="4"
-              fill={`url(#${idPrefix}-bar)`}
-              opacity="0.55"
+              key={`hit-${i}`}
+              className="stats-chart-hit"
+              x={x - colW / 2}
+              y={0}
+              width={colW}
+              height={h}
+              onMouseEnter={() => setHoverIdx(i)}
+              onFocus={() => setHoverIdx(i)}
+              tabIndex={0}
+              aria-label={tips?.[i]?.title ? `${tips[i].title}. ${tips[i].lines.join('. ')}` : undefined}
             />
           );
         })}
-      {path && !withBars && (
-        <path
-          d={`${path} L ${w - pad} ${h - pad} L ${pad} ${h - pad} Z`}
-          fill={`url(#${idPrefix}-fill-accent)`}
-          stroke="none"
-        />
+      </svg>
+      {hoverIdx != null && values.length > 0 && (
+        <div
+          className="stats-chart-hover-tip"
+          style={{
+            left: `${tipLeftPct}%`,
+            transform:
+              tipIdx === 0
+                ? 'translateX(0)'
+                : tipIdx === lastIdx
+                  ? 'translateX(-100%)'
+                  : 'translateX(-50%)',
+          }}
+        >
+          {tip?.title && <strong>{tip.title}</strong>}
+          {tipLines.map((line, i) => (
+            <span key={i}>{line}</span>
+          ))}
+        </div>
       )}
-      {path2 && (
-        <path
-          d={path2}
-          fill="none"
-          stroke="var(--warning)"
-          strokeWidth="2"
-          strokeLinejoin="round"
-          filter={`url(#${idPrefix}-glow)`}
-          opacity="0.9"
-        />
+      {axisLabels && axisLabels.length > 0 && (
+        <ol
+          className="stats-chart-axis"
+          aria-hidden="true"
+          style={{ gridTemplateColumns: `repeat(${axisLabels.length}, minmax(0, 1fr))` }}
+        >
+          {axisLabels.map((name, i) => (
+            <li key={`${name}-${i}`} className={hoverIdx === i ? 'is-active' : undefined}>
+              {name}
+            </li>
+          ))}
+        </ol>
       )}
-      {path && (
-        <path
-          d={path}
-          fill="none"
-          stroke="var(--accent)"
-          strokeWidth="2.75"
-          strokeLinejoin="round"
-          filter={`url(#${idPrefix}-glow)`}
-        />
-      )}
-      {values.length > 0 &&
-        values.map((v, i) => {
-          if (values.length > 12 && i % 2 === 1 && i !== lastIdx) return null;
-          const x =
-            values.length <= 1 ? w / 2 : pad + (i / Math.max(values.length - 1, 1)) * (w - pad * 2);
-          const y = pad + (1 - (v - min) / span) * (h - pad * 2);
-          return (
-            <circle
-              key={i}
-              cx={x}
-              cy={y}
-              r={i === lastIdx ? 4.5 : 3}
-              className="stats-chart-dot"
-              filter={i === lastIdx ? `url(#${idPrefix}-glow)` : undefined}
-            />
-          );
-        })}
-      {values.length > 0 && (
-        <g transform={`translate(${Math.min(lastX + 12, w - 96)}, ${Math.max(lastY - 32, 6)})`}>
-          <rect className="stats-chart-tooltip" width="84" height="26" rx="10" />
-          <text x="42" y="17" textAnchor="middle" className="stats-chart-tooltip-text">
-            {formatChartInt(highlight)}
-          </text>
-        </g>
-      )}
-    </svg>
+    </div>
   );
 }
 

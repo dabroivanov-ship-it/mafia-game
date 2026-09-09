@@ -94,6 +94,16 @@ export default function AdminStatsPanel() {
             secondaryValues={series.map((p) => p.registered)}
             highlight={stats.usersActiveWeek}
             withBars
+            axisLabels={series.map((p) =>
+              new Date(`${p.date}T12:00:00`).toLocaleDateString('ru-RU', { weekday: 'short' })
+            )}
+            tips={series.map((p) => ({
+              title: p.label,
+              lines: [
+                `Активны: ${formatChartInt(p.active)}`,
+                `Регистрации: ${formatChartInt(p.registered)}`,
+              ],
+            }))}
           />
           <p className="admin-stats-card-footnote muted">
             Сейчас онлайн: <strong>{formatChartInt(stats.usersOnline)}</strong>

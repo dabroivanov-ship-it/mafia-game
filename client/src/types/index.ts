@@ -40,6 +40,21 @@ export interface SupportTicket {
   createdAt: string;
   resolvedAt: string | null;
   resolvedBy: number | null;
+  lastPreview?: string;
+  lastAt?: string;
+  lastRole?: 'player' | 'staff';
+  messageCount?: number;
+}
+
+export interface SupportTicketMessage {
+  id: number;
+  ticketId: number;
+  authorId: number;
+  role: 'player' | 'staff';
+  authorName: string;
+  text: string;
+  attachmentUrl: string | null;
+  createdAt: string;
 }
 
 export type AuthProvider = 'telegram' | 'vk' | 'email';

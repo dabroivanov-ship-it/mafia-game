@@ -121,6 +121,8 @@ export default function App() {
   const [messageThreadUsername, setMessageThreadUsername] = useState<string | null>(null);
   const [messagesOpenUnread, setMessagesOpenUnread] = useState(false);
   const [adminInitialView, setAdminInitialView] = useState<'hub' | 'violations' | 'support'>('hub');
+  const [adminSupportTicketId, setAdminSupportTicketId] = useState<number | null>(null);
+  const [supportFocusTicketId, setSupportFocusTicketId] = useState<number | null>(null);
   const [mailReadReceipt, setMailReadReceipt] = useState<{
     readerId: number;
     messageIds: number[];
@@ -734,9 +736,26 @@ export default function App() {
             if ((roomState?.kind === 'chat' || roomState?.kind === 'clan')) leaveRoom();
             else minimizeMafiaRoom();
           }
+          const ticketId =
+            typeof notification.payload?.ticketId === 'number' ? notification.payload.ticketId : null;
+          setAdminSupportTicketId(ticketId);
           setAdminInitialView('support');
           setView('admin');
         }
+        return;
+      }
+
+      if (notification.action === 'cabinet_support') {
+        const ticketId =
+          typeof notification.payload?.ticketId === 'number' ? notification.payload.ticketId : null;
+        setSupportFocusTicketId(ticketId);
+        if (currentRoomIdRef.current != null) {
+          setRoomMinimized(true);
+        }
+        setProfileStatsUserId(null);
+        setView('cabinet');
+        setLobbyScreen('cabinet-support');
+        window.history.pushState(null, '', '/');
         return;
       }
 
@@ -793,6 +812,7 @@ export default function App() {
     if (currentRoomIdRef.current != null) {
       setRoomMinimized(true);
     }
+    setSupportFocusTicketId(null);
     setProfileStatsUserId(null);
     setView('cabinet');
     setLobbyScreen('cabinet-support');
@@ -1149,7 +1169,13 @@ export default function App() {
         )}
         {view === 'cabinet' && lobbyScreen === 'cabinet-support' && (
           <ViewSuspense label="Поддержка…">
-            <CabinetSupport onBack={() => setLobbyScreen('cabinet')} />
+            <CabinetSupport
+              onBack={() => {
+                setSupportFocusTicketId(null);
+                setLobbyScreen('cabinet');
+              }}
+              initialTicketId={supportFocusTicketId}
+            />
           </ViewSuspense>
         )}
         {view === 'cabinet' && lobbyScreen === 'cabinet-sanctions' && (
@@ -1176,7 +1202,10 @@ export default function App() {
             onOpenAccountSettings={() => setLobbyScreen('cabinet-account-settings')}
             onOpenMessages={openMessagesInbox}
             onOpenFriends={openFriendsPage}
-            onOpenSupport={() => setLobbyScreen('cabinet-support')}
+            onOpenSupport={() => {
+              setSupportFocusTicketId(null);
+              setLobbyScreen('cabinet-support');
+            }}
             onOpenSanctions={() => setLobbyScreen('cabinet-sanctions')}
             onOpenClans={() => openClansBrowse('cabinet')}
             onOpenStatistics={() => openProfileStatistics(user.id)}
@@ -1209,8 +1238,9 @@ export default function App() {
         {view === 'admin' && user.canAccessAdminPanel && (
           <ViewSuspense label="Админка…">
             <AdminPanel
-              key={adminInitialView}
+              key={`${adminInitialView}-${adminSupportTicketId ?? ''}`}
               initialSystemView={adminInitialView}
+              initialSupportTicketId={adminSupportTicketId}
               onDefaultThemeChange={setSiteDefaultTheme}
               onBrandingChange={(branding) => {
                 setSiteBranding(branding);
@@ -1218,7 +1248,9 @@ export default function App() {
               }}
               onLobbyAnnouncementChange={setLobbyAnnouncement}
               onOpenStatistics={openProfileStatistics}
-              onReplyToUser={(userId, username) => openMessages({ userId, username, thread: true })}
+              onWriteMessage={(userId, username) => openMessages({ userId, username })}
+              onOpenClan={openClan}
+              viewer={user}
             />
           </ViewSuspense>
         )}
@@ -1263,6 +1295,7 @@ export default function App() {
           }
           if (v === 'admin') {
             setAdminInitialView('hub');
+            setAdminSupportTicketId(null);
           }
           setView(v);
         }}

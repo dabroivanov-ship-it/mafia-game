@@ -38,6 +38,7 @@ interface UserProfileModalProps {
   onWriteMessage?: (userId: number, username: string) => void;
   onOpenStatistics?: (userId: number) => void;
   onOpenClan?: (clanId: number) => void;
+  onRequestEdit?: () => void;
   replyTarget?: ChatReplyTarget | null;
   canSendChat?: boolean;
   onSendChat?: (
@@ -82,6 +83,7 @@ export default function UserProfileModal({
   onWriteMessage,
   onOpenStatistics,
   onOpenClan,
+  onRequestEdit,
   replyTarget = null,
   canSendChat = false,
   onSendChat,
@@ -510,6 +512,14 @@ export default function UserProfileModal({
                   </div>
                 )}
 
+                {onRequestEdit && !editMode && (
+                  <div className="player-page-actions">
+                    <button type="button" className="btn btn-primary btn-sm" onClick={onRequestEdit}>
+                      Редактировать
+                    </button>
+                  </div>
+                )}
+
                 {canWriteMail && (
                   <div className="player-page-actions">
                     {!showMailCompose ? (
@@ -692,7 +702,7 @@ export default function UserProfileModal({
               <div className="admin-profile-actions">
                 <h4>{canAdmin ? 'Администрирование' : 'Модерация'}</h4>
                 <div className="admin-profile-buttons">
-                  {canAdmin && (
+                  {canAdmin && !onRequestEdit && (
                     <button type="button" className="btn btn-sm" onClick={() => setEditMode(true)}>
                       Редактировать
                     </button>
