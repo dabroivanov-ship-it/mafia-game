@@ -2,6 +2,7 @@ import { FormEvent, ReactNode, useState } from 'react';
 import ThemePicker from './ThemePicker';
 import AdminBotPhrasesEditor from './AdminBotPhrasesEditor';
 import AdminSiteBrandingEditor from './AdminSiteBrandingEditor';
+import AdminStatsPanel from './AdminStatsPanel';
 import AdminSupportPanel from './AdminSupportPanel';
 import AdminBackupPanel from './AdminBackupPanel';
 import AdminLobbyAnnouncementEditor from './AdminLobbyAnnouncementEditor';
