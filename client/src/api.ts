@@ -1,4 +1,4 @@
-import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, NewsPoll, NewsPollInput, NewsComment, BlogPost, MailConversation, RoomKind, ThemeId, ViolationLogEntry, ViolationType, UserSearchHit, UserPresence, FriendUser, LeaderboardEntry, QuizLeaderboardEntry, SiteBranding, LobbyAnnouncement, UserStatisticsResponse, UserNotification, PublicSiteStats, ClanDetail, ClanEligibility, ClanListItem, ClanNewsItem, ClanJoinMode } from './types';
+import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, NewsPoll, NewsPollInput, NewsComment, BlogPost, MailConversation, RoomKind, ThemeId, ViolationLogEntry, ViolationType, UserSearchHit, UserPresence, FriendUser, LeaderboardEntry, QuizLeaderboardEntry, SiteBranding, LobbyAnnouncement, UserStatisticsResponse, UserNotification, PublicSiteStats, ClanDetail, ClanEligibility, ClanListItem, ClanNewsItem, ClanJoinMode, SupportTicket, SupportTicketStatus } from './types';
 import type { AdminPermission } from './adminPermissions';
 
 const API_BASE =
@@ -491,6 +491,23 @@ export async function sendSupportMessage(text: string, photo?: File): Promise<{ 
   return apiRequest('/api/support', { method: 'POST', body: fd });
 }
 
+export async function fetchAdminSupportTickets(
+  status: SupportTicketStatus | 'all' = 'all'
+): Promise<{ tickets: SupportTicket[]; openCount: number }> {
+  const q = status === 'all' ? '' : `?status=${encodeURIComponent(status)}`;
+  return apiRequest(`/api/support/tickets${q}`);
+}
+
+export async function adminSetSupportTicketStatus(
+  id: number,
+  status: SupportTicketStatus
+): Promise<{ ticket: SupportTicket; openCount: number }> {
+  return apiRequest(`/api/support/tickets/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+}
+
 export async function markMessageRead(messageId: number): Promise<{ unreadCount: number }> {
   return apiRequest(`/api/messages/${messageId}/read`, { method: 'POST' });
 }
@@ -770,6 +787,7 @@ export async function fetchAdminOverview(): Promise<{
   gameEvents: AdminGameEvent[];
   rooms: AdminRoom[];
   usersRegisteredToday: number;
+  supportOpenCount?: number;
 }> {
   return apiRequest('/api/admin/overview');
 }

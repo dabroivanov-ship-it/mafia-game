@@ -45,7 +45,7 @@ export default function CabinetSupport({ onBack }: CabinetSupportProps) {
       await sendSupportMessage(trimmed, photo ?? undefined);
       setText('');
       clearPhoto();
-      setSuccess('Обращение отправлено. Администратор ответит в личных сообщениях.');
+      setSuccess('Обращение отправлено. Ответ придёт в личные сообщения.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка отправки');
     } finally {

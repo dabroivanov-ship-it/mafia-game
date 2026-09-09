@@ -17,6 +17,7 @@ import { createAdminRouter } from './admin/routes.js';
 import { createModerationRouter } from './moderation/routes.js';
 import { createMessagesRouter } from './messages/routes.js';
 import { createSupportRouter } from './support/routes.js';
+import './support/store.js';
 import { createNewsRouter } from './news/routes.js';
 import './news/comments.js';
 import './news/polls.js';
@@ -24,7 +25,7 @@ import { createBlogRouter } from './blog/routes.js';
 import { getPublicSiteStats } from './stats/siteStats.js';
 import settingsRoutes from './settings/routes.js';
 import notificationRoutes from './notifications/routes.js';
-import { initNotificationPush, pushMailNotification, pushStaffAutoModerationAlert } from './notifications/push.js';
+import { initNotificationPush, pushMailNotification, pushStaffAutoModerationAlert, pushStaffSupportAlert } from './notifications/push.js';
 import { getUnreadNotificationCount, listNotifications } from './notifications/store.js';
 import { getUnreadCount } from './messages/store.js';
 import { socketAuthMiddleware, refreshSocketUser } from './auth/jwt.js';
@@ -566,8 +567,18 @@ app.use(
 app.use(
   '/api/support',
   createSupportRouter({
-    onMessageSent: (recipientId, payload) => {
-      notifyMailReceived(recipientId, payload);
+    onTicketCreated: (ticket) => {
+      try {
+        pushStaffSupportAlert({
+          ticketId: ticket.id,
+          authorName: ticket.displayName || ticket.username || 'Игрок',
+          authorUserId: ticket.userId,
+          preview: ticket.preview,
+          staffUserIds: ticket.staffUserIds,
+        });
+      } catch (err) {
+        console.error('Failed to store support notification:', err);
+      }
     },
   })
 );

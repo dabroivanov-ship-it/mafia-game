@@ -2,7 +2,7 @@ import { FormEvent, ReactNode, useState } from 'react';
 import ThemePicker from './ThemePicker';
 import AdminBotPhrasesEditor from './AdminBotPhrasesEditor';
 import AdminSiteBrandingEditor from './AdminSiteBrandingEditor';
-import AdminStatsPanel from './AdminStatsPanel';
+import AdminSupportPanel from './AdminSupportPanel';
 import AdminBackupPanel from './AdminBackupPanel';
 import AdminLobbyAnnouncementEditor from './AdminLobbyAnnouncementEditor';
 import AdminCategoryIcon from './AdminCategoryIcon';
@@ -19,6 +19,7 @@ export type SystemView =
   | 'blog'
   | 'announcement'
   | 'violations'
+  | 'support'
   | 'stats'
   | 'settings'
   | 'telegram'
@@ -41,12 +42,16 @@ interface AdminSystemSectionProps {
   gameRoomsCount?: number;
   chatRoomsCount?: number;
   violationsCount: number;
+  supportOpenCount?: number;
   newsCount?: number;
   defaultTheme: ThemeId;
   themeSaving: boolean;
   onThemeChange: (id: ThemeId) => void;
   onBrandingChange?: (branding: SiteBranding) => void;
   onAnnouncementChange?: (announcement: LobbyAnnouncement) => void;
+  onOpenStatistics?: (userId: number) => void;
+  onReplyToUser?: (userId: number, username: string) => void;
+  onSupportOpenCountChange?: (count: number) => void;
   telegramForm: { botUsername: string; webAppUrl: string };
   telegramSaving: boolean;
   onTelegramFormChange: (patch: Partial<{ botUsername: string; webAppUrl: string }>) => void;
@@ -98,6 +103,8 @@ const SYSTEM_CATEGORIES: {
       { view: 'users', label: 'Пользователи' },
       { view: 'banlist', label: 'Бан-лист' },
       { view: 'violations', label: 'Журнал модерации' },
+      { view: 'support', label: 'Поддержка' },
+      { view: 'stats', label: 'Статистика' },
     ],
   },
   {
@@ -105,10 +112,7 @@ const SYSTEM_CATEGORIES: {
     tone: 'teal',
     title: 'Система',
     links: [
-      { view: 'stats', label: 'Статистика' },
       { view: 'news', label: 'Новости' },
-      { view: 'blog', label: 'Блог' },
-      { view: 'announcement', label: 'Объявление на главной' },
       { view: 'backup', label: 'Резервные копии' },
       { view: 'theme', label: 'Тема сайта' },
       { view: 'settings', label: 'Аналитика и боты' },
@@ -122,6 +126,8 @@ const SYSTEM_CATEGORIES: {
       { view: 'phrases', label: 'Фразы ведущего' },
       { view: 'game-rooms', label: 'Комнаты мафии' },
       { view: 'chat-rooms', label: 'Комнаты чата' },
+      { view: 'announcement', label: 'Объявление на главной' },
+      { view: 'blog', label: 'Блог' },
     ],
   },
 ];
@@ -135,6 +141,7 @@ const VIEW_TITLES: Record<Exclude<SystemView, 'hub'>, string> = {
   blog: 'Блог',
   announcement: 'Объявление на главной',
   violations: 'Журнал модерации',
+  support: 'Поддержка',
   stats: 'Статистика',
   settings: 'Аналитика и боты',
   telegram: 'Аналитика и боты',
@@ -153,11 +160,15 @@ export default function AdminSystemSection({
   gameRoomsCount = 0,
   chatRoomsCount = 0,
   violationsCount,
+  supportOpenCount = 0,
   defaultTheme,
   themeSaving,
   onThemeChange,
   onBrandingChange,
   onAnnouncementChange,
+  onOpenStatistics,
+  onReplyToUser,
+  onSupportOpenCountChange,
   telegramForm,
   telegramSaving,
   onTelegramFormChange,
@@ -196,7 +207,7 @@ export default function AdminSystemSection({
   };
 
   const badgeFor = (categoryId: CategoryId, linksCount: number) => {
-    if (categoryId === 'users') return usersCount + banListCount + violationsCount;
+    if (categoryId === 'users') return usersCount + banListCount + violationsCount + supportOpenCount;
     if (categoryId === 'system') return linksCount;
     return gameRoomsCount + chatRoomsCount;
   };
@@ -247,6 +258,15 @@ export default function AdminSystemSection({
         )}
         {view === 'violations' && (
           <div className="admin-system-detail-panel admin-system-wide">{panels.violations}</div>
+        )}
+        {view === 'support' && (
+          <div className="admin-system-detail-panel admin-system-wide">
+            <AdminSupportPanel
+              onOpenStatistics={onOpenStatistics}
+              onReplyToUser={onReplyToUser}
+              onOpenCountChange={onSupportOpenCountChange}
+            />
+          </div>
         )}
         {view === 'stats' && (
           <div className="admin-system-detail-panel admin-system-wide">
@@ -446,10 +466,12 @@ export default function AdminSystemSection({
             </header>
             <ul className="admin-dash-links">
               {category.links.map((link) => (
-                <li key={link.label}>
+                <li key={link.view}>
                   <button type="button" onClick={() => setView(link.view)}>
                     <span className="admin-dash-link-dot" aria-hidden="true" />
-                    {link.label}
+                    {link.view === 'support' && supportOpenCount > 0
+                      ? `${link.label} (${supportOpenCount})`
+                      : link.label}
                   </button>
                 </li>
               ))}

@@ -114,3 +114,27 @@ export function pushStaffAutoModerationAlert(input: {
     });
   }
 }
+
+export function pushStaffSupportAlert(input: {
+  ticketId: number;
+  authorName: string;
+  authorUserId: number;
+  preview: string;
+  staffUserIds: number[];
+}): void {
+  const preview = input.preview.trim().slice(0, 120);
+  const body = `${input.authorName}: ${preview || '—'}`;
+  for (const staffId of input.staffUserIds) {
+    if (staffId === input.authorUserId) continue;
+    pushNotification(staffId, {
+      type: 'system',
+      title: 'Обращение в поддержку',
+      body,
+      action: 'admin_support',
+      payload: {
+        ticketId: input.ticketId,
+        authorUserId: input.authorUserId,
+      },
+    });
+  }
+}

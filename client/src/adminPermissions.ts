@@ -10,6 +10,7 @@ export type AdminPermission =
   | 'view_banlist'
   | 'manage_silence'
   | 'view_violations'
+  | 'view_support'
   | 'clear_violations'
   | 'view_stats'
   | 'manage_news'
@@ -41,6 +42,7 @@ export const SYSTEM_VIEW_PERMISSIONS: Record<string, AdminPermission> = {
   users: 'view_users',
   banlist: 'view_banlist',
   violations: 'view_violations',
+  support: 'view_support',
   stats: 'view_stats',
   news: 'manage_news',
   blog: 'manage_news',

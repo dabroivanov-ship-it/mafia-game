@@ -120,7 +120,7 @@ export default function App() {
   const [messageThreadUserId, setMessageThreadUserId] = useState<number | null>(null);
   const [messageThreadUsername, setMessageThreadUsername] = useState<string | null>(null);
   const [messagesOpenUnread, setMessagesOpenUnread] = useState(false);
-  const [adminInitialView, setAdminInitialView] = useState<'hub' | 'violations'>('hub');
+  const [adminInitialView, setAdminInitialView] = useState<'hub' | 'violations' | 'support'>('hub');
   const [mailReadReceipt, setMailReadReceipt] = useState<{
     readerId: number;
     messageIds: number[];
@@ -728,6 +728,18 @@ export default function App() {
         return;
       }
 
+      if (notification.action === 'admin_support') {
+        if (user?.canAccessAdminPanel) {
+          if (currentRoomId && !roomMinimized) {
+            if ((roomState?.kind === 'chat' || roomState?.kind === 'clan')) leaveRoom();
+            else minimizeMafiaRoom();
+          }
+          setAdminInitialView('support');
+          setView('admin');
+        }
+        return;
+      }
+
       if (notification.action === 'profile') {
         const userId =
           typeof notification.payload?.userId === 'number' ? notification.payload.userId : user?.id;
@@ -742,6 +754,7 @@ export default function App() {
       minimizeMafiaRoom,
       openMessages,
       openProfileStatistics,
+      user?.canAccessAdminPanel,
       user?.id,
     ]
   );
@@ -1205,6 +1218,7 @@ export default function App() {
               }}
               onLobbyAnnouncementChange={setLobbyAnnouncement}
               onOpenStatistics={openProfileStatistics}
+              onReplyToUser={(userId, username) => openMessages({ userId, username, thread: true })}
             />
           </ViewSuspense>
         )}

@@ -27,6 +27,21 @@ export interface LobbyAnnouncement {
 
 export type NotificationType = 'mail' | 'reputation_up' | 'reputation_down' | 'system';
 
+export type SupportTicketStatus = 'open' | 'done';
+
+export interface SupportTicket {
+  id: number;
+  userId: number;
+  username: string;
+  displayName: string;
+  text: string;
+  attachmentUrl: string | null;
+  status: SupportTicketStatus;
+  createdAt: string;
+  resolvedAt: string | null;
+  resolvedBy: number | null;
+}
+
 export type AuthProvider = 'telegram' | 'vk' | 'email';
 
 export type UserGender = 'male' | 'female' | '';

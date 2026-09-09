@@ -11,6 +11,7 @@ export type AdminPermission =
   | 'view_banlist'
   | 'manage_silence'
   | 'view_violations'
+  | 'view_support'
   | 'clear_violations'
   | 'view_stats'
   | 'manage_news'
@@ -28,6 +29,7 @@ const WATCHER_PERMISSIONS: AdminPermission[] = [
   'view_users',
   'view_banlist',
   'view_violations',
+  'view_support',
   'view_stats',
   'view_rooms',
   'manage_silence',

@@ -160,6 +160,7 @@ interface AdminPanelProps {
   onBrandingChange?: (branding: SiteBranding) => void;
   onLobbyAnnouncementChange?: (announcement: LobbyAnnouncement) => void;
   onOpenStatistics?: (userId: number) => void;
+  onReplyToUser?: (userId: number, username: string) => void;
   initialSystemView?: SystemView;
 }
 
@@ -168,6 +169,7 @@ export default function AdminPanel({
   onBrandingChange,
   onLobbyAnnouncementChange,
   onOpenStatistics,
+  onReplyToUser,
   initialSystemView = 'hub',
 }: AdminPanelProps) {
   const [systemView, setSystemView] = useState<SystemView>(initialSystemView);
@@ -235,6 +237,7 @@ export default function AdminPanel({
   const [roomAiStatus, setRoomAiStatus] = useState('');
   const [permissions, setPermissions] = useState<AdminPermission[]>([]);
   const [panelRole, setPanelRole] = useState<UserRole>('user');
+  const [supportOpenCount, setSupportOpenCount] = useState(0);
 
   const load = async ({ silent = false, syncRoomNames = false } = {}) => {
     if (!silent) setLoading(true);
@@ -243,6 +246,7 @@ export default function AdminPanel({
       const data = await fetchAdminOverview();
       setUsers(data.users || []);
       setRooms(data.rooms || []);
+      setSupportOpenCount(data.supportOpenCount ?? 0);
 
       if (!roomEditsInitializedRef.current || syncRoomNames) {
         const edits: Record<number, string> = {};
@@ -975,12 +979,16 @@ export default function AdminPanel({
         gameRoomsCount={gameRooms.length}
         chatRoomsCount={chatRooms.length}
         violationsCount={violations.length}
+        supportOpenCount={supportOpenCount}
         newsCount={newsPosts.length}
         defaultTheme={defaultTheme}
         themeSaving={themeSaving}
         onThemeChange={(id) => void handleDefaultThemeChange(id)}
         onBrandingChange={onBrandingChange}
         onAnnouncementChange={onLobbyAnnouncementChange}
+        onOpenStatistics={onOpenStatistics}
+        onReplyToUser={onReplyToUser}
+        onSupportOpenCountChange={setSupportOpenCount}
         telegramForm={telegramForm}
         telegramSaving={telegramSaving}
         onTelegramFormChange={(patch) => setTelegramForm((prev) => ({ ...prev, ...patch }))}

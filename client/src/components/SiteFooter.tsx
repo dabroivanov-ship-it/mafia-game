@@ -17,6 +17,7 @@ export default function SiteFooter({ text = '', variant = 'minimal' }: SiteFoote
 
   return (
     <footer className={`site-footer site-footer--${variant}`}>
+      {showSocial && <p className="site-footer-copyright">{SITE_COPYRIGHT_NOTICE}</p>}
       {showSocial && (
         <section className="site-footer-social" aria-label="Наши соцсети">
           <h2 className="site-footer-title">Наши соцсети</h2>
@@ -38,7 +39,6 @@ export default function SiteFooter({ text = '', variant = 'minimal' }: SiteFoote
           </nav>
         </section>
       )}
-      {showSocial && <p className="site-footer-copyright">{SITE_COPYRIGHT_NOTICE}</p>}
       {hasExtra && <p className="site-footer-extra">{text}</p>}
     </footer>
   );

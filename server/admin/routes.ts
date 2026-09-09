@@ -43,6 +43,7 @@ import { newsImageUpload, newsImagePublicPath } from '../upload/newsImage.js';
 import { adminSetReputation, getReputation } from '../social/store.js';
 import { listBotPhrasesForAdmin, updateBotPhrasesFromAdmin } from '../game/botPhrases.js';
 import { getAdminSiteStats } from '../stats/siteStats.js';
+import { countOpenSupportTickets } from '../support/store.js';
 import {
   listBackups,
   createBackup,
@@ -147,6 +148,7 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
       users: listAllUsers(),
       gameEvents: handlers.getGameEvents?.() || [],
       usersRegisteredToday,
+      supportOpenCount: countOpenSupportTickets(),
     });
   });
 
