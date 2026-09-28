@@ -228,9 +228,7 @@ export function GlowLineChart({
               width={colW}
               height={h}
               onMouseEnter={() => setHoverIdx(i)}
-              onFocus={() => setHoverIdx(i)}
-              tabIndex={0}
-              aria-label={tips?.[i]?.title ? `${tips[i].title}. ${tips[i].lines.join('. ')}` : undefined}
+              aria-hidden="true"
             />
           );
         })}

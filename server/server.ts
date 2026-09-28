@@ -244,6 +244,7 @@ app.get('/api/health', (_req, res) => {
     ok: true,
     telegramLogin: isTelegramOidcConfigured(),
     vkLogin: isVkAuthConfigured(),
+    telegramBot: Boolean(process.env.TELEGRAM_BOT_TOKEN?.trim()),
   });
 });
 

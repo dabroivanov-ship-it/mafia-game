@@ -127,6 +127,9 @@ async function configureMenuButton(token: string): Promise<void> {
 export async function startTelegramBot(): Promise<() => void> {
   const token = process.env.TELEGRAM_BOT_TOKEN?.trim();
   if (!token) {
+    console.warn(
+      'Telegram bot: TELEGRAM_BOT_TOKEN не задан в server/.env — polling не запущен'
+    );
     return () => {};
   }
 

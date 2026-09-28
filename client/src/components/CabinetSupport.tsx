@@ -233,7 +233,7 @@ export default function CabinetSupport({ onBack, initialTicketId = null }: Cabin
                 onChange={(e) => setText(e.target.value)}
                 maxLength={MAX_LENGTH}
                 rows={6}
-                placeholder="Что произошло? Когда и в какой комнате?"
+                placeholder="Напишите ваш вопрос или пришлите скриншот"
                 disabled={loading}
               />
               <span className="muted support-char-count">

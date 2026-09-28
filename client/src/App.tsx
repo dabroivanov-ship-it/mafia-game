@@ -1004,7 +1004,7 @@ export default function App() {
   if (currentRoomId && !roomMinimized) {
     const isChatRoom = roomState?.kind === 'chat' || roomState?.kind === 'clan';
     return (
-      <div className="app app-in-room">
+      <div className={`app app-in-room${profileStatsUserId != null || roomScreen === 'members' ? ' app-in-room--scroll' : ''}`}>
         {notificationBar}
         {notification && (
           <div className="toast" onClick={() => setNotification(null)}>

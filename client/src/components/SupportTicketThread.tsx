@@ -107,7 +107,9 @@ export default function SupportTicketThread({
             onChange={(e) => setText(e.target.value)}
             maxLength={MAX_LENGTH}
             rows={4}
-            placeholder={viewer === 'staff' ? 'Ответ игроку' : 'Дополните обращение'}
+            placeholder={
+              viewer === 'staff' ? 'Ответ игроку' : 'Напишите ваш вопрос или пришлите скриншот'
+            }
             disabled={sending}
           />
           <span className="muted support-char-count">

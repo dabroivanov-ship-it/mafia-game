@@ -995,6 +995,13 @@ textarea:focus-visible {
   position: relative;
 }
 
+.app-in-room--scroll {
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
 .app-in-room .room {
   flex: 1;
   min-height: 0;

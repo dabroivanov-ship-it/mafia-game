@@ -147,7 +147,7 @@ html.telegram-webapp .app-body {
 
 .app-main {
   display: flex;
-  flex: 1 1 auto;
+  flex: 1 1 0;
   flex-direction: column;
   min-width: 0;
   min-height: 0;
@@ -160,7 +160,7 @@ html.telegram-webapp .app-body {
 }
 
 .app-body {
-  flex: 1 1 auto;
+  flex: 1 1 0;
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
@@ -6953,6 +6953,7 @@ html.telegram-webapp .app-body {
   width: 100%;
   height: auto;
   max-height: 200px;
+  touch-action: pan-y;
 }
 
 .stats-chart-hit {
@@ -9213,6 +9214,7 @@ html.telegram-webapp .app-body {
   width: 100%;
   box-sizing: border-box;
   min-width: 0;
+  padding-bottom: calc(32px + var(--safe-bottom, 0px));
 }
 
 .user-stats-hero {
