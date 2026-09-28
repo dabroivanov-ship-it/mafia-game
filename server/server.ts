@@ -92,6 +92,8 @@ import { canUserAccessClanRoom } from './clans/store.js';
 import './clans/store.js';
 import type { ChatChannel, GameRoom, GamePlayer, PrivateNote, PublicUser, RoomState, Session, User } from './types/index.js';
 import { assertProductionEnv } from './config/env.js';
+import { isTelegramOidcConfigured } from './auth/telegramOidc.js';
+import { isVkAuthConfigured } from './auth/vk.js';
 import { resolveClientIp } from './security/ip.js';
 import { securityHeadersMiddleware } from './security/headers.js';
 import { chatSocketRateLimiter } from './security/rateLimit.js';
@@ -238,7 +240,11 @@ function syncUserProfileInRooms(userId: number, user: PublicUser | null): void {
 }
 
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true });
+  res.json({
+    ok: true,
+    telegramLogin: isTelegramOidcConfigured(),
+    vkLogin: isVkAuthConfigured(),
+  });
 });
 
 app.get('/robots.txt', (_req, res) => {

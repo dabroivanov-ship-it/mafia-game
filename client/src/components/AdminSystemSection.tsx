@@ -302,7 +302,8 @@ export default function AdminSystemSection({
               >
                 <h4>Telegram-бот</h4>
                 <p className="theme-settings-hint">
-                  Username бота и URL сайта — для Telegram Login и ссылки на Web App.
+                  Username бота и URL сайта — для Web App. Кнопки «Telegram» и «VK» на странице
+                  входа берутся из server/.env: TELEGRAM_OIDC_CLIENT_ID/SECRET и VK_CLIENT_ID/SECRET.
                 </p>
                 <label>
                   Username бота (без @)

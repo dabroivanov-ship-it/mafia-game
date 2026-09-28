@@ -2,14 +2,17 @@ import fs from 'fs';
 import path from 'path';
 import { getServerRoot } from '../paths.js';
 
-/** Fill missing process.env from server/.env (PM2 dump is a subset and can drop OIDC/VK). */
-export function loadServerEnvFile(): void {
-  const envPath = path.join(getServerRoot(), '.env');
-  if (!fs.existsSync(envPath)) return;
-  const lines = fs.readFileSync(envPath, 'utf8').split(/\r?\n/);
-  for (const line of lines) {
-    const trimmed = line.trim();
+function isUnsetEnv(value: string | undefined): boolean {
+  if (value == null) return true;
+  const trimmed = value.trim();
+  return !trimmed || trimmed === 'undefined';
+}
+
+function applyEnvFile(contents: string, overwrite: boolean): void {
+  for (const line of contents.split(/\r?\n/)) {
+    let trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#')) continue;
+    if (trimmed.startsWith('export ')) trimmed = trimmed.slice(7).trim();
     const eq = trimmed.indexOf('=');
     if (eq <= 0) continue;
     const key = trimmed.slice(0, eq).trim();
@@ -20,10 +23,17 @@ export function loadServerEnvFile(): void {
     ) {
       val = val.slice(1, -1);
     }
-    if (!process.env[key]?.trim()) {
+    if (overwrite || isUnsetEnv(process.env[key])) {
       process.env[key] = val;
     }
   }
+}
+
+/** Fill holes (and PM2's string "undefined") from server/.env. File wins for empty keys. */
+export function loadServerEnvFile(): void {
+  const envPath = path.join(getServerRoot(), '.env');
+  if (!fs.existsSync(envPath)) return;
+  applyEnvFile(fs.readFileSync(envPath, 'utf8'), false);
 }
 
 loadServerEnvFile();

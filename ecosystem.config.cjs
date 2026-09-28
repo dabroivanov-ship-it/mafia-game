@@ -5,12 +5,19 @@ const rootDir = __dirname;
 const serverDir = path.join(rootDir, 'server');
 const envPath = path.join(serverDir, '.env');
 
+function isUnsetEnv(value) {
+  if (value == null) return true;
+  const trimmed = String(value).trim();
+  return !trimmed || trimmed === 'undefined';
+}
+
 function loadServerEnv() {
   if (!fs.existsSync(envPath)) return;
   const lines = fs.readFileSync(envPath, 'utf8').split(/\r?\n/);
   for (const line of lines) {
-    const trimmed = line.trim();
+    let trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#')) continue;
+    if (trimmed.startsWith('export ')) trimmed = trimmed.slice(7).trim();
     const eq = trimmed.indexOf('=');
     if (eq <= 0) continue;
     const key = trimmed.slice(0, eq).trim();
@@ -21,8 +28,16 @@ function loadServerEnv() {
     ) {
       val = val.slice(1, -1);
     }
-    if (!process.env[key]) process.env[key] = val;
+    process.env[key] = val;
   }
+}
+
+function pickEnv(keys) {
+  const out = {};
+  for (const key of keys) {
+    if (!isUnsetEnv(process.env[key])) out[key] = process.env[key];
+  }
+  return out;
 }
 
 loadServerEnv();
@@ -43,21 +58,23 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: process.env.PORT || '3001',
-        JWT_SECRET: process.env.JWT_SECRET,
-        ADMIN_USERNAMES: process.env.ADMIN_USERNAMES || 'admin',
-        CORS_ORIGIN: process.env.CORS_ORIGIN,
-        SITE_URL: process.env.SITE_URL,
         TRUST_PROXY: process.env.TRUST_PROXY || '1',
-        TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
-        TELEGRAM_WEBAPP_URL: process.env.TELEGRAM_WEBAPP_URL,
-        TELEGRAM_OIDC_CLIENT_ID: process.env.TELEGRAM_OIDC_CLIENT_ID,
-        TELEGRAM_OIDC_CLIENT_SECRET: process.env.TELEGRAM_OIDC_CLIENT_SECRET,
-        TELEGRAM_OIDC_REDIRECT_URI: process.env.TELEGRAM_OIDC_REDIRECT_URI,
-        VK_CLIENT_ID: process.env.VK_CLIENT_ID,
-        VK_CLIENT_SECRET: process.env.VK_CLIENT_SECRET,
-        VK_REDIRECT_URI: process.env.VK_REDIRECT_URI,
-        DB_PATH: process.env.DB_PATH,
-        UPLOADS_DIR: process.env.UPLOADS_DIR,
+        ADMIN_USERNAMES: process.env.ADMIN_USERNAMES || 'admin',
+        ...pickEnv([
+          'JWT_SECRET',
+          'CORS_ORIGIN',
+          'SITE_URL',
+          'TELEGRAM_BOT_TOKEN',
+          'TELEGRAM_WEBAPP_URL',
+          'TELEGRAM_OIDC_CLIENT_ID',
+          'TELEGRAM_OIDC_CLIENT_SECRET',
+          'TELEGRAM_OIDC_REDIRECT_URI',
+          'VK_CLIENT_ID',
+          'VK_CLIENT_SECRET',
+          'VK_REDIRECT_URI',
+          'DB_PATH',
+          'UPLOADS_DIR',
+        ]),
       },
     },
   ],

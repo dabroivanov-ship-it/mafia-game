@@ -424,32 +424,20 @@ setup_env_file() {
     set_env_value "$env_file" TELEGRAM_BOT_TOKEN "$TELEGRAM_BOT_TOKEN"
     set_env_value "$env_file" TELEGRAM_WEBAPP_URL "$site_url"
     set_env_value "$env_file" TELEGRAM_BACKUP_CHAT_ID "${TELEGRAM_BACKUP_CHAT_ID:-}"
-  else
-    remove_env_key "$env_file" TELEGRAM_BOT_TOKEN
-    remove_env_key "$env_file" TELEGRAM_WEBAPP_URL
-    remove_env_key "$env_file" TELEGRAM_BACKUP_CHAT_ID
   fi
 
   if [[ "${SETUP_TELEGRAM_OIDC:-0}" == "1" ]]; then
     set_env_value "$env_file" TELEGRAM_OIDC_CLIENT_ID "$TELEGRAM_OIDC_CLIENT_ID"
     set_env_value "$env_file" TELEGRAM_OIDC_CLIENT_SECRET "$TELEGRAM_OIDC_CLIENT_SECRET"
-  else
-    remove_env_key "$env_file" TELEGRAM_OIDC_CLIENT_ID
-    remove_env_key "$env_file" TELEGRAM_OIDC_CLIENT_SECRET
   fi
 
   if [[ "${SETUP_VK:-0}" == "1" ]]; then
     set_env_value "$env_file" VK_CLIENT_ID "$VK_CLIENT_ID"
     set_env_value "$env_file" VK_CLIENT_SECRET "$VK_CLIENT_SECRET"
-  else
-    remove_env_key "$env_file" VK_CLIENT_ID
-    remove_env_key "$env_file" VK_CLIENT_SECRET
   fi
 
   if [[ "${SETUP_DEEPSEEK:-0}" == "1" && -n "${DEEPSEEK_API_KEY:-}" ]]; then
     set_env_value "$env_file" DEEPSEEK_API_KEY "$DEEPSEEK_API_KEY"
-  else
-    remove_env_key "$env_file" DEEPSEEK_API_KEY
   fi
 }
 
