@@ -132,14 +132,14 @@ export async function restoreBackup(backupId: string): Promise<void> {
   }
 }
 
-/** Rooms and other state live in memory — restart after restore so the new DB is opened. */
+/** Rooms and other state live in memory — exit so PM2 opens the replaced DB with the same env. */
 export function scheduleServerRestart(delayMs = 2000): void {
   setTimeout(() => {
-    exec('pm2 restart mafia-server', (err) => {
+    exec('pm2 restart mafia-server --update-env', (err) => {
       if (err) {
         console.error('[backup] pm2 restart failed:', err.message);
-        process.exit(0);
       }
+      process.exit(0);
     });
   }, delayMs);
 }

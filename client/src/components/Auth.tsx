@@ -37,6 +37,7 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [telegramLoginReady, setTelegramLoginReady] = useState(false);
+  const [socialChecking, setSocialChecking] = useState(true);
   const [telegramLoading, setTelegramLoading] = useState(false);
   const [telegramWebAppMode, setTelegramWebAppMode] = useState(false);
   const [vkLoginReady, setVkLoginReady] = useState(false);
@@ -130,21 +131,30 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
   );
 
   useEffect(() => {
-    fetchTelegramSettings()
-      .then(({ loginReady }) => {
-        setTelegramLoginReady(loginReady);
-      })
-      .catch(() => {
-        setTelegramLoginReady(false);
-      });
-
-    fetchVkSettings()
-      .then(({ loginReady }) => {
-        setVkLoginReady(loginReady);
-      })
-      .catch(() => {
-        setVkLoginReady(false);
-      });
+    let cancelled = false;
+    const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
+    const loadSocial = async () => {
+      const pauses = [0, 1500, 1500, 2000, 2000, 3000, 4000];
+      for (let i = 0; i < pauses.length; i++) {
+        if (pauses[i]) await wait(pauses[i]);
+        if (cancelled) return;
+        try {
+          const [tg, vk] = await Promise.all([fetchTelegramSettings(), fetchVkSettings()]);
+          if (cancelled) return;
+          setTelegramLoginReady(tg.loginReady);
+          setVkLoginReady(vk.loginReady);
+          setSocialChecking(false);
+          return;
+        } catch {
+          /* API may be down for a few seconds after backup restore */
+        }
+      }
+      if (!cancelled) setSocialChecking(false);
+    };
+    void loadSocial();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -561,7 +571,9 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
             <p className="auth-social-or">
               <span>или</span>
             </p>
-            {telegramLoginReady || vkLoginReady ? (
+            {socialChecking ? (
+              <p className="muted">Проверяем вход через Telegram и VK…</p>
+            ) : telegramLoginReady || vkLoginReady ? (
               <div className="auth-social-row">
                 <TelegramLoginWidget
                   loginReady={telegramLoginReady}
@@ -577,7 +589,9 @@ export default function Auth({ onSuccess, branding = DEFAULT_SITE_BRANDING }: Au
                 />
               </div>
             ) : (
-              <p className="muted auth-social-unavailable">Авторизация временно недоступна</p>
+              <p className="muted auth-social-unavailable">
+                Вход через Telegram и VK сейчас недоступен. Используйте логин и пароль.
+              </p>
             )}
           </div>
         )}

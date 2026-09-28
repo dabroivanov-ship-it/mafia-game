@@ -46,11 +46,19 @@ router.put('/theme', authMiddleware, adminMiddleware, (req, res) => {
 });
 
 router.get('/telegram', (_req, res) => {
-  res.json(getTelegramSettings());
+  try {
+    res.json(getTelegramSettings());
+  } catch (err) {
+    res.status(503).json({ error: err instanceof Error ? err.message : 'Сервер перезапускается' });
+  }
 });
 
 router.get('/vk', (_req, res) => {
-  res.json(getVkSettings());
+  try {
+    res.json(getVkSettings());
+  } catch (err) {
+    res.status(503).json({ error: err instanceof Error ? err.message : 'Сервер перезапускается' });
+  }
 });
 
 router.put('/telegram', authMiddleware, adminMiddleware, (req, res) => {
