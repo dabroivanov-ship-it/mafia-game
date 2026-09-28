@@ -1,8 +1,7 @@
-import Database from 'better-sqlite3';
 import { exec } from 'child_process';
 import fs from 'fs';
 import path from 'path';
-import { db } from '../auth/db.js';
+import { closeDb, db } from '../auth/db.js';
 import { getDataDir, getDbPath, getServerRoot } from '../paths.js';
 
 export interface BackupInfo {
@@ -114,12 +113,17 @@ export async function restoreBackup(backupId: string): Promise<void> {
     throw new Error('Резервная копия не найдена');
   }
 
-  const src = new Database(backupDbPath, { readonly: true });
-  try {
-    await src.backup(getDbPath());
-  } finally {
-    src.close();
+  const dest = getDbPath();
+  const tmp = `${dest}.restore-tmp`;
+  fs.copyFileSync(backupDbPath, tmp);
+
+  closeDb();
+
+  for (const extra of [`${dest}-wal`, `${dest}-shm`]) {
+    if (fs.existsSync(extra)) fs.unlinkSync(extra);
   }
+  fs.copyFileSync(tmp, dest);
+  fs.unlinkSync(tmp);
 
   const uploadsBackup = path.join(dir, 'uploads');
   if (fs.existsSync(uploadsBackup)) {
@@ -128,11 +132,14 @@ export async function restoreBackup(backupId: string): Promise<void> {
   }
 }
 
-/** Rooms and other state live in memory — restart PM2 after restore so DB changes apply. */
-export function scheduleServerRestart(delayMs = 800): void {
+/** Rooms and other state live in memory — restart after restore so the new DB is opened. */
+export function scheduleServerRestart(delayMs = 2000): void {
   setTimeout(() => {
     exec('pm2 restart mafia-server', (err) => {
-      if (err) console.error('[backup] pm2 restart failed:', err.message);
+      if (err) {
+        console.error('[backup] pm2 restart failed:', err.message);
+        process.exit(0);
+      }
     });
   }, delayMs);
 }

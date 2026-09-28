@@ -632,8 +632,8 @@ export function createAdminRouter(handlers: AdminRouterHandlers) {
   router.post('/backups/:id/restore', requireAdminPermission('manage_backups'), async (req, res) => {
     try {
       await restoreBackup(req.params.id);
-      scheduleServerRestart();
       res.json({ ok: true, restarting: true });
+      res.on('finish', () => scheduleServerRestart(2000));
     } catch (err) {
       res.status(400).json({ error: err instanceof Error ? err.message : 'Ошибка восстановления' });
     }

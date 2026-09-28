@@ -121,9 +121,17 @@ export default function AdminBackupPanel() {
     setError('');
     try {
       await adminRestoreBackup(id);
+      setError('');
       alert('База восстановлена. Сервер перезапускается — обновите страницу через 10–15 секунд.');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка восстановления');
+      const message = err instanceof Error ? err.message : 'Ошибка восстановления';
+      const likelyRestart =
+        /failed to fetch|networkerror|load failed|unexpected end of json/i.test(message);
+      if (likelyRestart) {
+        alert('Сервер перезапускается после восстановления. Обновите страницу через 10–15 секунд.');
+      } else {
+        setError(message);
+      }
     } finally {
       setRestoringId(null);
     }
@@ -177,6 +185,9 @@ export default function AdminBackupPanel() {
   return (
     <div className="admin-backup-panel">
       {error && <div className="auth-error">{error}</div>}
+      {restoringId && (
+        <p className="theme-settings-hint">Восстановление копии… не закрывайте страницу.</p>
+      )}
 
       <form className="admin-backup-telegram theme-settings-block" onSubmit={handleSaveTelegram}>
         <h4>Отправка в Telegram</h4>

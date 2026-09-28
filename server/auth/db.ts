@@ -768,4 +768,18 @@ export function deleteUser(userId: number): void {
   db.prepare('DELETE FROM users WHERE id = ? AND role != ?').run(userId, 'admin');
 }
 
+/** Release file locks so a backup can replace mafia.db (WAL journal). */
+export function closeDb(): void {
+  try {
+    db.pragma('wal_checkpoint(TRUNCATE)');
+  } catch {
+    /* ignore */
+  }
+  try {
+    db.close();
+  } catch {
+    /* already closed */
+  }
+}
+
 export default db;
