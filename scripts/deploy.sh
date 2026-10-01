@@ -6,15 +6,41 @@ cd "$ROOT"
 
 load_env() {
   local env_file="$ROOT/server/.env"
-  if [[ -f "$env_file" ]]; then
-    set -a
-    # shellcheck disable=SC1090
-    source "$env_file"
-    set +a
-    echo "==> loaded server/.env"
-  else
+  if [[ ! -f "$env_file" ]]; then
     echo "WARN: server/.env not found — copy server/.env.example and set JWT_SECRET"
+    return 0
   fi
+
+  # Do not `source` .env: secrets often contain (, ), $, ` and break bash.
+  local line trimmed key val
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line%$'\r'}"
+    trimmed="${line#"${line%%[![:space:]]*}"}"
+    [[ -z "$trimmed" || "$trimmed" == \#* ]] && continue
+    if [[ "$trimmed" == export[[:space:]]* ]]; then
+      trimmed="${trimmed#export}"
+      trimmed="${trimmed#"${trimmed%%[![:space:]]*}"}"
+    fi
+    [[ "$trimmed" == *=* ]] || continue
+    key="${trimmed%%=*}"
+    val="${trimmed#*=}"
+    key="${key%"${key##*[![:space:]]}"}"
+    key="${key#"${key%%[![:space:]]*}"}"
+    [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || continue
+    val="${val#"${val%%[![:space:]]*}"}"
+    val="${val%"${val##*[![:space:]]}"}"
+    if [[ ${#val} -ge 2 ]]; then
+      if [[ "$val" == \"*"\" ]]; then
+        val="${val:1:${#val}-2}"
+      elif [[ "$val" == \'*\' ]]; then
+        val="${val:1:${#val}-2}"
+      fi
+    fi
+    printf -v "$key" '%s' "$val"
+    export "$key"
+  done <"$env_file"
+
+  echo "==> loaded server/.env"
 }
 
 require_jwt_secret() {

@@ -27,6 +27,7 @@ export const SITEMAP_ENTRIES: SitemapEntry[] = [
   { path: '/info/roles', changefreq: 'weekly', priority: 0.9 },
   { path: '/info/ai', changefreq: 'weekly', priority: 0.85 },
   { path: '/info/chat', changefreq: 'monthly', priority: 0.8 },
+  { path: '/info/clans', changefreq: 'monthly', priority: 0.75 },
   { path: '/info/rating', changefreq: 'daily', priority: 0.85 },
   { path: '/info/faq', changefreq: 'monthly', priority: 0.8 },
   { path: '/info/privacy', changefreq: 'monthly', priority: 0.6 },
@@ -45,7 +46,7 @@ const PUBLIC_PAGE_META: Record<string, PublicPageMeta> = {
   '/info': {
     title: 'Информация об игре',
     description:
-      'Правила игры «Мафия онлайн», история Мафии, описание ролей, игры с AI-агентами, правила чата и команда проекта. Всё для новичков и опытных игроков.',
+      'Правила игры «Мафия онлайн», история Мафии, описание ролей, кланы, игры с AI-агентами, правила чата и команда проекта. Всё для новичков и опытных игроков.',
     path: '/info',
   },
   '/info/about': {
@@ -77,6 +78,12 @@ const PUBLIC_PAGE_META: Record<string, PublicPageMeta> = {
     description:
       'Правила общения в игре «Мафия онлайн»: чаты комнат, личные сообщения, честная игра, модерация и наказания.',
     path: '/info/chat',
+  },
+  '/info/clans': {
+    title: 'Правила кланов',
+    description:
+      'Кланы в онлайн-игре «Мафия»: как создать клан, вступить, комната, новости, права главы и выход.',
+    path: '/info/clans',
   },
   '/info/team': {
     title: 'Команда проекта',

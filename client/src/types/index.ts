@@ -511,6 +511,7 @@ export interface ClanListItem {
   id: number;
   name: string;
   description: string;
+  logo: string | null;
   leaderId: number;
   leaderName: string;
   joinMode: ClanJoinMode;
@@ -548,6 +549,16 @@ export interface ClanDetail extends ClanListItem {
     avatar: string | null;
     createdAt: string;
   }[];
+}
+
+export interface ClanChatMessage {
+  id: number;
+  clanId: number;
+  userId: number;
+  username: string;
+  displayName: string;
+  body: string;
+  createdAt: string;
 }
 
 export interface ClanNewsItem {

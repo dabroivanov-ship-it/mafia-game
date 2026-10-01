@@ -88,7 +88,7 @@ import {
   addMutedOnlyMessage,
 } from './game/engine.js';
 import { createClansRouter } from './clans/routes.js';
-import { canUserAccessClanRoom } from './clans/store.js';
+import { canUserAccessClanRoom, listClanMembers } from './clans/store.js';
 import './clans/store.js';
 import type { ChatChannel, GameRoom, GamePlayer, PrivateNote, PublicUser, RoomState, Session, User } from './types/index.js';
 import { assertProductionEnv } from './config/env.js';
@@ -105,6 +105,7 @@ import fs from 'fs';
 import { ensureNewsUploadsDir } from './upload/newsImage.js';
 import { ensureSiteBrandingUploadsDir } from './upload/siteLogo.js';
 import { ensureSupportUploadsDir } from './upload/supportImage.js';
+import { ensureClanLogosUploadsDir } from './upload/clanLogo.js';
 import { initAllQuizRooms, initQuizRoom, handleQuizAnswer, isQuizRoom, setQuizBroadcaster } from './quiz/index.js';
 import { initGameAiRunner, triggerGameAi, triggerBotChatResponse } from './game/ai/runner.js';
 import { buildRobotsTxt, buildSecurityTxt, buildSitemapXml } from './seo/siteSeo.js';
@@ -303,6 +304,11 @@ app.use(
       broadcastRoom(roomId);
     },
     broadcastLobby: () => broadcastLobby(),
+    emitToClanMembers: (clanId, event, data) => {
+      for (const member of listClanMembers(clanId)) {
+        notifyUser(member.userId, event, data);
+      }
+    },
   })
 );
 app.use(
@@ -346,6 +352,17 @@ app.use(
     next();
   },
   express.static(supportUploadsDir)
+);
+
+const clanLogosUploadsDir = ensureClanLogosUploadsDir();
+if (!fs.existsSync(clanLogosUploadsDir)) fs.mkdirSync(clanLogosUploadsDir, { recursive: true });
+app.use(
+  '/uploads/clans',
+  (_req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    next();
+  },
+  express.static(clanLogosUploadsDir)
 );
 
 function adminDeleteMessage(roomId: number, messageId: string, channel: string): boolean {

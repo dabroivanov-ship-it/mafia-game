@@ -50,6 +50,10 @@ export function getSupportUploadsDir(): string {
   return process.env.SUPPORT_UPLOADS_DIR || path.join(getServerRoot(), 'uploads', 'support');
 }
 
+export function getClanLogosUploadsDir(): string {
+  return process.env.CLAN_LOGOS_DIR || path.join(getServerRoot(), 'uploads', 'clans');
+}
+
 export function getProjectRoot(): string {
   return path.resolve(getServerRoot(), '..');
 }

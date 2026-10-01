@@ -1,4 +1,4 @@
-import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, NewsPoll, NewsPollInput, NewsComment, BlogPost, MailConversation, RoomKind, ThemeId, ViolationLogEntry, ViolationType, UserSearchHit, UserPresence, FriendUser, LeaderboardEntry, QuizLeaderboardEntry, SiteBranding, LobbyAnnouncement, UserStatisticsResponse, UserNotification, PublicSiteStats, ClanDetail, ClanEligibility, ClanListItem, ClanNewsItem, ClanJoinMode, SupportTicket, SupportTicketStatus, SupportTicketMessage } from './types';
+import type { User, StaffMember, ProfileStaffMeta, PrivateMessage, NewsPost, NewsPoll, NewsPollInput, NewsComment, BlogPost, MailConversation, RoomKind, ThemeId, ViolationLogEntry, ViolationType, UserSearchHit, UserPresence, FriendUser, LeaderboardEntry, QuizLeaderboardEntry, SiteBranding, LobbyAnnouncement, UserStatisticsResponse, UserNotification, PublicSiteStats, ClanDetail, ClanEligibility, ClanListItem, ClanNewsItem, ClanChatMessage, ClanJoinMode, SupportTicket, SupportTicketStatus, SupportTicketMessage } from './types';
 import type { AdminPermission } from './adminPermissions';
 
 const API_BASE =
@@ -1192,6 +1192,16 @@ export async function updateClan(
   return apiRequest(`/api/clans/${clanId}`, { method: 'PATCH', body: JSON.stringify(input) });
 }
 
+export async function uploadClanLogo(clanId: number, file: File): Promise<{ clan: ClanDetail }> {
+  const form = new FormData();
+  form.append('logo', file);
+  return apiRequest(`/api/clans/${clanId}/logo`, { method: 'POST', body: form });
+}
+
+export async function removeClanLogo(clanId: number): Promise<{ clan: ClanDetail }> {
+  return apiRequest(`/api/clans/${clanId}/logo`, { method: 'DELETE' });
+}
+
 export async function applyToClan(
   clanId: number
 ): Promise<{ joined: boolean; pending: boolean; clan: ClanDetail }> {
@@ -1256,6 +1266,20 @@ export async function transferClanLeadership(
 
 export async function dissolveClan(clanId: number): Promise<{ ok: boolean }> {
   return apiRequest(`/api/clans/${clanId}/dissolve`, { method: 'POST', body: '{}' });
+}
+
+export async function fetchClanChat(clanId: number): Promise<{ messages: ClanChatMessage[] }> {
+  return apiRequest(`/api/clans/${clanId}/chat`);
+}
+
+export async function sendClanChat(
+  clanId: number,
+  text: string
+): Promise<{ message: ClanChatMessage }> {
+  return apiRequest(`/api/clans/${clanId}/chat`, {
+    method: 'POST',
+    body: JSON.stringify({ text }),
+  });
 }
 
 export async function fetchClanNews(clanId: number): Promise<{ news: ClanNewsItem[] }> {

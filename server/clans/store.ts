@@ -74,7 +74,24 @@ db.exec(`
     FOREIGN KEY (author_id) REFERENCES users(id)
   );
   CREATE INDEX IF NOT EXISTS idx_clan_news_clan ON clan_news(clan_id, created_at DESC);
+
+  CREATE TABLE IF NOT EXISTS clan_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    clan_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    body TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (clan_id) REFERENCES clans(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_clan_messages_clan ON clan_messages(clan_id, id);
 `);
+
+try {
+  db.exec('ALTER TABLE clans ADD COLUMN logo TEXT');
+} catch {
+  /* column exists */
+}
 
 interface ClanRow {
   id: number;
@@ -84,6 +101,7 @@ interface ClanRow {
   join_mode: string;
   room_id: number | null;
   created_at: string;
+  logo: string | null;
 }
 
 export interface ClanMemberView {
@@ -99,6 +117,7 @@ export interface ClanListItem {
   id: number;
   name: string;
   description: string;
+  logo: string | null;
   leaderId: number;
   leaderName: string;
   joinMode: ClanJoinMode;
@@ -268,6 +287,7 @@ function rowToListItem(row: ClanRow, viewerId: number): ClanListItem {
     id: row.id,
     name: row.name,
     description: row.description || '',
+    logo: row.logo || null,
     leaderId: row.leader_id,
     leaderName: leader?.username || leader?.display_name || '?',
     joinMode: normalizeJoinMode(row.join_mode),
@@ -446,6 +466,14 @@ export function updateClanSettings(
   return getClanDetail(clanId, leaderId)!;
 }
 
+export function setClanLogo(clanId: number, leaderId: number, logo: string | null): ClanDetail {
+  if (!isClanLeader(clanId, leaderId)) throw new Error('Только глава клана может менять логотип');
+  const clan = getClanById(clanId);
+  if (!clan) throw new Error('Клан не найден');
+  db.prepare('UPDATE clans SET logo = ? WHERE id = ?').run(logo, clanId);
+  return getClanDetail(clanId, leaderId)!;
+}
+
 export function applyToClan(clanId: number, userId: number): { joined: boolean; pending: boolean } {
   const clan = getClanById(clanId);
   if (!clan) throw new Error('Клан не найден');
@@ -602,6 +630,7 @@ export function dissolveClan(
   if (!clan) throw new Error('Клан не найден');
   const roomId = clan.room_id;
   const tx = db.transaction(() => {
+    db.prepare('DELETE FROM clan_messages WHERE clan_id = ?').run(clanId);
     db.prepare('DELETE FROM clan_news WHERE clan_id = ?').run(clanId);
     db.prepare('DELETE FROM clan_application_bans WHERE clan_id = ?').run(clanId);
     db.prepare('DELETE FROM clan_applications WHERE clan_id = ?').run(clanId);
@@ -671,6 +700,74 @@ export function createClanNews(
     body,
     createdAt: new Date().toISOString(),
   };
+}
+
+export interface ClanChatMessage {
+  id: number;
+  clanId: number;
+  userId: number;
+  username: string;
+  displayName: string;
+  body: string;
+  createdAt: string;
+}
+
+const CLAN_CHAT_PAGE = 80;
+
+interface ClanChatRow {
+  id: number;
+  clan_id: number;
+  user_id: number;
+  body: string;
+  created_at: string;
+}
+
+function rowToClanChat(row: ClanChatRow): ClanChatMessage {
+  const user = findUserById(row.user_id);
+  return {
+    id: row.id,
+    clanId: row.clan_id,
+    userId: row.user_id,
+    username: user?.username || '?',
+    displayName: user?.display_name || user?.username || '?',
+    body: row.body,
+    createdAt: iso(row.created_at),
+  };
+}
+
+export function listClanChat(clanId: number, userId: number): ClanChatMessage[] {
+  if (!getClanById(clanId)) throw new Error('Клан не найден');
+  if (!isClanMember(clanId, userId)) throw new Error('Чат доступен только членам клана');
+  const rows = db
+    .prepare(
+      `SELECT id, clan_id, user_id, body, created_at
+       FROM clan_messages WHERE clan_id = ?
+       ORDER BY id DESC LIMIT ?`
+    )
+    .all(clanId, CLAN_CHAT_PAGE) as ClanChatRow[];
+  return rows.reverse().map(rowToClanChat);
+}
+
+export function postClanChat(clanId: number, userId: number, body: string): ClanChatMessage {
+  if (!getClanById(clanId)) throw new Error('Клан не найден');
+  if (!isClanMember(clanId, userId)) throw new Error('Писать в чат могут только члены клана');
+  const text = body.trim();
+  if (!text) throw new Error('Пустое сообщение');
+  const result = db
+    .prepare('INSERT INTO clan_messages (clan_id, user_id, body) VALUES (?, ?, ?)')
+    .run(clanId, userId, text);
+  const row = db
+    .prepare(
+      `SELECT id, clan_id, user_id, body, created_at FROM clan_messages WHERE id = ?`
+    )
+    .get(Number(result.lastInsertRowid)) as ClanChatRow;
+  return rowToClanChat(row);
+}
+
+export function clearClanMessages(clanId: number, leaderId: number): void {
+  if (!isClanLeader(clanId, leaderId)) throw new Error('Только глава может очистить чат');
+  if (!getClanById(clanId)) throw new Error('Клан не найден');
+  db.prepare('DELETE FROM clan_messages WHERE clan_id = ?').run(clanId);
 }
 
 export function deleteClanNews(clanId: number, newsId: number, userId: number): void {

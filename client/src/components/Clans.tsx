@@ -1,4 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
+import type { Socket } from 'socket.io-client';
+import ClanChat from './ClanChat';
 import {
   applyToClan,
   createClan,
@@ -16,21 +18,35 @@ import {
   leaveClan,
   transferClanLeadership,
   updateClan,
+  uploadClanLogo,
+  removeClanLogo,
+  avatarUrl,
 } from '../api';
 import type { ClanDetail, ClanEligibility, ClanJoinMode, ClanListItem, ClanNewsItem } from '../types';
 
 interface ClansProps {
   onBack: () => void;
-  onJoinRoom: (roomId: number) => void;
+  socket: Socket | null;
   initialClanId?: number | null;
   backLabel?: string;
 }
 
-type Screen = 'list' | 'create' | 'detail';
+type Screen = 'list' | 'create' | 'detail' | 'settings';
+
+function ClanMark({ logo, name }: { logo: string | null; name: string }) {
+  if (logo) {
+    return <img src={avatarUrl(logo) ?? undefined} alt="" className="clans-logo" />;
+  }
+  return (
+    <span className="clans-logo clans-logo--mark" aria-hidden="true">
+      {name.trim().charAt(0).toUpperCase() || 'К'}
+    </span>
+  );
+}
 
 export default function Clans({
   onBack,
-  onJoinRoom,
+  socket,
   initialClanId = null,
   backLabel = '← Комнаты',
 }: ClansProps) {
@@ -128,6 +144,7 @@ export default function Clans({
           className="btn btn-ghost btn-sm"
           onClick={() => {
             if (screen === 'list') onBack();
+            else if (screen === 'settings') setScreen('detail');
             else {
               setScreen('list');
               setClan(null);
@@ -135,7 +152,7 @@ export default function Clans({
             }
           }}
         >
-          {screen === 'list' ? backLabel : '← К кланам'}
+          {screen === 'list' ? backLabel : screen === 'settings' ? '← К клану' : '← К кланам'}
         </button>
       </nav>
 
@@ -144,41 +161,9 @@ export default function Clans({
       </header>
 
       {screen === 'list' && (
-        <details className="clans-rules">
-          <summary>Правила кланов</summary>
-          <div className="clans-rules-body">
-            <ul>
-              <li>
-                Игрок может состоять только в <strong>одном</strong> клане.
-              </li>
-              <li>
-                Создать клан можно после <strong>{createMinPosts}</strong> сообщений в чате и{' '}
-                <strong>{createMinGames}</strong> игр. Создатель становится главой.
-              </li>
-              <li>
-                Вступление: <strong>открытое</strong> (вход сразу) или <strong>по заявке</strong>{' '}
-                (решает глава).
-              </li>
-              <li>
-                <strong>Комната</strong> и <strong>новости</strong> клана доступны только членам.
-              </li>
-              <li>
-                Глава принимает и отклоняет заявки, публикует новости, исключает участников, ведёт
-                чёрный список, передаёт главенство, очищает чат комнаты и может распустить клан.
-              </li>
-              <li>
-                Исключение с чёрным списком — повторная заявка в этот клан невозможна.
-              </li>
-              <li>
-                Выйти из клана можно самостоятельно. Глава может выйти только один: иначе сначала
-                передайте главенство или распустите клан.
-              </li>
-              <li>
-                В клане действуют общие правила сайта и чата: без оскорблений, спама и читерства.
-              </li>
-            </ul>
-          </div>
-        </details>
+        <p className="muted clans-rules-link">
+          <a href="/info/clans">Правила кланов</a>
+        </p>
       )}
 
       {error && <p className="form-error">{error}</p>}
@@ -189,9 +174,12 @@ export default function Clans({
             <div className="clans-my">
               <span className="muted">Ваш клан</span>
               <button type="button" className="clans-card clans-card-mine" onClick={() => void openClan(myClan.id)}>
-                <strong>{myClan.name}</strong>
-                <span className="muted">
-                  {myClan.memberCount} чел. · {myClan.myRole === 'leader' ? 'глава' : 'участник'}
+                <ClanMark logo={myClan.logo} name={myClan.name} />
+                <span className="clans-card-copy">
+                  <strong>{myClan.name}</strong>
+                  <span className="muted">
+                    {myClan.memberCount} чел. · {myClan.myRole === 'leader' ? 'глава' : 'участник'}
+                  </span>
                 </span>
               </button>
             </div>
@@ -225,12 +213,15 @@ export default function Clans({
                   className="clans-card"
                   onClick={() => void openClan(item.id)}
                 >
-                  <strong>{item.name}</strong>
-                  <span className="muted">
-                    {item.memberCount} чел. · глава @{item.leaderName} ·{' '}
-                    {item.joinMode === 'open' ? 'открытый' : 'по заявке'}
+                  <ClanMark logo={item.logo} name={item.name} />
+                  <span className="clans-card-copy">
+                    <strong>{item.name}</strong>
+                    <span className="muted">
+                      {item.memberCount} чел. · глава @{item.leaderName} ·{' '}
+                      {item.joinMode === 'open' ? 'открытый' : 'по заявке'}
+                    </span>
+                    {item.description ? <span className="clans-card-desc">{item.description}</span> : null}
                   </span>
-                  {item.description ? <span className="clans-card-desc">{item.description}</span> : null}
                 </button>
               ))}
             </div>
@@ -297,20 +288,18 @@ export default function Clans({
       {screen === 'detail' && clan && (
         <div className="clans-detail">
           <div className="clans-detail-head">
-            <h2>{clan.name}</h2>
-            <p className="muted">
-              Глава @{clan.leaderName} · {clan.memberCount} чел. ·{' '}
-              {clan.joinMode === 'open' ? 'открытый вход' : 'вход по заявке'}
-            </p>
-            {clan.description ? <p>{clan.description}</p> : null}
+            <ClanMark logo={clan.logo} name={clan.name} />
+            <div>
+              <h2>{clan.name}</h2>
+              <p className="muted">
+                Глава @{clan.leaderName} · {clan.memberCount} чел. ·{' '}
+                {clan.joinMode === 'open' ? 'открытый вход' : 'вход по заявке'}
+              </p>
+              {clan.description ? <p>{clan.description}</p> : null}
+            </div>
           </div>
 
           <div className="clans-actions">
-            {clan.myRole && clan.roomId != null && (
-              <button type="button" className="btn btn-primary" onClick={() => onJoinRoom(clan.roomId!)}>
-                Комната клана
-              </button>
-            )}
             {!clan.myRole && !clan.amBanned && clan.myApplicationStatus !== 'pending' && (
               <button
                 type="button"
@@ -335,6 +324,11 @@ export default function Clans({
               <p className="muted">Заявка ожидает решения главы</p>
             )}
             {clan.amBanned && <p className="form-error">Вам запрещено подавать заявку в этот клан</p>}
+            {clan.myRole === 'leader' && (
+              <button type="button" className="btn btn-ghost" onClick={() => setScreen('settings')}>
+                Настройки
+              </button>
+            )}
             {clan.myRole === 'member' && (
               <button
                 type="button"
@@ -356,102 +350,9 @@ export default function Clans({
                 Выйти из клана
               </button>
             )}
-            {clan.myRole === 'leader' && (
-              <button
-                type="button"
-                className="btn btn-ghost danger"
-                disabled={busy}
-                onClick={() => {
-                  if (!confirm('Распустить клан? Комната и новости будут удалены.')) return;
-                  setBusy(true);
-                  void dissolveClan(clan.id)
-                    .then(() => {
-                      setScreen('list');
-                      setClan(null);
-                      return loadList();
-                    })
-                    .catch((err) => setError(err instanceof Error ? err.message : 'Ошибка'))
-                    .finally(() => setBusy(false));
-                }}
-              >
-                Распустить клан
-              </button>
-            )}
-            {clan.myRole === 'leader' && clan.roomId != null && (
-              <button
-                type="button"
-                className="btn btn-ghost"
-                disabled={busy}
-                onClick={() => {
-                  if (!confirm('Очистить весь чат комнаты клана?')) return;
-                  setBusy(true);
-                  setError('');
-                  void clearClanChat(clan.id)
-                    .then((res) => setClan(res.clan))
-                    .catch((err) => setError(err instanceof Error ? err.message : 'Ошибка'))
-                    .finally(() => setBusy(false));
-                }}
-              >
-                Очистить чат
-              </button>
-            )}
           </div>
 
-          {clan.myRole === 'leader' && (
-            <section className="clans-section">
-              <h3>Настройки</h3>
-              <form
-                className="clans-form"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  setBusy(true);
-                  setError('');
-                  void updateClan(clan.id, {
-                    description: editDescription,
-                    joinMode: editJoinMode,
-                  })
-                    .then((res) => setClan(res.clan))
-                    .catch((err) => setError(err instanceof Error ? err.message : 'Ошибка'))
-                    .finally(() => setBusy(false));
-                }}
-              >
-                <label>
-                  Описание
-                  <textarea
-                    value={editDescription}
-                    onChange={(e) => setEditDescription(e.target.value)}
-                    maxLength={400}
-                    rows={3}
-                    disabled={busy}
-                  />
-                </label>
-                <fieldset className="clans-join-mode">
-                  <legend>Вступление</legend>
-                  <label className="clans-radio">
-                    <input
-                      type="radio"
-                      checked={editJoinMode === 'open'}
-                      onChange={() => setEditJoinMode('open')}
-                      disabled={busy}
-                    />
-                    Открытое
-                  </label>
-                  <label className="clans-radio">
-                    <input
-                      type="radio"
-                      checked={editJoinMode === 'approval'}
-                      onChange={() => setEditJoinMode('approval')}
-                      disabled={busy}
-                    />
-                    По заявке
-                  </label>
-                </fieldset>
-                <button type="submit" className="btn btn-primary btn-sm" disabled={busy}>
-                  Сохранить
-                </button>
-              </form>
-            </section>
-          )}
+          {clan.myRole ? <ClanChat clanId={clan.id} socket={socket} /> : null}
 
           {clan.myRole === 'leader' && clan.pendingApplications.length > 0 && (
             <section className="clans-section">
@@ -714,9 +615,163 @@ export default function Clans({
 
           {!clan.myRole && (
             <p className="muted">
-              Комната и новости клана откроются после вступления. Список участников доступен всем.
+              Чат и новости клана откроются после вступления. Список участников доступен всем.
             </p>
           )}
+        </div>
+      )}
+
+      {screen === 'settings' && clan && clan.myRole === 'leader' && (
+        <div className="clans-detail">
+          <header className="page-header">
+            <h2>Настройки клана</h2>
+            <p className="muted">{clan.name}</p>
+          </header>
+
+          <section className="clans-section">
+            <h3>Логотип</h3>
+            <div className="clans-logo-edit">
+              <ClanMark logo={clan.logo} name={clan.name} />
+              <div className="clans-logo-edit-actions">
+                <input
+                  type="file"
+                  id="clan-logo-upload"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  hidden
+                  disabled={busy}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = '';
+                    if (!file) return;
+                    setBusy(true);
+                    setError('');
+                    void uploadClanLogo(clan.id, file)
+                      .then((res) => setClan(res.clan))
+                      .catch((err) => setError(err instanceof Error ? err.message : 'Ошибка загрузки'))
+                      .finally(() => setBusy(false));
+                  }}
+                />
+                <label htmlFor="clan-logo-upload" className="btn btn-ghost btn-sm">
+                  Загрузить
+                </label>
+                {clan.logo && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    disabled={busy}
+                    onClick={() => {
+                      setBusy(true);
+                      setError('');
+                      void removeClanLogo(clan.id)
+                        .then((res) => setClan(res.clan))
+                        .catch((err) => setError(err instanceof Error ? err.message : 'Ошибка'))
+                        .finally(() => setBusy(false));
+                    }}
+                  >
+                    Убрать
+                  </button>
+                )}
+                <p className="muted">JPG, PNG, WebP или GIF, до 2 МБ</p>
+              </div>
+            </div>
+          </section>
+
+          <section className="clans-section">
+            <h3>О клане</h3>
+            <form
+              className="clans-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                setBusy(true);
+                setError('');
+                void updateClan(clan.id, {
+                  description: editDescription,
+                  joinMode: editJoinMode,
+                })
+                  .then((res) => setClan(res.clan))
+                  .catch((err) => setError(err instanceof Error ? err.message : 'Ошибка'))
+                  .finally(() => setBusy(false));
+              }}
+            >
+              <label>
+                Описание
+                <textarea
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  maxLength={400}
+                  rows={3}
+                  disabled={busy}
+                />
+              </label>
+              <fieldset className="clans-join-mode">
+                <legend>Вступление</legend>
+                <label className="clans-radio">
+                  <input
+                    type="radio"
+                    checked={editJoinMode === 'open'}
+                    onChange={() => setEditJoinMode('open')}
+                    disabled={busy}
+                  />
+                  Открытое
+                </label>
+                <label className="clans-radio">
+                  <input
+                    type="radio"
+                    checked={editJoinMode === 'approval'}
+                    onChange={() => setEditJoinMode('approval')}
+                    disabled={busy}
+                  />
+                  По заявке
+                </label>
+              </fieldset>
+              <button type="submit" className="btn btn-primary btn-sm" disabled={busy}>
+                Сохранить
+              </button>
+            </form>
+          </section>
+
+          <section className="clans-section">
+            <h3>Комната и клан</h3>
+            <div className="clans-actions">
+              {clan.roomId != null && (
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  disabled={busy}
+                  onClick={() => {
+                    if (!confirm('Очистить чат клана?')) return;
+                    setBusy(true);
+                    setError('');
+                    void clearClanChat(clan.id)
+                      .then((res) => setClan(res.clan))
+                      .catch((err) => setError(err instanceof Error ? err.message : 'Ошибка'))
+                      .finally(() => setBusy(false));
+                  }}
+                >
+                  Очистить чат
+                </button>
+              )}
+              <button
+                type="button"
+                className="btn btn-ghost danger"
+                disabled={busy}
+                onClick={() => {
+                  if (!confirm('Распустить клан? Комната и новости будут удалены.')) return;
+                  setBusy(true);
+                  void dissolveClan(clan.id)
+                    .then(() => {
+                      setScreen('list');
+                      setClan(null);
+                      return loadList();
+                    })
+                    .catch((err) => setError(err instanceof Error ? err.message : 'Ошибка'))
+                    .finally(() => setBusy(false));
+                }}
+              >
+                Распустить клан
+              </button>
+            </div>
+          </section>
         </div>
       )}
     </div>

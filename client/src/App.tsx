@@ -1117,7 +1117,7 @@ export default function App() {
               initialClanId={clansInitialId}
               backLabel={clansBackTo === 'cabinet' ? '← Кабинет' : '← Комнаты'}
               onBack={leaveClans}
-              onJoinRoom={joinRoom}
+              socket={socket}
             />
           </ViewSuspense>
         )}

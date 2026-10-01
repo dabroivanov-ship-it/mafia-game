@@ -9,6 +9,7 @@ import PlayerRating from './PlayerRating';
 import Faq from './Faq';
 import QuizLeaders from './QuizLeaders';
 import PrivacyPolicy from './PrivacyPolicy';
+import ClanRules from './ClanRules';
 import {
   type InfoSection,
   infoSectionFromPath,
@@ -17,6 +18,7 @@ import {
 import { INFO_PAGE_META, updatePageMeta } from '../seo';
 import { ABOUT_GAME_INTRO } from '../content/aboutGameContent';
 import { PRIVACY_POLICY_INTRO } from '../content/privacyPolicyContent';
+import { CLAN_RULES_INTRO } from '../content/clanRulesContent';
 import { ROLES_INTRO } from '../content/rolesContent';
 import { AI_AGENTS_INTRO } from '../content/aiAgentsContent';
 
@@ -36,6 +38,7 @@ const INFO_HUB_ITEMS: InfoHubItem[] = [
   { section: 'faq', title: 'Частые вопросы' },
   { section: 'privacy', title: 'Политика конфиденциальности' },
   { section: 'chatRules', title: 'Правила чата' },
+  { section: 'clanRules', title: 'Правила кланов' },
   { section: 'rating', title: 'Рейтинг игроков' },
   { section: 'quizLeaders', title: 'Самые умные' },
   { section: 'team', title: 'Команда', authOnly: true },
@@ -227,6 +230,19 @@ export default function Info({
     );
   }
 
+  if (section === 'clanRules') {
+    return (
+      <div className="info-page">
+        {backNav('hub', 'Информация')}
+        <header className="page-header">
+          <h1>Правила кланов</h1>
+          <p className="muted">{CLAN_RULES_INTRO}</p>
+        </header>
+        <ClanRules embedded />
+      </div>
+    );
+  }
+
   return (
     <div className="info-page">
       {publicMode && (
@@ -240,7 +256,7 @@ export default function Info({
 
       <header className="page-header">
         <h1>Информация</h1>
-        <p className="muted">История, правила, роли, AI-агенты, чат, рейтинг и команда проекта</p>
+        <p className="muted">История, правила, роли, кланы, AI-агенты, чат, рейтинг и команда проекта</p>
       </header>
 
       <div className="info-hub">

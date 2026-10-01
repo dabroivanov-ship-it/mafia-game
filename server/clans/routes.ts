@@ -20,18 +20,30 @@ import {
   kickMember,
   leaveClan,
   listClanNews,
+  listClanChat,
+  postClanChat,
+  clearClanMessages,
   listClans,
   transferLeadership,
   updateClanSettings,
+  setClanLogo,
   type ClanJoinMode,
 } from './store.js';
 import { notifyClanAction } from './notify.js';
+import { chatSocketRateLimiter } from '../security/rateLimit.js';
+import { normalizeChatText } from '../security/validate.js';
+import {
+  clanLogoPublicPath,
+  clanLogoUpload,
+  deleteClanLogoFile,
+} from '../upload/clanLogo.js';
 
 export interface ClanRouteHandlers {
   createClanRoom: (name: string) => GameRoom;
   removeClanRoom: (roomId: number) => void;
   clearClanRoomChat: (roomId: number) => void;
   broadcastLobby: () => void;
+  emitToClanMembers: (clanId: number, event: string, data: unknown) => void;
 }
 
 export function createClansRouter(handlers: ClanRouteHandlers) {
@@ -113,6 +125,49 @@ export function createClansRouter(handlers: ClanRouteHandlers) {
     } catch (e) {
       const err = e as Error;
       res.status(400).json({ error: err.message || 'Не удалось сохранить' });
+    }
+  });
+
+  router.post('/:clanId/logo', (req, res) => {
+    if (isUserBanned(req.user)) {
+      return res.status(403).json({ error: 'Аккаунт заблокирован' });
+    }
+    const clanId = Number(req.params.clanId);
+    if (!Number.isFinite(clanId)) return res.status(400).json({ error: 'Некорректный id' });
+    clanLogoUpload.single('logo')(req, res, (err) => {
+      if (err) {
+        return res.status(400).json({ error: err instanceof Error ? err.message : 'Ошибка загрузки' });
+      }
+      if (!req.file) {
+        return res.status(400).json({ error: 'Выберите файл логотипа' });
+      }
+      try {
+        const previous = getClanById(clanId)?.logo;
+        const clan = setClanLogo(clanId, req.userId!, clanLogoPublicPath(req.file.filename));
+        if (previous && previous !== clan.logo) deleteClanLogoFile(previous);
+        res.json({ clan });
+      } catch (e) {
+        deleteClanLogoFile(clanLogoPublicPath(req.file.filename));
+        const error = e as Error;
+        res.status(400).json({ error: error.message || 'Не удалось сохранить логотип' });
+      }
+    });
+  });
+
+  router.delete('/:clanId/logo', (req, res) => {
+    if (isUserBanned(req.user)) {
+      return res.status(403).json({ error: 'Аккаунт заблокирован' });
+    }
+    const clanId = Number(req.params.clanId);
+    if (!Number.isFinite(clanId)) return res.status(400).json({ error: 'Некорректный id' });
+    try {
+      const previous = getClanById(clanId)?.logo;
+      const clan = setClanLogo(clanId, req.userId!, null);
+      deleteClanLogoFile(previous);
+      res.json({ clan });
+    } catch (e) {
+      const error = e as Error;
+      res.status(400).json({ error: error.message || 'Не удалось убрать логотип' });
     }
   });
 
@@ -269,12 +324,16 @@ export function createClansRouter(handlers: ClanRouteHandlers) {
     const clanId = Number(req.params.clanId);
     if (!Number.isFinite(clanId)) return res.status(400).json({ error: 'Некорректный id' });
     try {
-      if (!isClanLeader(clanId, req.userId!)) {
-        throw new Error('Только глава может очистить чат');
-      }
+      clearClanMessages(clanId, req.userId!);
       const clanRow = getClanById(clanId);
-      if (!clanRow?.room_id) throw new Error('У клана нет комнаты');
-      handlers.clearClanRoomChat(clanRow.room_id);
+      if (clanRow?.room_id) {
+        try {
+          handlers.clearClanRoomChat(clanRow.room_id);
+        } catch {
+          /* комната могла уже исчезнуть */
+        }
+      }
+      handlers.emitToClanMembers(clanId, 'clan:cleared', { clanId });
       res.json({ ok: true, clan: getClanDetail(clanId, req.userId!) });
     } catch (e) {
       const err = e as Error;
@@ -307,7 +366,9 @@ export function createClansRouter(handlers: ClanRouteHandlers) {
     const clanId = Number(req.params.clanId);
     if (!Number.isFinite(clanId)) return res.status(400).json({ error: 'Некорректный id' });
     try {
+      const previousLogo = getClanById(clanId)?.logo;
       const result = dissolveClan(clanId, req.userId!);
+      deleteClanLogoFile(previousLogo);
       if (result.roomId) {
         try {
           handlers.removeClanRoom(result.roomId);
@@ -320,6 +381,40 @@ export function createClansRouter(handlers: ClanRouteHandlers) {
     } catch (e) {
       const err = e as Error;
       res.status(400).json({ error: err.message || 'Не удалось распустить клан' });
+    }
+  });
+
+  router.get('/:clanId/chat', (req, res) => {
+    const clanId = Number(req.params.clanId);
+    if (!Number.isFinite(clanId)) return res.status(400).json({ error: 'Некорректный id' });
+    try {
+      res.json({ messages: listClanChat(clanId, req.userId!) });
+    } catch (e) {
+      const err = e as Error;
+      const status = err.message.includes('только членам') ? 403 : 400;
+      res.status(status).json({ error: err.message || 'Не удалось загрузить чат' });
+    }
+  });
+
+  router.post('/:clanId/chat', (req, res) => {
+    if (isUserBanned(req.user)) {
+      return res.status(403).json({ error: 'Аккаунт заблокирован' });
+    }
+    const clanId = Number(req.params.clanId);
+    if (!Number.isFinite(clanId)) return res.status(400).json({ error: 'Некорректный id' });
+    if (!chatSocketRateLimiter.try(`clan-chat:${req.userId}`)) {
+      return res.status(429).json({ error: 'Слишком много сообщений. Подождите.' });
+    }
+    const text = normalizeChatText(req.body?.text);
+    if (!text) return res.status(400).json({ error: 'Пустое сообщение' });
+    try {
+      const message = postClanChat(clanId, req.userId!, text);
+      handlers.emitToClanMembers(clanId, 'clan:message', message);
+      res.json({ message });
+    } catch (e) {
+      const err = e as Error;
+      const status = err.message.includes('только члены') ? 403 : 400;
+      res.status(status).json({ error: err.message || 'Не удалось отправить' });
     }
   });
 

@@ -9,7 +9,8 @@ export type InfoSection =
   | 'rating'
   | 'quizLeaders'
   | 'faq'
-  | 'privacy';
+  | 'privacy'
+  | 'clanRules';
 
 export const INFO_PATHS: Record<InfoSection, string> = {
   hub: '/info',
@@ -23,6 +24,7 @@ export const INFO_PATHS: Record<InfoSection, string> = {
   quizLeaders: '/info/quiz',
   faq: '/info/faq',
   privacy: '/info/privacy',
+  clanRules: '/info/clans',
 };
 
 export function infoSectionFromPath(path: string): InfoSection {
@@ -37,6 +39,7 @@ export function infoSectionFromPath(path: string): InfoSection {
   if (normalized.startsWith('/info/quiz')) return 'quizLeaders';
   if (normalized.startsWith('/info/faq')) return 'faq';
   if (normalized.startsWith('/info/privacy')) return 'privacy';
+  if (normalized.startsWith('/info/clans')) return 'clanRules';
   if (normalized === '/info') return 'hub';
   return 'hub';
 }
