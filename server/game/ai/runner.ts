@@ -684,7 +684,7 @@ function parseNightAction(
     case 'kill':
       if (bot.role === 'mafia' && bot.isDon && !isMafiaTeam(target.role)) {
         action = { type: 'kill', targetId: target.id };
-      } else if (bot.role === 'commissar' || bot.role === 'maniac') {
+      } else if (bot.role === 'commissar' || bot.role === 'maniac' || (bot.role === 'witch' && target.id !== bot.id)) {
         action = { type: 'kill', targetId: target.id };
       }
       break;
@@ -694,7 +694,7 @@ function parseNightAction(
       }
       break;
     case 'heal':
-      if (bot.role === 'doctor') action = { type: 'heal', targetId: target.id };
+      if (bot.role === 'doctor' || bot.role === 'witch') action = { type: 'heal', targetId: target.id };
       break;
     case 'seduce':
       if (bot.role === 'prostitute') action = { type: 'seduce', targetId: target.id };

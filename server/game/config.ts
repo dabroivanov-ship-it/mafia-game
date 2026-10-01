@@ -35,6 +35,7 @@ export const ROLE_LABELS: Record<RoleId, string> = {
   homeless: 'Бомж',
   prostitute: 'Путана',
   maniac: 'Маньяк',
+  witch: 'Ведьма',
   clown: 'Клоун',
   commissar_wife: 'Жена комиссара',
   highlander: 'Горец',
@@ -45,7 +46,7 @@ export const ROLE_LABELS: Record<RoleId, string> = {
 
 // Категории для проверок победы и очков
 export const MAFIA_ROLES: RoleId[] = ['mafia', 'advocate'];
-export const EVIL_ROLES: RoleId[] = ['mafia', 'maniac'];
+export const EVIL_ROLES: RoleId[] = ['mafia', 'maniac', 'witch'];
 export const TOWN_ROLES: RoleId[] = [
   'commissar',
   'doctor',

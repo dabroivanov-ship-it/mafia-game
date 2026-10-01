@@ -154,6 +154,7 @@ export type GameRole =
   | 'homeless'
   | 'prostitute'
   | 'maniac'
+  | 'witch'
   | 'clown'
   | 'commissar_wife'
   | 'advocate'

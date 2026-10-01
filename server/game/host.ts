@@ -28,6 +28,7 @@ const KILL_TARGET_ROLE: Record<RoleId, string> = {
   homeless: 'бомжа',
   prostitute: 'путану',
   maniac: 'маньяка',
+  witch: 'ведьму',
   clown: 'клоуна',
   commissar_wife: 'жену комиссара',
   highlander: 'горца',
@@ -153,6 +154,12 @@ function nightActionPrompt(player: GamePlayer, room: GameRoom): string {
 
       break;
 
+    case 'witch':
+
+      prompt = getPhraseText('prompt.witch');
+
+      break;
+
     case 'clown':
 
       prompt = room.clownUsed
@@ -265,6 +272,8 @@ export function buildNightReminderNotes(room: GameRoom): PrivateNote[] {
       player.role === 'prostitute' ||
 
       player.role === 'maniac' ||
+
+      player.role === 'witch' ||
 
       (player.role === 'clown' && !room.clownUsed) ||
 
@@ -396,6 +405,18 @@ export interface NightReport {
 
   maniacSaved?: GamePlayer;
 
+  witchKilled?: GamePlayer;
+
+  witchSaved?: GamePlayer;
+
+  witchHealed?: GamePlayer;
+
+  witchSelfHeal?: boolean;
+
+  witchHealWasSave?: boolean;
+
+  samuraiSavedByWitch?: boolean;
+
   wifeKilled?: GamePlayer;
 
   clownSwapped?: [GamePlayer, GamePlayer];
@@ -466,13 +487,42 @@ export function buildMorningReportMessage(
   if (report.commissarKilled) {
     parts.push(getCommissarKillReportLine(report.commissarKilled));
   } else if (report.commissarSaved) {
-    parts.push(pickPhraseLine('report.commissar_saved', { nick: playerNick(report.commissarSaved) }));
+    const nick = playerNick(report.commissarSaved);
+    parts.push(
+      report.doctorHealed?.id === report.commissarSaved.id
+        ? pickPhraseLine('report.commissar_saved', { nick })
+        : pickPhraseLine('report.commissar_saved_witch', { nick })
+    );
   }
 
   if (report.maniacKilled) {
     parts.push(pickPhraseLine('report.maniac_kill', killReportVars(report.maniacKilled)));
   } else if (report.maniacSaved) {
-    parts.push(pickPhraseLine('report.maniac_saved', { nick: playerNick(report.maniacSaved) }));
+    const nick = playerNick(report.maniacSaved);
+    parts.push(
+      report.doctorHealed?.id === report.maniacSaved.id
+        ? pickPhraseLine('report.maniac_saved', { nick })
+        : pickPhraseLine('report.maniac_saved_witch', { nick })
+    );
+  }
+
+  if (report.witchKilled) {
+    parts.push(pickPhraseLine('report.witch_kill', killReportVars(report.witchKilled)));
+  } else if (report.witchSaved) {
+    const nick = playerNick(report.witchSaved);
+    parts.push(
+      report.doctorHealed?.id === report.witchSaved.id
+        ? pickPhraseLine('report.witch_saved', { nick })
+        : pickPhraseLine('report.witch_saved_self', { nick })
+    );
+  }
+
+  if (report.witchHealed && !report.witchHealWasSave) {
+    if (report.witchSelfHeal) {
+      parts.push(pickPhraseLine('report.witch_self'));
+    } else {
+      parts.push(pickPhraseLine('report.witch_heal', { nick: playerNick(report.witchHealed) }));
+    }
   }
 
   if (report.wifeKilled) {
@@ -488,7 +538,7 @@ export function buildMorningReportMessage(
     const nick = playerNick(report.samuraiGuardTarget);
     parts.push(
       report.samuraiSaved
-        ? pickPhraseLine('report.samurai_saved', { nick })
+        ? pickPhraseLine(report.samuraiSavedByWitch ? 'report.samurai_saved_witch' : 'report.samurai_saved', { nick })
         : pickPhraseLine('report.samurai_die', { nick })
     );
   }
@@ -502,11 +552,16 @@ export function buildMorningReportMessage(
     } else if (report.mafiaKilled) {
       parts.push(pickPhraseLine('report.mafia_kill', killReportVars(report.mafiaKilled)));
     } else if (
-      report.doctorHealed &&
-      report.mafiaAttacked.id === report.doctorHealed.id &&
-      !report.samuraiTookHit
+      !report.samuraiTookHit &&
+      ((report.doctorHealed && report.mafiaAttacked.id === report.doctorHealed.id) ||
+        (report.witchHealed && report.mafiaAttacked.id === report.witchHealed.id))
     ) {
-      parts.push(pickPhraseLine('report.mafia_saved', { nick: playerNick(report.mafiaAttacked) }));
+      const nick = playerNick(report.mafiaAttacked);
+      parts.push(
+        report.doctorHealed?.id === report.mafiaAttacked.id
+          ? pickPhraseLine('report.mafia_saved', { nick })
+          : pickPhraseLine('report.mafia_saved_witch', { nick })
+      );
     }
   }
 
@@ -732,6 +787,10 @@ export function getRoleNightAtmosphereMessage(role: RoleId): string | null {
 
       return pickPhraseLine('atmosphere.maniac');
 
+    case 'witch':
+
+      return pickPhraseLine('atmosphere.witch');
+
     case 'advocate':
 
       return pickPhraseLine('atmosphere.advocate');
@@ -785,6 +844,12 @@ export function getNightAtmosphereMessages(room: GameRoom): string[] {
   if (room.players.some((p) => p.alive && p.role === 'maniac')) {
 
     messages.push(pickPhraseLine('atmosphere.maniac'));
+
+  }
+
+  if (room.players.some((p) => p.alive && p.role === 'witch')) {
+
+    messages.push(pickPhraseLine('atmosphere.witch'));
 
   }
 

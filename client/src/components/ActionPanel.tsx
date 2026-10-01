@@ -10,6 +10,7 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
   const [clownStep, setClownStep] = useState<'first' | 'second' | null>(null);
   const [clownFirst, setClownFirst] = useState<number | null>(null);
   const [commissarMode, setCommissarMode] = useState<'check' | 'kill' | null>(null);
+  const [witchMode, setWitchMode] = useState<'heal' | 'kill' | null>(null);
   const [voteSubmitting, setVoteSubmitting] = useState(false);
 
   const me = state.myPlayer;
@@ -256,6 +257,43 @@ export default function ActionPanel({ state, emit }: ActionPanelProps) {
               })
             )}
           </div>
+        </div>
+      );
+    }
+
+    if (role === 'witch') {
+      if (!witchMode) {
+        return (
+          <div className="action-panel">
+            <h3>Ведьма</h3>
+            <p className="muted" style={{ marginBottom: 12, fontSize: '0.9rem' }}>
+              За ночь одно действие. Себя можно лечить не чаще раза в три ночи.
+            </p>
+            <div className="action-row">
+              <button type="button" className="btn btn-action" onClick={() => setWitchMode('heal')}>
+                Лечить
+              </button>
+              <button type="button" className="btn btn-action danger" onClick={() => setWitchMode('kill')}>
+                Убить
+              </button>
+            </div>
+          </div>
+        );
+      }
+      const healing = witchMode === 'heal';
+      return (
+        <div className="action-panel">
+          <h3>{healing ? 'Кого лечить?' : 'Кого убить?'}</h3>
+          <div className="target-grid">
+            {(healing ? allAlive : aliveOthers).map((p) =>
+              targetBtn(p, (id) => {
+                void emit('game:nightAction', { type: witchMode, targetId: id });
+              })
+            )}
+          </div>
+          <button type="button" className="btn btn-ghost" onClick={() => setWitchMode(null)}>
+            Назад
+          </button>
         </div>
       );
     }

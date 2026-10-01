@@ -91,6 +91,8 @@ export function isValidNightActionForRole(
       return action.type === 'check' && Number.isFinite(action.targetId);
     case 'maniac':
       return action.type === 'kill' && Number.isFinite(action.targetId);
+    case 'witch':
+      return (action.type === 'kill' || action.type === 'heal') && Number.isFinite(action.targetId);
     case 'clown':
       return (
         !opts.clownUsed &&

@@ -53,7 +53,7 @@ export function distributeRoles(playerCount: number): RoleId[] {
     pool.push('mafia');
   }
   if (playerCount >= 14) {
-    pool.push('civilian');
+    pool.push('witch');
   }
   if (playerCount >= 15) {
     pool.push('mafia');
@@ -89,11 +89,15 @@ export function isMafiaTeam(role: RoleId | null | undefined): boolean {
 }
 
 export function isTown(role: RoleId | null | undefined): boolean {
-  return role !== 'mafia' && role !== 'maniac' && role !== 'advocate';
+  return role !== 'mafia' && role !== 'maniac' && role !== 'witch' && role !== 'advocate';
+}
+
+export function isNeutral(role: RoleId | null | undefined): boolean {
+  return role === 'maniac' || role === 'witch';
 }
 
 export function isEvil(role: RoleId | null | undefined): boolean {
-  return role === 'mafia' || role === 'maniac';
+  return role === 'mafia' || role === 'maniac' || role === 'witch';
 }
 
 /** Горец не убивается мафией */

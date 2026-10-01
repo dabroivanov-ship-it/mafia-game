@@ -1,6 +1,6 @@
 import { CONFIG, PHASE, isLobbyPhase, isActiveGamePhase } from './config.js';
 import { isValidNightActionForRole } from '../security/validate.js';
-import { distributeRoles, isMafia, isMafiaTeam, isTown, isEvil, isMafiaImmune, getRoleLabel } from './roles.js';
+import { distributeRoles, isMafia, isMafiaTeam, isTown, isNeutral, isEvil, isMafiaImmune, getRoleLabel } from './roles.js';
 import {
   buildRoleRevealNotes,
   buildNightReminderNotes,
@@ -255,6 +255,7 @@ function createRoom(id: number, kind: RoomKind = 'game'): GameRoom {
     wifeRevengeUsed: false,
     clownUsed: false,
     doctorLastSelfHealNight: -999,
+    witchLastSelfHealNight: -999,
     mafiaDonId: null,
     donIdleStreak: 0,
     votingStarted: false,
@@ -872,6 +873,7 @@ function beginGame(room: GameRoom): PrivateNote[] {
   room.wifeRevengeUsed = false;
   room.clownUsed = false;
   room.doctorLastSelfHealNight = -999;
+  room.witchLastSelfHealNight = -999;
   room.donIdleStreak = 0;
 
   saveGameEvent(room.id, room.sessionId, 'game_start', {
@@ -1258,6 +1260,10 @@ export function submitNightAction(
     throw new Error('Самурай не может закрывать себя');
   }
 
+  if (player.role === 'witch' && action.type === 'kill' && action.targetId === playerId) {
+    throw new Error('Ведьма не может убить себя');
+  }
+
   if (player.role === 'mafia') {
     if (!player.isDon) {
       throw new Error('Только главарь мафии выбирает жертву');
@@ -1289,6 +1295,7 @@ function getPlayersNeedingNightAction(room: GameRoom): GamePlayer[] {
     if (p.role === 'mafia') return p.isDon;
     if (p.role === 'commissar') return true;
     if (p.role === 'maniac') return true;
+    if (p.role === 'witch') return true;
     if (p.role === 'doctor') return true;
     if (p.role === 'advocate') return true;
     if (p.role === 'homeless') return true;
@@ -1309,13 +1316,32 @@ export function resolveNight(room: GameRoom): NightResolveResult {
   const report: NightReport = { killed: [] };
   let commissarShot: GamePlayer | null = null;
   let maniacShot: GamePlayer | null = null;
+  let witchShot: GamePlayer | null = null;
   let doctorSaveBonus = false;
+  let witchSaveBonus = false;
 
-  const awardDoctorSave = (): void => {
-    if (doctorSaveBonus) return;
-    doctorSaveBonus = true;
-    const doc = room.players.find((p) => p.role === 'doctor' && p.alive);
-    if (doc) doc.score += 15;
+  const awardHealSave = (victimId: number): void => {
+    if (
+      !doctorSaveBonus &&
+      report.doctorHealed?.id === victimId
+    ) {
+      doctorSaveBonus = true;
+      const doc = room.players.find((p) => p.role === 'doctor' && p.alive);
+      if (doc) doc.score += 15;
+    }
+    if (!witchSaveBonus && report.witchHealed?.id === victimId) {
+      witchSaveBonus = true;
+      report.witchHealWasSave = true;
+      const savedBy = room.players.find((p) => p.role === 'witch' && p.alive);
+      if (savedBy) savedBy.score += 15;
+    }
+  };
+
+  const noteSamuraiSave = (victimId: number): void => {
+    report.samuraiSaved = true;
+    if (report.witchHealed?.id === victimId && report.doctorHealed?.id !== victimId) {
+      report.samuraiSavedByWitch = true;
+    }
   };
 
   const prostitute = room.players.find((p) => p.alive && p.role === 'prostitute');
@@ -1415,6 +1441,27 @@ export function resolveNight(room: GameRoom): NightResolveResult {
     }
   }
 
+  const witch = room.players.find((p) => p.alive && p.role === 'witch');
+  if (witch && !isSeduced(witch.id)) {
+    const act = actions[witch.id];
+    if (act?.type === 'kill') {
+      const target = room.players.find((p) => p.id === act.targetId);
+      if (target?.alive && target.id !== witch.id) witchShot = target;
+    } else if (act?.type === 'heal') {
+      const selfHeal = act.targetId === witch.id;
+      if (!selfHeal || room.nightNumber - room.witchLastSelfHealNight >= 3) {
+        witch.score += 5;
+        heals.add(act.targetId);
+        if (selfHeal) room.witchLastSelfHealNight = room.nightNumber;
+        const healTarget = room.players.find((p) => p.id === act.targetId);
+        if (healTarget) {
+          report.witchHealed = healTarget;
+          report.witchSelfHeal = selfHeal;
+        }
+      }
+    }
+  }
+
   const samurai = room.players.find((p) => p.alive && p.role === 'samurai');
   let samuraiGuardId: number | null = null;
   if (samurai && !isSeduced(samurai.id)) {
@@ -1427,7 +1474,7 @@ export function resolveNight(room: GameRoom): NightResolveResult {
 
   const takeHit = (
     intended: GamePlayer | null | undefined,
-    source: 'mafia' | 'maniac' | 'commissar' | 'wife'
+    source: 'mafia' | 'maniac' | 'witch' | 'commissar' | 'wife'
   ): GamePlayer | null => {
     if (!intended?.alive) return intended ?? null;
     if (source === 'mafia' && isMafiaImmune(intended.role)) return intended;
@@ -1469,9 +1516,9 @@ export function resolveNight(room: GameRoom): NightResolveResult {
     const intended = commissarShot;
     const victim = takeHit(intended, 'commissar');
     if (victim && heals.has(victim.id)) {
-      awardDoctorSave();
+      awardHealSave(victim.id);
       if (victim.id === intended.id) report.commissarSaved = victim;
-      else report.samuraiSaved = true;
+      else noteSamuraiSave(victim.id);
     } else if (victim) {
       if (victim.id === intended.id) {
         if (isEvil(intended.role)) commissar.score += 20;
@@ -1486,14 +1533,31 @@ export function resolveNight(room: GameRoom): NightResolveResult {
     const intended = maniacShot;
     const victim = takeHit(intended, 'maniac');
     if (victim && heals.has(victim.id)) {
-      awardDoctorSave();
+      awardHealSave(victim.id);
       if (victim.id === intended.id) report.maniacSaved = victim;
-      else report.samuraiSaved = true;
+      else noteSamuraiSave(victim.id);
     } else if (victim) {
       if (victim.id === intended.id) {
         if (isMafia(intended.role)) maniac.score += 20;
         else maniac.score -= 5;
         report.maniacKilled = victim;
+      }
+      deaths.add(victim.id);
+    }
+  }
+
+  if (witchShot && witch) {
+    const intended = witchShot;
+    const victim = takeHit(intended, 'witch');
+    if (victim && heals.has(victim.id)) {
+      awardHealSave(victim.id);
+      if (victim.id === intended.id) report.witchSaved = victim;
+      else noteSamuraiSave(victim.id);
+    } else if (victim) {
+      if (victim.id === intended.id) {
+        if (isMafia(intended.role)) witch.score += 20;
+        else witch.score -= 5;
+        report.witchKilled = victim;
       }
       deaths.add(victim.id);
     }
@@ -1511,7 +1575,7 @@ export function resolveNight(room: GameRoom): NightResolveResult {
           nightNumber: room.nightNumber,
           targetId: target.id,
           targetName: target.username || target.name,
-          isThreat: isMafia(target.role) || isMafiaTeam(target.role) || target.role === 'maniac',
+          isThreat: isMafia(target.role) || isMafiaTeam(target.role) || isNeutral(target.role),
           seenAs: getRoleLabel(target.role),
         };
         privateNotes.push({
@@ -1575,8 +1639,8 @@ export function resolveNight(room: GameRoom): NightResolveResult {
         room.wifeRevengeUsed = true;
         room.wifeRevengeAvailable = false;
         if (heals.has(victim.id) && victim.id !== target.id) {
-          awardDoctorSave();
-          report.samuraiSaved = true;
+          awardHealSave(victim.id);
+          noteSamuraiSave(victim.id);
         } else {
           deaths.add(victim.id);
           if (victim.id === target.id) report.wifeKilled = victim;
@@ -1594,8 +1658,8 @@ export function resolveNight(room: GameRoom): NightResolveResult {
       } else {
         const victim = takeHit(intended, 'mafia');
         if (victim && heals.has(victim.id)) {
-          awardDoctorSave();
-          if (victim.id !== intended.id) report.samuraiSaved = true;
+          awardHealSave(victim.id);
+          if (victim.id !== intended.id) noteSamuraiSave(victim.id);
         } else if (victim) {
           deaths.add(victim.id);
           room.players.filter((p) => p.alive && p.role === 'mafia').forEach((m) => {
@@ -1668,11 +1732,18 @@ export function checkWin(room: GameRoom): boolean {
   const mafiaSideAlive = alive.filter((p) => isMafiaTeam(p.role)).length;
   const townAlive = alive.filter((p) => isTown(p.role)).length;
 
-  if (mafiaSideAlive === 0) {
+  if (mafiaSideAlive === 0 && townAlive === 0) {
     if (alive.length > 0 && alive.every((p) => p.role === 'maniac')) {
       endGame(room, 'maniac', 'Маньяк победил!');
       return true;
     }
+    if (alive.length > 0 && alive.every((p) => p.role === 'witch')) {
+      endGame(room, 'witch', 'Ведьма победила!');
+      return true;
+    }
+    return false;
+  }
+  if (mafiaSideAlive === 0) {
     endGame(room, 'town', 'Мирные победили!');
     return true;
   }
@@ -1688,8 +1759,8 @@ export function checkWin(room: GameRoom): boolean {
     endGame(room, 'mafia', 'Мафия победила!');
     return true;
   }
-  const maniacAlive = alive.some((p) => p.role === 'maniac');
-  if (!maniacAlive && mafiaSideAlive > townAlive) {
+  const neutralAlive = alive.some((p) => isNeutral(p.role));
+  if (!neutralAlive && mafiaSideAlive > townAlive) {
     endGame(room, 'mafia', 'Мафия победила!');
     return true;
   }
@@ -1721,6 +1792,8 @@ function endGame(room: GameRoom, team: NonNullable<WinnerTeam>, message: string)
     } else if (team === 'mafia' && isMafiaTeam(p.role)) {
       p.score += p.alive ? 50 : 0;
     } else if (team === 'maniac' && p.role === 'maniac') {
+      p.score += p.alive ? 100 : 50;
+    } else if (team === 'witch' && p.role === 'witch') {
       p.score += p.alive ? 100 : 50;
     }
   });

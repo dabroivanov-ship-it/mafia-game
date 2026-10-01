@@ -109,15 +109,16 @@ export interface UserStatistics {
 
 function getPlayerTeam(role: RoleId): PlayerTeam {
   if (isMafiaTeam(role)) return 'mafia';
-  if (role === 'maniac') return 'neutral';
+  if (role === 'maniac' || role === 'witch') return 'neutral';
   return 'town';
 }
 
 function didPlayerWin(role: RoleId | null, winnerTeam: WinnerTeam): boolean {
   if (!role || !winnerTeam || winnerTeam === 'draw') return false;
-  if (winnerTeam === 'town') return isTown(role) && role !== 'maniac';
+  if (winnerTeam === 'town') return isTown(role);
   if (winnerTeam === 'mafia') return isMafiaTeam(role);
   if (winnerTeam === 'maniac') return role === 'maniac';
+  if (winnerTeam === 'witch') return role === 'witch';
   return false;
 }
 

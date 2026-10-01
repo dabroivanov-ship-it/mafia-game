@@ -14,6 +14,7 @@ export type RoleId =
   | 'homeless'
   | 'prostitute'
   | 'maniac'
+  | 'witch'
   | 'clown'
   | 'commissar_wife'
   | 'highlander'
@@ -25,7 +26,7 @@ export type ChatChannel = 'public' | 'mafia' | 'dead' | 'spectator' | 'private';
 
 export type TimerReason = 'registration' | 'roles' | 'day' | 'voting' | 'night';
 
-export type WinnerTeam = 'town' | 'mafia' | 'maniac' | 'draw' | null;
+export type WinnerTeam = 'town' | 'mafia' | 'maniac' | 'witch' | 'draw' | null;
 
 export type RoomKind = 'game' | 'chat' | 'clan';
 
@@ -183,6 +184,7 @@ export interface GameRoom {
   wifeRevengeUsed: boolean;
   clownUsed: boolean;
   doctorLastSelfHealNight: number;
+  witchLastSelfHealNight: number;
   mafiaDonId: number | null;
   /** Подряд ночей, когда главарь был в сети и не выбрал жертву. */
   donIdleStreak: number;
