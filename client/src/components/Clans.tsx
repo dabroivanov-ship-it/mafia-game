@@ -428,188 +428,33 @@ export default function Clans({
                       {m.role === 'leader' ? ' · глава' : ''}
                     </span>
                   </span>
-                  {clan.myRole === 'leader' && m.role !== 'leader' && (
-                    <span className="clans-app-actions">
-                      <button
-                        type="button"
-                        className="btn btn-ghost btn-sm"
-                        disabled={busy}
-                        onClick={() => {
-                          if (!confirm(`Передать главенство игроку ${m.username}?`)) return;
-                          setBusy(true);
-                          void transferClanLeadership(clan.id, m.userId)
-                            .then((res) => setClan(res.clan))
-                            .catch((err) => setError(err instanceof Error ? err.message : 'Ошибка'))
-                            .finally(() => setBusy(false));
-                        }}
-                      >
-                        Сделать главой
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-ghost btn-sm danger"
-                        disabled={busy}
-                        onClick={() => {
-                          if (!confirm(`Исключить ${m.username} из клана?`)) return;
-                          setBusy(true);
-                          void kickClanMember(clan.id, m.userId)
-                            .then((res) => setClan(res.clan))
-                            .catch((err) => setError(err instanceof Error ? err.message : 'Ошибка'))
-                            .finally(() => setBusy(false));
-                        }}
-                      >
-                        Исключить
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-ghost btn-sm danger"
-                        disabled={busy}
-                        title="Исключить и запретить повторные заявки"
-                        onClick={() => {
-                          if (
-                            !confirm(
-                              `Добавить ${m.username} в чёрный список? Игрок будет исключён и не сможет подать заявку снова.`
-                            )
-                          ) {
-                            return;
-                          }
-                          setBusy(true);
-                          void blacklistClanMember(clan.id, m.userId)
-                            .then((res) => setClan(res.clan))
-                            .catch((err) => setError(err instanceof Error ? err.message : 'Ошибка'))
-                            .finally(() => setBusy(false));
-                        }}
-                      >
-                        Чёрный список
-                      </button>
-                    </span>
-                  )}
                 </li>
               ))}
             </ul>
           </section>
 
-          {clan.myRole === 'leader' && (clan.blacklist?.length ?? 0) > 0 && (
+          {clan.myRole === 'member' && news.length > 0 && (
             <section className="clans-section">
-              <h3>Чёрный список</h3>
-              <ul className="clans-members">
-                {clan.blacklist!.map((entry) => (
-                  <li key={entry.userId}>
-                    <span>
-                      <strong>{entry.displayName}</strong>{' '}
-                      <span className="muted">@{entry.username}</span>
-                    </span>
-                    <span className="clans-app-actions">
-                      <button
-                        type="button"
-                        className="btn btn-ghost btn-sm"
-                        disabled={busy}
-                        onClick={() => {
-                          setBusy(true);
-                          setError('');
-                          void removeClanBlacklistMember(clan.id, entry.userId)
-                            .then((res) => setClan(res.clan))
-                            .catch((err) => setError(err instanceof Error ? err.message : 'Ошибка'))
-                            .finally(() => setBusy(false));
-                        }}
-                      >
-                        Убрать
-                      </button>
-                    </span>
+              <h3>Новости клана</h3>
+              <ul className="clans-news">
+                {news.map((item) => (
+                  <li key={item.id}>
+                    <div className="clans-news-head">
+                      <strong>{item.title}</strong>
+                    </div>
+                    <p className="muted">
+                      @{item.authorName} ·{' '}
+                      {new Date(item.createdAt).toLocaleString('ru-RU', {
+                        day: 'numeric',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                    <p className="clans-news-body">{item.body}</p>
                   </li>
                 ))}
               </ul>
-            </section>
-          )}
-
-          {clan.myRole && (
-            <section className="clans-section">
-              <h3>Новости клана</h3>
-              {clan.myRole === 'leader' && (
-                <form
-                  className="clans-form"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    setBusy(true);
-                    setError('');
-                    void createClanNews(clan.id, { title: newsTitle, body: newsBody })
-                      .then((res) => {
-                        setNews((prev) => [res.news, ...prev]);
-                        setNewsTitle('');
-                        setNewsBody('');
-                      })
-                      .catch((err) => setError(err instanceof Error ? err.message : 'Ошибка'))
-                      .finally(() => setBusy(false));
-                  }}
-                >
-                  <label>
-                    Заголовок
-                    <input
-                      value={newsTitle}
-                      onChange={(e) => setNewsTitle(e.target.value)}
-                      maxLength={120}
-                      required
-                      disabled={busy}
-                    />
-                  </label>
-                  <label>
-                    Текст
-                    <textarea
-                      value={newsBody}
-                      onChange={(e) => setNewsBody(e.target.value)}
-                      maxLength={8000}
-                      rows={4}
-                      required
-                      disabled={busy}
-                    />
-                  </label>
-                  <button type="submit" className="btn btn-primary btn-sm" disabled={busy}>
-                    Опубликовать
-                  </button>
-                </form>
-              )}
-              {news.length === 0 ? (
-                <p className="muted">Пока нет новостей</p>
-              ) : (
-                <ul className="clans-news">
-                  {news.map((item) => (
-                    <li key={item.id}>
-                      <div className="clans-news-head">
-                        <strong>{item.title}</strong>
-                        {clan.myRole === 'leader' && (
-                          <button
-                            type="button"
-                            className="btn btn-ghost btn-sm danger"
-                            disabled={busy}
-                            onClick={() => {
-                              if (!confirm('Удалить новость?')) return;
-                              setBusy(true);
-                              void deleteClanNews(clan.id, item.id)
-                                .then(() => setNews((prev) => prev.filter((n) => n.id !== item.id)))
-                                .catch((err) =>
-                                  setError(err instanceof Error ? err.message : 'Ошибка')
-                                )
-                                .finally(() => setBusy(false));
-                            }}
-                          >
-                            Удалить
-                          </button>
-                        )}
-                      </div>
-                      <p className="muted">
-                        @{item.authorName} ·{' '}
-                        {new Date(item.createdAt).toLocaleString('ru-RU', {
-                          day: 'numeric',
-                          month: 'short',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </p>
-                      <p className="clans-news-body">{item.body}</p>
-                    </li>
-                  ))}
-                </ul>
-              )}
             </section>
           )}
 
@@ -728,6 +573,200 @@ export default function Clans({
                 Сохранить
               </button>
             </form>
+          </section>
+
+          <section className="clans-section">
+            <h3>Участники</h3>
+            <ul className="clans-members">
+              {clan.members.map((m) => (
+                <li key={m.userId}>
+                  <span>
+                    <strong>{m.displayName}</strong>{' '}
+                    <span className="muted">
+                      @{m.username}
+                      {m.role === 'leader' ? ' · глава' : ''}
+                    </span>
+                  </span>
+                  {m.role !== 'leader' && (
+                    <span className="clans-app-actions">
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        disabled={busy}
+                        onClick={() => {
+                          if (!confirm(`Передать главенство игроку ${m.username}?`)) return;
+                          setBusy(true);
+                          void transferClanLeadership(clan.id, m.userId)
+                            .then((res) => {
+                              setClan(res.clan);
+                              setScreen('detail');
+                            })
+                            .catch((err) => setError(err instanceof Error ? err.message : 'Ошибка'))
+                            .finally(() => setBusy(false));
+                        }}
+                      >
+                        Сделать главой
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm danger"
+                        disabled={busy}
+                        onClick={() => {
+                          if (!confirm(`Исключить ${m.username} из клана?`)) return;
+                          setBusy(true);
+                          void kickClanMember(clan.id, m.userId)
+                            .then((res) => setClan(res.clan))
+                            .catch((err) => setError(err instanceof Error ? err.message : 'Ошибка'))
+                            .finally(() => setBusy(false));
+                        }}
+                      >
+                        Исключить
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm danger"
+                        disabled={busy}
+                        title="Исключить и запретить повторные заявки"
+                        onClick={() => {
+                          if (
+                            !confirm(
+                              `Добавить ${m.username} в чёрный список? Игрок будет исключён и не сможет подать заявку снова.`
+                            )
+                          ) {
+                            return;
+                          }
+                          setBusy(true);
+                          void blacklistClanMember(clan.id, m.userId)
+                            .then((res) => setClan(res.clan))
+                            .catch((err) => setError(err instanceof Error ? err.message : 'Ошибка'))
+                            .finally(() => setBusy(false));
+                        }}
+                      >
+                        Чёрный список
+                      </button>
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          {(clan.blacklist?.length ?? 0) > 0 && (
+            <section className="clans-section">
+              <h3>Чёрный список</h3>
+              <ul className="clans-members">
+                {clan.blacklist!.map((entry) => (
+                  <li key={entry.userId}>
+                    <span>
+                      <strong>{entry.displayName}</strong>{' '}
+                      <span className="muted">@{entry.username}</span>
+                    </span>
+                    <span className="clans-app-actions">
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        disabled={busy}
+                        onClick={() => {
+                          setBusy(true);
+                          setError('');
+                          void removeClanBlacklistMember(clan.id, entry.userId)
+                            .then((res) => setClan(res.clan))
+                            .catch((err) => setError(err instanceof Error ? err.message : 'Ошибка'))
+                            .finally(() => setBusy(false));
+                        }}
+                      >
+                        Убрать
+                      </button>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          <section className="clans-section">
+            <h3>Новости клана</h3>
+            <form
+              className="clans-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                setBusy(true);
+                setError('');
+                void createClanNews(clan.id, { title: newsTitle, body: newsBody })
+                  .then((res) => {
+                    setNews((prev) => [res.news, ...prev]);
+                    setNewsTitle('');
+                    setNewsBody('');
+                  })
+                  .catch((err) => setError(err instanceof Error ? err.message : 'Ошибка'))
+                  .finally(() => setBusy(false));
+              }}
+            >
+              <label>
+                Заголовок
+                <input
+                  value={newsTitle}
+                  onChange={(e) => setNewsTitle(e.target.value)}
+                  maxLength={120}
+                  required
+                  disabled={busy}
+                />
+              </label>
+              <label>
+                Текст
+                <textarea
+                  value={newsBody}
+                  onChange={(e) => setNewsBody(e.target.value)}
+                  maxLength={8000}
+                  rows={4}
+                  required
+                  disabled={busy}
+                />
+              </label>
+              <button type="submit" className="btn btn-primary btn-sm" disabled={busy}>
+                Опубликовать
+              </button>
+            </form>
+            {news.length === 0 ? (
+              <p className="muted">Пока нет новостей</p>
+            ) : (
+              <ul className="clans-news">
+                {news.map((item) => (
+                  <li key={item.id}>
+                    <div className="clans-news-head">
+                      <strong>{item.title}</strong>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm danger"
+                        disabled={busy}
+                        onClick={() => {
+                          if (!confirm('Удалить новость?')) return;
+                          setBusy(true);
+                          void deleteClanNews(clan.id, item.id)
+                            .then(() => setNews((prev) => prev.filter((n) => n.id !== item.id)))
+                            .catch((err) =>
+                              setError(err instanceof Error ? err.message : 'Ошибка')
+                            )
+                            .finally(() => setBusy(false));
+                        }}
+                      >
+                        Удалить
+                      </button>
+                    </div>
+                    <p className="muted">
+                      @{item.authorName} ·{' '}
+                      {new Date(item.createdAt).toLocaleString('ru-RU', {
+                        day: 'numeric',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                    <p className="clans-news-body">{item.body}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
 
           <section className="clans-section">
